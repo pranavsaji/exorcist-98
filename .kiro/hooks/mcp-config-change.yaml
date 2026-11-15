@@ -1,0 +1,15 @@
+name: mcp-config-change
+description: >
+  Re-scan an MCP config file whenever it is saved.
+  Disabled until the CLI exists (M3).
+trigger:
+  type: fileChange
+  patterns:
+    - "**/.kiro/settings/mcp.json"
+    - "**/.cursor/mcp.json"
+    - "**/.vscode/mcp.json"
+    - "**/claude_desktop_config.json"
+action:
+  type: command
+  command: "pnpm --filter @exorcist-98/cli exec exorcist scan --config $FILE"
+enabled: false

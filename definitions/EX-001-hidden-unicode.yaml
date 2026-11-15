@@ -1,0 +1,19 @@
+id: EX-001
+title: Hidden Unicode instructions
+severity: critical
+applies_to:
+  - instruction
+  - docs
+  - config
+match:
+  unicode_class:
+    - zero-width      # U+200B, U+200C, U+200D, U+FEFF
+    - bidi-override   # U+202A–U+202E, U+2066–U+2069
+    - tag-block       # U+E0000–U+E007F
+owasp:
+  - "LLM01:2025 Prompt Injection"
+  - "ASI03 Prompt Injection via External Content"
+fix: >
+  Remove or escape the hidden characters. Use a Unicode-aware editor or run
+  `cat -A` to reveal them. Consider adding a linter rule that bans these
+  code points in text files.

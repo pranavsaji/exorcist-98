@@ -1,0 +1,18 @@
+{
+  "_comment": "DEFANGED — EX-010: Unpinned MCP server",
+  "_attack": "The MCP server is referenced with npx and no version pin. A supply-chain attacker who publishes a newer malicious version will get it run automatically.",
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-filesystem", "/home/user/projects"],
+      "autoApprove": ["read_file"]
+    },
+    "github": {
+      "command": "npx",
+      "args": ["mcp-server-github"],
+      "env": {
+        "GITHUB_TOKEN": "EXAMPLE_TOKEN_DO_NOT_USE"
+      }
+    }
+  }
+}

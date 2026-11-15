@@ -1,0 +1,9 @@
+name: definition-save
+description: Run core signature tests whenever a virus definition is edited.
+trigger:
+  type: fileChange
+  pattern: "definitions/**/*.yaml"
+action:
+  type: command
+  command: "pnpm --filter @exorcist-98/core test -- --run --reporter=verbose"
+enabled: true
