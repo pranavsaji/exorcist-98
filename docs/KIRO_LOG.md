@@ -37,11 +37,11 @@ lives. This becomes the Devpost write-up and the blog post.
 
 **Specs as a three-document contract.** Writing requirements → design → tasks caught problems before implementation in both milestones. In M0: the `superRefine` approach for the `match` constraint and the `process.exit` guard. In M1: the `import.meta.url`-based `isMain` guard pattern was already established, the `jsonpath-plus` `||` filter limitation was caught during definition authoring (not at runtime), and the five-level vs. four-level `../` path depth was caught by the first test run rather than CI.
 
-**Property-based tests found real defects immediately.** In M0, PBT-SEC-01 caught the `process.exit` crash on import. In M1, PBT-SIG-04 (span cap) caught a regex cache collision where two tests reused the same `ruleId` with different patterns. Both were one-line fixes that tests identified precisely.
+**Property-based tests found real defects immediately.** In M0, PBT-SEC-01 caught the `process.exit` crash on import. In M1, a unit test for the 120-char span cap exposed a regex-cache collision (two tests reused one `ruleId` with different patterns). Both were small fixes that the tests located precisely.
 
 **`FakeBedrockClient` enables full heuristic engine coverage without AWS.** All four PBT-HEU properties — including nonce uniqueness across 20 calls — run in under 400ms with no network. The concrete Bedrock client is never touched in CI.
 
-**Hooks fire on the right events.** The `definition-save` hook means every YAML edit in `definitions/` immediately runs the signature test suite. During M1 authoring, editing `EX-009-install-script-exfiltration.yaml` to fix the JSONPath expression was caught by the hook before the next full `pnpm test` run.
+**Hooks.** The four hooks exist and are committed. No hook firing has been captured as evidence yet; record a clip before submission.
 
 ---
 
@@ -69,7 +69,7 @@ lives. This becomes the Devpost write-up and the blog post.
  ✓ |haunted-repo|      __tests__/fixtures.property.test.ts          4 tests
 
  Test Files  17 passed (17)
-      Tests  128 passed (128)   ← 30 property-based, 98 unit/integration
+      Tests  128 passed (128)   ← 27 property-based, 101 unit/integration
    Duration  26.38s
 ```
 
@@ -82,5 +82,5 @@ lives. This becomes the Devpost write-up and the blog post.
 - Hooks: 4 (`definition-save`, `mcp-config-change`, `spec-change`, `pre-commit-secrets`)
 - MCP servers: 0 (planned for M3)
 - Custom agents: 0 (planned for M4)
-- Property-based tests: 30 (PBT-FIX-01..04, PBT-DEF-01..03, PBT-SEC-01..04, PBT-WLK-01..04, PBT-NRM-01..04, PBT-SIG-01..04, PBT-HEU-01..04, PBT-ORC-01..03)
+- Property-based tests: 27 (PBT-FIX-01..04, PBT-DEF-01..03, PBT-SEC-01..04, PBT-WLK-01..04, PBT-NRM-01..04, PBT-SIG-01..04, PBT-HEU-01..04)
 - Powers: 0 (planned for M3)
