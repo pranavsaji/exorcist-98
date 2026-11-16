@@ -23,8 +23,8 @@ engine should inspect, each annotated with its role.
    where `RepoFile` is:
    ```ts
    type RepoFile = {
-     path: string;       // absolute path
-     rel:  string;       // path relative to root
+     path: string; // absolute path
+     rel: string; // path relative to root
      role: FileRole;
      sizeBytes: number;
    };
@@ -32,18 +32,18 @@ engine should inspect, each annotated with its role.
 2. `FileRole` is a string union exported from `packages/core/src/types.ts`:
    ```ts
    type FileRole =
-     | 'instruction'   // .kiro/steering/**, AGENTS.md, CLAUDE.md, .cursorrules,
-                       //   .github/copilot-instructions.md, SKILL.md, README*
-     | 'mcp-config'    // mcp.json paths, claude_desktop_config.json
-     | 'hook'          // .kiro/hooks/**, *.hook.yaml
-     | 'manifest'      // package.json
-     | 'definition'    // definitions/*.yaml
-     | 'memory'        // MEMORY.md, .kiro/notes/**, agent-notes*
-     | 'power'         // power/**
-     | 'docs'          // *.md, *.txt not matched above
-     | 'code'          // *.ts, *.js, *.py, *.sh
-     | 'config'        // *.json, *.yaml, *.toml not matched above
-     | 'unknown';
+     | "instruction" // .kiro/steering/**, AGENTS.md, CLAUDE.md, .cursorrules,
+     //   .github/copilot-instructions.md, SKILL.md, README*
+     | "mcp-config" // mcp.json paths, claude_desktop_config.json
+     | "hook" // .kiro/hooks/**, *.hook.yaml
+     | "manifest" // package.json
+     | "definition" // definitions/*.yaml
+     | "memory" // MEMORY.md, .kiro/notes/**, agent-notes*
+     | "power" // power/**
+     | "docs" // *.md, *.txt not matched above
+     | "code" // *.ts, *.js, *.py, *.sh
+     | "config" // *.json, *.yaml, *.toml not matched above
+     | "unknown";
    ```
 3. Files larger than 1 MB are skipped (not yielded).
 4. Binary files (detected by the presence of a null byte in the first 512 bytes)
@@ -51,7 +51,7 @@ engine should inspect, each annotated with its role.
 5. The walker skips `node_modules/`, `.git/`, `dist/`, `.next/`, and `.pnpm-store/`.
 6. Classification is determined by path pattern, in priority order: `instruction`
    > `mcp-config` > `hook` > `manifest` > `definition` > `memory` > `power` >
-   `docs` > `code` > `config` > `unknown`.
+   > `docs` > `code` > `config` > `unknown`.
 7. The walker is an `AsyncIterable`, not a function that returns an array, so it
    can handle large repos without loading all paths into memory.
 
@@ -59,12 +59,12 @@ engine should inspect, each annotated with its role.
 
 Located in `packages/core/src/__tests__/walker.property.test.ts`.
 
-| ID | Property | Strategy |
-|----|----------|----------|
-| PBT-WLK-01 | Every file yielded has `sizeBytes <= 1_048_576` | Collect all from `fixtures/haunted-repo/`; assert |
-| PBT-WLK-02 | No yielded path contains `node_modules` or `.git` | Same corpus |
-| PBT-WLK-03 | `classifyFile(rel)` is pure: same input always returns same role | `fc.constantFrom` over a fixed path list |
-| PBT-WLK-04 | Every `FileRole` value is a non-empty string | `fc.constantFrom` over all role values |
+| ID         | Property                                                         | Strategy                                          |
+| ---------- | ---------------------------------------------------------------- | ------------------------------------------------- |
+| PBT-WLK-01 | Every file yielded has `sizeBytes <= 1_048_576`                  | Collect all from `fixtures/haunted-repo/`; assert |
+| PBT-WLK-02 | No yielded path contains `node_modules` or `.git`                | Same corpus                                       |
+| PBT-WLK-03 | `classifyFile(rel)` is pure: same input always returns same role | `fc.constantFrom` over a fixed path list          |
+| PBT-WLK-04 | Every `FileRole` value is a non-empty string                     | `fc.constantFrom` over all role values            |
 
 ---
 
@@ -82,11 +82,11 @@ hidden payloads are visible to regex matching.
    where:
    ```ts
    type NormalizedText = {
-     original:   string;  // unchanged
-     plain:      string;  // HTML entities decoded, comments extracted
-     hiddenUnicode: UnicodeHit[];  // zero-width / bidi / tag chars found
-     comments:   string[];         // extracted HTML/block comment bodies
-     base64Candidates: string[];   // strings that look like base64 blobs (≥32 chars)
+     original: string; // unchanged
+     plain: string; // HTML entities decoded, comments extracted
+     hiddenUnicode: UnicodeHit[]; // zero-width / bidi / tag chars found
+     comments: string[]; // extracted HTML/block comment bodies
+     base64Candidates: string[]; // strings that look like base64 blobs (≥32 chars)
    };
    type UnicodeHit = { char: string; codePoint: number; offset: number };
    ```
@@ -106,12 +106,12 @@ hidden payloads are visible to regex matching.
 
 Located in `packages/core/src/__tests__/normalizer.property.test.ts`.
 
-| ID | Property | Strategy |
-|----|----------|----------|
-| PBT-NRM-01 | `normalize` is idempotent: `normalize(t,r).plain === normalize(normalize(t,r).plain, r).plain` | `fc.string()` |
-| PBT-NRM-02 | A string containing a zero-width char always produces at least one `hiddenUnicode` hit | `fc.string()` with U+200B inserted at random position |
-| PBT-NRM-03 | A string with no hidden Unicode chars produces an empty `hiddenUnicode` array | `fc.string()` filtered to printable ASCII |
-| PBT-NRM-04 | `base64Candidates` never includes strings shorter than 32 chars | `fc.string({ maxLength: 31 })` |
+| ID         | Property                                                                                       | Strategy                                              |
+| ---------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| PBT-NRM-01 | `normalize` is idempotent: `normalize(t,r).plain === normalize(normalize(t,r).plain, r).plain` | `fc.string()`                                         |
+| PBT-NRM-02 | A string containing a zero-width char always produces at least one `hiddenUnicode` hit         | `fc.string()` with U+200B inserted at random position |
+| PBT-NRM-03 | A string with no hidden Unicode chars produces an empty `hiddenUnicode` array                  | `fc.string()` filtered to printable ASCII             |
+| PBT-NRM-04 | `base64Candidates` never includes strings shorter than 32 chars                                | `fc.string({ maxLength: 31 })`                        |
 
 ---
 
@@ -133,18 +133,18 @@ returns typed findings.
 2. `SignatureFinding` is defined in `packages/core/src/types.ts`:
    ```ts
    type SignatureFinding = {
-     source:     'signature';
-     ruleId:     string;         // e.g. "EX-001"
-     title:      string;
-     severity:   Severity;
-     file:       string;         // rel path
-     line:       number;         // 1-based
-     col:        number;         // 1-based
-     span:       string;         // exact quoted substring, max 120 chars
-     owasp:      string[];
-     fix:        string;
+     source: "signature";
+     ruleId: string; // e.g. "EX-001"
+     title: string;
+     severity: Severity;
+     file: string; // rel path
+     line: number; // 1-based
+     col: number; // 1-based
+     span: string; // exact quoted substring, max 120 chars
+     owasp: string[];
+     fix: string;
    };
-   type Severity = 'critical' | 'high' | 'medium' | 'low';
+   type Severity = "critical" | "high" | "medium" | "low";
    ```
 3. `match.regex` rules: compile the pattern and test against `norm.plain`. For
    each match, record line/col from the original text using the match offset.
@@ -163,12 +163,12 @@ returns typed findings.
 
 Located in `packages/core/src/__tests__/signature-engine.property.test.ts`.
 
-| ID | Property | Strategy |
-|----|----------|----------|
+| ID         | Property                                                                     | Strategy                                                                                       |
+| ---------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | PBT-SIG-01 | Running signatures on a file with no matching content returns an empty array | Generate random strings unlikely to match any real pattern; `fc.string()` with printable ASCII |
-| PBT-SIG-02 | Scanning is idempotent: same file + same defs → same findings | `fc.constantFrom` over haunted-repo fixtures |
-| PBT-SIG-03 | A disabled rule (`enabled: false`) never produces a finding | Build a def with `enabled: false` and known-matching content |
-| PBT-SIG-04 | `span` is never longer than 120 characters | Assert on all findings from haunted-repo scan |
+| PBT-SIG-02 | Scanning is idempotent: same file + same defs → same findings                | `fc.constantFrom` over haunted-repo fixtures                                                   |
+| PBT-SIG-03 | A disabled rule (`enabled: false`) never produces a finding                  | Build a def with `enabled: false` and known-matching content                                   |
+| PBT-SIG-04 | `span` is never longer than 120 characters                                   | Assert on all findings from haunted-repo scan                                                  |
 
 ---
 
@@ -196,10 +196,10 @@ for M1), all valid against `VirusDefinitionSchema`.
 Located in `packages/core/src/__tests__/definitions-integration.test.ts`
 (unit + integration, not pure PBT — validates each definition fires on its fixture).
 
-| ID | Test | What it checks |
-|----|------|----------------|
-| INT-DEF-01 | EX-001 fires on `EX-001-hidden-unicode.md` | At least one finding with `ruleId: 'EX-001'` |
-| INT-DEF-02..12 | Same pattern for EX-002..EX-012 | One test per definition |
+| ID             | Test                                       | What it checks                               |
+| -------------- | ------------------------------------------ | -------------------------------------------- |
+| INT-DEF-01     | EX-001 fires on `EX-001-hidden-unicode.md` | At least one finding with `ruleId: 'EX-001'` |
+| INT-DEF-02..12 | Same pattern for EX-002..EX-012            | One test per definition                      |
 
 ---
 
@@ -217,12 +217,12 @@ Claude and validates the response before accepting it as a finding.
    where:
    ```ts
    type BedrockParams = {
-     model:   'haiku' | 'sonnet';
-     prompt:  string;             // fully assembled, nonce-wrapped
+     model: "haiku" | "sonnet";
+     prompt: string; // fully assembled, nonce-wrapped
      maxTokens: number;
    };
    type BedrockResult =
-     | { ok: true;  raw: string }
+     | { ok: true; raw: string }
      | { ok: false; error: string };
    ```
    This module is the **only** place in `packages/core` that calls AWS SDK.
@@ -275,12 +275,12 @@ Claude and validates the response before accepting it as a finding.
 
 Located in `packages/core/src/__tests__/heuristic-engine.property.test.ts`.
 
-| ID | Property | Strategy |
-|----|----------|----------|
-| PBT-HEU-01 | A verdict whose `quoted_span` is not in the file is always dropped | Inject a fake client that returns a span not present in the input |
-| PBT-HEU-02 | A `benign` verdict never produces a finding | Fake client returns `verdict: 'benign'` for any input |
-| PBT-HEU-03 | The nonce in the prompt is different for every call | Collect nonces from 100 calls; assert all distinct |
-| PBT-HEU-04 | If the client returns invalid JSON, the finding is dropped and no exception propagates | Fake client returns `"not json"` |
+| ID         | Property                                                                               | Strategy                                                          |
+| ---------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| PBT-HEU-01 | A verdict whose `quoted_span` is not in the file is always dropped                     | Inject a fake client that returns a span not present in the input |
+| PBT-HEU-02 | A `benign` verdict never produces a finding                                            | Fake client returns `verdict: 'benign'` for any input             |
+| PBT-HEU-03 | The nonce in the prompt is different for every call                                    | Collect nonces from 100 calls; assert all distinct                |
+| PBT-HEU-04 | If the client returns invalid JSON, the finding is dropped and no exception propagates | Fake client returns `"not json"`                                  |
 
 ---
 
@@ -303,18 +303,18 @@ Located in `packages/core/src/__tests__/heuristic-engine.property.test.ts`.
    type ScanOptions = {
      definitionsDir: string;
      bedrockClient?: BedrockClient; // omit to skip heuristics
-     maxFileSizeBytes?: number;     // default 1_048_576
+     maxFileSizeBytes?: number; // default 1_048_576
    };
    type ScanEvent =
-     | { type: 'file';    file: RepoFile }
-     | { type: 'finding'; finding: Finding }
-     | { type: 'error';   file: string; message: string }
-     | { type: 'done';    stats: ScanStats };
+     | { type: "file"; file: RepoFile }
+     | { type: "finding"; finding: Finding }
+     | { type: "error"; file: string; message: string }
+     | { type: "done"; stats: ScanStats };
    type ScanStats = {
      filesScanned: number;
      filesSkipped: number;
      findingsTotal: number;
-     durationMs:   number;
+     durationMs: number;
    };
    type Finding = SignatureFinding | HeuristicFinding;
    ```
@@ -331,11 +331,11 @@ Located in `packages/core/src/__tests__/heuristic-engine.property.test.ts`.
 
 **Property-based tests (REQ-06-PBT)**:
 
-| ID | Property | Strategy |
-|----|----------|----------|
-| PBT-ORC-01 | Scanning is idempotent: two sequential scans of the same directory produce the same findings in the same order | Run twice on haunted-repo; deep-equal the finding arrays |
-| PBT-ORC-02 | No scan of haunted-repo mutates any file | Snapshot file mtimes before and after scan; assert unchanged |
-| PBT-ORC-03 | `done` is always the last event | Collect all events; assert last `.type === 'done'` |
+| ID         | Property                                                                                                       | Strategy                                                     |
+| ---------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| PBT-ORC-01 | Scanning is idempotent: two sequential scans of the same directory produce the same findings in the same order | Run twice on haunted-repo; deep-equal the finding arrays     |
+| PBT-ORC-02 | No scan of haunted-repo mutates any file                                                                       | Snapshot file mtimes before and after scan; assert unchanged |
+| PBT-ORC-03 | `done` is always the last event                                                                                | Collect all events; assert last `.type === 'done'`           |
 
 ---
 
@@ -408,6 +408,34 @@ other packages can import without reaching into internal paths.
 2. Nothing internal (normalizer, walker, llm module internals) is exported.
 
 ---
+
+### REQ-10 Detection accuracy (added after the first M1 review)
+
+**What**: Close gaps found when reviewing the first M1 implementation.
+
+**Acceptance criteria**:
+
+1. EX-001 uses `unicode_class` only and detects real zero-width, bidi-override
+   and tag-block characters. It does not fire on the words "zero-width" or on
+   `\u200B` written as plain text.
+2. The EX-001 fixture contains real invisible characters whose payload is only
+   the placeholder `EXAMPLE_HIDDEN_INSTRUCTION_DO_NOT_USE`. This is the one
+   fixture allowed to contain literal control characters (see REQ-02 in
+   m0-foundation, which assumed none).
+3. `match.value_regex` (optional, requires `json_path`, must compile) filters
+   JSONPath results. Findings are produced only for values that match it.
+4. EX-007 flags only auto-approved tools that write, delete, execute or run
+   shell commands; read-only tools are not flagged.
+5. EX-009 checks `preinstall`, `install` and `postinstall`, and flags only
+   scripts that reach the network or read secrets.
+6. EX-010 flags only the package argument of `npx`, `bunx`, `uvx` and `pnpx`
+   servers when it has no `@version`; pinned packages are never flagged.
+7. `json_path` findings carry the real line and column of the value when it
+   can be located in the file, and 1:1 only as a fallback.
+8. The compiled-regex cache is keyed by pattern and flags, not by rule id.
+
+**Tests**: `definitions-accuracy.test.ts` (18 tests including PBT-SIG-05 to
+PBT-SIG-08).
 
 ## Out of scope for this spec
 

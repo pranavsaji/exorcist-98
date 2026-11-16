@@ -44,6 +44,7 @@ definitions/
 ```
 
 New dev dependencies added to root `package.json`:
+
 - `@aws-sdk/client-bedrock-runtime` — Bedrock inference calls
 - `@aws-lambda-powertools/logger` — structured Lambda logging (no file content)
 - `aws-lambda` + `@types/aws-lambda` — Lambda handler types
@@ -58,50 +59,60 @@ All shared types live here. No circular imports — this file imports nothing fr
 the rest of `packages/core`.
 
 ```ts
-export type FileRole = 'instruction' | 'mcp-config' | 'hook' | 'manifest'
-  | 'definition' | 'memory' | 'power' | 'docs' | 'code' | 'config' | 'unknown';
+export type FileRole =
+  | "instruction"
+  | "mcp-config"
+  | "hook"
+  | "manifest"
+  | "definition"
+  | "memory"
+  | "power"
+  | "docs"
+  | "code"
+  | "config"
+  | "unknown";
 
-export type Severity = 'critical' | 'high' | 'medium' | 'low';
+export type Severity = "critical" | "high" | "medium" | "low";
 
 export type RepoFile = {
-  path:      string;
-  rel:       string;
-  role:      FileRole;
+  path: string;
+  rel: string;
+  role: FileRole;
   sizeBytes: number;
 };
 
 export type SignatureFinding = {
-  source:   'signature';
-  ruleId:   string;
-  title:    string;
+  source: "signature";
+  ruleId: string;
+  title: string;
   severity: Severity;
-  file:     string;
-  line:     number;
-  col:      number;
-  span:     string;
-  owasp:    string[];
-  fix:      string;
+  file: string;
+  line: number;
+  col: number;
+  span: string;
+  owasp: string[];
+  fix: string;
 };
 
 export type HeuristicFinding = SignatureFinding & {
-  source:     'heuristic';
-  rationale:  string;
-  confidence: 'high' | 'medium' | 'low';
+  source: "heuristic";
+  rationale: string;
+  confidence: "high" | "medium" | "low";
 };
 
 export type Finding = SignatureFinding | HeuristicFinding;
 
 export type ScanEvent =
-  | { type: 'file';    file: RepoFile }
-  | { type: 'finding'; finding: Finding }
-  | { type: 'error';   file: string; message: string }
-  | { type: 'done';    stats: ScanStats };
+  | { type: "file"; file: RepoFile }
+  | { type: "finding"; finding: Finding }
+  | { type: "error"; file: string; message: string }
+  | { type: "done"; stats: ScanStats };
 
 export type ScanStats = {
-  filesScanned:  number;
-  filesSkipped:  number;
+  filesScanned: number;
+  filesSkipped: number;
   findingsTotal: number;
-  durationMs:    number;
+  durationMs: number;
 };
 ```
 
@@ -111,19 +122,19 @@ export type ScanStats = {
 
 ### Classification table (evaluated top-to-bottom, first match wins)
 
-| Priority | Role | Path patterns |
-|----------|------|---------------|
-| 1 | `instruction` | `**/AGENTS.md`, `**/CLAUDE.md`, `**/.cursorrules`, `**/.github/copilot-instructions.md`, `**/SKILL.md`, `**/README*`, `.kiro/steering/**` |
-| 2 | `mcp-config` | `**/.kiro/settings/mcp.json`, `**/.cursor/mcp.json`, `**/.vscode/mcp.json`, `**/claude_desktop_config.json` |
-| 3 | `hook` | `.kiro/hooks/**`, `**/*.hook.yaml` |
-| 4 | `manifest` | `**/package.json` |
-| 5 | `definition` | `definitions/*.yaml` |
-| 6 | `memory` | `**/MEMORY.md`, `.kiro/notes/**`, `**/agent-notes*` |
-| 7 | `power` | `power/**` |
-| 8 | `docs` | `**/*.md`, `**/*.txt` |
-| 9 | `code` | `**/*.ts`, `**/*.js`, `**/*.py`, `**/*.sh` |
-| 10 | `config` | `**/*.json`, `**/*.yaml`, `**/*.toml` |
-| 11 | `unknown` | everything else |
+| Priority | Role          | Path patterns                                                                                                                             |
+| -------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| 1        | `instruction` | `**/AGENTS.md`, `**/CLAUDE.md`, `**/.cursorrules`, `**/.github/copilot-instructions.md`, `**/SKILL.md`, `**/README*`, `.kiro/steering/**` |
+| 2        | `mcp-config`  | `**/.kiro/settings/mcp.json`, `**/.cursor/mcp.json`, `**/.vscode/mcp.json`, `**/claude_desktop_config.json`                               |
+| 3        | `hook`        | `.kiro/hooks/**`, `**/*.hook.yaml`                                                                                                        |
+| 4        | `manifest`    | `**/package.json`                                                                                                                         |
+| 5        | `definition`  | `definitions/*.yaml`                                                                                                                      |
+| 6        | `memory`      | `**/MEMORY.md`, `.kiro/notes/**`, `**/agent-notes*`                                                                                       |
+| 7        | `power`       | `power/**`                                                                                                                                |
+| 8        | `docs`        | `**/*.md`, `**/*.txt`                                                                                                                     |
+| 9        | `code`        | `**/*.ts`, `**/*.js`, `**/*.py`, `**/*.sh`                                                                                                |
+| 10       | `config`      | `**/*.json`, `**/*.yaml`, `**/*.toml`                                                                                                     |
+| 11       | `unknown`     | everything else                                                                                                                           |
 
 `classifyFile(rel: string): FileRole` is exported separately so it can be tested
 without I/O.
@@ -131,7 +142,13 @@ without I/O.
 ### Skip-list implementation
 
 ```ts
-const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', '.next', '.pnpm-store']);
+const SKIP_DIRS = new Set([
+  "node_modules",
+  ".git",
+  "dist",
+  ".next",
+  ".pnpm-store",
+]);
 ```
 
 Checked on each directory entry before recursing. The walker uses
@@ -150,11 +167,11 @@ and skip. This is the same heuristic used by `git diff`.
 
 The hidden Unicode ranges, as code-point intervals:
 
-| Class name | Code points |
-|------------|-------------|
-| `zero-width` | U+200B, U+200C, U+200D, U+FEFF |
-| `bidi-override` | U+202A–U+202E, U+2066–U+2069 |
-| `tag-block` | U+E0000–U+E007F |
+| Class name      | Code points                    |
+| --------------- | ------------------------------ |
+| `zero-width`    | U+200B, U+200C, U+200D, U+FEFF |
+| `bidi-override` | U+202A–U+202E, U+2066–U+2069   |
+| `tag-block`     | U+E0000–U+E007F                |
 
 A single regex built from these ranges at module load time (not per-call).
 
@@ -169,6 +186,7 @@ Exorcist 98 cares about.
 Pattern: `/(?<![A-Za-z0-9+/=])[A-Za-z0-9+/=]{32,}(?![A-Za-z0-9+/=])/g`
 
 Excluded prefixes (checked before adding to candidates):
+
 - `data:image/`
 - `sha256:`
 - `sha512:`
@@ -177,6 +195,7 @@ Excluded prefixes (checked before adding to candidates):
 
 A candidate is worth escalating to heuristics if, when decoded with
 `Buffer.from(s, 'base64').toString('utf8')`, the result:
+
 - Is valid UTF-8 (no replacement characters), and
 - Contains `http` or one of the phrases: `ignore previous`, `you are now`,
   `as an ai`, `system prompt`.
@@ -215,7 +234,10 @@ doesn't give line numbers; a future improvement can add them).
 ### Line number helper
 
 ```ts
-function offsetToPosition(text: string, offset: number): { line: number; col: number }
+function offsetToPosition(
+  text: string,
+  offset: number,
+): { line: number; col: number };
 ```
 
 Pure function. Count `\n` characters before `offset`.
@@ -227,6 +249,7 @@ Pure function. Count `\n` characters before `offset`.
 ### Escalation decision
 
 A file is escalated if any of:
+
 1. `sigFindings.some(f => f.file === file.rel)` — signatures already flagged it
 2. `norm.hiddenUnicode.length > 0`
 3. Any base64 candidate decodes to a suspicious string (see normalizer section)
@@ -263,9 +286,11 @@ Sonnet for the judge" rule.
 ### Span-verification step
 
 After parsing the JSON response, run:
+
 ```ts
-norm.original.includes(result.quoted_span)
+norm.original.includes(result.quoted_span);
 ```
+
 If this is false, discard the entire verdict. This implements the security.md
 rule "Drop any LLM verdict whose quoted span is not found verbatim in the
 scanned file."
@@ -278,31 +303,41 @@ scanned file."
 
 ```ts
 async function* scanRepo(root, options): AsyncIterable<ScanEvent> {
-  const defs  = await loadDefinitions(options.definitionsDir);
+  const defs = await loadDefinitions(options.definitionsDir);
   const start = Date.now();
-  let   filesScanned = 0, filesSkipped = 0, findingsTotal = 0;
+  let filesScanned = 0,
+    filesSkipped = 0,
+    findingsTotal = 0;
 
   for await (const file of walkRepo(root)) {
-    yield { type: 'file', file };
+    yield { type: "file", file };
     try {
-      const norm  = normalize(await readFile(file.path, 'utf8'), file.role);
-      const sigs  = runSignatures(file, norm, defs);
+      const norm = normalize(await readFile(file.path, "utf8"), file.role);
+      const sigs = runSignatures(file, norm, defs);
       const heurs = options.bedrockClient
         ? await runHeuristics(file, norm, sigs, options.bedrockClient)
         : [];
       const deduped = deduplicate([...sigs, ...heurs]);
       for (const f of deduped) {
         findingsTotal++;
-        yield { type: 'finding', finding: f };
+        yield { type: "finding", finding: f };
       }
       filesScanned++;
     } catch (e) {
       filesSkipped++;
-      yield { type: 'error', file: file.rel, message: String(e) };
+      yield { type: "error", file: file.rel, message: String(e) };
     }
   }
 
-  yield { type: 'done', stats: { filesScanned, filesSkipped, findingsTotal, durationMs: Date.now() - start } };
+  yield {
+    type: "done",
+    stats: {
+      filesScanned,
+      filesSkipped,
+      findingsTotal,
+      durationMs: Date.now() - start,
+    },
+  };
 }
 ```
 
@@ -315,6 +350,7 @@ async function* scanRepo(root, options): AsyncIterable<ScanEvent> {
 ## 8. Bedrock client (`llm/bedrock.ts`)
 
 Uses `@aws-sdk/client-bedrock-runtime` with `InvokeModelCommand`. Model IDs:
+
 - Haiku: `anthropic.claude-3-haiku-20240307-v1:0`
 - Sonnet: `anthropic.claude-3-5-sonnet-20241022-v2:0`
 
@@ -322,6 +358,7 @@ The module reads `AWS_REGION` from `process.env` at call time (not module load)
 so it can be overridden in tests via `process.env`.
 
 `BedrockClient` interface (used by heuristic engine):
+
 ```ts
 interface BedrockClient {
   call(params: BedrockParams): Promise<BedrockResult>;
@@ -339,16 +376,16 @@ interface. Tests always use `FakeBedrockClient`.
 
 ```ts
 const BodySchema = z.object({
-  repoUrl: z.string().url().startsWith('https://github.com/'),
+  repoUrl: z.string().url().startsWith("https://github.com/"),
 });
 ```
 
 ### Clone and cleanup
 
 ```ts
-const tmpDir = path.join('/tmp', crypto.randomUUID());
+const tmpDir = path.join("/tmp", crypto.randomUUID());
 try {
-  await git.clone(repoUrl, tmpDir, ['--depth', '1', '--single-branch']);
+  await git.clone(repoUrl, tmpDir, ["--depth", "1", "--single-branch"]);
   const events = collectAsync(scanRepo(tmpDir, options));
   // …
 } finally {
@@ -363,8 +400,8 @@ without holding all events in memory simultaneously.
 
 ```ts
 const EnvSchema = z.object({
-  AWS_REGION:              z.string().min(1),
-  DEFINITIONS_S3_BUCKET:   z.string().min(1).optional(),
+  AWS_REGION: z.string().min(1),
+  DEFINITIONS_S3_BUCKET: z.string().min(1).optional(),
   // If not set, definitions are loaded from the bundle path at build time
 });
 ```
@@ -376,12 +413,13 @@ const EnvSchema = z.object({
 ### JSON reporter
 
 Output shape (Zod-validated):
+
 ```ts
 const ScanReportSchema = z.object({
-  version:   z.literal('1'),
+  version: z.literal("1"),
   createdAt: z.string().datetime(),
-  stats:     ScanStatsSchema,
-  findings:  z.array(FindingSchema),
+  stats: ScanStatsSchema,
+  findings: z.array(FindingSchema),
 });
 ```
 
@@ -401,17 +439,31 @@ Output uses `uri` relative to `repoRoot` for portability.
 
 ## 11. Property-based test strategy for M1
 
-| Suite | PBTs | Key arbitraries |
-|-------|------|-----------------|
-| Walker | PBT-WLK-01–04 | `fc.constantFrom` over real file paths |
-| Normalizer | PBT-NRM-01–04 | `fc.string()`, insertion of Unicode chars |
-| Signature engine | PBT-SIG-01–04 | `fc.constantFrom` over haunted-repo fixtures |
+| Suite            | PBTs          | Key arbitraries                               |
+| ---------------- | ------------- | --------------------------------------------- |
+| Walker           | PBT-WLK-01–04 | `fc.constantFrom` over real file paths        |
+| Normalizer       | PBT-NRM-01–04 | `fc.string()`, insertion of Unicode chars     |
+| Signature engine | PBT-SIG-01–04 | `fc.constantFrom` over haunted-repo fixtures  |
 | Heuristic engine | PBT-HEU-01–04 | `FakeBedrockClient` with controlled responses |
-| Orchestrator | PBT-ORC-01–03 | Full scan of haunted-repo; mtime snapshots |
+| Orchestrator     | PBT-ORC-01–03 | Full scan of haunted-repo; mtime snapshots    |
 
 New PBTs in M1: 19. Running total: 30.
 
 ---
+
+## 11b. Detection accuracy changes (REQ-10)
+
+- `match.value_regex` is an optional case-insensitive filter over the values
+  that `json_path` selects. Schema rule: it requires `json_path`, and both
+  `regex` and `value_regex` must compile.
+- `jsonpath-plus` supports `||` and `==` in filter expressions and unquoted
+  unions such as `$.scripts[preinstall,install,postinstall]`. An earlier note
+  that `||` was unsupported was wrong; that failure came from a filter being
+  applied to string values.
+- EX-010 inspects `args[0:2]` of package-runner servers. Known limit: a bare
+  positional word in the first two args of such a server would be flagged.
+- The EX-001 fixture is generated with a script so the invisible characters
+  are exact; it is the only fixture with literal control characters.
 
 ## 12. What M1 does not build
 

@@ -12,6 +12,7 @@ after each task before continuing.
 ### Step 1-A: add dependencies
 
 Add to root `package.json` devDependencies:
+
 ```jsonc
 "@aws-sdk/client-bedrock-runtime": "^3.600",
 "@types/aws-lambda":               "^8.10",
@@ -38,6 +39,7 @@ Replace the stub `src/index.ts` export with real types. Create
 **Requirement**: REQ-01
 
 Create `packages/core/src/walker.ts` with:
+
 - `classifyFile(rel: string): FileRole` — pure, exported
 - `walkRepo(root: string): AsyncIterable<RepoFile>` — uses `fs.promises.opendir`
   for streaming
@@ -47,6 +49,7 @@ Classification table is the priority-ordered list in design section 3. Use
 with simple string checks (avoid a heavy glob library on the hot path).
 
 Write `packages/core/src/__tests__/walker.test.ts` with unit tests:
+
 - `classifyFile` returns `instruction` for `README.md`
 - `classifyFile` returns `mcp-config` for `.kiro/settings/mcp.json`
 - `classifyFile` returns `manifest` for `packages/core/package.json`
@@ -73,6 +76,7 @@ section 4. Use `String.fromCodePoint` to build range arrays, then join into a
 character class.
 
 Write `packages/core/src/__tests__/normalizer.test.ts` with unit tests:
+
 - A string containing `\u200B` produces one `hiddenUnicode` hit with class `zero-width`
 - A string containing `\u202E` produces a `bidi-override` hit
 - `<!-- hidden -->` produces `['hidden']` in `comments`
@@ -95,6 +99,7 @@ PBT-NRM-01 through PBT-NRM-04.
 Create `packages/core/src/scanner/signature-engine.ts`.
 
 Key implementation details:
+
 - Cache compiled regexes in a `Map<string, RegExp>` keyed by `ruleId` to avoid
   recompilation per file.
 - Use `offsetToPosition` (pure helper in the same file) for line/col calculation.
@@ -103,6 +108,7 @@ Key implementation details:
 - Skip rules whose `applies_to` does not include the file's role.
 
 Write `packages/core/src/__tests__/signature-engine.test.ts` with unit tests:
+
 - A regex rule matching its pattern returns a `SignatureFinding` with correct line/col
 - A disabled rule returns no findings
 - A rule with `applies_to: ['docs']` does not fire on a `manifest` file
@@ -124,21 +130,22 @@ EX-001 already exists. Create EX-002 through EX-012.
 
 For each definition, the `match` strategy follows the design:
 
-| ID | Strategy | Key pattern |
-|----|----------|-------------|
-| EX-002 | `regex` | `/(ignore previous instructions\|you are now\|as an ai\|your new (primary )?directive)/gi` |
-| EX-003 | `regex` | `/(?<![A-Za-z0-9+\/=])[A-Za-z0-9+\/=]{40,}(?![A-Za-z0-9+\/=])/g` (long base64 blobs) |
-| EX-004 | `regex` | `/<!--[\s\S]*?(ignore\|exfiltrate\|send.*to\|fetch\|curl\|you are)[\s\S]*?-->/gi` |
-| EX-005 | `regex` | `/(before (responding\|answering\|using)\|do not (inform\|tell\|mention)\|this is required for)/gi` applied to `mcp-config` and `config` roles |
+| ID     | Strategy    | Key pattern                                                                                                                                                                                   |
+| ------ | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EX-002 | `regex`     | `/(ignore previous instructions\|you are now\|as an ai\|your new (primary )?directive)/gi`                                                                                                    |
+| EX-003 | `regex`     | `/(?<![A-Za-z0-9+\/=])[A-Za-z0-9+\/=]{40,}(?![A-Za-z0-9+\/=])/g` (long base64 blobs)                                                                                                          |
+| EX-004 | `regex`     | `/<!--[\s\S]*?(ignore\|exfiltrate\|send.*to\|fetch\|curl\|you are)[\s\S]*?-->/gi`                                                                                                             |
+| EX-005 | `regex`     | `/(before (responding\|answering\|using)\|do not (inform\|tell\|mention)\|this is required for)/gi` applied to `mcp-config` and `config` roles                                                |
 | EX-006 | `json_path` | `$.after.description` (fires on the rug-pull fixture's `after.description` field) — note: real rug-pull detection is in the Shield (M3); this definition catches the pattern in static config |
-| EX-007 | `json_path` | `$..autoApprove[*]` filtered for values matching `write_\|delete_\|run_\|execute_\|shell` |
-| EX-008 | `regex` | `/(curl\|wget).*\|\s*(sh\|bash\|zsh\|fish)/gi` on `hook` and `config` roles |
-| EX-009 | `json_path` | `$.scripts.postinstall` and `$.scripts.preinstall` — flag if value contains `http\|curl\|wget\|fetch\|require('http')` |
-| EX-010 | `json_path` | `$..args[*]` where the value matches `^@[\w-]+\/[\w-]+$` (bare package name, no `@version`) |
-| EX-011 | `regex` | `/(AWS_SECRET_ACCESS_KEY\|GITHUB_TOKEN\|OPENAI_API_KEY\|DATABASE_URL)=(?!EXAMPLE_)[^\s]+/` on all roles |
-| EX-012 | `regex` | `/!\[.*?\]\(https?:\/\/[^)]+\?[^)]*\)/gi` (Markdown image with query string) |
+| EX-007 | `json_path` | `$..autoApprove[*]` filtered for values matching `write_\|delete_\|run_\|execute_\|shell`                                                                                                     |
+| EX-008 | `regex`     | `/(curl\|wget).*\|\s*(sh\|bash\|zsh\|fish)/gi` on `hook` and `config` roles                                                                                                                   |
+| EX-009 | `json_path` | `$.scripts.postinstall` and `$.scripts.preinstall` — flag if value contains `http\|curl\|wget\|fetch\|require('http')`                                                                        |
+| EX-010 | `json_path` | `$..args[*]` where the value matches `^@[\w-]+\/[\w-]+$` (bare package name, no `@version`)                                                                                                   |
+| EX-011 | `regex`     | `/(AWS_SECRET_ACCESS_KEY\|GITHUB_TOKEN\|OPENAI_API_KEY\|DATABASE_URL)=(?!EXAMPLE_)[^\s]+/` on all roles                                                                                       |
+| EX-012 | `regex`     | `/!\[.*?\]\(https?:\/\/[^)]+\?[^)]*\)/gi` (Markdown image with query string)                                                                                                                  |
 
 Write `packages/core/src/__tests__/definitions-integration.test.ts`:
+
 - For each EX-NNN definition, load it and run the signature engine against
   the corresponding `fixtures/haunted-repo/EX-NNN-*.{md,json,yaml,env}` file.
 - Assert at least one finding with `ruleId === 'EX-NNN'`.
@@ -156,12 +163,19 @@ Update `docs/THREATS.md` with a row for each definition.
 ### Step 6-A: `BedrockClient` interface
 
 Add to `packages/core/src/types.ts`:
+
 ```ts
 export interface BedrockClient {
   call(params: BedrockParams): Promise<BedrockResult>;
 }
-export type BedrockParams = { model: 'haiku' | 'sonnet'; prompt: string; maxTokens: number };
-export type BedrockResult = { ok: true; raw: string } | { ok: false; error: string };
+export type BedrockParams = {
+  model: "haiku" | "sonnet";
+  prompt: string;
+  maxTokens: number;
+};
+export type BedrockResult =
+  | { ok: true; raw: string }
+  | { ok: false; error: string };
 ```
 
 ### Step 6-B: `llm/bedrock.ts`
@@ -180,7 +194,7 @@ export class FakeBedrockClient implements BedrockClient {
   ) {}
   async call(params: BedrockParams): Promise<BedrockResult> {
     this.calls.push(params);
-    return this.responses.shift() ?? { ok: false, error: 'no more responses' };
+    return this.responses.shift() ?? { ok: false, error: "no more responses" };
   }
 }
 ```
@@ -201,6 +215,7 @@ full prompt string from design section 6.
 Create `packages/core/src/scanner/heuristic-engine.ts`.
 
 Write `packages/core/src/__tests__/heuristic-engine.test.ts`:
+
 - A verdict with `quoted_span` not in the file is dropped
 - A `benign` verdict produces no finding
 - A `malicious` verdict with a valid span produces a `HeuristicFinding` with
@@ -222,6 +237,7 @@ Create `packages/core/src/scanner/orchestrator.ts` following the async-generator
 pattern in design section 7.
 
 Write `packages/core/src/__tests__/orchestrator.test.ts`:
+
 - Scanning `fixtures/haunted-repo/` with all 12 definitions yields at least
   12 findings (one per fixture)
 - `done` is always the last event
@@ -243,6 +259,7 @@ Create `packages/core/src/reporters/json-reporter.ts` and
 `packages/core/src/reporters/sarif-reporter.ts`.
 
 Write `packages/core/src/__tests__/reporters.test.ts`:
+
 - `toJson` output validates against `ScanReportSchema`
 - `toJson` with zero findings produces `findings: []` and correct `stats`
 - `toSarif` with a critical finding produces `level: 'error'`
@@ -260,6 +277,7 @@ Write `packages/core/src/__tests__/reporters.test.ts`:
 Create `packages/core/src/lambda/handler.ts`.
 
 Write `packages/core/src/__tests__/handler.test.ts`:
+
 - A request with a non-GitHub URL returns HTTP 400
 - A request with an invalid JSON body returns HTTP 400
 - Stack traces never appear in error response bodies
@@ -280,6 +298,7 @@ Replace `packages/core/src/index.ts` with the full re-export surface from
 design section 1 (REQ-09 acceptance criteria).
 
 Run the full suite:
+
 ```
 pnpm install
 pnpm -r build
@@ -295,12 +314,29 @@ pnpm -r typecheck
 ## TASK-12 Update KIRO_LOG.md
 
 Add rows to `docs/KIRO_LOG.md` for:
+
 - This spec (m1-engine, 3 documents)
 - Each new PBT suite (walker, normalizer, signature engine, heuristic engine,
   orchestrator)
 - Bedrock model usage (Haiku triage, Sonnet judge)
 
 Update counts: Specs: 2, PBTs: 30.
+
+---
+
+## TASK-13 Detection accuracy fixes (REQ-10)
+
+Added after reviewing the first M1 implementation.
+
+- Add `value_regex` to the match schema (requires `json_path`, must compile).
+- Apply `value_regex` in the signature engine; locate JSON findings in the
+  file; key the regex cache by pattern and flags.
+- Restore EX-001 to `unicode_class`; regenerate the EX-001 fixture with real
+  invisible characters carrying only a placeholder.
+- Tighten EX-007, EX-009 and EX-010 as described in REQ-10.
+- Add `definitions-accuracy.test.ts`.
+
+**Done when**: `pnpm test` and `pnpm -r typecheck` exit 0 (146 tests).
 
 ---
 

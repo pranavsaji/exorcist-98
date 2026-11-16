@@ -4,11 +4,15 @@ severity: critical
 applies_to:
   - manifest
 match:
-  json_path: "$.scripts.postinstall"
+  # preinstall, install and postinstall all run automatically on install.
+  json_path: "$.scripts[preinstall,install,postinstall]"
+  # Flag scripts that reach the network or read secrets. A script such as
+  # "node scripts/build.js" is not flagged.
+  value_regex: "(curl|wget|https?:|fetch\\(|require\\(['\"]https?['\"]\\)|\\bnc\\b|/dev/tcp|process\\.env|\\.ssh|\\.npmrc|\\.env\\b)"
 owasp:
   - "ASI07 Supply Chain Vulnerabilities"
   - "LLM01:2025 Prompt Injection"
 fix: >
-  Audit postinstall and preinstall scripts. They should not read environment
-  variables or make outbound network requests. If a build step is needed,
-  use a local script tracked in the repo rather than a remote fetch.
+  Audit preinstall, install and postinstall scripts. They should not read
+  environment variables or make outbound network requests. If a build step is
+  needed, use a local script tracked in the repo rather than a remote fetch.

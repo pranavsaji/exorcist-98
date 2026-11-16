@@ -26,8 +26,10 @@ lives. This becomes the Devpost write-up and the blog post.
 | 2026-11-19 | PBT      | PBT-NRM-01..04 — normalizer: idempotent on `plain`, hidden Unicode always detected, clean ASCII produces no hits, base64 candidates ≥32 chars                                                           | `packages/core/src/__tests__/normalizer.property.test.ts`                            |
 | 2026-11-19 | PBT      | PBT-SIG-01..04 — signature engine: no false positives on non-matching rule, idempotent across runs, disabled rule never fires, span ≤120 chars                                                          | `packages/core/src/__tests__/signature-engine.property.test.ts`                      |
 | 2026-11-19 | PBT      | PBT-HEU-01..04 — heuristic engine: unverifiable `quoted_span` dropped, `benign` verdict suppressed, nonce unique per call, bad JSON never throws                                                        | `packages/core/src/__tests__/heuristic-engine.property.test.ts`                      |
-| 2026-11-19 | PBT      | PBT-ORC-01..03 — orchestrator: idempotent across two sequential scans, no file mutation, `done` is always last event                                                                                    | `packages/core/src/__tests__/orchestrator.test.ts`                                   |
-| 2026-11-19 | MCP      | Amazon Bedrock wired: Claude Haiku for triage, Sonnet for judge; all tests use `FakeBedrockClient`; real client reads `AWS_REGION` at call time, never at module load                                   | `packages/core/src/llm/bedrock.ts`, `packages/core/src/llm/__tests__/fake-client.ts` |
+| 2026-11-19 | Test | Orchestrator unit tests (not property-based): `done` is always the last event, no file mtime changes after a scan, scan completes on an empty repo. The planned idempotence property is not written yet. | `packages/core/src/__tests__/orchestrator.test.ts` |
+| 2026-11-19 | PBT | PBT-SIG-05..08 - EX-001 detects a zero-width char at any position; EX-010 never flags pinned packages and always flags unpinned ones; EX-007 never flags read-only tools | `packages/core/src/__tests__/definitions-accuracy.test.ts` |
+| 2026-11-19 | Specs | Added REQ-10 and TASK-13 to `m1-engine` (detection accuracy fixes) instead of a new spec, keeping one spec per milestone | `.kiro/specs/m1-engine/` |
+| 2026-11-19 | Model      | Amazon Bedrock wired (not an MCP server): Claude Haiku for triage, Sonnet for judge; all tests use `FakeBedrockClient`; real client reads `AWS_REGION` at call time, never at module load                                   | `packages/core/src/llm/bedrock.ts`, `packages/core/src/llm/__tests__/fake-client.ts` |
 
 ---
 
@@ -69,7 +71,7 @@ lives. This becomes the Devpost write-up and the blog post.
  ✓ |haunted-repo|      __tests__/fixtures.property.test.ts          4 tests
 
  Test Files  17 passed (17)
-      Tests  128 passed (128)   ← 27 property-based, 101 unit/integration
+      Tests  128 passed (128)   ← 27 property-based, 101 unit/integration (before the accuracy fixes; 146 total after)
    Duration  26.38s
 ```
 
@@ -82,5 +84,6 @@ lives. This becomes the Devpost write-up and the blog post.
 - Hooks: 4 (`definition-save`, `mcp-config-change`, `spec-change`, `pre-commit-secrets`)
 - MCP servers: 0 (planned for M3)
 - Custom agents: 0 (planned for M4)
-- Property-based tests: 27 (PBT-FIX-01..04, PBT-DEF-01..03, PBT-SEC-01..04, PBT-WLK-01..04, PBT-NRM-01..04, PBT-SIG-01..04, PBT-HEU-01..04)
+- Property-based tests: 31 (PBT-FIX-01..04, PBT-DEF-01..03, PBT-SEC-01..04, PBT-WLK-01..04, PBT-NRM-01..04, PBT-SIG-01..08, PBT-HEU-01..04)
+- Tests passing: 146 in 18 files (last run after the accuracy fixes)
 - Powers: 0 (planned for M3)

@@ -6,11 +6,13 @@ applies_to:
   - config
 match:
   json_path: "$..autoApprove[*]"
+  # Only tools that write, delete, execute or run shell commands are flagged.
+  # Read-only tools in autoApprove are fine.
+  value_regex: "(write|delete|remove|rm_|exec|run_|shell|terminal|command|bash|edit|create|move|rename|deploy|install)"
 owasp:
   - "ASI02 Inadequate Human-in-the-Loop Controls"
   - "MCP05 Excessive Tool Permissions"
 fix: >
   Remove write, delete, shell and execution tools from autoApprove. Auto-approve
   should only be used for read-only, low-risk tools. For tools that need
-  frequent access, consider a confirmation-based approval rather than
-  auto-approve.
+  frequent access, use a confirmation-based approval instead.

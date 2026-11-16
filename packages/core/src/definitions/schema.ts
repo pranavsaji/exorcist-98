@@ -1,10 +1,22 @@
 import { z } from 'zod';
 
+function compiles(pattern: string): boolean {
+  try {
+    new RegExp(pattern, 'i');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const MatchSchema = z
   .object({
     regex:         z.string().optional(),
     unicode_class: z.array(z.string()).optional(),
     json_path:     z.string().optional(),
+    // Filters the values selected by json_path: only values matching this
+    // regex (case-insensitive) become findings. Requires json_path.
+    value_regex:   z.string().optional(),
   })
   .superRefine((val, ctx) => {
     const hasAny =
@@ -17,6 +29,21 @@ const MatchSchema = z
         message:
           'match must contain at least one of: regex, unicode_class, json_path',
       });
+    }
+    if (val.value_regex !== undefined && val.json_path === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'match.value_regex requires match.json_path',
+      });
+    }
+    for (const key of ['regex', 'value_regex'] as const) {
+      const pattern = val[key];
+      if (pattern !== undefined && !compiles(pattern)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `match.${key} is not a valid regular expression`,
+        });
+      }
     }
   });
 
