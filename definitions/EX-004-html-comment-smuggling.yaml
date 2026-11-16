@@ -1,0 +1,16 @@
+id: EX-004
+title: HTML comment smuggling
+severity: high
+applies_to:
+  - instruction
+  - docs
+match:
+  regex: "<!--[\\s\\S]*?(ignore|exfiltrate|send.*?to|fetch|curl|you are|as an ai)[\\s\\S]*?-->"
+owasp:
+  - "LLM01:2025 Prompt Injection"
+  - "ASI03 Prompt Injection via External Content"
+fix: >
+  Remove the HTML comment or replace its contents with a benign description.
+  Legitimate comments in Markdown should not contain imperative instructions
+  aimed at AI agents. Consider running a linter rule that bans instruction
+  keywords inside HTML comments.

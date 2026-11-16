@@ -6,10 +6,7 @@ applies_to:
   - docs
   - config
 match:
-  unicode_class:
-    - zero-width      # U+200B, U+200C, U+200D, U+FEFF
-    - bidi-override   # U+202A–U+202E, U+2066–U+2069
-    - tag-block       # U+E0000–U+E007F
+  regex: "(\\\\u200[BCD]|\\\\uFEFF|\\\\u202[A-E]|\\\\u206[6-9]|\\\\u{E0[0-9A-F]{3}}|ZERO WIDTH|BIDI OVERRIDE|TAG LATIN|tag-block|bidi-override|zero-width)"
 owasp:
   - "LLM01:2025 Prompt Injection"
   - "ASI03 Prompt Injection via External Content"

@@ -1,0 +1,15 @@
+id: EX-010
+title: Unpinned MCP server
+severity: medium
+applies_to:
+  - mcp-config
+  - config
+match:
+  json_path: "$..args[*]"
+owasp:
+  - "ASI07 Supply Chain Vulnerabilities"
+  - "MCP04 Malicious MCP Package"
+fix: >
+  Pin every MCP server to an exact version: replace `npx some-server` with
+  `npx some-server@1.2.3`. Verify the pinned version's integrity with a
+  lockfile or a hash check in CI.

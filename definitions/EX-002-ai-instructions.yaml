@@ -1,0 +1,17 @@
+id: EX-002
+title: Instructions addressed to AI
+severity: high
+applies_to:
+  - instruction
+  - docs
+  - memory
+match:
+  regex: "(ignore previous instructions|you are now|as an ai|your new (primary )?directive)"
+owasp:
+  - "LLM01:2025 Prompt Injection"
+  - "ASI03 Prompt Injection via External Content"
+fix: >
+  Remove or rewrite the flagged phrase. Legitimate documentation does not need
+  to address the AI agent directly. If the phrase is in a code example, wrap it
+  in a fenced code block with a language tag so it is not parsed as an
+  instruction.

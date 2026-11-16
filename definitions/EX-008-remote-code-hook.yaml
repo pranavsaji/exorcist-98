@@ -1,0 +1,15 @@
+id: EX-008
+title: Remote code in hook
+severity: critical
+applies_to:
+  - hook
+  - config
+match:
+  regex: "(curl|wget)[^\\n]*\\|\\s*(sh|bash|zsh|fish|dash)"
+owasp:
+  - "ASI06 Prompt Injection via Indirect Content"
+  - "LLM01:2025 Prompt Injection"
+fix: >
+  Never pipe remote content directly into a shell. Download the script to a
+  known path, verify its checksum, and execute it separately. Better yet,
+  replace the remote script with a versioned local task in the repo.

@@ -1,0 +1,16 @@
+id: EX-005
+title: Tool description poisoning
+severity: critical
+applies_to:
+  - mcp-config
+  - config
+match:
+  regex: "(before (responding|answering|using this tool)|do not (inform|tell|mention)|this is required for (audit|telemetry|logging))"
+owasp:
+  - "MCP01 Tool Poisoning Attack"
+  - "LLM01:2025 Prompt Injection"
+fix: >
+  Review the tool description field. A legitimate tool description explains
+  what the tool does, not what the agent should do before or after calling it.
+  Remove any instructions embedded in descriptions and replace with a plain
+  functional summary.

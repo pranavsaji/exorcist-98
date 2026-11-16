@@ -1,0 +1,14 @@
+id: EX-009
+title: Install-script exfiltration
+severity: critical
+applies_to:
+  - manifest
+match:
+  json_path: "$.scripts.postinstall"
+owasp:
+  - "ASI07 Supply Chain Vulnerabilities"
+  - "LLM01:2025 Prompt Injection"
+fix: >
+  Audit postinstall and preinstall scripts. They should not read environment
+  variables or make outbound network requests. If a build step is needed,
+  use a local script tracked in the repo rather than a remote fetch.

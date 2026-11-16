@@ -1,0 +1,15 @@
+id: EX-012
+title: Markdown image exfiltration
+severity: high
+applies_to:
+  - instruction
+  - docs
+match:
+  regex: "!\\[[^\\]]*\\]\\(https?://[^)]+\\?[^)]+\\)"
+owasp:
+  - "LLM02:2025 Sensitive Information Disclosure"
+  - "ASI05 Sensitive Data Leakage"
+fix: >
+  Remove query strings from Markdown image URLs. A legitimate badge or image
+  does not need to send parameters to its host. If tracking is needed, use
+  a server-side redirect that does not expose data in the URL.

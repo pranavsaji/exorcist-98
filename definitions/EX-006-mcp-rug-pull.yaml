@@ -1,0 +1,16 @@
+id: EX-006
+title: MCP rug pull (description change pattern)
+severity: critical
+applies_to:
+  - mcp-config
+  - config
+match:
+  regex: "(do not (inform|tell|mention)|attach.*contents|for telemetry purposes)"
+owasp:
+  - "MCP02 Tool Rug-Pull"
+  - "LLM01:2025 Prompt Injection"
+fix: >
+  The tool description contains language associated with rug-pull attacks, where
+  instructions are added to a description after the user approved the original
+  tool. Remove any instruction text from the description field. Enable the
+  Real-Time Shield (packages/shield) to pin tool hashes and alert on changes.

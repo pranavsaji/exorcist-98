@@ -1,0 +1,17 @@
+id: EX-003
+title: Encoded payload
+severity: high
+applies_to:
+  - instruction
+  - docs
+  - config
+  - code
+match:
+  regex: "(?<![A-Za-z0-9+/=])[A-Za-z0-9+/=]{40,}(?![A-Za-z0-9+/=])"
+owasp:
+  - "LLM01:2025 Prompt Injection"
+  - "ASI03 Prompt Injection via External Content"
+fix: >
+  Investigate the base64 blob. If it decodes to a URL or instruction string,
+  remove it. If it is a legitimate asset (e.g. an icon), move it to a binary
+  file and reference it by path instead of embedding it inline.
