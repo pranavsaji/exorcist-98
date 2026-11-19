@@ -35,6 +35,16 @@ lives. This becomes the Devpost write-up and the blog post.
 | 2026-11-20 | Test | A real run against a public GitHub repo exposed a broken clone (simple-git refuses to run with GIT_PAGER set). Fixed by giving git an allowlisted environment, with a test. | `apps/web/src/lib/scan-service.ts` |
 | 2026-11-20 | Test | Real-browser test (`pnpm e2e`, Chrome 157 via playwright-core, axe-core): 20 steps and 0 accessibility violations. It found four real defects that unit tests missed: a stale form error, one EX-001 finding per hidden character (72 findings, now 36), two findings with no highlight, and windows running off a 390px screen. | `scripts/e2e-chrome.mjs` |
 | 2026-11-20 | PBT | PBT-SIG-09: the number of EX-001 findings equals the number of runs of adjacent hidden characters, for any placement | `packages/core/src/__tests__/definitions-accuracy.test.ts` |
+| 2026-11-20 | Specs | Wrote `m3-shield` (requirements, design, tasks): Shield, Vault, CLI, MCP server, Power, Action. Records the design decisions (one proxy per server, shared state folder, fail closed, no interactive prompt) | `.kiro/specs/m3-shield/` |
+| 2026-11-20 | Hooks | **First real firing evidence.** The `spec-change` hook fired inside Kiro three times when the m3-shield spec files were saved (a `PostFileSave` event with `file_path`), and the agent updated only `docs/THREATS.md`. This only worked after the hooks were rewritten from invented YAML into the documented `.kiro/hooks/*.json` v1 format (checked against kiro.dev/docs/hooks). | `.kiro/hooks/*.json`, `docs/THREATS.md` |
+| 2026-11-20 | Hooks | Added `exorcist hook-scan` and `guard-commit`, the helpers the hooks call. They read the Kiro event from stdin (`file_path` was seen in a real event). `pre-commit-secrets` now actually blocks: tested as a real process (exit 2, reason on stderr). | `packages/cli/src/commands/`, `packages/core/src/hook-guard.ts` |
+| 2026-11-20 | PBT | PBT-SHD-01..06 and PBT-VLT-01..02: fingerprint ignores key order and changes on any edit; a secret at any depth is never forwarded; a changed tool is never listed or callable; pin store round-trips; stdio framing survives any byte split; an injection phrase in a result (any case or spacing) is never forwarded; quarantine then restore returns the exact bytes; wrap then unwrap returns the exact config. Plus a core property for injection phrases. 10 `fc.assert` properties. | `packages/shield/src/__tests__/`, `packages/core/src/__tests__/scan-text.test.ts` |
+| 2026-11-20 | Test | **Golden path with real processes:** a benign tool is pinned and works; the fake server then changes the tool description; the agent no longer sees the tool, cannot call it, and the real backend's call log proves it never heard about the call; the alert carries a unified diff; auto-quarantine disables the server and restore returns the config byte for byte. Repeated through the real `exorcist shield` command and by `scripts/demo-rug-pull.mjs`. | `packages/shield/src/__tests__/proxy.integration.test.ts`, `packages/cli/src/__tests__/cli.test.ts` |
+| 2026-11-20 | Test | **Mutation check:** I deliberately broke two protections (treat a changed hash as unchanged; never block secrets). The suite failed 11 and 5 tests, then passed 77/77 once restored. | n/a (one-off run) |
+| 2026-11-20 | MCP | Built the `exorcist` MCP server on the official SDK (`scan_repo`, `scan_mcp_config`, `explain_finding`, `quarantine`), tested with the SDK's own client over real stdio. Its output deliberately leaves out quoted file text, so it cannot become an injection channel and passes through the Shield. **Not yet registered in Kiro**: writing `.kiro/settings/mcp.json` was blocked by a permission rule. | `packages/mcp-server/` |
+| 2026-11-20 | Powers | Built the `exorcist` Power in the documented Agent Plugins layout (`plugin.json`, `mcp.json`, three skills). **Never installed in Kiro; the npm package it points at is not published.** | `power/` |
+| 2026-11-20 | CLI | `exorcist scan | shield | wrap | unwrap | vault | approve | alerts | init | guard-commit | hook-scan`, bundled with esbuild into one file; tests run the built artifact. | `packages/cli/` |
+| 2026-11-20 | CLI | GitHub Action (composite) and a workflow that scans this repo with it. The build and scan steps were rehearsed on a clean copy; the Action has not run on GitHub. | `action.yml`, `.github/workflows/exorcist.yml` |
 | 2026-11-19 | Model      | Amazon Bedrock wired (not an MCP server): Claude Haiku for triage, Sonnet for judge; all tests use `FakeBedrockClient`; real client reads `AWS_REGION` at call time, never at module load                                   | `packages/core/src/llm/bedrock.ts`, `packages/core/src/llm/__tests__/fake-client.ts` |
 
 ---
@@ -50,6 +60,10 @@ lives. This becomes the Devpost write-up and the blog post.
 **`FakeBedrockClient` enables full heuristic engine coverage without AWS.** All four PBT-HEU properties — including nonce uniqueness across 20 calls — run in under 400ms with no network. The concrete Bedrock client is never touched in CI.
 
 **Hooks.** The four hooks exist and are committed. No hook firing has been captured as evidence yet; record a clip before submission.
+
+**M3: problems found by running things.** Four real defects surfaced by running the code, not by reading it. (1) The `isMain` guard I added to `secrets-check.ts` in M0 broke the moment the CLI was bundled: the bundle itself became the main module, so the library's CLI branch ran and tried to read `--version` as a filename. Library code no longer contains an entry point. (2) A scan with an empty definitions folder reported "no threats" and exited 0; the CLI and the Shield now refuse to run without definitions. (3) EX-003 flagged the integrity hashes in `pnpm-lock.yaml`, which would have failed this repo's own CI scan on every pull request (found by scanning the repo with its own scanner). (4) The `mcp-config-change` hook scanned a folder that does not exist and the wrong file for `.cursor/mcp.json`; a test that checks hook commands against real paths caught it, and the real hook event carries `file_path`, so it now scans exactly the saved file. Separately, I tightened EX-002 after reasoning (not testing) that it would withhold ordinary tool output such as "You are now logged in"; tests now pin that. One more failure was my own wrong test expectation (quotes of hidden characters are already escape text), not a code bug.
+
+**Hooks finally fired.** The M0 hooks were written from memory in an invented YAML format and never ran. Fetching the real documentation showed the format was JSON with PascalCase triggers. After the rewrite, the `spec-change` hook fired in Kiro the first time a spec file was saved, which is the evidence the earlier log entries lacked.
 
 ---
 
@@ -85,11 +99,11 @@ lives. This becomes the Devpost write-up and the blog post.
 
 ## Counts (update before submitting)
 
-- Specs: 3 (`m0-foundation`, `m1-engine`, `m2-ui`)
+- Specs: 4 (`m0-foundation`, `m1-engine`, `m2-ui`, `m3-shield`)
 - Steering docs: 4 (`product`, `tech`, `security`, `ui`)
-- Hooks: 4 (`definition-save`, `mcp-config-change`, `spec-change`, `pre-commit-secrets`)
-- MCP servers: 0 (planned for M3)
+- Hooks: 4 in Kiro's JSON format (`definition-save`, `mcp-config-change`, `spec-change`, `pre-commit-secrets`); 1 seen firing (`spec-change`)
+- MCP servers: 1 built and tested (`exorcist`); not yet registered in Kiro (the config write was blocked)
 - Custom agents: 0 (planned for M4)
-- Property-based tests: 39 `fc.assert` properties (31 in core and fixtures, 8 in web). PBT-HEU-03 is a 20-iteration loop, not a fast-check property, and is not counted.
-- Tests passing: 219 in 25 files (last full run), plus 20 browser steps in `pnpm e2e`
-- Powers: 0 (planned for M3)
+- Property-based tests: 49 `fc.assert` properties (core 28, fixtures 4, shield 9, web 8). PBT-HEU-03 is a loop, not a fast-check property, and is not counted.
+- Tests passing: 392 in 34 files (last full run), plus 20 browser steps in `pnpm e2e` (0 accessibility violations)
+- Powers: 1 built (`exorcist`); not installed in Kiro, npm packages not published

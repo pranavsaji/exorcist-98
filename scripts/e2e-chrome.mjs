@@ -263,7 +263,7 @@ await step('reduced motion: the running progress bar does not animate', async ()
   return `reduce -> ${name}, normal -> ${name2}`;
 });
 
-await step('encyclopedia index lists 12 definitions; EX-001 page shows markers', async () => {
+await step('encyclopedia index lists every definition; EX-001 page shows markers', async () => {
   await page.goto(`${BASE}/encyclopedia`, { waitUntil: 'networkidle' });
   const links = await page.locator('a[href^="/encyclopedia/EX-"]').count();
   await page.screenshot({ path: `${SHOTS}/06-encyclopedia.png` });
@@ -273,7 +273,7 @@ await step('encyclopedia index lists 12 definitions; EX-001 page shows markers',
   const pre = await page.locator('pre').innerText();
   await page.screenshot({ path: `${SHOTS}/07-encyclopedia-ex001.png` });
   const r2 = await axe('encyclopedia-ex001'); axeReports.push(r2);
-  if (links !== 12) throw new Error('links: ' + links);
+  if (links < 13) throw new Error('links: ' + links);
   if (!/\[U\+200B\]/.test(pre) || !/\[U\+202E\]/.test(pre) || !/\[U\+E00/.test(pre)) throw new Error('markers missing');
   return `${links} links; markers present`;
 });

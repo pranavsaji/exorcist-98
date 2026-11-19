@@ -1,3 +1,77 @@
-#!/usr/bin/env node
-// stub CLI — exits 0 until M3
-process.exit(0);
+import { decideCommitGuard } from '@exorcist-98/core';
+import { approveCommand, alertsCommand } from './commands/approve.js';
+import { wrapCommand } from './commands/config.js';
+import { hookScanCommand } from './commands/hook-scan.js';
+import { initCommand } from './commands/init.js';
+import { scanCommand } from './commands/scan.js';
+import { shieldCommand } from './commands/shield.js';
+import { vaultCommand } from './commands/vault.js';
+import { stdio } from './util.js';
+
+const VERSION = '0.1.0';
+
+const HELP = `Exorcist 98 ${VERSION}: antivirus for AI coding agents
+
+Usage: exorcist <command> [options]
+
+Commands:
+  scan <path>        Scan a folder or file for attacks on AI agents
+  shield             Run an MCP server behind the Real-Time Shield
+  wrap <mcp.json>    Run every local MCP server in a config through the shield
+  unwrap <mcp.json>  Undo wrap
+  vault <command>    Quarantine and restore MCP servers, hooks and steering files
+  approve <kind>     Approve a changed tool or a host (see: exorcist approve --help)
+  alerts             Show recent shield alerts
+  init [folder]      Add hooks and steering to a Kiro project
+  guard-commit       Hook helper: block git commit while secrets are staged
+  hook-scan          Hook helper: scan the file named in a Kiro "file saved" event
+
+Run "exorcist <command> --help" for details.
+`;
+
+async function readStdin(): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const c of process.stdin) chunks.push(c as Buffer);
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+export async function main(argv: string[]): Promise<number> {
+  const [cmd, ...rest] = argv;
+  switch (cmd) {
+    case undefined:
+    case '--help':
+    case '-h':
+    case 'help':
+      stdio.out(HELP);
+      return cmd === undefined ? 2 : 0;
+    case '--version':
+    case '-v':
+      stdio.out(VERSION);
+      return 0;
+    case 'scan':   return await scanCommand(rest, stdio);
+    case 'shield': return await shieldCommand(rest, stdio);
+    case 'wrap':   return await wrapCommand(rest, stdio, 'wrap');
+    case 'unwrap': return await wrapCommand(rest, stdio, 'unwrap');
+    case 'vault':  return await vaultCommand(rest, stdio);
+    case 'approve': return await approveCommand(rest, stdio);
+    case 'alerts': return await alertsCommand(rest, stdio);
+    case 'init':   return await initCommand(rest, stdio);
+    case 'hook-scan': return await hookScanCommand(await readStdin(), stdio);
+    case 'guard-commit': {
+      const d = decideCommitGuard(await readStdin());
+      if (d.message) stdio.err(d.message);
+      return d.exitCode;
+    }
+    default:
+      stdio.err(`Unknown command "${cmd}".\n\n${HELP}`);
+      return 2;
+  }
+}
+
+main(process.argv.slice(2)).then(
+  (code) => process.exit(code),
+  (err: unknown) => {
+    stdio.err(`Unexpected error: ${String(err).split('\n')[0]}`);
+    process.exit(1);
+  },
+);

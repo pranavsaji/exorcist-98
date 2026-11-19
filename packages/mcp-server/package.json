@@ -1,13 +1,31 @@
 {
   "name": "@exorcist-98/mcp-server",
-  "version": "0.0.1",
-  "private": true,
+  "version": "0.1.0",
+  "private": false,
   "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
+  "description": "MCP server for Exorcist 98: scan repos and MCP configs, explain findings, quarantine servers.",
+  "license": "Apache-2.0",
+  "bin": {
+    "exorcist-mcp": "./dist/index.mjs"
+  },
+  "files": [
+    "dist",
+    "definitions"
+  ],
+  "engines": {
+    "node": ">=20"
   },
   "scripts": {
-    "build":     "tsc -p tsconfig.json",
+    "build": "node build.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.0",
+    "zod": "^3.23"
+  },
+  "devDependencies": {
+    "@exorcist-98/core": "workspace:*",
+    "@exorcist-98/shield": "workspace:*",
+    "esbuild": "^0.25.0"
   }
 }

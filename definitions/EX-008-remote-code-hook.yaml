@@ -4,6 +4,7 @@ severity: critical
 applies_to:
   - hook
   - config
+  - tool-result
 match:
   regex: "(curl|wget)[^\\n]*\\|\\s*(sh|bash|zsh|fish|dash)"
 owasp:

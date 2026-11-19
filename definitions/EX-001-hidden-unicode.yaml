@@ -7,11 +7,12 @@ applies_to:
   - config
   - memory
   - hook
+  - tool-result
 match:
   unicode_class:
-    - zero-width      # U+200B, U+200C, U+200D, U+FEFF
-    - bidi-override   # U+202A-U+202E, U+2066-U+2069
-    - tag-block       # U+E0000-U+E007F
+    - zero-width # U+200B, U+200C, U+200D, U+FEFF
+    - bidi-override # U+202A-U+202E, U+2066-U+2069
+    - tag-block # U+E0000-U+E007F
 owasp:
   - "LLM01:2025 Prompt Injection"
   - "ASI03 Prompt Injection via External Content"

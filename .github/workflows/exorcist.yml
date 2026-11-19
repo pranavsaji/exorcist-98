@@ -1,0 +1,31 @@
+name: Exorcist 98 scan
+
+# Dogfood: scan this repository with its own action on every pull request.
+# The Haunted Repo fixtures and the specs quote attacks on purpose, so they are skipped.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        with:
+          path: .
+          fail-on: high
+          comment: "true"
+          ignore: |
+            fixtures
+            .kiro/specs
+            docs
+            definitions
+            apps/web/src/__tests__
+            packages
+            e2e-output

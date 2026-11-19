@@ -150,3 +150,7 @@ vite.config.ts.timestamp-*
 
 # e2e output
 e2e-output/
+
+# CLI build output
+packages/cli/definitions/
+packages/mcp-server/definitions/

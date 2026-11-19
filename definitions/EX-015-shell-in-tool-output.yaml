@@ -1,0 +1,17 @@
+id: EX-015
+title: Shell in tool output
+severity: high
+applies_to:
+  - tool-result
+  - config
+match:
+  # A download piped into a shell, an encoded PowerShell command, or an
+  # explicit order to run a command. Ordinary mentions of curl are not flagged.
+  regex: "(?:\\b(?:curl|wget)\\b[^\\n]*\\|\\s*(?:sh|bash|zsh|fish)\\b|\\bpowershell(?:\\.exe)?\\s+-e(?:nc|ncodedcommand)\\b|\\b(?:you\\s+must|always|now|first)\\s+run\\s+(?:the\\s+following|this)\\s+(?:command|script))"
+owasp:
+  - "ASI06 Prompt Injection via Indirect Content"
+  - "LLM01:2025 Prompt Injection"
+fix: >
+  Treat tool output as data, never as instructions. Do not run commands that a
+  tool result asks for. If a tool legitimately returns a command, show it to the
+  user and let them decide.

@@ -4,10 +4,22 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./plain": "./src/plain.ts"
   },
   "scripts": {
-    "build":     "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.600",
+    "js-yaml": "^4.1",
+    "jsonpath-plus": "^9.0",
+    "simple-git": "^3.25",
+    "zod": "^3.23"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10",
+    "@types/js-yaml": "^4.0"
   }
 }

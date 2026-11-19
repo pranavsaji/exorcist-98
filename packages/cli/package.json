@@ -1,16 +1,27 @@
 {
   "name": "@exorcist-98/cli",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": false,
   "type": "module",
+  "description": "Exorcist 98: antivirus for AI coding agents. Scan repos, shield MCP servers, quarantine threats.",
+  "license": "Apache-2.0",
   "bin": {
-    "exorcist": "./src/index.ts"
+    "exorcist": "./dist/index.mjs"
   },
-  "exports": {
-    ".": "./src/index.ts"
+  "files": [
+    "dist",
+    "definitions"
+  ],
+  "engines": {
+    "node": ">=20"
   },
   "scripts": {
-    "build":     "tsc -p tsconfig.json",
+    "build": "node build.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@exorcist-98/core": "workspace:*",
+    "@exorcist-98/shield": "workspace:*",
+    "esbuild": "^0.25.0"
   }
 }

@@ -1,0 +1,107 @@
+name: Exorcist 98
+description: Scan a repository for attacks on AI coding agents (hidden instructions, poisoned MCP tools, dangerous hooks, leaked secrets).
+author: Pranav Saji
+branding:
+  icon: shield
+  color: purple
+
+inputs:
+  path:
+    description: Folder or file to scan, relative to the workspace.
+    default: "."
+  fail-on:
+    description: Fail the job if a finding is at least this severe (critical, high, medium, low or none).
+    default: high
+  ignore:
+    description: Paths to skip, one per line (prefixes relative to the scanned folder).
+    default: ""
+  comment:
+    description: Post (or update) a summary comment on pull requests.
+    default: "true"
+  upload-sarif:
+    description: Upload results to GitHub code scanning. Needs the security-events write permission.
+    default: "false"
+
+outputs:
+  sarif-file:
+    description: Path of the SARIF report.
+    value: ${{ steps.report.outputs.sarif }}
+
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+      with:
+        package_json_file: ${{ github.action_path }}/package.json
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+
+    - name: Build Exorcist 98
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        pnpm install --frozen-lockfile --filter "@exorcist-98/cli..."
+        pnpm --filter @exorcist-98/cli build
+
+    - name: Scan
+      id: report
+      shell: bash
+      env:
+        EXORCIST_CLI: ${{ github.action_path }}/packages/cli/dist/index.mjs
+        SCAN_PATH: ${{ inputs.path }}
+        SCAN_IGNORE: ${{ inputs.ignore }}
+      run: |
+        args=()
+        while IFS= read -r line; do
+          [ -n "$line" ] && args+=(--ignore "$line")
+        done <<< "$SCAN_IGNORE"
+        out="$RUNNER_TEMP/exorcist"
+        mkdir -p "$out"
+        node "$EXORCIST_CLI" scan "$SCAN_PATH" "${args[@]}" --format sarif    --output "$out/exorcist.sarif" --fail-on none
+        node "$EXORCIST_CLI" scan "$SCAN_PATH" "${args[@]}" --format markdown --output "$out/exorcist.md"    --fail-on none
+        echo "sarif=$out/exorcist.sarif" >> "$GITHUB_OUTPUT"
+        echo "markdown=$out/exorcist.md" >> "$GITHUB_OUTPUT"
+        cat "$out/exorcist.md" >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Upload SARIF to code scanning
+      if: ${{ inputs.upload-sarif == 'true' }}
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ steps.report.outputs.sarif }}
+        category: exorcist-98
+
+    - name: Comment on the pull request
+      if: ${{ inputs.comment == 'true' && github.event_name == 'pull_request' }}
+      uses: actions/github-script@v7
+      env:
+        REPORT_FILE: ${{ steps.report.outputs.markdown }}
+      with:
+        script: |
+          const fs = require('fs');
+          const marker = '<!-- exorcist-98 -->';
+          const body = `${marker}\n${fs.readFileSync(process.env.REPORT_FILE, 'utf8')}`;
+          const { owner, repo } = context.repo;
+          const issue_number = context.issue.number;
+          const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+          const existing = comments.find((c) => c.body && c.body.startsWith(marker));
+          if (existing) {
+            await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+          } else {
+            await github.rest.issues.createComment({ owner, repo, issue_number, body });
+          }
+
+    - name: Fail on findings
+      shell: bash
+      env:
+        EXORCIST_CLI: ${{ github.action_path }}/packages/cli/dist/index.mjs
+        SCAN_PATH: ${{ inputs.path }}
+        SCAN_IGNORE: ${{ inputs.ignore }}
+        FAIL_ON: ${{ inputs.fail-on }}
+      run: |
+        args=()
+        while IFS= read -r line; do
+          [ -n "$line" ] && args+=(--ignore "$line")
+        done <<< "$SCAN_IGNORE"
+        node "$EXORCIST_CLI" scan "$SCAN_PATH" "${args[@]}" --fail-on "$FAIL_ON"

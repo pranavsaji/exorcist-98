@@ -68,9 +68,10 @@ describe('POST /api/scan: golden path (Haunted Repo)', () => {
 
     const findings = events.flatMap((e) => (e.type === 'finding' ? [e] : []));
     const ruleIds = new Set(findings.map((f) => f.finding.ruleId));
-    // All twelve shipped rules must fire on their planted fixture.
-    for (let i = 1; i <= 12; i++) {
-      expect(ruleIds.has(`EX-${String(i).padStart(3, '0')}`), `EX-${i}`).toBe(true);
+    // Every shipped rule must fire on its planted fixture.
+    for (const n of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15]) {
+      const id = `EX-${String(n).padStart(3, '0')}`;
+      expect(ruleIds.has(id), id).toBe(true);
     }
     // Only planted samples are shown, never the folder's own test helpers.
     for (const f of findings) expect(f.finding.file).toMatch(/^EX-\d{3}-/);

@@ -3,12 +3,12 @@
   "hooks": [
     {
       "name": "mcp-config-change",
-      "description": "Scan MCP configuration with Exorcist 98 whenever a config file is saved. Blocks nothing; a failing scan is reported to the agent.",
+      "description": "Scan an MCP configuration file with Exorcist 98 whenever it is saved. The saved file comes from the hook event; a finding at or above high is reported to the agent.",
       "trigger": "PostFileSave",
       "matcher": "(\\.kiro/settings/mcp\\.json|\\.cursor/mcp\\.json|\\.vscode/mcp\\.json|claude_desktop_config\\.json)$",
       "action": {
         "type": "command",
-        "command": "pnpm exec tsx packages/cli/src/index.ts scan .kiro/settings --fail-on high"
+        "command": "pnpm exec tsx packages/cli/src/index.ts hook-scan"
       },
       "timeout": 60
     }

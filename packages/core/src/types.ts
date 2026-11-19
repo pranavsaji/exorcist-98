@@ -16,6 +16,7 @@ export type FileRole =
   | 'docs'         // *.md, *.txt (not matched above)
   | 'code'         // *.ts, *.js, *.py, *.sh
   | 'config'       // *.json, *.yaml, *.toml (not matched above)
+  | 'tool-result'  // text returned by an MCP tool (Shield only; never from the walker)
   | 'unknown';
 
 export type RepoFile = {

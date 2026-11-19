@@ -1,14 +1,22 @@
 // Public surface of @exorcist-98/core
-// Internal modules (normalizer, walker, llm internals) are not re-exported.
+// Internal modules (walker, normalizer, llm internals) are not re-exported.
 
 export { scanRepo } from './scanner/orchestrator.js';
+export { scanText } from './scanner/scan-text.js';
 export { toJson, ScanReportSchema } from './reporters/json-reporter.js';
 export { toSarif } from './reporters/sarif-reporter.js';
+export { toMarkdown } from './reporters/markdown-reporter.js';
 export { loadDefinitions } from './definitions/loader.js';
 export { DefinitionLoadError } from './definitions/schema.js';
+export { findSecrets, findStagedSecrets, redact } from './secrets-check.js';
+export { plainFor, hasPlainEntry } from './plain.js';
+export { decide as decideCommitGuard, isGitCommit } from './hook-guard.js';
+export type { HookDecision } from './hook-guard.js';
 
 export type { ScanOptions, ScanEvent, ScanStats } from './types.js';
 export type { Finding, SignatureFinding, HeuristicFinding, FileRole, Severity, RepoFile } from './types.js';
 export type { VirusDefinition } from './definitions/schema.js';
 export type { ScanReport } from './reporters/json-reporter.js';
 export type { SarifLog } from './reporters/sarif-reporter.js';
+export type { SecretHit, StagedHit, StagedResult } from './secrets-check.js';
+export type { PlainEntry } from './plain.js';

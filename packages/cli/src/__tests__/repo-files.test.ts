@@ -1,0 +1,221 @@
+import { describe, it, expect } from 'vitest';
+import { spawnSync } from 'node:child_process';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import yaml from 'js-yaml';
+import { z } from 'zod';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const ROOT = resolve(__dirname, '../../../..');
+const TSX = join(ROOT, 'node_modules/.bin/tsx');
+const CLI_SRC = join(ROOT, 'packages/cli/src/index.ts');
+
+const read = (p: string): string => readFileSync(join(ROOT, p), 'utf8');
+const readJson = (p: string): unknown => JSON.parse(read(p));
+
+/** Run the CLI from source (not the bundle) so these tests never race the bundle build. */
+function scan(path: string, ...extra: string[]) {
+  const r = spawnSync(TSX, [CLI_SRC, 'scan', path, '--fail-on', 'high', ...extra], { cwd: ROOT, encoding: 'utf8' });
+  return { code: r.status, out: r.stdout + r.stderr };
+}
+
+// ── Kiro hooks ────────────────────────────────────────────────────────────────
+
+// Triggers whose names were confirmed in kiro.dev/docs/hooks on the day the hooks were written.
+const VERIFIED_TRIGGERS = ['PostFileSave', 'PreToolUse'] as const;
+
+const HookFile = z.object({
+  version: z.literal('v1'),
+  hooks: z.array(
+    z.object({
+      name: z.string().min(1),
+      description: z.string().optional(),
+      trigger: z.enum(VERIFIED_TRIGGERS),
+      matcher: z.string().optional(),
+      action: z.discriminatedUnion('type', [
+        z.object({ type: z.literal('command'), command: z.string().min(1) }),
+        z.object({ type: z.literal('agent'), prompt: z.string().min(1) }),
+      ]),
+      timeout: z.number().int().nonnegative().optional(),
+      enabled: z.boolean().optional(),
+    }).strict(),
+  ).min(1),
+}).strict();
+
+describe('.kiro/hooks follow the documented v1 format', () => {
+  const files = readdirSync(join(ROOT, '.kiro/hooks')).sort();
+
+  it('there are exactly four hook files and no leftover YAML', () => {
+    expect(files).toEqual(['definition-save.json', 'mcp-config-change.json', 'pre-commit-secrets.json', 'spec-change.json']);
+  });
+
+  for (const f of files) {
+    it(`${f} is valid, its matcher compiles and its command points at real files`, () => {
+      const hookFile = HookFile.parse(readJson(`.kiro/hooks/${f}`));
+      for (const h of hookFile.hooks) {
+        const matcher = h.matcher;
+        if (matcher) expect(() => new RegExp(matcher), h.name).not.toThrow();
+        if (h.action.type === 'command') {
+          for (const tok of h.action.command.split(/\s+/)) {
+            if (tok.includes('/') && !tok.startsWith('-') && !tok.startsWith('@')) expect(existsSync(join(ROOT, tok)), `${h.name}: ${tok}`).toBe(true);
+          }
+        }
+      }
+    });
+  }
+
+  it('matchers select the right files', () => {
+    const m = (file: string) => new RegExp((HookFile.parse(readJson(`.kiro/hooks/${file}`)).hooks[0]?.matcher) ?? '');
+    expect(m('definition-save.json').test('definitions/EX-001-hidden-unicode.yaml')).toBe(true);
+    expect(m('definition-save.json').test('/abs/path/definitions/EX-002.yaml')).toBe(true);
+    expect(m('definition-save.json').test('docs/other.yaml')).toBe(false);
+    for (const p of ['.kiro/settings/mcp.json', 'proj/.cursor/mcp.json', 'x/.vscode/mcp.json', 'claude_desktop_config.json']) {
+      expect(m('mcp-config-change.json').test(p), p).toBe(true);
+    }
+    expect(m('mcp-config-change.json').test('package.json')).toBe(false);
+    expect(m('spec-change.json').test('.kiro/specs/m3-shield/design.md')).toBe(true);
+    expect(m('spec-change.json').test('docs/PLAN.md')).toBe(false);
+  });
+
+  it('the secrets hook runs on shell commands only and blocks by exit code', () => {
+    const h = HookFile.parse(readJson('.kiro/hooks/pre-commit-secrets.json')).hooks[0];
+    expect(h).toMatchObject({ trigger: 'PreToolUse', matcher: 'shell' });
+  });
+
+  it('the spec-change hook still tells the agent to touch only THREATS.md', () => {
+    const h = HookFile.parse(readJson('.kiro/hooks/spec-change.json')).hooks[0];
+    expect(h?.action.type === 'agent' && h.action.prompt).toContain('Do not modify any file other than docs/THREATS.md');
+  });
+});
+
+// ── Power ─────────────────────────────────────────────────────────────────────
+
+describe('the Kiro Power follows the Agent Plugins layout', () => {
+  const plugin = z.object({
+    $schema: z.string().url(),
+    name: z.string().regex(/^[a-z][a-z0-9-]*$/),
+    version: z.string().regex(/^\d+\.\d+\.\d+$/),
+    description: z.string().min(20),
+    author: z.object({ name: z.string().min(1) }).passthrough(),
+    keywords: z.array(z.string().min(1)).min(3),
+  }).passthrough();
+
+  it('plugin.json has the required fields', () => {
+    const p = plugin.parse(readJson('power/plugin.json'));
+    expect(p.name).toBe('exorcist');
+    expect(p.keywords).toEqual(expect.arrayContaining(['mcp', 'security']));
+  });
+
+  it('mcp.json starts the MCP server, pinned to an exact version', () => {
+    const cfg = z.object({
+      mcpServers: z.record(z.object({ type: z.literal('stdio'), command: z.string(), args: z.array(z.string()) })),
+    }).parse(readJson('power/mcp.json'));
+    const args = cfg.mcpServers['exorcist']?.args ?? [];
+    expect(args.some((a) => /^@exorcist-98\/mcp-server@\d+\.\d+\.\d+$/.test(a))).toBe(true);
+  });
+
+  const skills = readdirSync(join(ROOT, 'power/skills'));
+  it('has the three skills', () => {
+    expect(skills.sort()).toEqual(['quarantine', 'scan-repo', 'shield-setup']);
+  });
+  for (const dir of skills) {
+    it(`skills/${dir}/SKILL.md has front matter that matches its folder`, () => {
+      const text = read(`power/skills/${dir}/SKILL.md`);
+      const m = /^---\nname: (.+)\ndescription: (.+)\n---\n/.exec(text);
+      expect(m, 'front matter').not.toBeNull();
+      expect(m?.[1]).toBe(dir);
+      expect((m?.[2] ?? '').length).toBeGreaterThan(30);
+    });
+  }
+
+  it('the Power version matches the packages it installs', () => {
+    const power = plugin.parse(readJson('power/plugin.json'));
+    const mcp = z.object({ version: z.string() }).parse(readJson('packages/mcp-server/package.json'));
+    const cli = z.object({ version: z.string() }).parse(readJson('packages/cli/package.json'));
+    expect(mcp.version).toBe(power.version);
+    expect(cli.version).toBe(power.version);
+  });
+});
+
+// ── GitHub Action and workflows ───────────────────────────────────────────────
+
+describe('GitHub Action and workflows', () => {
+  type Step = { uses?: string; run?: string; name?: string; with?: Record<string, unknown>; if?: string };
+  const action = yaml.load(read('action.yml')) as {
+    runs: { using: string; steps: Step[] };
+    inputs: Record<string, { default?: string }>;
+    outputs: Record<string, unknown>;
+  };
+
+  it('is a composite action with the documented inputs', () => {
+    expect(action.runs.using).toBe('composite');
+    for (const i of ['path', 'fail-on', 'ignore', 'comment', 'upload-sarif']) expect(action.inputs[i], i).toBeDefined();
+    expect(action.inputs['fail-on']?.default).toBe('high');
+    expect(action.outputs['sarif-file']).toBeDefined();
+  });
+
+  it('every step runs something, and shell steps name their shell', () => {
+    for (const s of action.runs.steps) {
+      expect(Boolean(s.uses) !== Boolean(s.run), s.name ?? s.uses).toBe(true);
+      if (s.run) expect((s as { shell?: string }).shell, s.name).toBe('bash');
+    }
+  });
+
+  it('builds from the action checkout and gates the job last', () => {
+    const text = read('action.yml');
+    expect(text).toContain('${{ github.action_path }}');
+    const last = action.runs.steps.at(-1);
+    expect(last?.name).toBe('Fail on findings');
+    expect(last?.run).toContain('--fail-on "$FAIL_ON"');
+    // Untrusted input must reach the shell through env vars, never be pasted into the script.
+    for (const s of action.runs.steps) expect(s.run ?? '', s.name).not.toMatch(/\$\{\{\s*inputs\./);
+  });
+
+  it('the repo workflow uses the local action and asks for the permissions it needs', () => {
+    const wf = yaml.load(read('.github/workflows/exorcist.yml')) as {
+      permissions: Record<string, string>;
+      jobs: { scan: { steps: Step[] } };
+    };
+    expect(wf.permissions).toMatchObject({ contents: 'read', 'pull-requests': 'write' });
+    expect(wf.jobs.scan.steps.some((s) => s.uses === './')).toBe(true);
+  });
+
+  it('the CI workflow still parses', () => {
+    const ci = yaml.load(read('.github/workflows/ci.yml')) as { jobs: Record<string, unknown> };
+    expect(Object.keys(ci.jobs).sort()).toEqual(['build', 'install', 'test', 'typecheck']);
+  });
+});
+
+// ── dogfood: the project passes its own antivirus ─────────────────────────────
+
+describe('dogfood: exorcist scans the files an agent reads in this repo', () => {
+  for (const path of ['.kiro/hooks', '.kiro/steering', 'power', 'scripts', '.github']) {
+    it(`${path} is clean at --fail-on high`, () => {
+      const r = scan(path);
+      expect(r.code, r.out).toBe(0);
+    });
+  }
+
+  it('the workflow ignore list used in CI leaves the repo clean', () => {
+    const wf = yaml.load(read('.github/workflows/exorcist.yml')) as { jobs: { scan: { steps: Array<{ with?: { ignore?: string } }> } } };
+    const ignore = (wf.jobs.scan.steps.find((s) => s.with?.ignore)?.with?.ignore ?? '').split('\n').filter(Boolean);
+    const r = scan('.', ...ignore.flatMap((p) => ['--ignore', p]));
+    expect(r.code, r.out).toBe(0);
+  });
+});
+
+// ── the demo script ───────────────────────────────────────────────────────────
+
+describe('scripts/demo-rug-pull.mjs', () => {
+  it('shows the rug pull being stopped', () => {
+    const r = spawnSync(process.execPath, [join(ROOT, 'scripts/demo-rug-pull.mjs')], {
+      cwd: ROOT, encoding: 'utf8', env: { ...process.env, EXORCIST_DEMO_CLI: 'tsx' },
+    });
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toContain('read_note is gone');
+    expect(r.stdout).toContain('changed after you approved it');
+    expect(r.stdout).toContain('(only the first one)');
+    expect(r.stdout).toContain('calls received by the real server: 1');
+  }, 30_000);
+});

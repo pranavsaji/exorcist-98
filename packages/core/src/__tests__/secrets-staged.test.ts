@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { findSecrets, findStagedSecrets, redact } from '../secrets-check.js';
-import { decide, isGitCommit } from '../../../../scripts/hook-pre-commit-secrets.js';
+import { decide, isGitCommit } from '../hook-guard.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '../../../..');

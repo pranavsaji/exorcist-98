@@ -25,6 +25,7 @@ const ROLE_MAP: Record<string, RepoFile['role']> = {
   'EX-010': 'config',
   'EX-011': 'unknown',
   'EX-012': 'docs',
+  'EX-015': 'tool-result',
 };
 
 describe('INT-DEF: each definition fires on its haunted-repo fixture', () => {
@@ -35,7 +36,7 @@ describe('INT-DEF: each definition fires on its haunted-repo fixture', () => {
   for (const { name, id, path } of fixtureEntries) {
     // Only test EX-001 through EX-012 (definitions built in M1)
     const num = parseInt(id.replace('EX-', ''), 10);
-    if (num < 1 || num > 12) continue;
+    if (!(num >= 1 && num <= 12) && num !== 15) continue;
 
     it(`${id} fires on ${name}`, async () => {
       const defs = await loadDefinitions(DEFINITIONS_DIR);

@@ -1,0 +1,10 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "exorcist": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@exorcist-98/mcp-server@0.1.0"]
+    }
+  }
+}

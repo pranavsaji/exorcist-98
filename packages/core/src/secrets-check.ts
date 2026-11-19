@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * secrets-check.ts
  *
@@ -6,14 +5,13 @@
  * values (EXAMPLE_*_DO_NOT_USE) are never flagged, but a real key written next
  * to a placeholder still is.
  *
- * CLI: `secrets-check.ts --staged` or `secrets-check.ts <file>...`
- *   Exit 0: nothing found.   Exit 1: something found (file:line, redacted).
+ * Library code only. The command-line entry point is secrets-check-cli.ts;
+ * keeping it separate means bundling this module can never run a CLI.
  */
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 export type SecretPattern = 'aws-access-key' | 'github-token' | 'openai-key';
 
@@ -118,35 +116,4 @@ export function findStagedSecrets(cwd: string = process.cwd()): StagedResult {
     }
   }
   return { ok: true, hits, filesChecked };
-}
-
-// ── CLI ───────────────────────────────────────────────────────────────────────
-const isMain =
-  process.argv[1] !== undefined &&
-  resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
-
-if (isMain) {
-  const args = process.argv.slice(2);
-  const files = args.filter((a) => a !== '--staged');
-  let found = false;
-
-  if (args.includes('--staged')) {
-    const r = findStagedSecrets();
-    if (!r.ok) {
-      process.stderr.write(`${r.error}\n`);
-      process.exit(2); // cannot check: treat as a failure, not a pass
-    }
-    for (const h of r.hits) {
-      process.stdout.write(`${h.file}:${h.line} [${h.pattern}] ${h.redacted}\n`);
-      found = true;
-    }
-  }
-  for (const f of files) {
-    const text = readFileSync(f, 'utf8');
-    for (const h of findSecrets(text)) {
-      process.stdout.write(`${f}:${lineOf(text, h.offset)} [${h.pattern}] ${redact(h.match)}\n`);
-      found = true;
-    }
-  }
-  process.exit(found ? 1 : 0);
 }
