@@ -1,0 +1,127 @@
+import { describe, it, expect } from 'vitest';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { SeverityBadge } from '@/components/SeverityBadge';
+import { ProgressBar } from '@/components/ProgressBar';
+import { ResultsWindow } from '@/components/ResultsWindow';
+import { FindingDetail } from '@/components/FindingDetail';
+import { ScanWindow } from '@/components/ScanWindow';
+import { initialScanState } from '@/lib/scan-state';
+import type { FindingEntry } from '@/lib/scan-state';
+import type { Severity } from '@/lib/protocol';
+
+const entry = (id: number, severity: Severity, ruleId = 'EX-001'): FindingEntry => ({
+  id,
+  finding: {
+    source: 'signature', ruleId, title: 'Hidden Unicode instructions', severity,
+    file: 'a.md', line: 3, col: 5, span: '\\u200B', owasp: ['LLM01:2025 Prompt Injection'], fix: 'Remove it.',
+  },
+  snippet: { lines: [
+    { n: 2, before: 'before', match: '', after: '' },
+    { n: 3, before: 'ab', match: '[U+200B]', after: 'cd' },
+  ] },
+});
+
+describe('SeverityBadge', () => {
+  it.each([
+    ['critical', 'CRITICAL', 'diamond'],
+    ['high', 'HIGH', 'triangle'],
+    ['medium', 'MEDIUM', 'square'],
+    ['low', 'LOW', 'circle'],
+  ] as const)('%s shows a text label and a %s shape, not only colour', (sev, label, shape) => {
+    const html = renderToStaticMarkup(<SeverityBadge severity={sev} />);
+    expect(html).toContain(label);
+    expect(html).toContain(`data-shape="${shape}"`);
+    expect(html).toContain('aria-hidden="true"');
+  });
+
+  it('clean has its own label and shape', () => {
+    const html = renderToStaticMarkup(<SeverityBadge severity="clean" />);
+    expect(html).toContain('CLEAN');
+    expect(html).toContain('data-shape="check"');
+  });
+});
+
+describe('ProgressBar', () => {
+  it('is an accessible progressbar and indeterminate while running', () => {
+    const html = renderToStaticMarkup(<ProgressBar status="running" threatSeq={0} />);
+    expect(html).toContain('role="progressbar"');
+    expect(html).toContain('aria-label="Scanning"');
+    expect(html).not.toContain('aria-valuenow');
+  });
+
+  it('reports 100 when done and glitches only after a threat while running', () => {
+    expect(renderToStaticMarkup(<ProgressBar status="done" threatSeq={2} />)).toContain('aria-valuenow="100"');
+    expect(renderToStaticMarkup(<ProgressBar status="running" threatSeq={1} />)).toContain('data-possessed="true"');
+    expect(renderToStaticMarkup(<ProgressBar status="running" threatSeq={0} />)).toContain('data-possessed="false"');
+  });
+});
+
+describe('ResultsWindow', () => {
+  it('shows an empty state', () => {
+    expect(renderToStaticMarkup(<ResultsWindow findings={[]} selectedId={null} onSelect={() => undefined} />)).toContain('No threats yet');
+  });
+
+  it('lists worst first with plain-language headlines, file and line', () => {
+    const html = renderToStaticMarkup(
+      <ResultsWindow findings={[entry(1, 'low'), entry(2, 'critical'), entry(3, 'medium')]} selectedId={null} onSelect={() => undefined} />,
+    );
+    expect(html.indexOf('CRITICAL')).toBeLessThan(html.indexOf('MEDIUM'));
+    expect(html.indexOf('MEDIUM')).toBeLessThan(html.indexOf('LOW'));
+    expect(html).toContain('This file hides instructions for your AI');
+    expect(html).toContain('a.md:3');
+    expect(html).toContain('3 threats found');
+  });
+
+  it('marks the selected row', () => {
+    const html = renderToStaticMarkup(<ResultsWindow findings={[entry(7, 'high')]} selectedId={7} onSelect={() => undefined} />);
+    expect(html).toContain('aria-current="true"');
+  });
+});
+
+describe('FindingDetail', () => {
+  it('leads with the plain sentence, then technical details, with the span highlighted', () => {
+    const html = renderToStaticMarkup(<FindingDetail entry={entry(1, 'critical')} />);
+    expect(html.indexOf('This file hides instructions for your AI')).toBeLessThan(html.indexOf('Technical details'));
+    expect(html).toContain('<mark class="hit">[U+200B]</mark>');
+    expect(html).toContain('line 3, column 5');
+    expect(html).toContain('EX-001');
+    expect(html).toContain('LLM01:2025 Prompt Injection');
+    expect(html).toContain('Remove it.');
+    expect(html).toContain('/encyclopedia/EX-001');
+  });
+
+  it('shows rationale and confidence for heuristic findings', () => {
+    const e = entry(1, 'high');
+    const h: FindingEntry = {
+      ...e,
+      finding: { ...e.finding, source: 'heuristic', rationale: 'Looks like an injection.', confidence: 'high' },
+    };
+    const html = renderToStaticMarkup(<FindingDetail entry={h} />);
+    expect(html).toContain('Looks like an injection.');
+    expect(html).toContain('Confidence');
+  });
+
+  it('shows a prompt when nothing is selected', () => {
+    expect(renderToStaticMarkup(<FindingDetail entry={null} />)).toContain('Pick a threat');
+  });
+});
+
+describe('ScanWindow', () => {
+  const noop = () => undefined;
+  const base = { onScanUrl: noop, onScanHaunted: noop, onCancel: noop, onShowResults: noop };
+
+  it('has a labelled URL field, both scan buttons and a polite log region', () => {
+    const html = renderToStaticMarkup(<ScanWindow state={initialScanState} {...base} />);
+    expect(html).toContain('GitHub repository to scan');
+    expect(html).toContain('Scan the Haunted Repo');
+    expect(html).toContain('role="log"');
+    expect(html).toContain('aria-live="polite"');
+  });
+
+  it('disables Scan while running and enables Cancel', () => {
+    const running = { ...initialScanState, status: 'running' as const };
+    const html = renderToStaticMarkup(<ScanWindow state={running} {...base} />);
+    expect(html).toMatch(/<button type="submit" class="btn" disabled="">Scan<\/button>/);
+    expect(html).not.toMatch(/<button type="button" class="btn" disabled="">Cancel<\/button>/);
+  });
+});

@@ -29,6 +29,10 @@ lives. This becomes the Devpost write-up and the blog post.
 | 2026-11-19 | Test | Orchestrator unit tests (not property-based): `done` is always the last event, no file mtime changes after a scan, scan completes on an empty repo. The planned idempotence property is not written yet. | `packages/core/src/__tests__/orchestrator.test.ts` |
 | 2026-11-19 | PBT | PBT-SIG-05..08 - EX-001 detects a zero-width char at any position; EX-010 never flags pinned packages and always flags unpinned ones; EX-007 never flags read-only tools | `packages/core/src/__tests__/definitions-accuracy.test.ts` |
 | 2026-11-19 | Specs | Added REQ-10 and TASK-13 to `m1-engine` (detection accuracy fixes) instead of a new spec, keeping one spec per milestone | `.kiro/specs/m1-engine/` |
+| 2026-11-20 | Specs | Wrote `m2-ui` spec (requirements, design, tasks): streaming scan API, desktop shell, scan/results/detail windows, Threat Encyclopedia | `.kiro/specs/m2-ui/` |
+| 2026-11-20 | PBT | PBT-WEB-01..05 (8 properties): NDJSON parsing under any byte chunking; hidden characters always revealed; snippet reconstructs the line; GitHub URL validator accepts only owner/repo and rejects every suffix and host; severity sort order | `apps/web/src/__tests__/` |
+| 2026-11-20 | Test | Golden-path integration test: `POST /api/scan` on the Haunted Repo streams findings for all 12 shipped rules with snippets. It found a real bug: EX-009 never fired in a real scan because the walker classes the fixture as `config`, not `manifest`. | `apps/web/src/__tests__/route.test.ts` |
+| 2026-11-20 | Test | A real run against a public GitHub repo exposed a broken clone (simple-git refuses to run with GIT_PAGER set). Fixed by giving git an allowlisted environment, with a test. | `apps/web/src/lib/scan-service.ts` |
 | 2026-11-19 | Model      | Amazon Bedrock wired (not an MCP server): Claude Haiku for triage, Sonnet for judge; all tests use `FakeBedrockClient`; real client reads `AWS_REGION` at call time, never at module load                                   | `packages/core/src/llm/bedrock.ts`, `packages/core/src/llm/__tests__/fake-client.ts` |
 
 ---
@@ -79,11 +83,11 @@ lives. This becomes the Devpost write-up and the blog post.
 
 ## Counts (update before submitting)
 
-- Specs: 2 (`m0-foundation`, `m1-engine`)
+- Specs: 3 (`m0-foundation`, `m1-engine`, `m2-ui`)
 - Steering docs: 4 (`product`, `tech`, `security`, `ui`)
 - Hooks: 4 (`definition-save`, `mcp-config-change`, `spec-change`, `pre-commit-secrets`)
 - MCP servers: 0 (planned for M3)
 - Custom agents: 0 (planned for M4)
-- Property-based tests: 31 (PBT-FIX-01..04, PBT-DEF-01..03, PBT-SEC-01..04, PBT-WLK-01..04, PBT-NRM-01..04, PBT-SIG-01..08, PBT-HEU-01..04)
-- Tests passing: 146 in 18 files (last run after the accuracy fixes)
+- Property-based tests: 38 `fc.assert` properties (30 in core and fixtures, 8 in web). PBT-HEU-03 is a 20-iteration loop, not a fast-check property, and is not counted.
+- Tests passing: 210 in 25 files (last full run)
 - Powers: 0 (planned for M3)

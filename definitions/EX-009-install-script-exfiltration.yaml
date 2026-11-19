@@ -3,6 +3,7 @@ title: Install-script exfiltration
 severity: critical
 applies_to:
   - manifest
+  - config
 match:
   # preinstall, install and postinstall all run automatically on install.
   json_path: "$.scripts[preinstall,install,postinstall]"
