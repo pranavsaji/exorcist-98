@@ -24,6 +24,8 @@ export type ProxyOptions = {
   stdin?: Readable;
   stdout?: Writable;
   stderr?: Writable;
+  /** How often to check the pin file for approvals (ms). */
+  pollMs?: number;
 };
 
 const FAIL_CLOSED_EXIT = 78;
@@ -61,6 +63,7 @@ export async function runProxy(o: ProxyOptions): Promise<number> {
   // without restarting the proxy.
   let cached: State = first.state;
   let mtime = 0;
+  let dirty = false; // the pin file was re-read since the last approval check
   const readMtime = (): number => { try { return statSync(statePath(o.dir)).mtimeMs; } catch { return 0; } };
   mtime = readMtime();
   const io = {
@@ -68,7 +71,7 @@ export async function runProxy(o: ProxyOptions): Promise<number> {
       const m = readMtime();
       if (m !== mtime) {
         const r = loadState(statePath(o.dir));
-        if (r.ok) { cached = r.state; mtime = m; }
+        if (r.ok) { cached = r.state; mtime = m; dirty = true; }
         else log(`${r.error} Using the last good copy.`);
       }
       return cached;
@@ -123,12 +126,24 @@ export async function runProxy(o: ProxyOptions): Promise<number> {
   child.stderr.on('data', (chunk: Buffer) => void stderr.write(chunk));
   child.stdin.on('error', () => { /* the child went away; its exit is handled below */ });
 
+  // Notice approvals made from the command line while the agent is idle, so a
+  // re-approved tool comes back without a reconnect.
+  const watch = setInterval(() => {
+    if (dirty || readMtime() !== mtime) {
+      dirty = false;
+      run(engine.onStateChanged());
+    }
+  }, o.pollMs ?? 1000);
+  watch.unref();
+
   return await new Promise<number>((resolve) => {
     child.on('error', (err) => {
+      clearInterval(watch);
       log(`Could not start "${o.command}": ${err.message}`);
       resolve(127);
     });
     child.on('close', (code) => {
+      clearInterval(watch);
       for (const l of fromServer.flush()) run(engine.onServerLine(l));
       resolve(code ?? 1);
     });

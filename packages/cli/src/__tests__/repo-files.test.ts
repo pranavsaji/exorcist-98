@@ -78,9 +78,12 @@ describe('.kiro/hooks follow the documented v1 format', () => {
     expect(m('spec-change.json').test('docs/PLAN.md')).toBe(false);
   });
 
-  it('the secrets hook runs on shell commands only and blocks by exit code', () => {
+  it('the secrets hook runs before shell tools and blocks by exit code', () => {
     const h = HookFile.parse(readJson('.kiro/hooks/pre-commit-secrets.json')).hooks[0];
-    expect(h).toMatchObject({ trigger: 'PreToolUse', matcher: 'shell' });
+    expect(h?.trigger).toBe('PreToolUse');
+    const m = new RegExp(h?.matcher ?? '');
+    for (const id of ['shell', 'execute_bash']) expect(m.test(id), id).toBe(true);
+    for (const id of ['read_file', 'fs_write', 'web_fetch']) expect(m.test(id), id).toBe(false);
   });
 
   it('the spec-change hook still tells the agent to touch only THREATS.md', () => {
@@ -181,9 +184,25 @@ describe('GitHub Action and workflows', () => {
     expect(wf.jobs.scan.steps.some((s) => s.uses === './')).toBe(true);
   });
 
-  it('the CI workflow still parses', () => {
-    const ci = yaml.load(read('.github/workflows/ci.yml')) as { jobs: Record<string, unknown> };
-    expect(Object.keys(ci.jobs).sort()).toEqual(['build', 'install', 'test', 'typecheck']);
+  it('the CI workflow parses, uses Node 22, and never gives pnpm a second version', () => {
+    // A first run on GitHub failed: pnpm/action-setup got "version: 10" and the
+    // packageManager field at the same time, and refused to run.
+    type Job = { steps: Array<{ uses?: string; with?: Record<string, unknown> }> };
+    const ci = yaml.load(read('.github/workflows/ci.yml')) as { jobs: Record<string, Job> };
+    expect(Object.keys(ci.jobs).sort()).toEqual(['build', 'e2e', 'test']);
+    for (const [name, job] of Object.entries(ci.jobs)) {
+      for (const s of job.steps) {
+        if (s.uses?.startsWith('pnpm/action-setup')) expect(s.with?.['version'], name).toBeUndefined();
+        if (s.uses?.startsWith('actions/setup-node')) expect(s.with?.['node-version'], name).toBe('22');
+      }
+    }
+  });
+
+  it('the action installs pnpm from packageManager, not from a hard-coded version', () => {
+    const text = read('action.yml');
+    expect(text).not.toContain('pnpm/action-setup'); // its package_json_file input failed on GitHub
+    expect(text).toContain("require('./package.json').packageManager");
+    expect((JSON.parse(read('package.json')) as { packageManager: string }).packageManager).toMatch(/^pnpm@\d+\.\d+\.\d+$/);
   });
 });
 

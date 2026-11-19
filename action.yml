@@ -30,18 +30,17 @@ outputs:
 runs:
   using: composite
   steps:
-    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v7
       with:
-        package_json_file: ${{ github.action_path }}/package.json
+        node-version: "22"
 
-    - uses: actions/setup-node@v4
-      with:
-        node-version: "20"
-
+    # pnpm is installed from the action's own package.json ("packageManager"), so
+    # the version is the one this repo is tested with, wherever the action runs.
     - name: Build Exorcist 98
       shell: bash
       working-directory: ${{ github.action_path }}
       run: |
+        npm install --global --no-fund --no-audit "$(node -p "require('./package.json').packageManager")"
         pnpm install --frozen-lockfile --filter "@exorcist-98/cli..."
         pnpm --filter @exorcist-98/cli build
 
@@ -67,14 +66,14 @@ runs:
 
     - name: Upload SARIF to code scanning
       if: ${{ inputs.upload-sarif == 'true' }}
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: ${{ steps.report.outputs.sarif }}
         category: exorcist-98
 
     - name: Comment on the pull request
       if: ${{ inputs.comment == 'true' && github.event_name == 'pull_request' }}
-      uses: actions/github-script@v7
+      uses: actions/github-script@v9
       env:
         REPORT_FILE: ${{ steps.report.outputs.markdown }}
       with:

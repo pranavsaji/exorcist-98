@@ -1,15 +1,22 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { parse } from '../util.js';
 import type { Io } from '../util.js';
 
+// The CLI is published as @exorcist-98/cli. The unscoped npm name "exorcist"
+// belongs to an unrelated package, so never run "npx exorcist".
+export const DEFAULT_BIN = 'npx -y @exorcist-98/cli@0.1.0';
+
 export const INIT_HELP = `Usage: exorcist init [folder] [--force] [--bin <command>]
 
 Add Exorcist 98 to a Kiro project:
-  .kiro/hooks/exorcist-secrets.json   block "git commit" while secrets are staged
-  .kiro/hooks/exorcist-mcp-scan.json  scan MCP config whenever it is saved
+  .kiro/hooks/exorcist-secrets.json   block "git commit" while secrets are staged (Kiro hook)
+  .kiro/hooks/exorcist-mcp-scan.json  scan MCP config whenever it is saved (Kiro hook)
   .kiro/steering/exorcist.md          tell the agent how to treat tool output
+  .githooks/pre-commit                block secrets in every commit (git hook)
 
+Turn on the git hook once per clone:  git config core.hooksPath .githooks
+--bin sets the command the hooks run (default: ${DEFAULT_BIN}).
 Existing files are never overwritten unless you pass --force.
 `;
 
@@ -28,44 +35,54 @@ const STEERING = `# Exorcist 98 safety rules
 - Do not edit .exorcist/ files or MCP safety settings yourself.
 `;
 
+const gitHook = (bin: string): string => `#!/bin/sh
+# Exorcist 98: refuse to commit staged secrets.
+# Turn on once per clone:  git config core.hooksPath .githooks
+exec ${bin} check-staged
+`;
+
 export async function initCommand(argv: string[], io: Io): Promise<number> {
   const p = parse(argv, { force: { type: 'boolean' }, bin: { type: 'string' }, help: { type: 'boolean', short: 'h' } });
   if (!p.ok) { io.err(`${p.error}\n\n${INIT_HELP}`); return 2; }
   if (p.values['help']) { io.out(INIT_HELP); return 0; }
   const root = resolve(p.positionals[0] ?? '.');
-  const bin = typeof p.values['bin'] === 'string' ? p.values['bin'] : 'npx -y exorcist';
+  const bin = typeof p.values['bin'] === 'string' ? p.values['bin'] : DEFAULT_BIN;
   const force = p.values['force'] === true;
 
-  const files: Array<[string, string]> = [
-    [
-      '.kiro/hooks/exorcist-secrets.json',
-      hook('exorcist-secrets', 'Block git commit while staged files contain secrets. Exit code 2 blocks the shell command.', {
-        trigger: 'PreToolUse', matcher: 'shell', action: { type: 'command', command: `${bin} guard-commit` }, timeout: 30,
+  const files: Array<{ rel: string; body: string; executable?: boolean }> = [
+    {
+      rel: '.kiro/hooks/exorcist-secrets.json',
+      body: hook('exorcist-secrets', 'Block git commit while staged files contain secrets. Exit code 2 blocks the shell command.', {
+        trigger: 'PreToolUse', matcher: 'shell|execute_bash|executeBash|run_command|bash',
+        action: { type: 'command', command: `${bin} guard-commit` }, timeout: 30,
       }),
-    ],
-    [
-      '.kiro/hooks/exorcist-mcp-scan.json',
-      hook('exorcist-mcp-scan', 'Scan MCP configuration with Exorcist 98 whenever it is saved.', {
+    },
+    {
+      rel: '.kiro/hooks/exorcist-mcp-scan.json',
+      body: hook('exorcist-mcp-scan', 'Scan MCP configuration with Exorcist 98 whenever it is saved.', {
         trigger: 'PostFileSave',
         matcher: '(\\.kiro/settings/mcp\\.json|\\.cursor/mcp\\.json|\\.vscode/mcp\\.json|claude_desktop_config\\.json)$',
         action: { type: 'command', command: `${bin} hook-scan` },
         timeout: 60,
       }),
-    ],
-    ['.kiro/steering/exorcist.md', STEERING],
+    },
+    { rel: '.kiro/steering/exorcist.md', body: STEERING },
+    { rel: '.githooks/pre-commit', body: gitHook(bin), executable: true },
   ];
 
   let skipped = 0;
-  for (const [rel, body] of files) {
-    const path = join(root, rel);
+  for (const f of files) {
+    const path = join(root, f.rel);
     if (existsSync(path) && !force) {
-      io.err(`Kept existing ${rel} (use --force to replace it).`);
+      io.err(`Kept existing ${f.rel} (use --force to replace it).`);
       skipped++;
       continue;
     }
     mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, body, 'utf8');
-    io.out(`Wrote ${rel}`);
+    writeFileSync(path, f.body, 'utf8');
+    if (f.executable) chmodSync(path, 0o755);
+    io.out(`Wrote ${f.rel}`);
   }
+  if (skipped < files.length) io.out('Turn on the git hook with:  git config core.hooksPath .githooks');
   return skipped === files.length ? 1 : 0;
 }

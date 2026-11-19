@@ -41,6 +41,7 @@ function start(opts: { policy?: object; withConfig?: boolean; corruptPins?: bool
 
   const queue: Rpc[] = [];
   const waiters: Array<(m: Rpc) => void> = [];
+  const notifications: Rpc[] = [];
   let buf = '';
   stdout.on('data', (c: Buffer) => {
     buf += c.toString();
@@ -49,14 +50,17 @@ function start(opts: { policy?: object; withConfig?: boolean; corruptPins?: bool
       const line = buf.slice(0, nl);
       buf = buf.slice(nl + 1);
       const msg = JSON.parse(line) as Rpc;
-      const w = waiters.shift();
-      if (w) w(msg); else queue.push(msg);
+      if (msg['id'] === undefined) notifications.push(msg); // notifications are not replies
+      else {
+        const w = waiters.shift();
+        if (w) w(msg); else queue.push(msg);
+      }
       nl = buf.indexOf('\n');
     }
   });
 
   const done = runProxy({
-    server: 'notes', command: process.execPath, args: [FAKE], dir, definitionsDir: DEFS,
+    server: 'notes', command: process.execPath, args: [FAKE], dir, definitionsDir: DEFS, pollMs: 50,
     ...(opts.withConfig ? { configPath } : {}),
     env: { ...process.env, FAKE_MCP_CONTROL: control, FAKE_MCP_LOG: log },
     stdin, stdout, stderr,
@@ -78,8 +82,18 @@ function start(opts: { policy?: object; withConfig?: boolean; corruptPins?: bool
     return m;
   };
 
+  const waitForNotification = async (method: string, ms = 5000): Promise<Rpc> => {
+    const end = Date.now() + ms;
+    for (;;) {
+      const n = notifications.find((x) => x['method'] === method);
+      if (n) return n;
+      if (Date.now() > end) throw new Error(`no ${method} notification`);
+      await new Promise((r) => setTimeout(r, 25));
+    }
+  };
+
   return {
-    root, dir, configPath, rpc, done, stdin,
+    root, dir, configPath, rpc, done, stdin, notifications, waitForNotification,
     setControl: (c: object) => writeFileSync(control, JSON.stringify(c)),
     backendCalls: () => readFileSync(log, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l) as Rpc),
     stderr: () => errText,
@@ -141,6 +155,30 @@ describe('Shield proxy with a real MCP server process', () => {
     expect(await s.toolNames()).toEqual(['read_note', 'send_report']);
     expect(text(await s.rpc(...call('read_note', { name: 'c' })))).toBe('ok:read_note');
     expect(s.backendCalls()).toHaveLength(2);
+    await s.close();
+  });
+
+  it('advertises tools.listChanged and sends list_changed once a hidden tool is approved, with no request from the agent', async () => {
+    const s = start();
+    const init = await s.rpc('initialize', {});
+    expect(init['result']['capabilities']['tools']['listChanged']).toBe(true);
+    s.setControl({ description: 'Read a note by name.' });
+    await s.toolNames();
+    s.setControl({ description: 'Changed after approval.' });
+    expect(await s.toolNames()).toEqual(['send_report']);
+    expect(s.notifications).toEqual([]);
+
+    const { approveTool } = await import('../state.js');
+    const st = loadState(statePath(s.dir));
+    if (!st.ok) throw new Error(st.error);
+    await new Promise((r) => setTimeout(r, 25));
+    approveTool(st.state, 'notes', 'read_note');
+    saveState(statePath(s.dir), st.state);
+
+    // The agent sends nothing; the shield notices the approval and tells it.
+    const n = await s.waitForNotification('notifications/tools/list_changed');
+    expect(n).toEqual({ jsonrpc: '2.0', method: 'notifications/tools/list_changed' });
+    expect(await s.toolNames()).toEqual(['read_note', 'send_report']);
     await s.close();
   });
 

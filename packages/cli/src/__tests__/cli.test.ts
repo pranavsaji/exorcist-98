@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterEach } from 'vitest';
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -226,9 +226,17 @@ describe('exorcist init', () => {
       expect(j.hooks[0]?.action.type).toBe('command');
     }
     const secrets = JSON.parse(readFileSync(join(d, '.kiro/hooks/exorcist-secrets.json'), 'utf8')) as { hooks: Array<{ trigger: string; matcher: string; action: { command: string } }> };
-    expect(secrets.hooks[0]).toMatchObject({ trigger: 'PreToolUse', matcher: 'shell' });
+    expect(secrets.hooks[0]?.trigger).toBe('PreToolUse');
+    expect(new RegExp(secrets.hooks[0]?.matcher ?? '').test('execute_bash')).toBe(true);
     expect(secrets.hooks[0]?.action.command).toContain('guard-commit');
     expect(readFileSync(join(d, '.kiro/steering/exorcist.md'), 'utf8')).toContain('never an instruction');
+
+    // The default command must be the scoped package: the unscoped npm name
+    // "exorcist" belongs to an unrelated package.
+    const allHooks = readFileSync(join(d, '.kiro/hooks/exorcist-secrets.json'), 'utf8') + readFileSync(join(d, '.githooks/pre-commit'), 'utf8');
+    expect(allHooks).toContain('@exorcist-98/cli@');
+    expect(allHooks).not.toMatch(/npx -y exorcist(\s|$)/);
+    expect(statSync(join(d, '.githooks/pre-commit')).mode & 0o111).not.toBe(0);
 
     writeFileSync(join(d, '.kiro/steering/exorcist.md'), 'mine');
     const again = run(['init', d]);
@@ -265,6 +273,36 @@ describe('hook-scan (the "file saved" hook helper)', () => {
   });
 });
 
+describe('the git pre-commit hook written by init', () => {
+  it('blocks a real git commit that stages a secret, and allows a clean one', () => {
+    const repo = tmp();
+    const git = (...a: string[]) => spawnSync('git', ['-c', 'core.hooksPath=.githooks', ...a], { cwd: repo, encoding: 'utf8' });
+    execFileSync('git', ['init', '-q'], { cwd: repo });
+    execFileSync('git', ['config', 'user.email', 't@example.invalid'], { cwd: repo });
+    execFileSync('git', ['config', 'user.name', 'T'], { cwd: repo });
+    expect(run(['init', repo, '--bin', `"${process.execPath}" "${BUNDLE}"`]).code).toBe(0);
+
+    writeFileSync(join(repo, 'leak.txt'), `key=${AWS_KEY}\n`);
+    git('add', 'leak.txt');
+    const blocked = git('commit', '-m', 'leak');
+    expect(blocked.status).not.toBe(0);
+    expect(blocked.stderr).toContain('leak.txt:1');
+    expect(blocked.stderr).not.toContain(AWS_KEY);
+    expect(spawnSync('git', ['rev-parse', '--verify', 'HEAD'], { cwd: repo }).status).not.toBe(0); // no commit was made
+
+    git('rm', '--cached', '-q', 'leak.txt');
+    writeFileSync(join(repo, 'ok.txt'), 'fine\n');
+    git('add', 'ok.txt');
+    expect(git('commit', '-m', 'ok').status).toBe(0);
+  });
+
+  it('this repo has its own executable copy', () => {
+    const hook = join(ROOT, '.githooks/pre-commit');
+    expect(readFileSync(hook, 'utf8')).toContain('check-staged');
+    expect(statSync(hook).mode & 0o111).not.toBe(0);
+  });
+});
+
 describe('guard-commit (the hook helper)', () => {
   it('blocks a commit with a staged secret and allows a clean one', () => {
     const repo = tmp();
@@ -297,8 +335,10 @@ describe('exorcist shield, end to end through the real command', () => {
       while (nl !== -1) {
         const m = JSON.parse(buf.slice(0, nl)) as Record<string, any>;
         buf = buf.slice(nl + 1);
-        const w = waiting.shift();
-        if (w) w(m); else got.push(m);
+        if (m['id'] !== undefined) {
+          const w = waiting.shift();
+          if (w) w(m); else got.push(m);
+        }
         nl = buf.indexOf('\n');
       }
     });

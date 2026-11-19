@@ -42,7 +42,7 @@ child.stdout.on('data', (c) => {
   for (let nl = buf.indexOf('\n'); nl !== -1; nl = buf.indexOf('\n')) {
     const m = JSON.parse(buf.slice(0, nl));
     buf = buf.slice(nl + 1);
-    waiting.shift()?.(m);
+    if (m.id !== undefined) waiting.shift()?.(m); // skip notifications
   }
 });
 let id = 0;

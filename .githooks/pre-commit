@@ -1,0 +1,5 @@
+#!/bin/sh
+# Exorcist 98: refuse to commit staged secrets (this repo's own copy).
+# Turn on once per clone:  git config core.hooksPath .githooks
+# Undo:                    git config --unset core.hooksPath
+exec node_modules/.bin/tsx packages/cli/src/index.ts check-staged

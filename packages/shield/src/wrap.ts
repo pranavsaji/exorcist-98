@@ -4,7 +4,7 @@ export type McpConfig = { mcpServers?: Record<string, McpServerEntry> } & Record
 export type WrapOptions = {
   /** Executable that runs the shield, e.g. "exorcist" or "npx". */
   bin: string;
-  /** Arguments before `shield`, e.g. ["-y", "exorcist@0.1.0"] when bin is npx. */
+  /** Arguments before `shield`, e.g. ["-y", "@exorcist-98/cli@0.1.0"] when bin is npx. */
   binArgs?: string[];
   /** State folder passed to the shield (--dir). */
   dir?: string;

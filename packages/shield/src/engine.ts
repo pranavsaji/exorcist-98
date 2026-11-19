@@ -28,9 +28,23 @@ export type EngineOptions = {
   now?: () => Date;
 };
 
-type Withheld = { ruleId: string; reason: string };
+/** A tool hidden from the agent. `fingerprint` is the version that was hidden (rug pulls only). */
+type Withheld = { ruleId: string; reason: string; fingerprint?: string };
 
 const MAX_DIFF_CHARS = 4_000;
+
+/**
+ * The shield may send `notifications/tools/list_changed` after an approval, so
+ * it advertises `tools.listChanged` even when the wrapped server does not.
+ */
+function advertiseListChanged(msg: JsonRpcMessage): JsonRpcMessage {
+  const result = msg.result as { capabilities?: { tools?: Record<string, unknown> } } | undefined;
+  if (!result || typeof result !== 'object' || !result.capabilities?.tools) return msg;
+  return {
+    ...msg,
+    result: { ...result, capabilities: { ...result.capabilities, tools: { ...result.capabilities.tools, listChanged: true } } },
+  };
+}
 
 function joinReasons(reasons: Reason[]): string {
   return reasons.map((r) => `${r.message} (${r.ruleId})`).join(' ');
@@ -95,8 +109,29 @@ export class ShieldEngine {
 
   onClient(msg: JsonRpcMessage): Action[] {
     if (msg.method === 'tools/call' && msg.id !== undefined) return this.onToolCall(msg, msg.id);
-    if (msg.method === 'tools/list' && msg.id !== undefined) this.pending.set(msg.id, { method: 'tools/list' });
+    if ((msg.method === 'tools/list' || msg.method === 'initialize') && msg.id !== undefined) {
+      this.pending.set(msg.id, { method: msg.method });
+    }
     return [{ type: 'forward', to: 'server', message: msg }];
+  }
+
+  /**
+   * Call when the pin file may have changed (for example after
+   * `exorcist approve tool`). If a hidden tool is now approved, tell the agent
+   * its tool list changed so it re-lists without a reconnect.
+   */
+  onStateChanged(): Action[] {
+    const ss = serverState(this.o.io.load(), this.o.server);
+    let released = false;
+    for (const [name, w] of this.withheld) {
+      if (w.fingerprint !== undefined && ss.tools[name]?.hash === w.fingerprint) {
+        this.withheld.delete(name);
+        released = true;
+      }
+    }
+    return released
+      ? [{ type: 'forward', to: 'client', message: { jsonrpc: '2.0', method: 'notifications/tools/list_changed' } }]
+      : [];
   }
 
   private onToolCall(msg: JsonRpcMessage, id: JsonRpcId): Action[] {
@@ -165,6 +200,7 @@ export class ShieldEngine {
     if (!ctx || msg.result === undefined) return [{ type: 'forward', to: 'client', message: msg }];
 
     if (ctx.method === 'tools/list') return this.onToolsList(msg);
+    if (ctx.method === 'initialize') return [{ type: 'forward', to: 'client', message: advertiseListChanged(msg) }];
     if (ctx.method === 'tools/call') return this.onToolResult(msg, ctx.tool);
     return [{ type: 'forward', to: 'client', message: msg }];
   }
@@ -254,7 +290,7 @@ export class ShieldEngine {
           );
         }
         if (this.enforcing()) {
-          this.withheld.set(tool.name, { ruleId: 'EX-006', reason: 'it changed after you approved it (possible rug pull).' });
+          this.withheld.set(tool.name, { ruleId: 'EX-006', reason: 'it changed after you approved it (possible rug pull).', fingerprint: fp });
           if (this.o.policy.autoQuarantine && first) quarantine = true;
           continue;
         }

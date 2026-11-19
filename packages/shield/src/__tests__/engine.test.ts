@@ -75,6 +75,31 @@ describe('rug pull (EX-006)', () => {
     expect(JSON.stringify(forwards(call, 'client')[0])).toContain('changed after you approved it');
   });
 
+  it('onStateChanged releases an approved tool and asks the agent to re-list, once', () => {
+    const { engine, io } = setup();
+    list(engine, 1, [tool()]);
+    list(engine, 2, [tool('Changed.')]);
+    expect(engine.withheldTools()).toEqual(['read_note']);
+    expect(engine.onStateChanged()).toEqual([]); // nothing approved yet
+
+    const st = io.load();
+    approveTool(st, 'notes', 'read_note');
+    io.save(st);
+    expect(forwards(engine.onStateChanged(), 'client')).toEqual([{ jsonrpc: '2.0', method: 'notifications/tools/list_changed' }]);
+    expect(engine.withheldTools()).toEqual([]);
+    expect(engine.onStateChanged()).toEqual([]);
+  });
+
+  it('adds tools.listChanged to the initialize result only when the server has tools', () => {
+    const { engine } = setup();
+    engine.onClientLine(req(1, 'initialize', {}));
+    const withTools = forwards(engine.onServerLine(res(1, { capabilities: { tools: {} }, serverInfo: { name: 'x' } })), 'client')[0];
+    expect(withTools?.['result']?.capabilities?.tools).toEqual({ listChanged: true });
+    engine.onClientLine(req(2, 'initialize', {}));
+    const noTools = forwards(engine.onServerLine(res(2, { capabilities: { prompts: {} } })), 'client')[0];
+    expect(noTools?.['result']?.capabilities).toEqual({ prompts: {} });
+  });
+
   it('catches a change that no static rule would flag (the pin is what matters)', () => {
     const { engine } = setup();
     list(engine, 1, [tool()]);

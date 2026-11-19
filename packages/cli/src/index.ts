@@ -1,6 +1,7 @@
 import { decideCommitGuard } from '@exorcist-98/core';
 import { approveCommand, alertsCommand } from './commands/approve.js';
 import { wrapCommand } from './commands/config.js';
+import { checkStagedCommand } from './commands/check-staged.js';
 import { hookScanCommand } from './commands/hook-scan.js';
 import { initCommand } from './commands/init.js';
 import { scanCommand } from './commands/scan.js';
@@ -25,6 +26,7 @@ Commands:
   init [folder]      Add hooks and steering to a Kiro project
   guard-commit       Hook helper: block git commit while secrets are staged
   hook-scan          Hook helper: scan the file named in a Kiro "file saved" event
+  check-staged       Git pre-commit helper: exit 1 if staged files contain secrets
 
 Run "exorcist <command> --help" for details.
 `;
@@ -57,6 +59,7 @@ export async function main(argv: string[]): Promise<number> {
     case 'alerts': return await alertsCommand(rest, stdio);
     case 'init':   return await initCommand(rest, stdio);
     case 'hook-scan': return await hookScanCommand(await readStdin(), stdio);
+    case 'check-staged': return await checkStagedCommand(stdio);
     case 'guard-commit': {
       const d = decideCommitGuard(await readStdin());
       if (d.message) stdio.err(d.message);

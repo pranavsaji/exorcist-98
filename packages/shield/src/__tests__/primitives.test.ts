@@ -227,8 +227,8 @@ describe('wrap and unwrap', () => {
 
   it('works through npx with a binArgs prefix and unwraps exactly', () => {
     const original: McpConfig = { mcpServers: { a: { command: 'node', args: ['s.js'], env: { A: '1' } } } };
-    const wrapped = wrapConfig(original, { bin: 'npx', binArgs: ['-y', 'exorcist@0.1.0'] }).config;
-    expect(wrapped.mcpServers?.['a']?.['args']).toEqual(['-y', 'exorcist@0.1.0', 'shield', '--server', 'a', '--', 'node', 's.js']);
+    const wrapped = wrapConfig(original, { bin: 'npx', binArgs: ['-y', '@exorcist-98/cli@0.1.0'] }).config;
+    expect(wrapped.mcpServers?.['a']?.['args']).toEqual(['-y', '@exorcist-98/cli@0.1.0', 'shield', '--server', 'a', '--', 'node', 's.js']);
     expect(unwrapConfig(wrapped).config).toEqual(original);
   });
 

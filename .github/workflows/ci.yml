@@ -5,61 +5,68 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
+# Node 20 reached end of life in 2026; everything is tested on Node 22.
+# pnpm's version comes from "packageManager" in package.json (pnpm/action-setup
+# refuses to run when a second version is also given here).
+
 jobs:
-  install:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile
-
-  build:
-    needs: install
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm -r build
-
   test:
-    needs: install
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
-          version: 10
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm test
-
-  typecheck:
-    needs: install
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
+          node-version: "22"
+          cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r typecheck
+      - run: pnpm test
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+
+  # Drives the Chrome that ships on GitHub's Ubuntu runners against the built web app.
+  e2e:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @exorcist-98/web build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+      - name: Start the web app
+        run: |
+          pnpm --filter @exorcist-98/web exec next start -p 3000 > "$RUNNER_TEMP/web.log" 2>&1 &
+          for i in $(seq 1 30); do curl -fs http://localhost:3000/ > /dev/null && exit 0; sleep 1; done
+          cat "$RUNNER_TEMP/web.log"; exit 1
+      - run: pnpm e2e
+        env:
+          E2E_BASE: http://localhost:3000
+          CHROME_PATH: /usr/bin/google-chrome
+          E2E_OUT: e2e-output
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: e2e-screenshots
+          path: e2e-output

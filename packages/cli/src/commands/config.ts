@@ -13,7 +13,7 @@ unwrap Put the original commands back, exactly.
 
 Options (wrap):
   --bin <command>       Command that runs the shield (default: exorcist)
-  --bin-arg <arg>       Argument before "shield" (repeatable), e.g. --bin npx --bin-arg -y --bin-arg exorcist@0.1.0
+  --bin-arg <arg>       Argument before "shield" (repeatable), e.g. --bin npx --bin-arg -y --bin-arg @exorcist-98/cli@0.1.0
   --dir <folder>        State folder (default: ${resolve(DEFAULT_DIR)})
   --dry-run             Show the result without writing the file
 `;
