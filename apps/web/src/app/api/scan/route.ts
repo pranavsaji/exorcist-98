@@ -37,7 +37,7 @@ export async function POST(request: Request): Promise<Response> {
     if (!repo) {
       return badRequest('Only public https://github.com/owner/repo links can be scanned.');
     }
-    target = { kind: 'github', display: `${repo.owner}/${repo.repo}`, cloneUrl: repo.cloneUrl };
+    target = { kind: 'github', display: `${repo.owner}/${repo.repo}`, owner: repo.owner, repo: repo.repo };
   }
 
   const encoder = new TextEncoder();

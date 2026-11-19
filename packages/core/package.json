@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./plain": "./src/plain.ts"
+    "./plain": "./src/plain.ts",
+    "./browser": "./src/browser.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

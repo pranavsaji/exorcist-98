@@ -8,9 +8,9 @@ Built with [Kiro](https://kiro.dev) for **Kiroween 2026** (category: Resurrectio
 
 ## Status
 
-Milestones M0 to M3 are built and tested: the scan engine and virus definitions, the web app, the Real-Time Shield, the Quarantine Vault, the CLI, an MCP server, a Kiro Power and a GitHub Action. M4 (polish, SARIF badge, landing page) and M5 (video, write-up, submission) are not started. See [`docs/PLAN.md`](docs/PLAN.md).
+Milestones M0 to M4 are built and tested: the scan engine and virus definitions, the web app (with sound, report downloads, a README badge and a `/product` page), the Real-Time Shield, the Quarantine Vault, the CLI, an MCP server, a Kiro Power and a GitHub Action. The web app builds as a standalone server ([`docs/DEPLOY.md`](docs/DEPLOY.md)) but is not deployed yet. M5 (video, write-up, submission) is in progress. See [`docs/PLAN.md`](docs/PLAN.md).
 
-**Read [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) before trusting any claim here.** The most important gaps: the Shield, the Power and the MCP server have not been run inside Kiro, nothing is published to npm, the GitHub Action has not run on GitHub, and the AI (Bedrock) heuristic layer has never run against the real service.
+**Read [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) before trusting any claim here.** The most important gaps: the Shield, the Power and the MCP server have not been run inside Kiro, nothing is published to npm, the web app has no public URL yet, and the AI (Bedrock) heuristic layer has never run against the real service.
 
 ## The four parts
 

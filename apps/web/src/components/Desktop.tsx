@@ -1,7 +1,9 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { play, setSoundEnabled, soundEnabled } from '@/lib/sound';
+import { ReportButtons } from './ReportButtons';
 import { BookIcon, GhostIcon, InfoIcon, ShieldIcon, SkullIcon } from './Icons';
 import { DesktopIcon } from './DesktopIcon';
 import { FindingDetail } from './FindingDetail';
@@ -40,7 +42,29 @@ export function Desktop() {
   const { state, start, cancel } = useScan();
   const [wins, setWins] = useState<Record<WinId, WinState>>(INITIAL);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [soundOn, setSoundOn] = useState(false); // muted by default (ui.md)
   const topZ = useRef(10);
+
+  useEffect(() => setSoundOn(soundEnabled()), []);
+
+  // A ghost moan per threat (throttled in play) and a chime when a scan ends.
+  useEffect(() => {
+    if (state.threatSeq > 0) play('threat');
+  }, [state.threatSeq]);
+  const prevStatus = useRef(state.status);
+  useEffect(() => {
+    if (prevStatus.current === 'running' && state.status === 'done') {
+      play(state.findings.length > 0 ? 'done-infected' : 'done-clean');
+    }
+    prevStatus.current = state.status;
+  }, [state.status, state.findings.length]);
+
+  function toggleSound() {
+    const next = !soundOn;
+    setSoundEnabled(next);
+    setSoundOn(next);
+    if (next) play('boot');
+  }
 
   const focus = useCallback((id: WinId) => {
     topZ.current += 1;
@@ -146,7 +170,12 @@ export function Desktop() {
               />
             )}
             {id === 'results' && (
-              <ResultsWindow findings={state.findings} selectedId={selectedId} onSelect={select} />
+              <div className="flex flex-col gap-2">
+                <ResultsWindow findings={state.findings} selectedId={selectedId} onSelect={select} />
+                {state.status === 'done' && (
+                  <ReportButtons findings={state.findings.map((f) => f.finding)} stats={state.stats} target={state.target} />
+                )}
+              </div>
             )}
             {id === 'detail' && <FindingDetail entry={selected} />}
             {id === 'about' && (
@@ -163,9 +192,12 @@ export function Desktop() {
                   Every sample in the Haunted Repo is defanged: it uses example.invalid addresses and
                   placeholder secrets, and nothing in it can run.
                 </p>
-                <p className="m-0">
+                <p className="m-0 flex flex-wrap gap-x-3">
                   <a className="font-semibold underline" href="/encyclopedia">
                     Browse the Threat Encyclopedia
+                  </a>
+                  <a className="font-semibold underline" href="/product">
+                    What Exorcist 98 is for
                   </a>
                 </p>
               </div>
@@ -187,8 +219,11 @@ export function Desktop() {
           { label: 'Scan the Haunted Repo', icon: <SkullIcon size={18} />, onSelect: scanHaunted },
           { label: 'Virus Definitions', icon: <BookIcon size={18} />, href: '/encyclopedia' },
           { label: 'About Exorcist 98', icon: <GhostIcon size={18} />, onSelect: () => open('about') },
+          { label: 'Product and plans', icon: <ShieldIcon size={18} />, href: '/product' },
         ]}
         onToggle={toggleFromTaskbar}
+        soundOn={soundOn}
+        onToggleSound={toggleSound}
       />
     </main>
   );

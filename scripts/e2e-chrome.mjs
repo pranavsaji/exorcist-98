@@ -214,6 +214,61 @@ await step('drag: moving the title bar moves the window', async () => {
   return `moved (${dx},${dy})`;
 });
 
+await step('keyboard: Alt+arrow keys move the focused window', async () => {
+  const dlg = page.getByRole('dialog', { name: /Full System Scan/ });
+  await dlg.focus();
+  const before = await dlg.boundingBox();
+  await page.keyboard.press('Alt+ArrowRight');
+  await page.keyboard.press('Alt+ArrowDown');
+  await page.keyboard.press('Alt+Shift+ArrowRight');
+  const after = await dlg.boundingBox();
+  const dx = Math.round(after.x - before.x), dy = Math.round(after.y - before.y);
+  if (dx !== 80 || dy !== 20) throw new Error(`moved (${dx},${dy}), expected (80,20)`);
+  return `moved (${dx},${dy})`;
+});
+
+await step('sound is muted by default, toggles, and the choice persists', async () => {
+  const btn = page.locator('nav[aria-label="Taskbar"]').getByRole('button', { name: /Sound (off|on)/ });
+  const first = await btn.getAttribute('aria-pressed');
+  if (first !== 'false') throw new Error('sound was not muted by default: aria-pressed=' + first);
+  await btn.click();
+  if ((await btn.getAttribute('aria-pressed')) !== 'true') throw new Error('toggle did not turn sound on');
+  await page.reload({ waitUntil: 'networkidle' });
+  const again = page.locator('nav[aria-label="Taskbar"]').getByRole('button', { name: /Sound (off|on)/ });
+  await page.waitForFunction(() => [...document.querySelectorAll('nav[aria-label="Taskbar"] button[aria-pressed="true"]')].some((b) => b.textContent?.includes('Sound on')));
+  await again.click();
+  if ((await again.getAttribute('aria-pressed')) !== 'false') throw new Error('toggle did not turn sound off');
+  return 'muted by default; on; persisted across reload; off';
+});
+
+await step('reports: SARIF, Markdown, JSON and badge download from the results window', async () => {
+  await page.getByRole('button', { name: 'Scan the Haunted Repo' }).first().click();
+  await page.getByText('Scan complete.').first().waitFor({ timeout: 20000 });
+  const got = [];
+  for (const label of ['SARIF (code scanning)', 'Markdown (pull request)', 'JSON', 'README badge (SVG)']) {
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: label, exact: true }).click()]);
+    const path = join(OUT, dl.suggestedFilename());
+    await dl.saveAs(path);
+    const body = readFileSync(path, 'utf8');
+    if (label.startsWith('SARIF') && JSON.parse(body).version !== '2.1.0') throw new Error('bad SARIF');
+    if (label.startsWith('README') && !body.includes('possessed')) throw new Error('badge does not say possessed');
+    got.push(`${dl.suggestedFilename()} (${body.length} bytes)`);
+  }
+  await page.screenshot({ path: `${SHOTS}/09-reports.png` });
+  return got.join(', ');
+});
+
+await step('product page loads, links back to the desktop, and passes axe', async () => {
+  await page.goto(`${BASE}/product`, { waitUntil: 'networkidle' });
+  const h1 = await page.locator('h1').innerText();
+  if (!/virus/i.test(h1)) throw new Error('h1: ' + h1);
+  if ((await page.locator('a[href="/"]').count()) === 0) throw new Error('no link back to the desktop');
+  await page.screenshot({ path: `${SHOTS}/10-product.png`, fullPage: true });
+  const r = await axe('product'); axeReports.push(r);
+  await page.goto(BASE, { waitUntil: 'networkidle' });
+  return `"${h1}", ${r.violations.length} axe violation types`;
+});
+
 await step('real GitHub scan through the UI (octocat/Hello-World)', async () => {
   await page.getByLabel('GitHub repository to scan').fill('https://github.com/octocat/Hello-World');
   await page.getByRole('button', { name: 'Scan', exact: true }).click();

@@ -94,6 +94,10 @@ describe('exorcist scan', () => {
     const md = run(['scan', FIXTURES, '--format', 'markdown', '--fail-on', 'none']).out;
     expect(md.startsWith('## Exorcist 98 scan')).toBe(true);
     expect(md).toContain('This file hides instructions for your AI');
+    expect(run(['scan', FIXTURES, '--format', 'badge', '--fail-on', 'none']).out).toContain('possessed');
+    const clean = tmp();
+    writeFileSync(join(clean, 'README.md'), '# fine\n');
+    expect(run(['scan', clean, '--format', 'badge']).out).toContain('exorcised');
   });
 
   it('--ignore and .exorcistignore skip paths', () => {

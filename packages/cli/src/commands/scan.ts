@@ -1,12 +1,12 @@
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
-import { loadDefinitions, plainFor, scanRepo, toJson, toMarkdown, toSarif } from '@exorcist-98/core';
+import { loadDefinitions, plainFor, scanRepo, toBadgeSvg, toJson, toMarkdown, toSarif } from '@exorcist-98/core';
 import type { Finding, ScanStats } from '@exorcist-98/core';
 import { findDefinitionsDir, parse, str, strs } from '../util.js';
 import type { Io } from '../util.js';
 
 const RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
-const FORMATS = ['text', 'json', 'sarif', 'markdown'] as const;
+const FORMATS = ['text', 'json', 'sarif', 'markdown', 'badge'] as const;
 type Format = (typeof FORMATS)[number];
 
 export const SCAN_HELP = `Usage: exorcist scan <path> [options]
@@ -14,7 +14,9 @@ export const SCAN_HELP = `Usage: exorcist scan <path> [options]
 Scan a folder or file for attacks on AI coding agents.
 
 Options:
-  --format <text|json|sarif|markdown>   Output format (default: text)
+  --format <text|json|sarif|markdown|badge>
+                                        Output format (default: text). "badge" writes an
+                                        SVG README badge: "exorcised" or "possessed".
   --fail-on <critical|high|medium|low|none>
                                         Exit 1 if a finding is at least this bad (default: high)
   --ignore <path>                       Skip a path prefix (repeatable). A .exorcistignore
@@ -121,6 +123,7 @@ export async function scanCommand(argv: string[], io: Io): Promise<number> {
     format === 'json' ? `${JSON.stringify(toJson(findings, stats), null, 2)}\n`
     : format === 'sarif' ? `${JSON.stringify(toSarif(findings, root), null, 2)}\n`
     : format === 'markdown' ? toMarkdown(findings, stats)
+    : format === 'badge' ? toBadgeSvg(findings)
     : renderText(findings, stats);
 
   const outFile = str(p.values['output']);

@@ -101,7 +101,7 @@ describe('FindingDetail', () => {
     expect(html).toContain('Confidence');
   });
 
-  it('shows a prompt when nothing is selected', () => {
+  it('shows a prompt when nothing is selected (empty state)', () => {
     expect(renderToStaticMarkup(<FindingDetail entry={null} />)).toContain('Pick a threat');
   });
 });

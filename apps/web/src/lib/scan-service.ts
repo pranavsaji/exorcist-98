@@ -2,8 +2,7 @@ import { randomUUID } from "node:crypto";
 import { readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import simpleGit from "simple-git";
-import { scanRepo } from "@exorcist-98/core";
+import { fetchGithubRepo, scanRepo } from "@exorcist-98/core";
 import type { Finding } from "@exorcist-98/core";
 import { definitionsDir, hauntedRepoDir } from "./paths";
 import { buildSnippet } from "./snippet";
@@ -11,9 +10,10 @@ import type { ScanEventMsg, WebFinding } from "./protocol";
 
 export type ScanTarget =
   | { kind: "haunted-repo"; display: string }
-  | { kind: "github"; display: string; cloneUrl: string };
+  | { kind: "github"; display: string; owner: string; repo: string };
 
-export type CloneFn = (cloneUrl: string, dir: string) => Promise<void>;
+/** Puts a copy of the repository in `dir`. Throws with a plain message on failure. */
+export type CloneFn = (target: { owner: string; repo: string }, dir: string) => Promise<void>;
 
 export type ScanServiceOptions = {
   clone?: CloneFn;
@@ -24,43 +24,17 @@ const DEFAULT_MAX_FINDINGS = 500;
 const GENERIC_FATAL = "The scan could not be completed.";
 const GENERIC_FILE_ERROR = "This file could not be read.";
 
-const GIT_ENV_ALLOWLIST = [
-  "PATH",
-  "HOME",
-  "LANG",
-  "LC_ALL",
-  "TMPDIR",
-  "SYSTEMROOT",
-  "HTTPS_PROXY",
-  "HTTP_PROXY",
-  "NO_PROXY",
-  "https_proxy",
-  "http_proxy",
-  "no_proxy",
-  "SSL_CERT_FILE",
-  "SSL_CERT_DIR",
-];
-
 /**
- * Environment for the git subprocess: an allowlist, never the whole process
- * environment. This keeps cloud credentials out of git and avoids simple-git
- * refusing to run when variables such as GIT_PAGER are set.
+ * Download the repository as a tarball over HTTPS (no git binary, no
+ * subprocess), with size, file-count and time limits.
  */
-export function gitEnv(
-  source: Readonly<Record<string, string | undefined>> = process.env,
-): Record<string, string> {
-  const env: Record<string, string> = { GIT_TERMINAL_PROMPT: "0" };
-  for (const key of GIT_ENV_ALLOWLIST) {
-    const v = source[key];
-    if (v !== undefined) env[key] = v;
-  }
-  return env;
+async function defaultClone(t: { owner: string; repo: string }, dir: string): Promise<void> {
+  const r = await fetchGithubRepo({ owner: t.owner, repo: t.repo, dir });
+  if (!r.ok) throw new UserFacingError(r.error);
 }
 
-async function defaultClone(cloneUrl: string, dir: string): Promise<void> {
-  const git = simpleGit({ timeout: { block: 60_000 } }).env(gitEnv());
-  await git.clone(cloneUrl, dir, ["--depth", "1", "--single-branch"]);
-}
+/** An error whose message is safe and useful to show to the user. */
+export class UserFacingError extends Error {}
 
 function toWebFinding(f: Finding): WebFinding {
   const base: WebFinding = {
@@ -102,7 +76,7 @@ export async function* scanTarget(
     } else {
       const dir = join(tmpdir(), `exorcist-${randomUUID()}`);
       cleanup = () => rm(dir, { recursive: true, force: true });
-      await (options.clone ?? defaultClone)(target.cloneUrl, dir);
+      await (options.clone ?? defaultClone)({ owner: target.owner, repo: target.repo }, dir);
       root = dir;
     }
 
@@ -177,8 +151,8 @@ export async function* scanTarget(
         yield { type: "done", stats };
       }
     }
-  } catch {
-    yield { type: "fatal", message: GENERIC_FATAL };
+  } catch (err) {
+    yield { type: "fatal", message: err instanceof UserFacingError ? err.message : GENERIC_FATAL };
   } finally {
     if (cleanup) await cleanup().catch(() => undefined);
   }

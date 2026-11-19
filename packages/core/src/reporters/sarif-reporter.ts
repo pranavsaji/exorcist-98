@@ -1,5 +1,15 @@
-import { relative } from 'node:path';
 import type { Finding } from '../types.js';
+
+// Browser-safe: no Node imports, so the web app can build SARIF in the page.
+
+/** A path relative to `root`, with forward slashes. Paths outside root are kept as given. */
+function relativeTo(root: string, file: string): string {
+  const norm = (p: string) => p.replace(/\\/g, '/').replace(/\/+$/, '');
+  const r = norm(root);
+  const f = norm(file);
+  if (r && f.startsWith(`${r}/`)) return f.slice(r.length + 1);
+  return f.replace(/^\/+/, '');
+}
 
 export type SarifLog = {
   version: '2.1.0';
@@ -52,7 +62,7 @@ export function toSarif(findings: Finding[], repoRoot: string): SarifLog {
     }
 
     // Make the URI relative to the repo root
-    const uri = f.file.startsWith('/') ? relative(repoRoot, f.file) : f.file;
+    const uri = f.file.startsWith('/') ? relativeTo(repoRoot, f.file) : f.file;
 
     return {
       ruleId: f.ruleId,

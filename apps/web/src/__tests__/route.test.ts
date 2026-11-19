@@ -4,7 +4,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { POST } from '@/app/api/scan/route';
 import { parseNdjsonStream } from '@/lib/ndjson';
-import { gitEnv, scanTarget } from '@/lib/scan-service';
+import { UserFacingError, scanTarget } from '@/lib/scan-service';
 import type { ScanEventMsg } from '@/lib/protocol';
 
 vi.spyOn(console, 'log').mockImplementation(() => undefined);
@@ -100,20 +100,8 @@ describe('POST /api/scan: golden path (Haunted Repo)', () => {
   });
 });
 
-describe('gitEnv', () => {
-  it('passes only allowlisted variables and disables prompts', () => {
-    const env = gitEnv({
-      PATH: '/usr/bin', HOME: '/home/x', GIT_PAGER: 'less', GIT_SSH_COMMAND: 'evil',
-      AWS_SECRET_ACCESS_KEY: 'EXAMPLE_TOKEN_DO_NOT_USE', HTTPS_PROXY: 'http://proxy.invalid:3128',
-    });
-    expect(env).toEqual({
-      GIT_TERMINAL_PROMPT: '0', PATH: '/usr/bin', HOME: '/home/x', HTTPS_PROXY: 'http://proxy.invalid:3128',
-    });
-  });
-});
-
 describe('scanTarget: cloned repositories', () => {
-  const target = { kind: 'github' as const, display: 'o/r', cloneUrl: 'https://github.com/o/r.git' };
+  const target = { kind: 'github' as const, display: 'o/r', owner: 'o', repo: 'r' };
 
   it('scans a clone and removes it afterwards', async () => {
     let cloned = '';
@@ -149,6 +137,14 @@ describe('scanTarget: cloned repositories', () => {
     expect(fatal).toBeDefined();
     expect(JSON.stringify(events)).not.toContain('/secret/path');
     expect(existsSync(cloned)).toBe(false);
+  });
+
+  it('shows the plain reason when the download fails (not found, too large, too slow)', async () => {
+    const events: ScanEventMsg[] = [];
+    for await (const ev of scanTarget(target, {
+      clone: async () => { throw new UserFacingError('That repository was not found, or it is private.'); },
+    })) events.push(ev);
+    expect(events.at(-1)).toEqual({ type: 'fatal', message: 'That repository was not found, or it is private.' });
   });
 
   it('caps the number of findings and says so', async () => {

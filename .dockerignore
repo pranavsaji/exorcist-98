@@ -1,0 +1,9 @@
+**/node_modules
+**/.next
+**/dist
+.git
+e2e-output
+packages/cli/definitions
+packages/mcp-server/definitions
+.exorcist
+**/*.log

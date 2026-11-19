@@ -48,6 +48,15 @@ export function Window(props: WindowProps) {
     if (e.key === 'Escape') {
       e.stopPropagation();
       onClose(id);
+      return;
+    }
+    // Alt + arrow keys move the window (Shift moves further), so dragging is not mouse-only.
+    if (e.altKey && e.key.startsWith('Arrow')) {
+      e.preventDefault();
+      const step = e.shiftKey ? 60 : 20;
+      const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+      const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+      onMove(id, Math.max(0, x + dx), Math.max(0, y + dy));
     }
   }
 
@@ -56,6 +65,7 @@ export function Window(props: WindowProps) {
       ref={ref}
       role="dialog"
       aria-labelledby={titleId}
+      aria-describedby={`${titleId}-keys`}
       tabIndex={-1}
       hidden={minimized}
       className="win"
@@ -81,6 +91,7 @@ export function Window(props: WindowProps) {
           <span aria-hidden="true">x</span>
         </button>
       </div>
+      <p id={`${titleId}-keys`} className="sr-only">Press Escape to close. Alt and the arrow keys move this window.</p>
       <div className="min-h-0 flex-1 overflow-auto p-2">{children}</div>
     </section>
   );

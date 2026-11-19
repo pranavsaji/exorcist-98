@@ -11,6 +11,8 @@ type Props = {
   windows:  TaskbarWindow[];
   items:    StartItem[];
   onToggle: (id: string) => void;
+  soundOn:  boolean;
+  onToggleSound: () => void;
 };
 
 function useClock(): string {
@@ -25,7 +27,7 @@ function useClock(): string {
   return now;
 }
 
-export function Taskbar({ windows, items, onToggle }: Props) {
+export function Taskbar({ windows, items, onToggle, soundOn, onToggleSound }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const clock = useClock();
 
@@ -98,6 +100,23 @@ export function Taskbar({ windows, items, onToggle }: Props) {
           </li>
         ))}
       </ul>
+
+      <button
+        type="button"
+        className="btn"
+        aria-pressed={soundOn}
+        onClick={onToggleSound}
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+          <path d="M2 6h3l4-3v10L5 10H2z" fill="currentColor" />
+          {soundOn ? (
+            <path d="M11 5.5a3.5 3.5 0 0 1 0 5M12.5 3.5a6 6 0 0 1 0 9" fill="none" stroke="currentColor" strokeWidth="1.4" />
+          ) : (
+            <path d="M11 5.5l4 5M15 5.5l-4 5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+          )}
+        </svg>
+        <span className="text-xs">{soundOn ? 'Sound on' : 'Sound off'}</span>
+      </button>
 
       <div className="bevel-in px-3 py-1 font-mono text-sm" aria-label="Clock" suppressHydrationWarning>
         {clock}
