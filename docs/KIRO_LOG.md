@@ -51,6 +51,11 @@ lives. This becomes the Devpost write-up and the blog post.
 | 2026-11-18 | Specs | Wrote `m4-polish` (requirements, design, tasks): sound, reports and badge, keyboard window moves, landing page, deployable web app, Crew app. | `.kiro/specs/m4-polish/` |
 | 2026-11-18 | PBT | PBT-WEB-06 (the badge always shows the worst severity present), PBT-TAR-01 (any set of files round-trips through tar with identical bytes), PBT-TAR-02 (no entry name writes outside the target folder). | `apps/web/src/__tests__/report.test.ts`, `packages/core/src/__tests__/tarball.test.ts` |
 | 2026-11-18 | Test | Deployment rehearsal: the standalone server, copied to a folder outside the repository, passed the 24-step browser suite with 0 axe violations, including a real GitHub scan through the new tarball path (no `git` binary). The Dockerfile has not been built. | `scripts/e2e-chrome.mjs`, `docs/DEPLOY.md` |
+| 2026-11-18 | Crew | Built the Crew app in `pranavsaji/exorcist-98-crew` against the Crew docs (Apps, Manifest reference, SDK reference, Publishing): Sentry agent, agent-hygiene skill, nightly cron, a Node backend that runs the Exorcist 98 CLI, and a dashboard page. The agent-facing reply carries no quoted file text. 59 tests (PBT-CRW-01..05, a real CLI scan of the Haunted Repo) and a 16-step Chrome run with 0 axe violations through a stand-in gateway. **Never run inside Crew** (`kirocrew` not installed). | `exorcist-98-crew` commit `b6fed7d`, its `docs/KNOWN_LIMITATIONS.md` |
+| 2026-11-18 | Specs | Wrote the `crew-app` spec in the Crew repo (requirements, design, tasks). | `exorcist-98-crew/.kiro/specs/crew-app/` |
+| 2026-11-18 | Hooks | `spec-change` fired four more times, on saves of the Crew repo's spec files, with this repo as `cwd` and the Crew file as `file_path`. No `THREATS.md` row related to them, so none changed. | this session |
+| 2026-11-18 | Test | The Crew Chrome run found a real accessibility defect (button text "Remove" not in its accessible name, WCAG 2.5.3) and a repeated phrase in the folder summary; both fixed. | `exorcist-98-crew/scripts/e2e-chrome.mjs` |
+| 2026-11-18 | Docs | M5 drafts: video script, Devpost write-up, blog post, social posts. | `docs/VIDEO_SCRIPT.md`, `docs/SUBMISSION.md`, `docs/BLOG.md`, `docs/SOCIAL.md` |
 | 2026-11-15 | Model      | Amazon Bedrock wired (not an MCP server): Claude Haiku for triage, Sonnet for judge; all tests use `FakeBedrockClient`; real client reads `AWS_REGION` at call time, never at module load                                   | `packages/core/src/llm/bedrock.ts`, `packages/core/src/llm/__tests__/fake-client.ts` |
 
 ---
@@ -105,11 +110,12 @@ lives. This becomes the Devpost write-up and the blog post.
 
 ## Counts (update before submitting)
 
-- Specs: 5 (`m0-foundation`, `m1-engine`, `m2-ui`, `m3-shield`, `m4-polish`)
+- Specs: 5 here (`m0-foundation`, `m1-engine`, `m2-ui`, `m3-shield`, `m4-polish`) plus 1 in the Crew repo (`crew-app`)
 - Steering docs: 4 (`product`, `tech`, `security`, `ui`)
 - Hooks: 4 in Kiro's JSON format (`definition-save`, `mcp-config-change`, `spec-change`, `pre-commit-secrets`); 1 seen firing (`spec-change`), 1 seen not firing (`pre-commit-secrets`), plus a git `pre-commit` hook outside Kiro
 - MCP servers: 1 built and tested (`exorcist`); not yet registered in Kiro (the config write was blocked)
-- Custom agents: 0 in this repository
-- Property-based tests: 52 `fc.assert` properties (core 30, fixtures 4, shield 9, web 9). PBT-HEU-03 is a loop, not a fast-check property, and is not counted.
+- Custom agents: 0 in this repository; 1 Crew agent (`exorcist-sentry`) in the Crew repo
+- Crew apps: 1 (`exorcist-98-crew`), built and tested outside Crew, not yet run in Crew
+- Property-based tests: 52 `fc.assert` properties (core 30, fixtures 4, shield 9, web 9), plus 11 in the Crew repo (PBT-CRW-01 to 05). PBT-HEU-03 is a loop, not a fast-check property, and is not counted.
 - Tests passing: 431 in 37 files (last full run), plus 24 browser steps in `pnpm e2e` (0 accessibility violations)
 - Powers: 1 built (`exorcist`); not installed in Kiro, npm packages not published

@@ -5,7 +5,7 @@
 - [x] TASK-03 Keyboard window moves, label-in-name fix, axe on every page. (REQ-03)
 - [x] TASK-04 `/product` landing page. (REQ-04)
 - [x] TASK-05 Tarball fetch replaces git clone; standalone output; deployment rehearsal; Dockerfile. (REQ-05)
-- [ ] TASK-06 Crew app in its own repository. (REQ-06)
+- [x] TASK-06 Crew app in its own repository. (REQ-06) Built and tested outside Crew; not yet run in Crew.
 - [x] TASK-07 Tests and docs. (REQ-07)
 
 ## Results
