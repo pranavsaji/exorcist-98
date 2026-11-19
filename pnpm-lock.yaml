@@ -23,6 +23,9 @@ importers:
       aws-lambda:
         specifier: ^1.0
         version: 1.0.7
+      axe-core:
+        specifier: ^4.14.1
+        version: 4.14.1
       fast-check:
         specifier: ^3.19
         version: 3.23.2
@@ -32,6 +35,9 @@ importers:
       jsonpath-plus:
         specifier: ^9.0
         version: 9.0.0
+      playwright-core:
+        specifier: ^1.65.1
+        version: 1.65.1
       simple-git:
         specifier: ^3.25
         version: 3.36.0
@@ -853,6 +859,10 @@ packages:
     engines: {node: '>= 10.0.0'}
     deprecated: The AWS SDK for JavaScript (v2) has reached end-of-support, and no longer receives updates. Please migrate your code to use AWS SDK for JavaScript (v3). More info https://a.co/cUPnyil
 
+  axe-core@4.14.1:
+    resolution: {integrity: sha512-FHfa+lmNjQZfJz1q8wKqIDwC6DExcHt/pkjNQb09a3NPjCKg2rhu5qb2S4r76ASyFNNtuFooJpZe37OgudVGtQ==}
+    engines: {node: '>=4'}
+
   base64-js@1.5.1:
     resolution: {integrity: sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA==}
 
@@ -1330,6 +1340,11 @@ packages:
 
   pkg-types@1.3.1:
     resolution: {integrity: sha512-/Jm5M4RvtBFVkKWRu2BLUTNP8/M2a+UwuAX+ae4770q1qVGtfjG+WTCupoZixokjmHiry8uI+dlY8KXYV5HVVQ==}
+
+  playwright-core@1.65.1:
+    resolution: {integrity: sha512-hqPpz7blSMPxWVdoeE1yiBSzXsKiVOd2k+kjCvmUywD2GPO2Dd9HfcWnq9NN0GHbNZDFgZ9JfBFr+X5/BLo0qw==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   possible-typed-array-names@1.1.0:
     resolution: {integrity: sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg==}
@@ -2331,6 +2346,8 @@ snapshots:
       uuid: 8.0.0
       xml2js: 0.6.2
 
+  axe-core@4.14.1: {}
+
   base64-js@1.5.1: {}
 
   baseline-browser-mapping@2.11.38: {}
@@ -2824,6 +2841,8 @@ snapshots:
       confbox: 0.1.8
       mlly: 1.8.2
       pathe: 2.0.3
+
+  playwright-core@1.65.1: {}
 
   possible-typed-array-names@1.1.0: {}
 

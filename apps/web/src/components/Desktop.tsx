@@ -109,7 +109,7 @@ export function Desktop() {
     <main className="relative h-screen w-screen overflow-hidden bg-desk">
       <h1 className="sr-only">Exorcist 98: antivirus for AI coding agents</h1>
 
-      <div className="absolute left-2 top-2 flex flex-col gap-1">
+      <div className="desktop-icons absolute left-2 top-2 flex flex-col gap-1">
         <DesktopIcon label="Full System Scan" icon={<ShieldIcon />} onOpen={() => open('scan')} />
         <DesktopIcon label="Scan the Haunted Repo" icon={<SkullIcon />} onOpen={scanHaunted} />
         <DesktopIcon label="Virus Definitions" icon={<BookIcon />} href="/encyclopedia" />

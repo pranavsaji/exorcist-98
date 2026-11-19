@@ -32,6 +32,12 @@ export function ScanWindow({ state, onScanUrl, onScanHaunted, onCancel, onShowRe
   const errorId = useId();
   const running = state.status === 'running';
 
+  // A scan can start from the desktop icon or Start menu too, so clear any
+  // old URL error whenever a scan begins.
+  useEffect(() => {
+    if (state.status === 'running') setUrlError(null);
+  }, [state.status]);
+
   // Keep the newest log line in view.
   useEffect(() => {
     const el = logRef.current;
@@ -69,7 +75,10 @@ export function ScanWindow({ state, onScanUrl, onScanHaunted, onCancel, onShowRe
             value={url}
             aria-invalid={urlError ? true : undefined}
             aria-describedby={urlError ? errorId : undefined}
-            onChange={(e) => setUrl(e.target.value)}
+            onChange={(e) => {
+              setUrl(e.target.value);
+              setUrlError(null);
+            }}
           />
           <button type="submit" className="btn" disabled={running}>
             Scan
@@ -81,7 +90,15 @@ export function ScanWindow({ state, onScanUrl, onScanHaunted, onCancel, onShowRe
           </p>
         )}
         <div className="flex flex-wrap gap-2">
-          <button type="button" className="btn" onClick={onScanHaunted} disabled={running}>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              setUrlError(null);
+              onScanHaunted();
+            }}
+            disabled={running}
+          >
             Scan the Haunted Repo
           </button>
           <button type="button" className="btn" onClick={onCancel} disabled={!running}>

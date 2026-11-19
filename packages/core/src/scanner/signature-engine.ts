@@ -1,6 +1,6 @@
 import { JSONPath } from 'jsonpath-plus';
 import type { RepoFile, SignatureFinding, Severity } from '../types.js';
-import type { NormalizedText } from '../normalizer.js';
+import type { NormalizedText, UnicodeHit } from '../normalizer.js';
 import type { VirusDefinition } from '../definitions/schema.js';
 
 const MAX_SPAN = 120;
@@ -24,6 +24,22 @@ function offsetToPosition(text: string, offset: number): { line: number; col: nu
   const lastNl = before.lastIndexOf('\n');
   const col = lastNl === -1 ? offset + 1 : offset - lastNl;
   return { line, col };
+}
+
+function escapeCodePoint(hit: UnicodeHit): string {
+  const hex = hit.codePoint.toString(16).toUpperCase();
+  return hit.codePoint > 0xFFFF ? `\\u{${hex}}` : `\\u${hex.padStart(4, '0')}`;
+}
+
+/** Join escapes for a run of hidden characters, cutting only between escapes. */
+function joinEscapes(run: UnicodeHit[]): string {
+  let out = '';
+  for (const hit of run) {
+    const e = escapeCodePoint(hit);
+    if (out.length + e.length > MAX_SPAN) return `${out}…`;
+    out += e;
+  }
+  return out;
 }
 
 function truncateSpan(s: string): string {
@@ -78,15 +94,26 @@ export function runSignatures(
 
     // ── unicode_class ────────────────────────────────────────────────────────
     if (match.unicode_class && match.unicode_class.length > 0) {
+      // Adjacent hidden characters are one finding: a payload of 37 tag
+      // characters is one hidden message, not 37 problems.
+      let run: UnicodeHit[] = [];
+      const flush = (): void => {
+        const first = run[0];
+        if (!first) return;
+        const { line, col } = offsetToPosition(norm.original, first.offset);
+        findings.push({ ...base, line, col, span: joinEscapes(run) });
+        run = [];
+      };
       for (const hit of norm.hiddenUnicode) {
-        if (match.unicode_class.includes(hit.class)) {
-          const { line, col } = offsetToPosition(norm.original, hit.offset);
-          const cpHex = hit.codePoint > 0xFFFF
-            ? `\\u{${hit.codePoint.toString(16).toUpperCase()}}`
-            : `\\u${hit.codePoint.toString(16).toUpperCase().padStart(4, '0')}`;
-          findings.push({ ...base, line, col, span: cpHex });
+        if (!match.unicode_class.includes(hit.class)) {
+          flush();
+          continue;
         }
+        const prev = run[run.length - 1];
+        if (prev && hit.offset !== prev.offset + prev.char.length) flush();
+        run.push(hit);
       }
+      flush();
     }
 
     // ── json_path (+ optional value_regex filter) ────────────────────────────

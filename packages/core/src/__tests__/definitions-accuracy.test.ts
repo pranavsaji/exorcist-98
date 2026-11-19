@@ -45,6 +45,54 @@ describe('EX-001 hidden Unicode (real characters)', () => {
   });
 });
 
+describe('EX-001 groups adjacent hidden characters', () => {
+  const tag = (s: string) => [...s].map((c) => String.fromCodePoint(0xE0000 + c.charCodeAt(0))).join('');
+
+  it('reports a run of tag characters as one finding at the start of the run', () => {
+    const f = scan('EX-001', 'README.md', 'docs', `line one\nhello${tag('SECRET')} world`);
+    expect(f).toHaveLength(1);
+    expect(f[0]).toMatchObject({ line: 2, col: 6 });
+    expect(f[0]?.span).toBe('\\u{E0053}\\u{E0045}\\u{E0043}\\u{E0052}\\u{E0045}\\u{E0054}');
+  });
+
+  it('keeps hidden characters separated by visible text as separate findings', () => {
+    expect(scan('EX-001', 'README.md', 'docs', 'a\u200Bb\u200Bc')).toHaveLength(2);
+  });
+
+  it('joins mixed classes that touch each other', () => {
+    expect(scan('EX-001', 'README.md', 'docs', 'a\u200B\u202Eb')).toHaveLength(1);
+  });
+
+  it('caps the span of a very long run and cuts only between escapes', () => {
+    const f = scan('EX-001', 'README.md', 'docs', `x${tag('A'.repeat(100))}`);
+    expect(f).toHaveLength(1);
+    const span = f[0]?.span ?? '';
+    expect(span.length).toBeLessThanOrEqual(121);
+    expect(span.endsWith('…')).toBe(true);
+    expect(span.slice(0, -1)).toMatch(/^(?:\\u\{E0041\})+$/);
+  });
+
+  it('PBT-SIG-09: the number of findings equals the number of runs, for any placement', () => {
+    const piece = fc.oneof(
+      fc.constantFrom('\u200B', '\u200C', '\u202E', String.fromCodePoint(0xE0041)).map((h) => ({ hidden: true, text: h })),
+      fc.stringMatching(/^[a-z ]{1,5}$/).map((t) => ({ hidden: false, text: t })),
+    );
+    fc.assert(
+      fc.property(fc.array(piece, { maxLength: 14 }), (pieces) => {
+        let runs = 0;
+        let prevHidden = false;
+        for (const p of pieces) {
+          if (p.hidden && !prevHidden) runs++;
+          prevHidden = p.hidden;
+        }
+        const text = pieces.map((p) => p.text).join('');
+        expect(scan('EX-001', 'README.md', 'docs', text)).toHaveLength(runs);
+        return true;
+      }),
+    );
+  });
+});
+
 describe('EX-007 over-broad auto-approve', () => {
   it('flags write and shell tools', () => {
     const text = mcp({ s: { command: 'node', args: [], autoApprove: ['read_file', 'write_file', 'run_terminal_cmd'] } });

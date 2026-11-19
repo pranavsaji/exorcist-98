@@ -63,6 +63,33 @@ describe('buildSnippet', () => {
     expect(s.lines[0]).toEqual({ n: 1, before: 'x', match: '[U+E0041]', after: 'y' });
   });
 
+  it('highlights a whole run of adjacent hidden characters from a multi-escape span', () => {
+    const run = [0xE0041, 0xE0042, 0xE0043].map((c) => String.fromCodePoint(c)).join('');
+    const s = buildSnippet(`ab${run}cd`, 1, 3, '\\u{E0041}\\u{E0042}\\u{E0043}');
+    expect(s.lines[0]).toEqual({ n: 1, before: 'ab', match: '[U+E0041][U+E0042][U+E0043]', after: 'cd' });
+  });
+
+  it('highlights a JSON string whose file text has escaped quotes', () => {
+    const file = '{\n  "cmd": "node -e \\"x()\\""\n}';
+    const decoded = 'node -e "x()"';
+    const l = buildSnippet(file, 2, 10, decoded).lines.find((x) => x.n === 2);
+    expect(l?.match).toBe('node -e \\"x()\\"');
+    expect(l?.before).toBe('  "cmd": "');
+  });
+
+  it('highlights a truncated JSON string with escapes', () => {
+    const file = '{ "cmd": "a \\"b\\" c" }';
+    const l = buildSnippet(file, 1, 10, 'a "b"…').lines[0];
+    expect(l?.match).toBe('a \\"b\\"');
+  });
+
+  it('highlights the full run even when the span was truncated', () => {
+    const run = String.fromCodePoint(0xE0041).repeat(5);
+    const s = buildSnippet(`x${run}y`, 1, 2, '\\u{E0041}\\u{E0041}…');
+    expect(s.lines[0]?.match).toBe('[U+E0041]'.repeat(5));
+    expect(s.lines[0]?.after).toBe('y');
+  });
+
   it('handles a span truncated with an ellipsis', () => {
     const long = 'x'.repeat(130);
     const s = buildSnippet(`a ${long} b`, 1, 3, `${'x'.repeat(120)}…`);

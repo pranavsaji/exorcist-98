@@ -7,23 +7,26 @@
     "node": ">=20"
   },
   "scripts": {
-    "build":     "pnpm -r build",
-    "test":      "vitest run",
-    "typecheck": "pnpm -r typecheck"
+    "build": "pnpm -r build",
+    "test": "vitest run",
+    "typecheck": "pnpm -r typecheck",
+    "e2e": "node scripts/e2e-chrome.mjs"
   },
   "devDependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.600",
-    "@types/aws-lambda":               "^8.10",
-    "@types/js-yaml":                  "^4.0",
-    "@types/node":                     "^20",
-    "aws-lambda":                      "^1.0",
-    "fast-check":                      "^3.19",
-    "js-yaml":                         "^4.1",
-    "jsonpath-plus":                   "^9.0",
-    "simple-git":                      "^3.25",
-    "tsx":                             "^4.11",
-    "typescript":                      "^5.4",
-    "vitest":                          "^1.6",
-    "zod":                             "^3.23"
+    "@types/aws-lambda": "^8.10",
+    "@types/js-yaml": "^4.0",
+    "@types/node": "^20",
+    "aws-lambda": "^1.0",
+    "axe-core": "^4.14.1",
+    "fast-check": "^3.19",
+    "js-yaml": "^4.1",
+    "jsonpath-plus": "^9.0",
+    "playwright-core": "^1.65.1",
+    "simple-git": "^3.25",
+    "tsx": "^4.11",
+    "typescript": "^5.4",
+    "vitest": "^1.6",
+    "zod": "^3.23"
   }
 }

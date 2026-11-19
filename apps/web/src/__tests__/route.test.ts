@@ -83,7 +83,8 @@ describe('POST /api/scan: golden path (Haunted Repo)', () => {
   it('shows the hidden characters of the EX-001 fixture as visible markers', async () => {
     const events = await readEvents(await post({ target: 'haunted-repo' }));
     const ex1 = events.flatMap((e) => (e.type === 'finding' && e.finding.ruleId === 'EX-001' ? [e] : []));
-    expect(ex1.length).toBeGreaterThanOrEqual(5);
+    // One finding per run of hidden characters: 2 + 2 + 1 in the fixture.
+    expect(ex1).toHaveLength(5);
     const matches = ex1.flatMap((e) => e.snippet.lines.map((l) => l.match));
     expect(matches.some((m) => m.includes('[U+200B]'))).toBe(true);
     expect(matches.some((m) => m.includes('[U+202E]'))).toBe(true);

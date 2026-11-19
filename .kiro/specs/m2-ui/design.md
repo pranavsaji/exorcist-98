@@ -111,3 +111,12 @@ start(target), cancel() }`. Starting a scan aborts the previous one.
 - The route uses the Node runtime and `dynamic = 'force-dynamic'`.
 - `definitions/` and `fixtures/` are located relative to the repo root. Deployment
   must include them (see `docs/KNOWN_LIMITATIONS.md`).
+
+## 10. Changes found by real-browser testing
+
+- Adjacent hidden characters are reported as one finding (a run), and the
+  snippet highlights the whole run. Span truncation cuts only between escapes.
+- Snippets match JSON strings in their escaped form.
+- A scan started from the desktop icon or Start menu clears the URL form error.
+- Under 900 pixels wide, windows fill the width and the desktop icons are hidden.
+- `pnpm e2e` (`scripts/e2e-chrome.mjs`) drives Chrome and axe-core.

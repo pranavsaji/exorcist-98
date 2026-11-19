@@ -27,19 +27,30 @@ function resolveRange(original: string, start: number, span: string, lineStart: 
     return { start, end: start + span.length - 1 };
   }
 
-  // unicode_class findings carry an escape such as \u200B or \u{E0041}.
-  if (/^\\u(?:\{[0-9A-F]{4,6}\}|[0-9A-F]{4})$/.test(span)) {
-    const cp = original.codePointAt(start);
-    if (cp !== undefined) {
+  // unicode_class findings carry one or more escapes such as \u200B or
+  // \u{E0041}\u{E0042}, one per adjacent hidden character (maybe truncated).
+  if (/^(?:\\u(?:\{[0-9A-F]{4,6}\}|[0-9A-F]{4}))+…?$/.test(span)) {
+    let end = start;
+    for (;;) {
+      const cp = original.codePointAt(end);
+      if (cp === undefined) break;
       const ch = String.fromCodePoint(cp);
-      if (HIDDEN_ONE.test(ch)) return { start, end: start + ch.length };
+      if (!HIDDEN_ONE.test(ch)) break;
+      end += ch.length;
     }
-    return null;
+    return end > start ? { start, end } : null;
   }
 
-  // Fall back to the first occurrence on the same line.
-  const idx = original.slice(lineStart, lineEnd).indexOf(span);
-  if (idx !== -1) return { start: lineStart + idx, end: lineStart + idx + span.length };
+  // Fall back to the first occurrence on the same line. JSON findings carry the
+  // decoded string, while the file holds the escaped form (\" and \\), so try
+  // that too. A truncated span (ending in an ellipsis) is matched without it.
+  const core = span.endsWith('…') ? span.slice(0, -1) : span;
+  const lineText = original.slice(lineStart, lineEnd);
+  for (const cand of new Set([span, core, JSON.stringify(core).slice(1, -1)])) {
+    if (cand.length === 0) continue;
+    const idx = lineText.indexOf(cand);
+    if (idx !== -1) return { start: lineStart + idx, end: lineStart + idx + cand.length };
+  }
   return null;
 }
 

@@ -12,7 +12,8 @@ body {
   min-height: 100%;
   background: #23163d;
   color: #120b22;
-  font-family: ui-sans-serif, system-ui, 'Segoe UI', Helvetica, Arial, sans-serif;
+  font-family:
+    ui-sans-serif, system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
   font-size: 15px;
 }
 
@@ -28,11 +29,17 @@ body {
 @layer components {
   .bevel-out {
     background: #cfc8dc;
-    box-shadow: inset -2px -2px 0 #6b6180, inset 2px 2px 0 #f4f0fa, 0 0 0 1px #120b22;
+    box-shadow:
+      inset -2px -2px 0 #6b6180,
+      inset 2px 2px 0 #f4f0fa,
+      0 0 0 1px #120b22;
   }
   .bevel-in {
     background: #cfc8dc;
-    box-shadow: inset 2px 2px 0 #6b6180, inset -2px -2px 0 #f4f0fa, 0 0 0 1px #120b22;
+    box-shadow:
+      inset 2px 2px 0 #6b6180,
+      inset -2px -2px 0 #f4f0fa,
+      0 0 0 1px #120b22;
   }
 
   .btn {
@@ -46,11 +53,17 @@ body {
     cursor: pointer;
     user-select: none;
     background: #cfc8dc;
-    box-shadow: inset -2px -2px 0 #6b6180, inset 2px 2px 0 #f4f0fa, 0 0 0 1px #120b22;
+    box-shadow:
+      inset -2px -2px 0 #6b6180,
+      inset 2px 2px 0 #f4f0fa,
+      0 0 0 1px #120b22;
   }
   .btn:active,
-  .btn[aria-pressed='true'] {
-    box-shadow: inset 2px 2px 0 #6b6180, inset -2px -2px 0 #f4f0fa, 0 0 0 1px #120b22;
+  .btn[aria-pressed="true"] {
+    box-shadow:
+      inset 2px 2px 0 #6b6180,
+      inset -2px -2px 0 #f4f0fa,
+      0 0 0 1px #120b22;
   }
   .btn:disabled {
     color: #4a4160;
@@ -63,7 +76,10 @@ body {
     padding: 0.3rem 0.5rem;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.9rem;
-    box-shadow: inset 2px 2px 0 #6b6180, inset -2px -2px 0 #f4f0fa, 0 0 0 1px #120b22;
+    box-shadow:
+      inset 2px 2px 0 #6b6180,
+      inset -2px -2px 0 #f4f0fa,
+      0 0 0 1px #120b22;
   }
 
   .win {
@@ -74,7 +90,10 @@ body {
     max-height: calc(100vh - 56px);
     background: #cfc8dc;
     color: #120b22;
-    box-shadow: inset -2px -2px 0 #6b6180, inset 2px 2px 0 #f4f0fa, 0 0 0 1px #120b22,
+    box-shadow:
+      inset -2px -2px 0 #6b6180,
+      inset 2px 2px 0 #f4f0fa,
+      0 0 0 1px #120b22,
       6px 6px 0 rgba(0, 0, 0, 0.45);
     padding: 3px;
   }
@@ -94,7 +113,7 @@ body {
     cursor: grab;
     touch-action: none;
   }
-  .titlebar[data-active='false'] {
+  .titlebar[data-active="false"] {
     background: linear-gradient(90deg, #4a4160, #6f6585);
   }
   .titlebar button {
@@ -113,7 +132,10 @@ body {
     line-height: 1.35;
     overflow: auto;
     padding: 0.5rem;
-    box-shadow: inset 2px 2px 0 #6b6180, inset -2px -2px 0 #f4f0fa, 0 0 0 1px #120b22;
+    box-shadow:
+      inset 2px 2px 0 #6b6180,
+      inset -2px -2px 0 #f4f0fa,
+      0 0 0 1px #120b22;
   }
   .log .threat {
     color: #ff7a9c;
@@ -137,38 +159,55 @@ body {
     color: #120b22;
     border: 1px solid #120b22;
   }
-  .sev-critical { background: #ff3b6b; }
-  .sev-high     { background: #ff9a3c; }
-  .sev-medium   { background: #ffd93c; }
-  .sev-low      { background: #6bd0ff; }
-  .sev-clean    { background: #8dffb4; }
+  .sev-critical {
+    background: #ff3b6b;
+  }
+  .sev-high {
+    background: #ff9a3c;
+  }
+  .sev-medium {
+    background: #ffd93c;
+  }
+  .sev-low {
+    background: #6bd0ff;
+  }
+  .sev-clean {
+    background: #8dffb4;
+  }
 
   .progress {
     height: 1.4rem;
     background: #ffffff;
     overflow: hidden;
-    box-shadow: inset 2px 2px 0 #6b6180, inset -2px -2px 0 #f4f0fa, 0 0 0 1px #120b22;
+    box-shadow:
+      inset 2px 2px 0 #6b6180,
+      inset -2px -2px 0 #f4f0fa,
+      0 0 0 1px #120b22;
   }
   .progress-fill {
     height: 100%;
-    background: repeating-linear-gradient(90deg, #4b2a8a 0 12px, #cfc8dc 12px 14px);
+    background: repeating-linear-gradient(
+      90deg,
+      #4b2a8a 0 12px,
+      #cfc8dc 12px 14px
+    );
   }
-  .progress-fill[data-state='running'] {
+  .progress-fill[data-state="running"] {
     width: 100%;
     animation: crawl 1.2s linear infinite;
     background-size: 28px 100%;
   }
-  .progress-fill[data-state='done'] {
+  .progress-fill[data-state="done"] {
     width: 100%;
   }
-  .progress-fill[data-state='idle'] {
+  .progress-fill[data-state="idle"] {
     width: 0;
   }
-  .progress-fill[data-state='stopped'] {
+  .progress-fill[data-state="stopped"] {
     width: 100%;
     opacity: 0.45;
   }
-  .progress[data-possessed='true'] {
+  .progress[data-possessed="true"] {
     animation: possessed 0.7s steps(2, end) 1;
     background: #ff3b6b;
   }
@@ -184,23 +223,56 @@ body {
 }
 
 @keyframes crawl {
-  from { background-position: 0 0; }
-  to   { background-position: 28px 0; }
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 28px 0;
+  }
 }
 
 @keyframes possessed {
-  0%   { transform: translate(0, 0) skewX(0); filter: hue-rotate(0deg); }
-  25%  { transform: translate(-3px, 1px) skewX(-8deg); filter: hue-rotate(90deg); }
-  50%  { transform: translate(4px, -1px) skewX(6deg); filter: hue-rotate(200deg); }
-  75%  { transform: translate(-2px, 0) skewX(-4deg); filter: hue-rotate(300deg); }
-  100% { transform: translate(0, 0) skewX(0); filter: hue-rotate(0deg); }
+  0% {
+    transform: translate(0, 0) skewX(0);
+    filter: hue-rotate(0deg);
+  }
+  25% {
+    transform: translate(-3px, 1px) skewX(-8deg);
+    filter: hue-rotate(90deg);
+  }
+  50% {
+    transform: translate(4px, -1px) skewX(6deg);
+    filter: hue-rotate(200deg);
+  }
+  75% {
+    transform: translate(-2px, 0) skewX(-4deg);
+    filter: hue-rotate(300deg);
+  }
+  100% {
+    transform: translate(0, 0) skewX(0);
+    filter: hue-rotate(0deg);
+  }
+}
+
+/* Narrow screens: windows fill the width instead of sitting at fixed offsets.
+   Windows are still stacked by z-order; the taskbar switches between them. */
+@media (max-width: 899px) {
+  .win {
+    left: 4px !important;
+    top: 8px !important;
+    width: calc(100vw - 8px) !important;
+    max-height: calc(100vh - 64px);
+  }
+  .desktop-icons {
+    display: none !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .progress-fill[data-state='running'] {
+  .progress-fill[data-state="running"] {
     animation: none;
   }
-  .progress[data-possessed='true'] {
+  .progress[data-possessed="true"] {
     animation: none;
   }
 }

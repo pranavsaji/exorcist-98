@@ -33,6 +33,8 @@ lives. This becomes the Devpost write-up and the blog post.
 | 2026-11-20 | PBT | PBT-WEB-01..05 (8 properties): NDJSON parsing under any byte chunking; hidden characters always revealed; snippet reconstructs the line; GitHub URL validator accepts only owner/repo and rejects every suffix and host; severity sort order | `apps/web/src/__tests__/` |
 | 2026-11-20 | Test | Golden-path integration test: `POST /api/scan` on the Haunted Repo streams findings for all 12 shipped rules with snippets. It found a real bug: EX-009 never fired in a real scan because the walker classes the fixture as `config`, not `manifest`. | `apps/web/src/__tests__/route.test.ts` |
 | 2026-11-20 | Test | A real run against a public GitHub repo exposed a broken clone (simple-git refuses to run with GIT_PAGER set). Fixed by giving git an allowlisted environment, with a test. | `apps/web/src/lib/scan-service.ts` |
+| 2026-11-20 | Test | Real-browser test (`pnpm e2e`, Chrome 157 via playwright-core, axe-core): 20 steps and 0 accessibility violations. It found four real defects that unit tests missed: a stale form error, one EX-001 finding per hidden character (72 findings, now 36), two findings with no highlight, and windows running off a 390px screen. | `scripts/e2e-chrome.mjs` |
+| 2026-11-20 | PBT | PBT-SIG-09: the number of EX-001 findings equals the number of runs of adjacent hidden characters, for any placement | `packages/core/src/__tests__/definitions-accuracy.test.ts` |
 | 2026-11-19 | Model      | Amazon Bedrock wired (not an MCP server): Claude Haiku for triage, Sonnet for judge; all tests use `FakeBedrockClient`; real client reads `AWS_REGION` at call time, never at module load                                   | `packages/core/src/llm/bedrock.ts`, `packages/core/src/llm/__tests__/fake-client.ts` |
 
 ---
@@ -88,6 +90,6 @@ lives. This becomes the Devpost write-up and the blog post.
 - Hooks: 4 (`definition-save`, `mcp-config-change`, `spec-change`, `pre-commit-secrets`)
 - MCP servers: 0 (planned for M3)
 - Custom agents: 0 (planned for M4)
-- Property-based tests: 38 `fc.assert` properties (30 in core and fixtures, 8 in web). PBT-HEU-03 is a 20-iteration loop, not a fast-check property, and is not counted.
-- Tests passing: 210 in 25 files (last full run)
+- Property-based tests: 39 `fc.assert` properties (31 in core and fixtures, 8 in web). PBT-HEU-03 is a 20-iteration loop, not a fast-check property, and is not counted.
+- Tests passing: 219 in 25 files (last full run), plus 20 browser steps in `pnpm e2e`
 - Powers: 0 (planned for M3)
