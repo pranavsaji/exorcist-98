@@ -56,6 +56,7 @@ lives. This becomes the Devpost write-up and the blog post.
 | 2026-11-18 | Hooks | `spec-change` fired four more times, on saves of the Crew repo's spec files, with this repo as `cwd` and the Crew file as `file_path`. No `THREATS.md` row related to them, so none changed. | this session |
 | 2026-11-18 | Test | The Crew Chrome run found a real accessibility defect (button text "Remove" not in its accessible name, WCAG 2.5.3) and a repeated phrase in the folder summary; both fixed. | `exorcist-98-crew/scripts/e2e-chrome.mjs` |
 | 2026-11-18 | Docs | M5 drafts: video script, Devpost write-up, blog post, social posts. | `docs/VIDEO_SCRIPT.md`, `docs/SUBMISSION.md`, `docs/BLOG.md`, `docs/SOCIAL.md` |
+| 2026-11-19 | Crew | **Ran the Crew app inside Kiro Crew 0.12.2**, in two sessions working in parallel (the main gateway on 5476 and a separate test gateway on 5490, coordinated through `docs/COORDINATION.md` in the Crew repo). It installs, enables, patrols the Haunted Repo through the gateway proxy, renders in the signed-in dashboard, and sends a Crew notification ("38 new serious problems found", critical). Installing found 7 things the Crew docs do not say: crons need `permissions.cron`; the proxy header is `X-KiroCrew-Proxy`; the health probe is unsigned; the page must be a React default export; secret and data folder come from `KIROCREW_HOME`; an agent has no gateway token (so the backend now patrols itself); app notifications need a token exchange, the `mc_token_<port>` cookie and a declared channel. Not checked: the Sentry agent in chat and a cron firing (need a Kiro sign-in). | `exorcist-98-crew` commits `d13cb2a`, `947822e`; its `docs/KNOWN_LIMITATIONS.md` |
 | 2026-11-15 | Model      | Amazon Bedrock wired (not an MCP server): Claude Haiku for triage, Sonnet for judge; all tests use `FakeBedrockClient`; real client reads `AWS_REGION` at call time, never at module load                                   | `packages/core/src/llm/bedrock.ts`, `packages/core/src/llm/__tests__/fake-client.ts` |
 
 ---
@@ -115,7 +116,7 @@ lives. This becomes the Devpost write-up and the blog post.
 - Hooks: 4 in Kiro's JSON format (`definition-save`, `mcp-config-change`, `spec-change`, `pre-commit-secrets`); 1 seen firing (`spec-change`), 1 seen not firing (`pre-commit-secrets`), plus a git `pre-commit` hook outside Kiro
 - MCP servers: 1 built and tested (`exorcist`); not yet registered in Kiro (the config write was blocked)
 - Custom agents: 0 in this repository; 1 Crew agent (`exorcist-sentry`) in the Crew repo
-- Crew apps: 1 (`exorcist-98-crew`), built and tested outside Crew, not yet run in Crew
-- Property-based tests: 52 `fc.assert` properties (core 30, fixtures 4, shield 9, web 9), plus 11 in the Crew repo (PBT-CRW-01 to 05). PBT-HEU-03 is a loop, not a fast-check property, and is not counted.
+- Crew apps: 1 (`exorcist-98-crew`), run in Crew 0.12.2 (install, page, patrol, notification); agent chat and cron firing not checked
+- Property-based tests: 52 `fc.assert` properties (core 30, fixtures 4, shield 9, web 9), plus properties in the Crew repo (PBT-CRW-01 to 05 and later ones; 103 tests there). PBT-HEU-03 is a loop, not a fast-check property, and is not counted.
 - Tests passing: 431 in 37 files (last full run), plus 24 browser steps in `pnpm e2e` (0 accessibility violations)
 - Powers: 1 built (`exorcist`); not installed in Kiro, npm packages not published

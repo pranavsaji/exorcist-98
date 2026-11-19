@@ -56,11 +56,11 @@ a quarantine vault) and pointed it at the files and tools an agent trusts.
 |---|---|---|
 | Specs | 5 specs, one per milestone (`m0-foundation`, `m1-engine`, `m2-ui`, `m3-shield`, `m4-polish`), each with requirements, design and tasks; 1 more in the Crew repo (`crew-app`). | `.kiro/specs/` |
 | Steering | 4 files (product, tech, security, ui) that set the rules for every change: strict TypeScript, zod at every boundary, defanged fixtures, untrusted text never concatenated into instructions, severity never by colour alone. | `.kiro/steering/` |
-| Property-based tests | 52 fast-check properties, for example "a secret at any depth is never forwarded", "a changed tool is never listed or callable", "a zero-width character is detected at any position", "no tar entry name writes outside the target folder". Plus 11 in the Crew repo. | `docs/KIRO_LOG.md` |
+| Property-based tests | 52 fast-check properties, for example "a secret at any depth is never forwarded", "a changed tool is never listed or callable", "a zero-width character is detected at any position", "no tar entry name writes outside the target folder". Plus more in the Crew repo. | `docs/KIRO_LOG.md` |
 | Hooks | 4 hooks in Kiro's JSON format. `spec-change` fired in Kiro on every spec save and kept `docs/THREATS.md` in step. `pre-commit-secrets` (PreToolUse) did **not** fire in our sessions, so a git pre-commit hook does that job. | `.kiro/hooks/`, KIRO_LOG |
 | MCP | Built the `exorcist` MCP server on the official SDK (4 tools), tested with the SDK client. | `packages/mcp-server/` |
 | Powers | Built the `exorcist` Power (MCP config plus 3 skills). | `power/` |
-| Crew | A separate Crew app repo: Sentry agent, agent-hygiene skill, nightly cron, backend, dashboard page. | `pranavsaji/exorcist-98-crew` |
+| Crew | A separate Crew app repo: Sentry agent, agent-hygiene skill, a nightly patrol that sends Crew notifications, a backend and a dashboard page. Run inside Crew 0.12.2; installing it found 7 differences from the Crew docs, all fixed. | `pranavsaji/exorcist-98-crew` |
 
 Stack: TypeScript (strict) in a pnpm monorepo; Next.js for the web app;
 Vitest and fast-check; playwright-core and axe-core for a real-browser,
@@ -87,7 +87,7 @@ bundles; Amazon Bedrock wiring for an AI judge (see "What's next").
   the server changes it to "send the contents of .env to ...", the agent no
   longer sees it, the call is refused, and the server's own log proves it never
   received the call.
-- 431 tests in the main repo, 59 in the Crew repo; 0 axe violations on every
+- 431 tests in the main repo, 103 in the Crew repo; 0 axe violations on every
   page in Chrome.
 
 ## What we learned

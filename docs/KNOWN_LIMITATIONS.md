@@ -119,7 +119,7 @@ When an item is fixed, change its status to `Fixed in <commit>` and keep the row
 | S-018 | Low | Verified | `scan_repo` and the other MCP tools only accept paths inside the folder the server was started in (symlinks are resolved). The folder Kiro starts it in is unverified. | Confirm in Kiro. |
 | S-019 | Low | Verified | `findDefinitionsDir` exists twice (CLI and MCP server). | Move it to one shared module. |
 | S-020 | Low | Verified | `exorcist scan` runs signatures only. The Bedrock heuristic layer is not in the CLI. | Add `--ai` once L-020 is verified. |
-| S-021 | High | Unverified | **The Crew app has never run inside Kiro Crew.** It is tested with unit tests and a stand-in gateway. Its own list of Crew assumptions (mount signature, backend port, proxy signature details) is in `pranavsaji/exorcist-98-crew` `docs/KNOWN_LIMITATIONS.md`. | Install Crew and work through C-001 to C-007 there. |
+| S-021 | Medium | Partly fixed | The Crew app now runs in Kiro Crew 0.12.2: install, enable, the dashboard page, a patrol through the gateway proxy and a Crew notification were all seen working. Still unchecked: the Sentry agent in chat and a cron firing (both need a Kiro sign-in). Details in `pranavsaji/exorcist-98-crew` `docs/KNOWN_LIMITATIONS.md`. | Sign in to Kiro in Crew, chat with the agent, trigger the cron once. |
 
 ---
 
