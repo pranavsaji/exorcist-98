@@ -25,15 +25,16 @@ have not actually run.
 
 - Web app screenshots from the browser suite are a guide for framing:
   `E2E_OUT=/tmp/shots pnpm e2e` writes them.
-- Crew page: `npm run e2e` in the Crew repo writes `e2e-output/02-results.png`.
-  If you show it, say it runs through a test gateway unless you have run it in
-  Crew (Crew repo C-001).
+- Crew page: record it in the real Crew dashboard (it runs in Crew 0.12.2),
+  plus the "38 new serious problems found" notification. Do not show the
+  Sentry agent answering in chat unless you have seen it work (needs a Kiro
+  sign-in).
 - Record at 1920x1080, browser zoom 125% so the pixel font is readable.
 
 ## Facts to keep straight on camera
 
 - "Fifty-two property-based tests" is the count of `fc.assert` properties in
-  `docs/KIRO_LOG.md`. Test totals: 431 in the main repo, 59 in the Crew repo.
+  `docs/KIRO_LOG.md`. Test totals: 431 in the main repo, 103 in the Crew repo.
 - The AI heuristic layer (Bedrock) has never run against the real service.
   Do not say scans use AI unless that changes (L-020).
 - Do not call it "on npm" until you publish (S-002).
