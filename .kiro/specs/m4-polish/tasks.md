@@ -14,7 +14,7 @@
 - Browser suite: 24 steps, 0 axe violations, run against a standalone copy of
   the server outside the repository, including a real GitHub scan through the
   tarball path.
-- GitHub: CI result for the M4 commit is recorded after the push.
+- GitHub: CI (`test`, `build`, `e2e`) and the Action's `scan` job were green on `07991dc`, which includes the M4 commit.
 
 ## Not done here
 
