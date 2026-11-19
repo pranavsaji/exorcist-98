@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "spec-change",
+      "description": "Keep docs/THREATS.md in step with the specs.",
+      "trigger": "PostFileSave",
+      "matcher": "(^|/)\\.kiro/specs/.+\\.md$",
+      "action": {
+        "type": "agent",
+        "prompt": "A spec file has changed. Read the changed spec and update only the rows in docs/THREATS.md that relate to it. Leave all other rows and the file structure untouched. Do not modify any file other than docs/THREATS.md."
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "definition-save",
+      "description": "Run the core signature tests whenever a virus definition is saved.",
+      "trigger": "PostFileSave",
+      "matcher": "(^|/)definitions/.+\\.yaml$",
+      "action": {
+        "type": "command",
+        "command": "pnpm exec vitest run --project @exorcist-98/core"
+      },
+      "timeout": 180
+    }
+  ]
+}

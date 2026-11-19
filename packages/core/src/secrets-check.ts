@@ -2,15 +2,17 @@
 /**
  * secrets-check.ts
  *
- * Scans text (or staged files when --staged is passed) for real secret patterns.
- * Placeholder values matching EXAMPLE_*_DO_NOT_USE are always excluded.
+ * Finds real-looking secrets in text and in staged git files. Placeholder
+ * values (EXAMPLE_*_DO_NOT_USE) are never flagged, but a real key written next
+ * to a placeholder still is.
  *
- * Exit 0 — no secrets found.
- * Exit 1 — one or more secrets found (file:line printed per hit).
+ * CLI: `secrets-check.ts --staged` or `secrets-check.ts <file>...`
+ *   Exit 0: nothing found.   Exit 1: something found (file:line, redacted).
  */
 
-import { readFileSync, existsSync } from 'node:fs';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
+import { readFileSync, statSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export type SecretPattern = 'aws-access-key' | 'github-token' | 'openai-key';
@@ -27,85 +29,124 @@ const PATTERNS: Array<{ id: SecretPattern; re: RegExp }> = [
   { id: 'openai-key',     re: /sk-[A-Za-z0-9]{48}/g },
 ];
 
-const PLACEHOLDER_RE = /EXAMPLE_[A-Z0-9_]*_DO_NOT_USE/;
+const PLACEHOLDER_RE = /EXAMPLE_[A-Z0-9_]*_DO_NOT_USE/g;
+
+function placeholderRanges(text: string): Array<[number, number]> {
+  const ranges: Array<[number, number]> = [];
+  PLACEHOLDER_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = PLACEHOLDER_RE.exec(text)) !== null) {
+    ranges.push([m.index, m.index + m[0].length]);
+  }
+  return ranges;
+}
 
 /**
- * Pure function — scan `text` and return all secret hits that are not part of
- * a placeholder value.
+ * Pure function: all secret-shaped matches in `text`, except those that sit
+ * inside a EXAMPLE_*_DO_NOT_USE placeholder token.
  */
 export function findSecrets(text: string): SecretHit[] {
+  const ranges = placeholderRanges(text);
   const hits: SecretHit[] = [];
 
   for (const { id, re } of PATTERNS) {
-    // Reset lastIndex because the regex objects are module-level (shared)
-    re.lastIndex = 0;
+    re.lastIndex = 0; // the regexes are shared, module-level objects
     let m: RegExpExecArray | null;
     while ((m = re.exec(text)) !== null) {
-      const offset = m.index;
-      const matched = m[0];
-      // Allow if the surrounding 40 chars contain a placeholder
-      const surrounding = text.slice(
-        Math.max(0, offset - 30),
-        offset + matched.length + 30,
-      );
-      if (!PLACEHOLDER_RE.test(surrounding)) {
-        hits.push({ pattern: id, offset, match: matched });
-      }
+      const start = m.index;
+      const end = start + m[0].length;
+      const inPlaceholder = ranges.some(([a, b]) => start >= a && end <= b);
+      if (!inPlaceholder) hits.push({ pattern: id, offset: start, match: m[0] });
     }
   }
-
-  return hits;
+  return hits.sort((a, b) => a.offset - b.offset);
 }
 
-// ── CLI entry point ───────────────────────────────────────────────────────────
-// Only runs when this file is executed directly (not imported by tests).
+/** First four characters then asterisks, so logs never contain a full secret. */
+export function redact(secret: string): string {
+  return `${secret.slice(0, 4)}${'*'.repeat(Math.max(4, secret.length - 4))}`;
+}
 
-import { resolve } from 'node:path';
+export function lineOf(text: string, offset: number): number {
+  let line = 1;
+  for (let i = 0; i < offset && i < text.length; i++) if (text.charCodeAt(i) === 10) line++;
+  return line;
+}
 
+export type StagedHit = { file: string; line: number; pattern: SecretPattern; redacted: string };
+export type StagedResult =
+  | { ok: true; hits: StagedHit[]; filesChecked: number }
+  | { ok: false; error: string };
+
+const MAX_BYTES = 1_048_576;
+
+/**
+ * Scan the files staged in the git repository that contains `cwd`. Paths from
+ * git are relative to the repository root, so they are resolved against the
+ * root (not against `cwd`).
+ */
+export function findStagedSecrets(cwd: string = process.cwd()): StagedResult {
+  let root: string;
+  let names: string[];
+  try {
+    root = execFileSync('git', ['rev-parse', '--show-toplevel'], { cwd, encoding: 'utf8' }).trim();
+    const out = execFileSync('git', ['diff', '--cached', '--name-only', '--diff-filter=ACMR', '-z'], {
+      cwd: root,
+      encoding: 'utf8',
+    });
+    names = out.split('\0').filter(Boolean);
+  } catch (err) {
+    return { ok: false, error: `Could not read the staged files: ${String(err).split('\n')[0]}` };
+  }
+
+  const hits: StagedHit[] = [];
+  let filesChecked = 0;
+  for (const name of names) {
+    const full = resolve(root, name);
+    let text: string;
+    try {
+      if (statSync(full).size > MAX_BYTES) continue;
+      const buf = readFileSync(full);
+      if (buf.subarray(0, 512).includes(0)) continue; // binary
+      text = buf.toString('utf8');
+    } catch {
+      continue; // deleted or unreadable between the two git calls
+    }
+    filesChecked++;
+    for (const h of findSecrets(text)) {
+      hits.push({ file: name, line: lineOf(text, h.offset), pattern: h.pattern, redacted: redact(h.match) });
+    }
+  }
+  return { ok: true, hits, filesChecked };
+}
+
+// ── CLI ───────────────────────────────────────────────────────────────────────
 const isMain =
-  typeof process !== 'undefined' &&
   process.argv[1] !== undefined &&
   resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
 
-function offsetToLineNumber(text: string, offset: number): number {
-  return text.slice(0, offset).split('\n').length;
-}
-
-function scanFile(filePath: string): boolean {
-  if (!existsSync(filePath)) return false;
-  const text = readFileSync(filePath, 'utf8');
-  const hits = findSecrets(text);
-  for (const hit of hits) {
-    const line = offsetToLineNumber(text, hit.offset);
-    process.stdout.write(`${filePath}:${line} [${hit.pattern}] ${hit.match}\n`);
-  }
-  return hits.length > 0;
-}
-
 if (isMain) {
   const args = process.argv.slice(2);
-  const stagedMode = args.includes('--staged');
-  const explicitFiles = args.filter((a) => a !== '--staged');
+  const files = args.filter((a) => a !== '--staged');
+  let found = false;
 
-  let filesToScan: string[] = explicitFiles;
-
-  if (stagedMode) {
-    try {
-      const output = execSync('git diff --name-only --cached', { encoding: 'utf8' });
-      const staged = output
-        .split('\n')
-        .map((f) => f.trim())
-        .filter(Boolean);
-      filesToScan = [...filesToScan, ...staged];
-    } catch {
-      // Not in a git repo or git not available — skip staged check silently
+  if (args.includes('--staged')) {
+    const r = findStagedSecrets();
+    if (!r.ok) {
+      process.stderr.write(`${r.error}\n`);
+      process.exit(2); // cannot check: treat as a failure, not a pass
+    }
+    for (const h of r.hits) {
+      process.stdout.write(`${h.file}:${h.line} [${h.pattern}] ${h.redacted}\n`);
+      found = true;
     }
   }
-
-  let anyFound = false;
-  for (const f of filesToScan) {
-    if (scanFile(f)) anyFound = true;
+  for (const f of files) {
+    const text = readFileSync(f, 'utf8');
+    for (const h of findSecrets(text)) {
+      process.stdout.write(`${f}:${lineOf(text, h.offset)} [${h.pattern}] ${redact(h.match)}\n`);
+      found = true;
+    }
   }
-
-  process.exit(anyFound ? 1 : 0);
+  process.exit(found ? 1 : 0);
 }
