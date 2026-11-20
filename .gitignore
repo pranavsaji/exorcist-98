@@ -154,3 +154,6 @@ e2e-output/
 # CLI build output
 packages/cli/definitions/
 packages/mcp-server/definitions/
+
+# Local Shield demo state (pins, alerts, control file)
+.exorcist-kiro-demo/

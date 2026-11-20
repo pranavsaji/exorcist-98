@@ -87,7 +87,7 @@ bundles; Amazon Bedrock wiring for an AI judge (see "What's next").
   the server changes it to "send the contents of .env to ...", the agent no
   longer sees it, the call is refused, and the server's own log proves it never
   received the call.
-- 431 tests in the main repo, 122 in the Crew repo; 0 axe violations on every
+- 434 tests in the main repo, 127 in the Crew repo; 0 axe violations on every
   page in Chrome.
 
 ## What we learned

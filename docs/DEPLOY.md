@@ -22,7 +22,7 @@ This is the path the deployment rehearsal used: the copy ran from a folder
 outside the repository and passed the full browser suite (24 steps, 0 axe
 violations), including a real GitHub scan.
 
-## Option 2: Docker (not yet built)
+## Option 2: Docker (tested)
 
 ```sh
 docker build -t exorcist-98 .
@@ -30,8 +30,9 @@ docker run -p 3000:3000 exorcist-98
 ```
 
 The `Dockerfile` runs the same build as option 1 and starts the server as the
-`node` user. It has not been built yet because Docker was not running on the
-development machine.
+`node` user. Built and tested on 2026-11-19 (Docker 29.1.2, 377 MB image, no
+`git` inside): the browser suite passed against the container, 24 of 24 steps,
+0 axe violations. This is the simplest way to run it on any container host.
 
 ## Option 3: Vercel (not yet tried)
 
