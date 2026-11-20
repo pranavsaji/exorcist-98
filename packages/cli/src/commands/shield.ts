@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
-import { runProxy } from '@exorcist-98/shield';
-import { DEFAULT_DIR, findDefinitionsDir, parse, str } from '../util.js';
+import { desktopNotifier, runProxy } from '@exorcist-98/shield';
+import { DEFAULT_DIR, stateDir, findDefinitionsDir, parse, str } from '../util.js';
 import type { Io } from '../util.js';
 
 export const SHIELD_HELP = `Usage: exorcist shield --server <name> [options] -- <command> [args...]
@@ -39,8 +39,10 @@ export async function shieldCommand(argv: string[], io: Io): Promise<number> {
     server,
     command,
     args: rest.slice(1),
-    dir: resolve(str(p.values['dir']) ?? DEFAULT_DIR),
+    dir: stateDir(str(p.values['dir'])),
     definitionsDir: defs,
     ...(config ? { configPath: resolve(config) } : {}),
+    // Desktop notifications for critical and high alerts; EXORCIST_NOTIFY=0 or policy notify:false turns them off.
+    ...(process.env['EXORCIST_NOTIFY'] === '0' ? {} : { notify: desktopNotifier() }),
   });
 }

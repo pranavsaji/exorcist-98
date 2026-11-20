@@ -36,7 +36,7 @@ async function connect(opts: { policy?: object; answer?: (msg: string) => { acti
   const transport = new StdioClientTransport({
     command: TSX,
     args: [CLI, 'shield', '--server', 'notes', '--dir', dir, '--definitions', DEFS, '--', process.execPath, FAKE],
-    env: { PATH: process.env['PATH'] ?? '', HOME: root, FAKE_MCP_LOG: log, FAKE_MCP_CONTROL: join(root, 'control.json') },
+    env: { PATH: process.env['PATH'] ?? '', HOME: root, EXORCIST_NOTIFY: '0', FAKE_MCP_LOG: log, FAKE_MCP_CONTROL: join(root, 'control.json') },
     stderr: 'pipe',
   });
   const prompts: string[] = [];

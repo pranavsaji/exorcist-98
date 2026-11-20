@@ -1,6 +1,4 @@
-import { existsSync, readdirSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { findDefinitionsDir as sharedFindDefinitionsDir, findStateDir } from '@exorcist-98/shield';
 import { parseArgs } from 'node:util';
 import type { ParseArgsConfig } from 'node:util';
 
@@ -11,9 +9,6 @@ export const stdio: Io = {
   err: (s) => void process.stderr.write(s.endsWith('\n') ? s : `${s}\n`),
 };
 
-const hasDefinitions = (dir: string): boolean => {
-  try { return existsSync(dir) && readdirSync(dir).some((f) => /^EX-\d{3}.*\.yaml$/.test(f)); } catch { return false; }
-};
 
 /**
  * Where the virus definitions are: --definitions, EXORCIST_DEFINITIONS, the
@@ -21,12 +16,12 @@ const hasDefinitions = (dir: string): boolean => {
  * or ./definitions.
  */
 export function findDefinitionsDir(explicit?: string): string | null {
-  if (explicit) return resolve(explicit);
-  const env = process.env['EXORCIST_DEFINITIONS'];
-  if (env) return resolve(env);
-  const here = dirname(fileURLToPath(import.meta.url));
-  const candidates = [join(here, '..', 'definitions'), join(here, '..', '..', '..', 'definitions'), resolve('definitions')];
-  return candidates.find(hasDefinitions) ?? null;
+  return sharedFindDefinitionsDir({ ...(explicit ? { explicit } : {}), callerUrl: import.meta.url });
+}
+
+/** The Shield's state folder: `--dir`, else EXORCIST_DIR, else the project's `.exorcist` (S-013). */
+export function stateDir(explicit?: string): string {
+  return findStateDir(explicit ? { explicit } : {});
 }
 
 export type Parsed<T> = { ok: true; values: T; positionals: string[] } | { ok: false; error: string };
@@ -47,4 +42,5 @@ export function parse<T extends ParseArgsConfig['options']>(
 export const str = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined);
 export const strs = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
 
-export const DEFAULT_DIR = '.exorcist';
+/** How the default state folder is described in help text. */
+export const DEFAULT_DIR = "the project's .exorcist folder (or EXORCIST_DIR)";

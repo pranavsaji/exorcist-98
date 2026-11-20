@@ -1,7 +1,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { explainFindingTool, findDefinitionsDir, quarantineTool, scanMcpConfigTool, scanRepoTool } from './tools.js';
+import { homedir } from 'node:os';
+import { delimiter } from 'node:path';
+import { RootsListChangedNotificationSchema } from '@modelcontextprotocol/sdk/types.js';
+import { explainFindingTool, findDefinitionsDir, quarantineTool, scanMcpConfigTool, scanRepoTool, usableRoots } from './tools.js';
 import type { Ctx, ToolText } from './tools.js';
 
 const VERSION = '0.1.0';
@@ -14,6 +17,33 @@ const ctx: Ctx = {
 const reply = (r: ToolText) => ({ content: [{ type: 'text' as const, text: r.text }], ...(r.isError ? { isError: true } : {}) });
 
 const server = new McpServer({ name: 'exorcist', version: VERSION });
+
+/**
+ * Folders the tools may read besides the start folder (S-018): EXORCIST_ROOTS
+ * (separated like PATH) and the roots the client shares through MCP
+ * `roots/list`, refreshed when the client says they changed.
+ */
+let clientRoots: string[] | null = null;
+async function refreshRoots(): Promise<void> {
+  const fromEnv = (process.env['EXORCIST_ROOTS'] ?? '').split(delimiter);
+  let fromClient: string[] = [];
+  if (server.server.getClientCapabilities()?.roots) {
+    if (clientRoots === null) {
+      try {
+        clientRoots = (await server.server.listRoots()).roots.map((r) => r.uri);
+      } catch {
+        clientRoots = [];
+      }
+    }
+    fromClient = clientRoots;
+  }
+  ctx.roots = usableRoots([...fromEnv, ...fromClient], homedir());
+}
+server.server.setNotificationHandler(RootsListChangedNotificationSchema, async () => { clientRoots = null; });
+const withRoots = <A, R>(fn: (c: Ctx, a: A) => Promise<R>) => async (a: A): Promise<R> => {
+  await refreshRoots();
+  return fn(ctx, a);
+};
 
 server.registerTool(
   'scan_repo',
@@ -29,7 +59,7 @@ server.registerTool(
     },
     annotations: { readOnlyHint: true, openWorldHint: false },
   },
-  async (a) => reply(await scanRepoTool(ctx, a)),
+  async (a) => reply(await withRoots(scanRepoTool)(a)),
 );
 
 server.registerTool(
@@ -43,7 +73,7 @@ server.registerTool(
     },
     annotations: { readOnlyHint: true, openWorldHint: false },
   },
-  async (a) => reply(await scanMcpConfigTool(ctx, a)),
+  async (a) => reply(await withRoots(scanMcpConfigTool)(a)),
 );
 
 server.registerTool(
@@ -54,7 +84,7 @@ server.registerTool(
     inputSchema: { ruleId: z.string().min(1).describe('A rule id such as EX-001') },
     annotations: { readOnlyHint: true, openWorldHint: false },
   },
-  async (a) => reply(await explainFindingTool(ctx, a)),
+  async (a) => reply(await withRoots(explainFindingTool)(a)),
 );
 
 server.registerTool(
@@ -71,7 +101,7 @@ server.registerTool(
     },
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
   },
-  async (a) => reply(await quarantineTool(ctx, a)),
+  async (a) => reply(await withRoots(quarantineTool)(a)),
 );
 
 await server.connect(new StdioServerTransport());

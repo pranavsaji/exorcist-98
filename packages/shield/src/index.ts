@@ -13,6 +13,10 @@ export { inspectCall, inspectResult, inspectTool, collectStrings, hostsIn, extra
 export { ShieldEngine } from './engine.js';
 export type { Action, EngineOptions, StateIO } from './engine.js';
 export { runProxy } from './proxy.js';
+export { desktopNotifier, notifyCommand, throttle, cleanText } from './notify.js';
+export type { Notifier } from './notify.js';
+export { findDefinitionsDir, findStateDir } from './locate.js';
+export type { DefinitionsLookup } from './locate.js';
 export type { ProxyOptions } from './proxy.js';
 export { quarantineServer, quarantineFile, listEntries, getEntry, diffEntry, restoreEntry } from './vault.js';
 export type { VaultEntry, VaultResult } from './vault.js';

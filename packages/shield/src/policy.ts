@@ -12,12 +12,14 @@ export const PolicySchema = z
      * `exorcist approve tool <server> <tool>`.
      */
     firstUse:       z.enum(['pin', 'review']).default('pin'),
+    /** Show a desktop notification for critical and high alerts (S-012). */
+    notify:         z.boolean().default(true),
   })
   .strict();
 
 export type Policy = z.infer<typeof PolicySchema>;
 
-export const DEFAULT_POLICY: Policy = { allowedHosts: [], mode: 'enforce', autoQuarantine: false, firstUse: 'pin' };
+export const DEFAULT_POLICY: Policy = { allowedHosts: [], mode: 'enforce', autoQuarantine: false, firstUse: 'pin', notify: true };
 
 export type PolicyResult = { ok: true; policy: Policy } | { ok: false; error: string };
 

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { alertsPath, approveHost, approveTool, loadState, saveState, statePath } from '@exorcist-98/shield';
-import { DEFAULT_DIR, parse, str } from '../util.js';
+import { DEFAULT_DIR, stateDir, parse, str } from '../util.js';
 import type { Io } from '../util.js';
 
 export const APPROVE_HELP = `Usage: exorcist approve tool <server> <tool> [--dir <folder>]
@@ -25,7 +25,7 @@ export async function approveCommand(argv: string[], io: Io): Promise<number> {
     io.err(`Say what to approve.\n\n${APPROVE_HELP}`);
     return 2;
   }
-  const path = statePath(resolve(str(p.values['dir']) ?? DEFAULT_DIR));
+  const path = statePath(stateDir(str(p.values['dir'])));
   const loaded = loadState(path);
   if (!loaded.ok) { io.err(loaded.error); return 1; }
   const r = kind === 'tool' ? approveTool(loaded.state, server, name) : approveHost(loaded.state, server, name);
@@ -38,7 +38,7 @@ export async function approveCommand(argv: string[], io: Io): Promise<number> {
 export async function alertsCommand(argv: string[], io: Io): Promise<number> {
   const p = parse(argv, { dir: { type: 'string' }, last: { type: 'string' }, help: { type: 'boolean', short: 'h' } });
   if (!p.ok) { io.err(p.error); return 2; }
-  const file = alertsPath(resolve(str(p.values['dir']) ?? DEFAULT_DIR));
+  const file = alertsPath(stateDir(str(p.values['dir'])));
   if (!existsSync(file)) { io.out('No alerts.'); return 0; }
   const n = Math.max(1, Number.parseInt(str(p.values['last']) ?? '20', 10) || 20);
   const lines = readFileSync(file, 'utf8').split('\n').filter(Boolean).slice(-n);

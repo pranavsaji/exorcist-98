@@ -9,6 +9,8 @@ import { loadPolicy } from './policy.js';
 import { alertsPath, appendAlert, loadState, policyPath, saveState, statePath, vaultPath } from './state.js';
 import type { Alert, State } from './state.js';
 import { quarantineServer } from './vault.js';
+import { throttle } from './notify.js';
+import type { Notifier } from './notify.js';
 
 export type ProxyOptions = {
   server: string;
@@ -26,6 +28,8 @@ export type ProxyOptions = {
   stderr?: Writable;
   /** How often to check the pin file for approvals (ms). */
   pollMs?: number;
+  /** Shows desktop notifications for critical and high alerts, unless the policy sets `notify: false`. */
+  notify?: Notifier;
 };
 
 const FAIL_CLOSED_EXIT = 78;
@@ -91,8 +95,15 @@ export async function runProxy(o: ProxyOptions): Promise<number> {
     ...(o.cwd ? { cwd: o.cwd } : {}),
   });
 
+  const notifier = policy.policy.notify ? o.notify : undefined;
+  const allowNotice = throttle();
+  log(`Protecting "${o.server}". State folder: ${o.dir}`);
+
   const recordAlert = (a: Alert): void => {
     log(`${a.severity.toUpperCase()} ${a.ruleId}${a.tool ? ` [${a.tool}]` : ''}: ${a.message}`);
+    if (notifier && (a.severity === 'critical' || a.severity === 'high') && allowNotice(`${a.ruleId}:${a.tool ?? ''}`)) {
+      notifier(`Exorcist 98: ${a.severity === 'critical' ? 'threat blocked' : 'warning'} (${o.server})`, a.message);
+    }
     if (a.detail) log(a.detail.trimEnd().split('\n').map((l) => `    ${l}`).join('\n'));
     try { appendAlert(alertsPath(o.dir), a); } catch { /* the console line above is enough */ }
   };

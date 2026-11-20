@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { unwrapConfig, wrapConfig } from '@exorcist-98/shield';
 import type { McpConfig } from '@exorcist-98/shield';
-import { DEFAULT_DIR, parse, str, strs } from '../util.js';
+import { DEFAULT_DIR, stateDir, parse, str, strs } from '../util.js';
 import type { Io } from '../util.js';
 
 export const WRAP_HELP = `Usage: exorcist wrap <mcp.json> [options]
@@ -14,7 +14,7 @@ unwrap Put the original commands back, exactly.
 Options (wrap):
   --bin <command>       Command that runs the shield (default: exorcist)
   --bin-arg <arg>       Argument before "shield" (repeatable), e.g. --bin npx --bin-arg -y --bin-arg @exorcist-98/cli@0.1.0
-  --dir <folder>        State folder (default: ${resolve(DEFAULT_DIR)})
+  --dir <folder>        State folder (default: ${DEFAULT_DIR})
   --dry-run             Show the result without writing the file
 `;
 
@@ -50,7 +50,7 @@ export async function wrapCommand(argv: string[], io: Io, mode: 'wrap' | 'unwrap
     const r = wrapConfig(cfg, {
       bin: str(p.values['bin']) ?? 'exorcist',
       binArgs: strs(p.values['bin-arg']),
-      dir: resolve(str(p.values['dir']) ?? DEFAULT_DIR),
+      dir: stateDir(str(p.values['dir'])),
       configPath: path,
     });
     next = r.config;

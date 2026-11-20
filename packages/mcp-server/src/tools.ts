@@ -1,13 +1,19 @@
-import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
-import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { findDefinitionsDir as sharedFindDefinitionsDir } from '@exorcist-98/shield';
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { loadDefinitions, plainFor, scanRepo, scanText } from '@exorcist-98/core';
 import type { Finding, VirusDefinition } from '@exorcist-98/core';
 import { isWrapped, quarantineServer } from '@exorcist-98/shield';
 import type { McpConfig } from '@exorcist-98/shield';
 
 export type ToolText = { text: string; isError?: boolean };
-export type Ctx = { cwd: string; definitionsDir: string };
+export type Ctx = {
+  cwd: string;
+  definitionsDir: string;
+  /** More folders the tools may read: the client's MCP roots and EXORCIST_ROOTS (S-018). Absolute, real paths. */
+  roots?: readonly string[];
+};
 
 const RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
 const HIDDEN = /[\u200B-\u200D\uFEFF\u202A-\u202E\u2066-\u2069\u{E0000}-\u{E007F}]/gu;
@@ -19,32 +25,61 @@ export function reveal(s: string): string {
   return s.replace(HIDDEN, (c) => `[U+${(c.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, '0')}]`);
 }
 
-function hasDefinitions(dir: string): boolean {
-  try { return existsSync(dir) && readdirSync(dir).some((f) => /^EX-\d{3}.*\.yaml$/.test(f)); } catch { return false; }
-}
 
 export function findDefinitionsDir(cwd: string): string | null {
-  const env = process.env['EXORCIST_DEFINITIONS'];
-  if (env) return resolve(env);
-  const here = dirname(fileURLToPath(import.meta.url));
-  const candidates = [join(here, '..', 'definitions'), join(here, '..', '..', '..', 'definitions'), join(cwd, 'definitions')];
-  return candidates.find(hasDefinitions) ?? null;
+  return sharedFindDefinitionsDir({ callerUrl: import.meta.url, cwd });
 }
 
 /**
- * Only paths inside the folder the server was started in are allowed, after
- * resolving symlinks. An agent should not be able to point a scanner at ~/.ssh.
+ * Only paths inside the folder the server was started in, or inside one of
+ * the extra roots, are allowed, after resolving symlinks. An agent should not
+ * be able to point a scanner at ~/.ssh. A relative path is looked up in the
+ * start folder first, then in each root.
  */
-export function resolveInside(cwd: string, p: string): { ok: true; path: string } | { ok: false; error: string } {
-  const abs = resolve(cwd, p);
-  if (!existsSync(abs)) return { ok: false, error: `Path not found: ${p}` };
-  const real = realpathSync(abs);
-  const base = realpathSync(cwd);
-  const rel = relative(base, real);
-  if (rel.startsWith('..') || isAbsolute(rel)) {
-    return { ok: false, error: `"${p}" is outside the project folder (${base}). Only paths inside it can be used.` };
+export function resolveInside(
+  cwd: string,
+  p: string,
+  roots: readonly string[] = [],
+): { ok: true; path: string; base: string } | { ok: false; error: string } {
+  const bases = [realpathSync(cwd), ...roots.filter((r) => existsSync(r)).map((r) => realpathSync(r))];
+  const tries = isAbsolute(p) ? [p] : bases.map((b) => resolve(b, p));
+  const found = tries.find((t) => existsSync(t));
+  if (!found) return { ok: false, error: `Path not found: ${p}` };
+  const real = realpathSync(found);
+  const base = bases.find((b) => {
+    const rel = relative(b, real);
+    return !rel.startsWith('..') && !isAbsolute(rel);
+  });
+  if (!base) {
+    const where = bases.length > 1 ? `the project folder (${bases[0]}) or the folders your client shared` : `the project folder (${bases[0]})`;
+    return { ok: false, error: `"${p}" is outside ${where}. Only paths inside them can be used.` };
   }
-  return { ok: true, path: real };
+  return { ok: true, path: real, base };
+}
+
+/**
+ * Turn root URIs or paths into folders the tools may read. Refuses the
+ * filesystem root and the home folder itself, which would expose everything.
+ */
+export function usableRoots(entries: readonly string[], home: string): string[] {
+  const out: string[] = [];
+  for (const e of entries) {
+    let path = e.trim();
+    if (!path) continue;
+    if (path.startsWith('file://')) {
+      try { path = fileURLToPath(path); } catch { continue; }
+    } else if (/^[a-z][a-z0-9+.-]*:/i.test(path) && !/^[a-z]:[\\/]/i.test(path)) continue; // other URI schemes
+    if (!isAbsolute(path) || !existsSync(path)) continue;
+    let real: string;
+    try {
+      if (!statSync(path).isDirectory()) continue;
+      real = realpathSync(path);
+    } catch { continue; }
+    const realHome = existsSync(home) ? realpathSync(home) : home;
+    if (real === resolve('/') || real === realHome || dirname(real) === real) continue;
+    if (!out.includes(real)) out.push(real);
+  }
+  return out;
 }
 
 async function loadDefs(ctx: Ctx): Promise<{ ok: true; defs: VirusDefinition[] } | { ok: false; error: string }> {
@@ -85,7 +120,7 @@ function summary(findings: Finding[], files: number): string {
 }
 
 export async function scanRepoTool(ctx: Ctx, a: { path: string; maxFindings?: number; includeQuotes?: boolean }): Promise<ToolText> {
-  const inside = resolveInside(ctx.cwd, a.path);
+  const inside = resolveInside(ctx.cwd, a.path, ctx.roots);
   if (!inside.ok) return err(inside.error);
   const defs = await loadDefs(ctx);
   if (!defs.ok) return err(defs.error);
@@ -105,7 +140,7 @@ export async function scanRepoTool(ctx: Ctx, a: { path: string; maxFindings?: nu
 }
 
 export async function scanMcpConfigTool(ctx: Ctx, a: { path: string; includeQuotes?: boolean }): Promise<ToolText> {
-  const inside = resolveInside(ctx.cwd, a.path);
+  const inside = resolveInside(ctx.cwd, a.path, ctx.roots);
   if (!inside.ok) return err(inside.error);
   if (!statSync(inside.path).isFile()) return err(`${a.path} is a folder. Give the path of an MCP config file.`);
   const defs = await loadDefs(ctx);
@@ -118,7 +153,7 @@ export async function scanMcpConfigTool(ctx: Ctx, a: { path: string; includeQuot
   } catch {
     return err(`${a.path} is not valid JSON.`);
   }
-  const rel = relative(realpathSync(ctx.cwd), inside.path);
+  const rel = relative(inside.base, inside.path);
   const findings = scanText(text, 'mcp-config', defs.defs, rel);
   const servers = Object.entries(config.mcpServers ?? {});
   const local = servers.filter(([, e]) => typeof e['command'] === 'string');
@@ -152,7 +187,7 @@ export async function explainFindingTool(ctx: Ctx, a: { ruleId: string }): Promi
 }
 
 export async function quarantineTool(ctx: Ctx, a: { config: string; server: string; reason?: string }): Promise<ToolText> {
-  const inside = resolveInside(ctx.cwd, a.config);
+  const inside = resolveInside(ctx.cwd, a.config, ctx.roots);
   if (!inside.ok) return err(inside.error);
   const r = quarantineServer({
     configPath: inside.path,

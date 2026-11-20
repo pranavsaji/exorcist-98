@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 import { diffEntry, listEntries, quarantineFile, quarantineServer, restoreEntry, vaultPath } from '@exorcist-98/shield';
-import { DEFAULT_DIR, parse, str } from '../util.js';
+import { DEFAULT_DIR, stateDir, parse, str } from '../util.js';
 import type { Io } from '../util.js';
 
 export const VAULT_HELP = `Usage: exorcist vault <command> [--dir <folder>]
@@ -25,7 +25,7 @@ export async function vaultCommand(argv: string[], io: Io): Promise<number> {
   const [sub, ...args] = p.positionals;
   if (p.values['help'] || !sub) { io.out(VAULT_HELP); return sub || p.values['help'] ? 0 : 2; }
 
-  const vault = vaultPath(resolve(str(p.values['dir']) ?? DEFAULT_DIR));
+  const vault = vaultPath(stateDir(str(p.values['dir'])));
   const reason = str(p.values['reason']) ?? 'quarantined by hand';
   const fail = (e: string): number => { io.err(e); return 1; };
 
