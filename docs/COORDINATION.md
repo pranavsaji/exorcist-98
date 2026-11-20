@@ -16,3 +16,11 @@ another session has claimed below. Add a dated entry when you claim or finish.
   of `docs/KNOWN_LIMITATIONS.md`; also the Crew repo. Not touching
   `packages/shield`, `packages/mcp-server` or the CLI shield commands.
 
+
+- **2026-11-20, session B:** one edit in `packages/core/src/llm/bedrock.ts`
+  (with its test): the default Bedrock model ids had reached end of life;
+  defaults are now current Claude models through the region inference
+  profile. Session B is building `exorcist scan --ai` (S-020) and the AI
+  judge fixes (L-020 to L-022) next and claims `packages/core/src/llm/**`,
+  `packages/core/src/scanner/heuristic-engine.ts` and
+  `packages/cli/src/commands/scan.ts` for that.

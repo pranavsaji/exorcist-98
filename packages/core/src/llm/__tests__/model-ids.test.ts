@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_MODEL_IDS, modelIdFor } from '../bedrock.js';
+import { DEFAULT_MODELS, geographyFor, modelIdFor } from '../bedrock.js';
 
 describe('L-020 Bedrock model ids are configurable', () => {
-  it('uses the defaults when nothing is set', () => {
-    expect(modelIdFor('haiku', {})).toBe(DEFAULT_MODEL_IDS.haiku);
-    expect(modelIdFor('sonnet', {})).toBe(DEFAULT_MODEL_IDS.sonnet);
+  it('defaults to current models through the inference profile for the region', () => {
+    expect(modelIdFor('haiku', { AWS_REGION: 'us-east-2' })).toBe(`us.${DEFAULT_MODELS.haiku}`);
+    expect(modelIdFor('sonnet', { AWS_REGION: 'eu-west-1' })).toBe(`eu.${DEFAULT_MODELS.sonnet}`);
+    expect(modelIdFor('haiku', { AWS_REGION: 'ap-southeast-2' })).toBe(`apac.${DEFAULT_MODELS.haiku}`);
+    expect(modelIdFor('haiku', {})).toBe(`global.${DEFAULT_MODELS.haiku}`);
+    expect(geographyFor('sa-east-1')).toBe('global');
+  });
+
+  it('never defaults to the retired Claude 3 ids', () => {
+    for (const m of ['haiku', 'sonnet'] as const) expect(modelIdFor(m, { AWS_REGION: 'us-east-1' })).not.toMatch(/claude-3/);
   });
 
   it('accepts model ids, inference profile ids and ARNs from the environment', () => {
@@ -15,7 +22,7 @@ describe('L-020 Bedrock model ids are configurable', () => {
 
   it('ignores empty or odd values', () => {
     for (const bad of ['', '   ', 'model id with spaces', 'x;rm -rf /', 'a'.repeat(201)]) {
-      expect(modelIdFor('haiku', { EXORCIST_BEDROCK_HAIKU: bad })).toBe(DEFAULT_MODEL_IDS.haiku);
+      expect(modelIdFor('haiku', { EXORCIST_BEDROCK_HAIKU: bad, AWS_REGION: 'us-east-1' })).toBe(`us.${DEFAULT_MODELS.haiku}`);
     }
   });
 });
