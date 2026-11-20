@@ -18,9 +18,17 @@ const PendingSchema = z.object({
   seenAt:         z.string(),
 });
 
+const UnreviewedSchema = z.object({
+  hash:        Sha256,
+  description: z.string(),
+  seenAt:      z.string(),
+});
+
 const ServerStateSchema = z.object({
   tools:         z.record(PinSchema).default({}),
   pending:       z.record(PendingSchema).default({}),
+  /** Tools seen for the first time under `firstUse: review`, not yet approved. */
+  unreviewed:    z.record(UnreviewedSchema).default({}),
   approvedHosts: z.array(z.string()).default([]),
 });
 
@@ -80,7 +88,7 @@ export function saveState(path: string, state: State): void {
 export function serverState(state: State, name: string): ServerState {
   let s = state.servers[name];
   if (!s) {
-    s = { tools: {}, pending: {}, approvedHosts: [] };
+    s = { tools: {}, pending: {}, unreviewed: {}, approvedHosts: [] };
     state.servers[name] = s;
   }
   return s;
@@ -93,9 +101,15 @@ export function appendAlert(path: string, alert: Alert): void {
 
 export type ApproveResult = { ok: true; message: string } | { ok: false; error: string };
 
-/** Accept the pending (changed) version of a tool and pin it. */
+/** Accept the pending (changed or never reviewed) version of a tool and pin it. */
 export function approveTool(state: State, server: string, tool: string, now: Date = new Date()): ApproveResult {
   const s = state.servers[server];
+  const fresh = s?.unreviewed[tool];
+  if (s && fresh) {
+    s.tools[tool] = { hash: fresh.hash, description: fresh.description, pinnedAt: now.toISOString() };
+    delete s.unreviewed[tool];
+    return { ok: true, message: `Approved "${tool}" on "${server}" after review. It is now pinned.` };
+  }
   const pending = s?.pending[tool];
   if (!s || !pending) return { ok: false, error: `There is no pending change for "${tool}" on "${server}".` };
   s.tools[tool] = { hash: pending.hash, description: pending.newDescription, pinnedAt: now.toISOString() };

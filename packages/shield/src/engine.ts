@@ -7,7 +7,7 @@ import type { Reason } from './inspect.js';
 import { JsonRpcMessageSchema, errorResponse, parseLine, toolErrorResult } from './jsonrpc.js';
 import type { JsonRpcId, JsonRpcMessage } from './jsonrpc.js';
 import type { Policy } from './policy.js';
-import { serverState } from './state.js';
+import { approveHost, serverState } from './state.js';
 import type { Alert, State } from './state.js';
 
 export type Action =
@@ -32,6 +32,9 @@ export type EngineOptions = {
 type Withheld = { ruleId: string; reason: string; fingerprint?: string };
 
 const MAX_DIFF_CHARS = 4_000;
+
+/** Ids of the Shield's own approval prompts to the client (S-004). */
+const PROMPT_PREFIX = 'exorcist-98:approve:';
 
 /**
  * The shield may send `notifications/tools/list_changed` after an approval, so
@@ -61,6 +64,11 @@ export class ShieldEngine {
   private readonly alerted = new Set<string>();
   /** Requests the server sent to the agent that are still waiting for an answer: id to method. */
   private readonly serverRequests = new Map<JsonRpcId, string>();
+  /** True when the agent's client said in `initialize` that it can show elicitation prompts (S-004). */
+  private clientElicits = false;
+  private elicitSeq = 0;
+  /** Tool calls waiting for the user's answer to an approval prompt, by prompt id. */
+  private readonly heldCalls = new Map<string, { call: JsonRpcMessage; id: JsonRpcId; tool: string; hosts: string[] }>();
 
   constructor(private readonly o: EngineOptions) {}
 
@@ -111,8 +119,17 @@ export class ShieldEngine {
 
   onClient(msg: JsonRpcMessage): Action[] {
     if (msg.method === 'tools/call' && msg.id !== undefined) return this.onToolCall(msg, msg.id);
+    if (msg.method === undefined && typeof msg.id === 'string' && msg.id.startsWith(PROMPT_PREFIX)) {
+      // An answer to one of the Shield's own prompts: never passed to the server.
+      if (this.heldCalls.has(msg.id)) return this.onApprovalAnswer(msg, msg.id);
+      return [this.alert({ ruleId: 'SHIELD', severity: 'medium', message: 'Dropped an answer to an approval prompt the Shield did not send (or already handled).' })];
+    }
     if (msg.method === undefined && msg.id !== undefined && msg.result !== undefined && this.serverRequests.has(msg.id)) {
       return this.onClientReply(msg, msg.id);
+    }
+    if (msg.method === 'initialize') {
+      const caps = (msg.params as { capabilities?: { elicitation?: unknown } } | undefined)?.capabilities;
+      this.clientElicits = caps?.elicitation !== undefined && caps.elicitation !== null;
     }
     if ((msg.method === 'tools/list' || msg.method === 'initialize') && msg.id !== undefined) {
       this.pending.set(msg.id, { method: msg.method });
@@ -169,6 +186,8 @@ export class ShieldEngine {
     actions.push(this.alert({ ruleId: verdict.reasons[0]?.ruleId ?? 'SHIELD', severity: sev, tool: name, message: joinReasons(verdict.reasons) }));
     if (!this.enforcing()) return forward();
 
+    if (verdict.action === 'ask' && this.clientElicits) return [...actions, ...this.askUser(msg, id, name, verdict.hosts)];
+
     const how =
       verdict.action === 'ask'
         ? ` If you trust ${verdict.hosts.join(', ')}, run: exorcist approve host ${this.o.server} ${verdict.hosts[0]}  and ask again.`
@@ -209,6 +228,63 @@ export class ShieldEngine {
     if (ctx.method === 'initialize') return [{ type: 'forward', to: 'client', message: advertiseListChanged(msg) }];
     if (ctx.method === 'tools/call') return this.onToolResult(msg, ctx.tool);
     return [{ type: 'forward', to: 'client', message: msg }];
+  }
+
+  /**
+   * Ask the user, through the client, whether this call may reach these hosts
+   * (S-004). The call waits; nothing is sent to the server until the answer.
+   */
+  private askUser(call: JsonRpcMessage, id: JsonRpcId, tool: string, hosts: string[]): Action[] {
+    const promptId = `${PROMPT_PREFIX}${++this.elicitSeq}`;
+    this.heldCalls.set(promptId, { call, id, tool, hosts });
+    const list = hosts.join(', ');
+    return [{
+      type: 'forward',
+      to: 'client',
+      message: {
+        jsonrpc: '2.0',
+        id: promptId,
+        method: 'elicitation/create',
+        params: {
+          message: `Exorcist 98: the tool "${tool}" on "${this.o.server}" wants to send data to ${list}, which is not on your allowed list. Allow this call?`,
+          requestedSchema: {
+            type: 'object',
+            properties: {
+              remember: { type: 'boolean', title: `Always allow ${list} for ${this.o.server}`, default: false },
+            },
+          },
+        },
+      },
+    }];
+  }
+
+  /** The user's answer to an approval prompt: run or refuse the waiting call. */
+  private onApprovalAnswer(msg: JsonRpcMessage, promptId: string): Action[] {
+    const held = this.heldCalls.get(promptId);
+    this.heldCalls.delete(promptId);
+    if (!held) return [];
+    const r = (msg.result ?? {}) as { action?: unknown; content?: { remember?: unknown } };
+    if (msg.error !== undefined || r.action !== 'accept') {
+      return [
+        this.alert({ ruleId: 'EX-016', severity: 'high', tool: held.tool, message: `You declined a call that would send data to ${held.hosts.join(', ')}.` }),
+        { type: 'forward', to: 'client', message: toolErrorResult(held.id, `You declined this call to "${held.tool}", so nothing was sent.`) },
+      ];
+    }
+    const actions: Action[] = [];
+    if (r.content?.remember === true) {
+      const state = this.o.io.load();
+      for (const h of held.hosts) approveHost(state, this.o.server, h);
+      this.o.io.save(state);
+    }
+    actions.push(this.alert({
+      ruleId: 'EX-016',
+      severity: 'medium',
+      tool: held.tool,
+      message: `You allowed a call to ${held.hosts.join(', ')}${r.content?.remember === true ? ' and added the host to the allowed list' : ' once'}.`,
+    }));
+    this.pending.set(held.id, { method: 'tools/call', tool: held.tool });
+    actions.push({ type: 'forward', to: 'server', message: held.call });
+    return actions;
   }
 
   /**
@@ -295,6 +371,23 @@ export class ShieldEngine {
 
       if (!pin) {
         const reasons = inspectTool(tool, this.o.defs);
+        if (reasons.length === 0 && this.o.policy.firstUse === 'review' && this.enforcing()) {
+          // S-006: a never-seen tool waits for the user's review before it is trusted.
+          if (!ss.unreviewed[tool.name] || ss.unreviewed[tool.name]?.hash !== fp) {
+            ss.unreviewed[tool.name] = { hash: fp, description: tool.description ?? '', seenAt: this.now().toISOString() };
+            changed = true;
+          }
+          if (this.firstTime(tool.name, fp)) {
+            actions.push(this.alert({
+              ruleId: 'SHIELD',
+              severity: 'medium',
+              tool: tool.name,
+              message: `New tool "${tool.name}" is waiting for your review and is hidden until then. Description: ${(tool.description ?? '').slice(0, 300)} To allow it, run: exorcist approve tool ${this.o.server} ${tool.name}`,
+            }));
+          }
+          this.withheld.set(tool.name, { ruleId: 'SHIELD', reason: 'it is new and waiting for your review.', fingerprint: fp });
+          continue;
+        }
         if (reasons.length > 0) {
           if (this.firstTime(tool.name, fp)) {
             actions.push(

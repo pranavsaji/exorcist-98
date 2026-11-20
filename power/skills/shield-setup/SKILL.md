@@ -13,6 +13,8 @@ The shield sits between Kiro and each MCP server. It pins every tool the first t
 2. Run `exorcist wrap .kiro/settings/mcp.json` (add `--dry-run` first to show the result). To undo it later: `exorcist unwrap .kiro/settings/mcp.json`.
 3. Run `exorcist init` to add the secrets guard hook, the MCP config scan hook and a steering file.
 4. Optional: write `.exorcist/policy.json`, for example `{ "allowedHosts": ["api.github.com"], "mode": "enforce", "autoQuarantine": true }`.
+   Add `"firstUse": "review"` to hold every new tool back until the user runs `exorcist approve tool <server> <tool>` (the default, `"pin"`, trusts a tool the first time it is seen).
+   If the client supports MCP elicitation, a call to a host that is not allowed shows the user a prompt (allow once, or always allow the host); otherwise the call is refused with the exact `exorcist approve host` command.
 5. Tell the user to reconnect their MCP servers so Kiro starts them through the shield.
 
 ## When something is blocked

@@ -6,12 +6,18 @@ export const PolicySchema = z
     allowedHosts:   z.array(z.string().min(1)).default([]),
     mode:           z.enum(['enforce', 'monitor']).default('enforce'),
     autoQuarantine: z.boolean().default(false),
+    /**
+     * What happens the first time a tool is seen (S-006). `pin` trusts it and
+     * pins its fingerprint (trust on first use). `review` holds it back until
+     * `exorcist approve tool <server> <tool>`.
+     */
+    firstUse:       z.enum(['pin', 'review']).default('pin'),
   })
   .strict();
 
 export type Policy = z.infer<typeof PolicySchema>;
 
-export const DEFAULT_POLICY: Policy = { allowedHosts: [], mode: 'enforce', autoQuarantine: false };
+export const DEFAULT_POLICY: Policy = { allowedHosts: [], mode: 'enforce', autoQuarantine: false, firstUse: 'pin' };
 
 export type PolicyResult = { ok: true; policy: Policy } | { ok: false; error: string };
 

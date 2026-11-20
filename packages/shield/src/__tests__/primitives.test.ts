@@ -114,6 +114,7 @@ const stateArb: fc.Arbitrary<State> = fc.record({
     fc.record({
       tools: fc.dictionary(fc.constantFrom('read', 'write', 'list'), fc.record({ hash: hex64, description: fc.string(), pinnedAt: fc.constant('2026-11-20T00:00:00.000Z') })),
       pending: fc.dictionary(fc.constantFrom('read', 'write'), fc.record({ hash: hex64, oldHash: hex64, oldDescription: fc.string(), newDescription: fc.string(), seenAt: fc.constant('2026-11-20T00:00:00.000Z') })),
+      unreviewed: fc.dictionary(fc.constantFrom('new', 'extra'), fc.record({ hash: hex64, description: fc.string(), seenAt: fc.constant('2026-11-20T00:00:00.000Z') })),
       approvedHosts: fc.array(fc.constantFrom('a.example.invalid', '*.b.example.invalid'), { maxLength: 2 }),
     }),
   ),
@@ -177,7 +178,7 @@ describe('policy', () => {
   it('uses defaults when there is no file, and rejects unknown keys', () => {
     const dir = tmp();
     const none = loadPolicy(join(dir, 'policy.json'));
-    expect(none.ok && none.policy).toEqual({ allowedHosts: [], mode: 'enforce', autoQuarantine: false });
+    expect(none.ok && none.policy).toEqual({ allowedHosts: [], mode: 'enforce', autoQuarantine: false, firstUse: 'pin' });
     writeFileSync(join(dir, 'policy.json'), JSON.stringify({ mode: 'monitor', surprise: true }));
     expect(loadPolicy(join(dir, 'policy.json')).ok).toBe(false);
   });
