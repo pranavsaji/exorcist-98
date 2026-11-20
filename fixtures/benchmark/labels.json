@@ -37,6 +37,9 @@
     ],
     "claude-settings-hook": [
       "EX-008"
+    ],
+    "private-key-in-docs": [
+      "EX-011"
     ]
   },
   "benign": [
