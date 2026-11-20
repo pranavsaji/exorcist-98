@@ -25,7 +25,11 @@ export type RemoteProxyOptions = ShieldSetupOptions & {
   timeoutMs?: number;
   /** Allow plain http to a host that is not this machine (tokens would travel unencrypted). */
   allowInsecure?: boolean;
+  /** Wait before reopening a dropped server stream, per attempt (ms). Default 1 s, 2 s, 4 s ... up to 30 s. */
+  reconnectBaseMs?: number;
 };
+
+const MAX_RECONNECTS = 8;
 
 const MAX_EVENT_BYTES = 16 * 1024 * 1024;
 const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
@@ -157,17 +161,35 @@ export async function runRemoteProxy(o: RemoteProxyOptions): Promise<number> {
     for (const m of Array.isArray(parsed) ? parsed : [parsed]) fromServer(JSON.stringify(m));
   };
 
-  /** Open the stream for messages the server sends on its own, once a session exists. */
+  /**
+   * Open the stream for messages the server sends on its own, once a session
+   * exists. If it drops, reopen it with a growing wait (a few times), so
+   * server notifications and requests do not silently stop.
+   */
   const openGetStream = (): void => {
     if (getStreamOpen || closing) return;
     getStreamOpen = true;
+    const base = o.reconnectBaseMs ?? 1_000;
     const p = (async () => {
       try {
-        const res = await fetchFn(url, { method: 'GET', headers: headers({ accept: 'text/event-stream' }), signal: getCtl.signal });
-        if (res.status === 405 || res.status === 404 || !res.ok) return; // optional for servers
-        await readBody(res);
-      } catch {
-        // The stream is optional; requests still work without it.
+        for (let attempt = 0; attempt <= MAX_RECONNECTS && !closing; attempt++) {
+          let delivered = false;
+          try {
+            const res = await fetchFn(url, { method: 'GET', headers: headers({ accept: 'text/event-stream' }), signal: getCtl.signal });
+            if (res.status === 405 || res.status === 404 || !res.ok) return; // optional for servers
+            delivered = true;
+            await readBody(res);
+          } catch {
+            if (closing) return;
+          }
+          if (closing) return;
+          if (delivered) attempt = 0; // a stream that connected resets the count
+          if (attempt === MAX_RECONNECTS) {
+            log('The remote server stream dropped and could not be reopened; server-initiated messages will not arrive until the next request.');
+            return;
+          }
+          await new Promise((r) => setTimeout(r, Math.min(30_000, base * 2 ** attempt)));
+        }
       } finally {
         getStreamOpen = false;
       }
@@ -192,7 +214,11 @@ export async function runRemoteProxy(o: RemoteProxyOptions): Promise<number> {
         });
         const sid = res.headers.get('mcp-session-id');
         if (sid && /^[\x21-\x7e]{1,256}$/.test(sid)) sessionId = sid;
-        if (res.status === 202) return;
+        // A notification is usually answered with 202 and no body. After initialized, open the server stream.
+        if (res.status === 202) {
+          if (m['method'] === 'notifications/initialized') openGetStream();
+          return;
+        }
         if (!res.ok) {
           const why = res.status === 404 && sessionId ? 'the remote session expired' : `HTTP ${res.status}`;
           log(`The remote server refused a message (${why}).`);

@@ -7,11 +7,14 @@ import type { Reason } from './inspect.js';
 import { JsonRpcMessageSchema, errorResponse, parseLine, toolErrorResult } from './jsonrpc.js';
 import type { JsonRpcId, JsonRpcMessage } from './jsonrpc.js';
 import type { Policy } from './policy.js';
+import { cleanText } from './notify.js';
 import { approveHost, serverState } from './state.js';
 import type { Alert, State } from './state.js';
 
 export type Action =
   | { type: 'forward'; to: 'server' | 'client'; message: unknown }
+  /** Text for the Shield's stderr only (for example a server's own log line). */
+  | { type: 'log'; text: string }
   | { type: 'alert'; alert: Alert }
   | { type: 'quarantine'; reason: string };
 
@@ -32,6 +35,20 @@ export type EngineOptions = {
 type Withheld = { ruleId: string; reason: string; fingerprint?: string };
 
 const MAX_DIFF_CHARS = 4_000;
+
+/** Bookkeeping limits: a peer that never answers must not make the Shield's tables grow without end. */
+const MAX_OPEN_PROMPTS = 32;
+const MAX_TRACKED = 1_000;
+
+/** Set a key, dropping the oldest entries when the map is full. */
+function boundedSet<K, V>(map: Map<K, V>, key: K, value: V, max = MAX_TRACKED): void {
+  map.set(key, value);
+  while (map.size > max) {
+    const oldest = map.keys().next();
+    if (oldest.done) break;
+    map.delete(oldest.value);
+  }
+}
 
 /** Ids of the Shield's own approval prompts to the client (S-004). */
 const PROMPT_PREFIX = 'exorcist-98:approve:';
@@ -67,6 +84,8 @@ export class ShieldEngine {
   /** True when the agent's client said in `initialize` that it can show elicitation prompts (S-004). */
   private clientElicits = false;
   private elicitSeq = 0;
+  /** Lines of stdout from the server that were not protocol messages (S-011). */
+  private noiseLines = 0;
   /** Tool calls waiting for the user's answer to an approval prompt, by prompt id. */
   private readonly heldCalls = new Map<string, { call: JsonRpcMessage; id: JsonRpcId; tool: string; hosts: string[] }>();
 
@@ -90,6 +109,11 @@ export class ShieldEngine {
 
   private enforcing(): boolean {
     return this.o.policy.mode === 'enforce';
+  }
+
+  /** How many requests are being tracked (for tests and diagnostics). */
+  openCounts(): { pending: number; serverRequests: number; prompts: number } {
+    return { pending: this.pending.size, serverRequests: this.serverRequests.size, prompts: this.heldCalls.size };
   }
 
   /** Names of tools currently hidden from the agent. */
@@ -132,7 +156,7 @@ export class ShieldEngine {
       this.clientElicits = caps?.elicitation !== undefined && caps.elicitation !== null;
     }
     if ((msg.method === 'tools/list' || msg.method === 'initialize') && msg.id !== undefined) {
-      this.pending.set(msg.id, { method: msg.method });
+      boundedSet(this.pending, msg.id, { method: msg.method });
     }
     return [{ type: 'forward', to: 'server', message: msg }];
   }
@@ -163,7 +187,7 @@ export class ShieldEngine {
 
     const actions: Action[] = [];
     const forward = (): Action[] => {
-      this.pending.set(id, { method: 'tools/call', tool: name });
+      boundedSet(this.pending, id, { method: 'tools/call', tool: name });
       return [...actions, { type: 'forward', to: 'server', message: msg }];
     };
 
@@ -203,7 +227,13 @@ export class ShieldEngine {
   onServerLine(line: string): Action[] {
     const parsed = parseLine(line);
     if (!parsed.ok) {
-      return [this.alert({ ruleId: 'SHIELD', severity: 'medium', message: 'Dropped a line from the MCP server that was not valid JSON.' })];
+      // S-011: a server printing its own logs to stdout. Never pass it to the
+      // agent; show it on the Shield's stderr, and alert once, not per line.
+      const actions: Action[] = [{ type: 'log', text: `${cleanText(this.o.server, 60)} (stdout): ${cleanText(line, 500)}` }];
+      if (this.noiseLines++ === 0) {
+        actions.unshift(this.alert({ ruleId: 'SHIELD', severity: 'medium', message: 'The MCP server is printing text that is not MCP protocol on stdout (usually its own logs). It is kept away from the agent and shown on the Shield\'s stderr. Fix the server to log to stderr.' }));
+      }
+      return actions;
     }
     if (Array.isArray(parsed.value)) {
       return [this.alert({ ruleId: 'SHIELD', severity: 'medium', message: 'Dropped a JSON-RPC batch from the MCP server.' })];
@@ -235,9 +265,19 @@ export class ShieldEngine {
    * (S-004). The call waits; nothing is sent to the server until the answer.
    */
   private askUser(call: JsonRpcMessage, id: JsonRpcId, tool: string, hosts: string[]): Action[] {
+    if (this.heldCalls.size >= MAX_OPEN_PROMPTS) {
+      // Too many unanswered prompts: refuse instead of piling up more.
+      return [
+        this.alert({ ruleId: 'EX-016', severity: 'high', tool, message: `Refused a call to ${hosts.map((h) => cleanText(h, 80)).join(', ')}: ${MAX_OPEN_PROMPTS} approval prompts are already waiting for your answer.` }),
+        { type: 'forward', to: 'client', message: toolErrorResult(id, `Exorcist 98 stopped this call because ${MAX_OPEN_PROMPTS} approval prompts are already waiting. Answer them first, then try again.`) },
+      ];
+    }
     const promptId = `${PROMPT_PREFIX}${++this.elicitSeq}`;
     this.heldCalls.set(promptId, { call, id, tool, hosts });
-    const list = hosts.join(', ');
+    // The tool name and hosts come from the server: show them with hidden and
+    // direction-changing characters removed, so they cannot mislead the user.
+    const shownTool = cleanText(tool, 80);
+    const list = hosts.map((h) => cleanText(h, 80)).join(', ');
     return [{
       type: 'forward',
       to: 'client',
@@ -246,11 +286,11 @@ export class ShieldEngine {
         id: promptId,
         method: 'elicitation/create',
         params: {
-          message: `Exorcist 98: the tool "${tool}" on "${this.o.server}" wants to send data to ${list}, which is not on your allowed list. Allow this call?`,
+          message: `Exorcist 98: the tool "${shownTool}" on "${cleanText(this.o.server, 80)}" wants to send data to ${list}, which is not on your allowed list. Allow this call?`,
           requestedSchema: {
             type: 'object',
             properties: {
-              remember: { type: 'boolean', title: `Always allow ${list} for ${this.o.server}`, default: false },
+              remember: { type: 'boolean', title: `Always allow ${list} for ${cleanText(this.o.server, 80)}`, default: false },
             },
           },
         },
@@ -271,18 +311,24 @@ export class ShieldEngine {
       ];
     }
     const actions: Action[] = [];
+    let remembered = false;
+    let notSaved: string[] = [];
     if (r.content?.remember === true) {
       const state = this.o.io.load();
-      for (const h of held.hosts) approveHost(state, this.o.server, h);
-      this.o.io.save(state);
+      const results = held.hosts.map((h) => ({ h, r: approveHost(state, this.o.server, h) }));
+      notSaved = results.filter((x) => !x.r.ok).map((x) => cleanText(x.h, 80));
+      remembered = results.some((x) => x.r.ok);
+      if (remembered) this.o.io.save(state);
     }
+    const saved = remembered ? ' and added the host to the allowed list' : ' only this once';
+    const caveat = notSaved.length > 0 ? ` (${notSaved.join(', ')} could not be saved to the allowed list, so it will ask again)` : '';
     actions.push(this.alert({
       ruleId: 'EX-016',
       severity: 'medium',
-      tool: held.tool,
-      message: `You allowed a call to ${held.hosts.join(', ')}${r.content?.remember === true ? ' and added the host to the allowed list' : ' once'}.`,
+      tool: cleanText(held.tool, 80),
+      message: `You allowed a call to ${held.hosts.map((h) => cleanText(h, 80)).join(', ')}${saved}${caveat}.`,
     }));
-    this.pending.set(held.id, { method: 'tools/call', tool: held.tool });
+    boundedSet(this.pending, held.id, { method: 'tools/call', tool: held.tool });
     actions.push({ type: 'forward', to: 'server', message: held.call });
     return actions;
   }
@@ -298,7 +344,7 @@ export class ShieldEngine {
     const method = msg.method ?? '';
     const verdict = isQuietMethod(method) ? { action: 'allow' as const, reasons: [] } : inspectServerText(msg.params, this.o.defs);
     if (verdict.action === 'allow') {
-      if (msg.id !== undefined) this.serverRequests.set(msg.id, method);
+      if (msg.id !== undefined) boundedSet(this.serverRequests, msg.id, method);
       return [{ type: 'forward', to: 'client', message: msg }];
     }
     const alert = this.alert({
@@ -307,7 +353,7 @@ export class ShieldEngine {
       message: `The server's ${method} ${msg.id === undefined ? 'notification' : 'request'} was ${this.enforcing() ? 'withheld' : 'flagged'}: ${joinReasons(verdict.reasons)}`,
     });
     if (!this.enforcing()) {
-      if (msg.id !== undefined) this.serverRequests.set(msg.id, method);
+      if (msg.id !== undefined) boundedSet(this.serverRequests, msg.id, method);
       return [alert, { type: 'forward', to: 'client', message: msg }];
     }
     // A request is answered with an error so the server is not left waiting;

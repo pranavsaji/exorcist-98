@@ -119,6 +119,7 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
     const out: Array<{ to: 'server' | 'client'; message: unknown }> = [];
     for (const a of actions) {
       if (a.type === 'forward') out.push({ to: a.to, message: a.message });
+      else if (a.type === 'log') log(a.text);
       else if (a.type === 'alert') recordAlert(a.alert);
       else if (o.configPath) {
         const r = quarantineServer({ configPath: o.configPath, serverName: o.server, reason: a.reason, vaultDir: vaultPath(o.dir) });
