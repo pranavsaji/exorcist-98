@@ -9,7 +9,8 @@ applies_to:
 match:
   # Phrases that only make sense when talking to an AI agent. Any amount of
   # whitespace may separate the words. Ordinary text such as "you are now
-  # logged in" is not flagged.
+  # logged in" is not flagged. A phrase split by hidden characters still
+  # matches (the engine also scans the text with them removed).
   regex: "(?:\\bignore\\s+(?:all\\s+|any\\s+|the\\s+)?(?:previous|prior|above|earlier)\\s+(?:instructions|rules|prompts?)|\\bdisregard\\s+(?:all\\s+|any\\s+|the\\s+)?(?:previous|prior|above|earlier)\\s+(?:instructions|rules)|\\byou\\s+are\\s+now\\s+(?:operating|in\\s+(?:maintenance|developer|debug|admin|god|unrestricted)\\s+mode|free\\b|unrestricted|dan\\b)|\\bas\\s+an\\s+ai(?:\\s+(?:assistant|agent|model))?\\s*,?\\s+(?:your|you\\s+must|you\\s+should|ignore)|\\byour\\s+new\\s+(?:primary\\s+)?(?:directive|instructions?)\\b|\\bdo\\s+not\\s+(?:mention|tell|reveal)\\s+(?:this|these)\\s+(?:instruction|note|message)s?)"
 owasp:
   - "LLM01:2025 Prompt Injection"
