@@ -34,7 +34,7 @@ have not actually run.
 ## Facts to keep straight on camera
 
 - "Fifty-two property-based tests" is the count of `fc.assert` properties in
-  `docs/KIRO_LOG.md`. Test totals: 431 in the main repo, 103 in the Crew repo.
+  `docs/KIRO_LOG.md`. Test totals: 431 in the main repo, 122 in the Crew repo.
 - The AI heuristic layer (Bedrock) has never run against the real service.
   Do not say scans use AI unless that changes (L-020).
 - Do not call it "on npm" until you publish (S-002).
