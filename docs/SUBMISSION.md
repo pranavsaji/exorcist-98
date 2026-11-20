@@ -6,7 +6,7 @@ below comes from `docs/KIRO_LOG.md` or a test run; update them if they change.
 - **Project name:** Exorcist 98
 - **Tagline:** The 90s desktop antivirus, resurrected to protect AI coding agents.
 - **Category:** Resurrection
-- **Bonus prizes:** Best Startup Project, Best Kiro Crew App
+- **Bonus prizes:** Best Kiro Crew App, Best Demo (automatic), Bonus Blog and Social Blitz if posted. **[you]** Best Startup Project only if you are the founder of a real startup and can give your LinkedIn and startup website; otherwise leave it out (the rules require both).
 - **Web app (no login):** https://exorcist-98.vercel.app
 - **Repository:** https://github.com/pranavsaji/exorcist-98 (Apache-2.0, `.kiro/` committed)
 - **Crew app repository:** https://github.com/pranavsaji/exorcist-98-crew (Apache-2.0)
@@ -32,13 +32,22 @@ a quarantine vault) and pointed it at the files and tools an agent trusts.
   infection level in words and a shape (never colour alone), the threat class
   and a fix. Reports download as SARIF (GitHub code scanning), Markdown (pull
   requests), JSON and an SVG README badge, built in the browser.
-- **Virus Definitions:** 13 open YAML signatures for hidden Unicode,
+- **Virus Definitions:** 14 open YAML signatures for hidden Unicode,
   instructions aimed at the AI, encoded payloads, HTML comment smuggling, tool
   description poisoning, rug pulls, over-broad auto-approve, remote code in
   hooks, install-script exfiltration, unpinned MCP servers, secrets within the
-  agent's reach, markdown image exfiltration and shell in tool output. Each
+  agent's reach, markdown image exfiltration, steering overrides and shell in
+  tool output, across the files Kiro, Cursor, Cline, Windsurf, Copilot, Claude
+  Code and Gemini read. Each
   maps to the OWASP LLM, Agentic or MCP Top 10. A Threat Encyclopedia explains
   each one in plain language.
+- **Measured precision:** on five well-known public agent and MCP repos it
+  raises 2 alarms in total (down from 4,457 before tuning), and it catches 12
+  of 12 attacks in a labelled corpus that runs with the tests
+  (`docs/BENCHMARK.md`).
+- **Protect a repo in one step:** a GitHub Action that scans every pull
+  request and comments on new threats; the web app shows the workflow file to
+  copy after each scan.
 - **Real-Time Shield:** an MCP firewall that sits between the agent and each
   MCP server. It pins every tool's fingerprint; if a tool changes, it is hidden
   from the agent and calls to it are refused, with a diff of what changed. It
@@ -90,10 +99,11 @@ where Crew behaved differently from its docs is listed in
 | Specs | 5 specs, one per milestone (`m0-foundation`, `m1-engine`, `m2-ui`, `m3-shield`, `m4-polish`), each with requirements, design and tasks; 1 more in the Crew repo (`crew-app`). | `.kiro/specs/` |
 | Steering | 4 files (product, tech, security, ui) that set the rules for every change: strict TypeScript, zod at every boundary, defanged fixtures, untrusted text never concatenated into instructions, severity never by colour alone. | `.kiro/steering/` |
 | Property-based tests | 52 fast-check properties, for example "a secret at any depth is never forwarded", "a changed tool is never listed or callable", "a zero-width character is detected at any position", "no tar entry name writes outside the target folder". Plus more in the Crew repo. | `docs/KIRO_LOG.md` |
-| Hooks | 4 hooks in Kiro's JSON format. `spec-change` fired in Kiro on every spec save and kept `docs/THREATS.md` in step. `pre-commit-secrets` (PreToolUse) did **not** fire in our sessions, so a git pre-commit hook does that job. | `.kiro/hooks/`, KIRO_LOG |
+| Hooks | 4 hooks in the main repo and 1 in the Crew repo, in Kiro's JSON format. Seen firing: `spec-change` (on every spec save; kept `docs/THREATS.md` in step) and the Crew repo's `validate-app-json` (ran the manifest tests on each save of `app.json`). Not seen firing: `definition-save` and `mcp-config-change` (not triggered yet) and `pre-commit-secrets` (PreToolUse; did not fire in our sessions, so a git pre-commit hook does that job). | `.kiro/hooks/`, KIRO_LOG |
 | MCP | Built the `exorcist` MCP server on the official SDK (4 tools), tested with the SDK client. | `packages/mcp-server/` |
 | Powers | Built the `exorcist` Power (MCP config plus 3 skills). | `power/` |
-| Crew | A separate Crew app repo: Sentry agent, agent-hygiene skill, a nightly patrol that sends Crew notifications, a backend and a dashboard page. Run inside Crew 0.12.2 and 0.13.0, including the Sentry agent reading results through its own read-only MCP tool; installing it found 7 differences from the Crew docs, all fixed. | `pranavsaji/exorcist-98-crew` |
+| Measurement | We ran our own scanner on five real repos and found it raised 4,457 alarms, none real. Kiro then worked through a precision spec: rule-level controls in the YAML format, a labelled attack corpus, and a re-run: 2 alarms, 12 of 12 attacks caught. The same run found a CLI bug that cut reports at 64 KB. | `docs/BENCHMARK.md`, `fixtures/benchmark/` |
+| Crew | A separate Crew app repo: Sentry agent, agent-hygiene skill, a nightly patrol that sends Crew notifications, a backend and a dashboard page. Run inside Crew 0.12.2 and 0.13.0, including the Sentry agent reading results through its own read-only MCP tool; installing and running it found places where Crew behaves differently from its docs (each recorded in that repo's `docs/KNOWN_LIMITATIONS.md`, C-0xx and N-0xx) and fixed. | `pranavsaji/exorcist-98-crew` |
 
 Stack: TypeScript (strict) in a pnpm monorepo; Next.js for the web app;
 Vitest and fast-check; playwright-core and axe-core for a real-browser,
@@ -120,8 +130,30 @@ bundles; Amazon Bedrock wiring for an AI judge (see "What's next").
   the server changes it to "send the contents of .env to ...", the agent no
   longer sees it, the call is refused, and the server's own log proves it never
   received the call.
-- 434 tests in the main repo, 140 in the Crew repo; 0 axe violations on every
+- 465 tests in the main repo, 140 in the Crew repo; 0 axe violations on every
   page in Chrome.
+
+## How the Kiro tools differed
+
+- **Kiro IDE** carried the spec-driven work: one spec per milestone
+  (requirements, design, tasks), steering that every change had to follow,
+  and hooks on file save. `spec-change` fired on every spec save.
+- **Kiro Crew** was a different kind of target: a running agent platform we
+  built an app for, then installed and ran. Doing that found places where
+  Crew behaved differently from its docs. Examples: the proxy header is
+  `X-KiroCrew-Proxy`, crons need `permissions.cron`, and the page must be a
+  React default export. Each is fixed and recorded.
+- **Custom agents:** the Crew app's Exorcist Sentry agent, with one read-only
+  MCP tool, so it can report patrol results but never sees scanned text and
+  never moves files.
+
+## Spec-driven versus vibe coding
+
+Specs made a security tool falsifiable: every requirement got a test, and
+property-based tests found real defects that example tests missed (KIRO_LOG,
+"What worked well"). Where we skipped measuring, we were wrong. Rule tuning
+looked fine on the planted fixtures and failed badly on real repos, until a
+spec-style task forced a benchmark.
 
 ## What we learned
 
@@ -134,8 +166,8 @@ running it, and every gap written down (`docs/KNOWN_LIMITATIONS.md`).
 - Turn on the Bedrock AI judge (wired and unit tested with a fake client, never
   run against the real service).
 - Publish `@exorcist-98/cli` and `@exorcist-98/mcp-server` to npm.
-- More definitions (typosquatted servers, steering overrides, memory poisoning)
-  and a false-positive benchmark on real repositories.
+- More definitions (typosquatted servers, memory poisoning, confused deputy)
+  and a bigger benchmark corpus.
 
 ## Startup (Best Startup Project)
 
