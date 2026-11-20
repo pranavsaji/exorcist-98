@@ -2,7 +2,7 @@ import { createTwoFilesPatch } from 'diff';
 import type { VirusDefinition } from '@exorcist-98/core';
 import { toolFingerprint } from './hash.js';
 import type { ToolDef } from './hash.js';
-import { inspectCall, inspectResult, inspectTool } from './inspect.js';
+import { inspectCall, inspectResult, inspectServerText, inspectTool, isQuietMethod, secretsIn } from './inspect.js';
 import type { Reason } from './inspect.js';
 import { JsonRpcMessageSchema, errorResponse, parseLine, toolErrorResult } from './jsonrpc.js';
 import type { JsonRpcId, JsonRpcMessage } from './jsonrpc.js';
@@ -59,6 +59,8 @@ export class ShieldEngine {
   private readonly pending = new Map<JsonRpcId, { method: string; tool?: string }>();
   private readonly withheld = new Map<string, Withheld>();
   private readonly alerted = new Set<string>();
+  /** Requests the server sent to the agent that are still waiting for an answer: id to method. */
+  private readonly serverRequests = new Map<JsonRpcId, string>();
 
   constructor(private readonly o: EngineOptions) {}
 
@@ -109,6 +111,9 @@ export class ShieldEngine {
 
   onClient(msg: JsonRpcMessage): Action[] {
     if (msg.method === 'tools/call' && msg.id !== undefined) return this.onToolCall(msg, msg.id);
+    if (msg.method === undefined && msg.id !== undefined && msg.result !== undefined && this.serverRequests.has(msg.id)) {
+      return this.onClientReply(msg, msg.id);
+    }
     if ((msg.method === 'tools/list' || msg.method === 'initialize') && msg.id !== undefined) {
       this.pending.set(msg.id, { method: msg.method });
     }
@@ -193,6 +198,7 @@ export class ShieldEngine {
 
   onServer(msg: JsonRpcMessage): Action[] {
     const isResponse = msg.id !== undefined && msg.method === undefined && (msg.result !== undefined || msg.error !== undefined);
+    if (msg.method !== undefined) return this.onServerInitiated(msg);
     if (!isResponse || msg.id === undefined) return [{ type: 'forward', to: 'client', message: msg }];
 
     const ctx = this.pending.get(msg.id);
@@ -203,6 +209,50 @@ export class ShieldEngine {
     if (ctx.method === 'initialize') return [{ type: 'forward', to: 'client', message: advertiseListChanged(msg) }];
     if (ctx.method === 'tools/call') return this.onToolResult(msg, ctx.tool);
     return [{ type: 'forward', to: 'client', message: msg }];
+  }
+
+  /**
+   * A request or notification the server starts (S-010). Sampling asks the
+   * agent's own model to read text the server chose; elicitation shows the
+   * user a prompt; log and progress notifications are often shown to the
+   * model too. Any of them can carry instructions aimed at the AI, so their
+   * text gets the same check as a tool result.
+   */
+  private onServerInitiated(msg: JsonRpcMessage): Action[] {
+    const method = msg.method ?? '';
+    const verdict = isQuietMethod(method) ? { action: 'allow' as const, reasons: [] } : inspectServerText(msg.params, this.o.defs);
+    if (verdict.action === 'allow') {
+      if (msg.id !== undefined) this.serverRequests.set(msg.id, method);
+      return [{ type: 'forward', to: 'client', message: msg }];
+    }
+    const alert = this.alert({
+      ruleId: verdict.reasons[0]?.ruleId ?? 'SHIELD',
+      severity: 'high',
+      message: `The server's ${method} ${msg.id === undefined ? 'notification' : 'request'} was ${this.enforcing() ? 'withheld' : 'flagged'}: ${joinReasons(verdict.reasons)}`,
+    });
+    if (!this.enforcing()) {
+      if (msg.id !== undefined) this.serverRequests.set(msg.id, method);
+      return [alert, { type: 'forward', to: 'client', message: msg }];
+    }
+    // A request is answered with an error so the server is not left waiting;
+    // a notification is dropped.
+    if (msg.id === undefined) return [alert];
+    return [alert, { type: 'forward', to: 'server', message: errorResponse(msg.id, -32001, 'Exorcist 98 refused this request: it looks like an attack on the AI.') }];
+  }
+
+  /** The agent's answer to a server request: never let a secret go back to the server. */
+  private onClientReply(msg: JsonRpcMessage, id: JsonRpcId): Action[] {
+    const method = this.serverRequests.get(id) ?? 'request';
+    this.serverRequests.delete(id);
+    const hits = secretsIn(msg.result);
+    if (hits.length === 0) return [{ type: 'forward', to: 'server', message: msg }];
+    const alert = this.alert({
+      ruleId: 'EX-017',
+      severity: 'critical',
+      message: `The answer to the server's ${method} contained a secret (${hits.slice(0, 3).join('; ')}). ${this.enforcing() ? 'It was not sent.' : 'Monitor mode: it was sent.'}`,
+    });
+    if (!this.enforcing()) return [alert, { type: 'forward', to: 'server', message: msg }];
+    return [alert, { type: 'forward', to: 'server', message: errorResponse(id, -32001, 'Exorcist 98 withheld this answer because it contained a secret.') }];
   }
 
   private onToolResult(msg: JsonRpcMessage, tool: string | undefined): Action[] {

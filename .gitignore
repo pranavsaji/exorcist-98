@@ -159,3 +159,7 @@ packages/mcp-server/definitions/
 .exorcist-kiro-demo/
 .vercel
 .env*.local
+packages/cli/definitions.new-*/
+packages/cli/definitions.old-*/
+packages/mcp-server/definitions.new-*/
+packages/mcp-server/definitions.old-*/

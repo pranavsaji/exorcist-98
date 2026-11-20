@@ -3,7 +3,7 @@
 //
 //   node build.mjs   ->  dist/index.mjs  and  definitions/
 import { build } from 'esbuild';
-import { cpSync, rmSync, mkdirSync } from 'node:fs';
+import { cpSync, rmSync, mkdirSync, existsSync, renameSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 
@@ -28,9 +28,18 @@ await build({
   external: ['@aws-sdk/*', 'simple-git'],
 });
 
-rmSync(join(here, 'definitions'), { recursive: true, force: true });
-cpSync(join(here, '../../definitions'), join(here, 'definitions'), {
+// Copy into a fresh folder, then swap it in with renames, so a process reading
+// definitions/ while a build runs (parallel tests do) never sees it missing or
+// half-copied.
+const target = join(here, 'definitions');
+const fresh = `${target}.new-${process.pid}`;
+const stale = `${target}.old-${process.pid}`;
+rmSync(fresh, { recursive: true, force: true });
+cpSync(join(here, '../../definitions'), fresh, {
   recursive: true,
   filter: (src) => !src.endsWith('.gitkeep'),
 });
+if (existsSync(target)) renameSync(target, stale);
+renameSync(fresh, target);
+rmSync(stale, { recursive: true, force: true });
 console.log('built dist/index.mjs and definitions/');

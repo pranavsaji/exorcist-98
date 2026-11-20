@@ -1,19 +1,36 @@
-import { findSecrets, plainFor, redact, scanText } from '@exorcist-98/core';
+import { plainFor, scanText } from '@exorcist-98/core';
 import type { VirusDefinition } from '@exorcist-98/core';
 import { hostAllowed } from './policy.js';
+import { hostsIn } from './hosts.js';
+import { describeCredential, findCredentials } from './secrets.js';
+
+export { hostsIn };
 import type { ToolDef } from './hash.js';
 
 export type Reason = { ruleId: string; message: string };
 
-const MAX_DEPTH = 8;
+const MAX_DEPTH = 32;
 const MAX_STRINGS = 5_000;
 const MAX_SCAN_CHARS = 1_000_000;
 
 /** All string values and keys in a JSON-like value, within depth and count limits. */
 export function collectStrings(value: unknown): string[] {
+  return collectStringsChecked(value).strings;
+}
+
+/**
+ * Like `collectStrings`, and also says whether anything was left unread
+ * because of the depth or count limits. A caller deciding whether data may
+ * leave the machine must refuse what it could not read (fail closed).
+ */
+export function collectStringsChecked(value: unknown): { strings: string[]; truncated: boolean } {
   const out: string[] = [];
+  let truncated = false;
   const walk = (v: unknown, depth: number): void => {
-    if (out.length >= MAX_STRINGS || depth > MAX_DEPTH) return;
+    if (out.length >= MAX_STRINGS || depth > MAX_DEPTH) {
+      if (v !== null && v !== undefined) truncated = true;
+      return;
+    }
     if (typeof v === 'string') out.push(v);
     else if (Array.isArray(v)) for (const x of v) walk(x, depth + 1);
     else if (v && typeof v === 'object') {
@@ -24,7 +41,7 @@ export function collectStrings(value: unknown): string[] {
     }
   };
   walk(value, 0);
-  return out;
+  return { strings: out, truncated };
 }
 
 // ── tool calls (agent to server) ──────────────────────────────────────────────
@@ -34,33 +51,24 @@ export type CallVerdict =
   | { action: 'block'; reasons: Reason[] }
   | { action: 'ask'; reasons: Reason[]; hosts: string[] };
 
-const URL_HOST = /https?:\/\/([^\s/?#"'<>\\]+)/gi;
-
-export function hostsIn(text: string): string[] {
-  const hosts: string[] = [];
-  URL_HOST.lastIndex = 0;
-  let m: RegExpExecArray | null;
-  while ((m = URL_HOST.exec(text)) !== null) {
-    let h = (m[1] ?? '').toLowerCase();
-    h = h.slice(h.lastIndexOf('@') + 1); // drop user:password@
-    if (!h.startsWith('[')) h = h.replace(/:\d+$/, ''); // drop the port
-    if (h) hosts.push(h);
-  }
-  return hosts;
-}
-
 export function inspectCall(
   args: unknown,
   ctx: { allowedHosts: readonly string[]; approvedHosts: readonly string[] },
 ): CallVerdict {
-  const strings = collectStrings(args);
+  const { strings, truncated } = collectStringsChecked(args);
+  if (truncated) {
+    return {
+      action: 'block',
+      reasons: [{ ruleId: 'EX-016', message: `The arguments of this call are too deeply nested or too large to inspect (over ${MAX_DEPTH} levels or ${MAX_STRINGS} strings), so they were not sent.` }],
+    };
+  }
 
   const secretReasons: Reason[] = [];
   for (const s of strings) {
-    for (const hit of findSecrets(s)) {
+    for (const hit of findCredentials(s)) {
       secretReasons.push({
         ruleId: 'EX-017',
-        message: `A secret (${hit.pattern}, ${redact(hit.match)}) is in the arguments of this call. ${plainFor('EX-017', '').headline}.`,
+        message: `A secret (${describeCredential(hit)}) is in the arguments of this call. ${plainFor('EX-017', '').headline}.`,
       });
     }
   }
@@ -143,4 +151,28 @@ export function inspectTool(tool: ToolDef, defs: VirusDefinition[]): Reason[] {
   const poisoning = scanText(text, 'mcp-config', defs.filter((d) => TOOL_TEXT_RULES.has(d.id)), tool.name);
   const injection = scanText(text, 'tool-result', defs, tool.name);
   return reasonsFrom([...poisoning, ...injection]);
+}
+
+// ── requests and notifications the server starts (S-010) ──────────────────────
+
+/** Methods with no text worth checking (they only carry ids, counts or URIs). */
+const QUIET = new Set(['notifications/cancelled', 'notifications/tools/list_changed', 'notifications/resources/list_changed', 'notifications/prompts/list_changed', 'notifications/roots/list_changed', 'roots/list', 'ping']);
+
+/** Every string in the params of a server request or notification, checked like a tool result. */
+export function inspectServerText(params: unknown, defs: VirusDefinition[]): ResultVerdict {
+  const text = collectStrings(params).join('\n').slice(0, MAX_SCAN_CHARS);
+  if (!text) return { action: 'allow', reasons: [] };
+  const reasons = reasonsFrom(scanText(text, 'tool-result', defs, '(server request)'));
+  return reasons.length > 0 ? { action: 'block', reasons } : { action: 'allow', reasons: [] };
+}
+
+export function isQuietMethod(method: string): boolean {
+  return QUIET.has(method);
+}
+
+/** Redacted descriptions of the credentials anywhere in a value. */
+export function secretsIn(value: unknown): string[] {
+  const out: string[] = [];
+  for (const s of collectStrings(value)) for (const h of findCredentials(s)) out.push(describeCredential(h));
+  return out;
 }
