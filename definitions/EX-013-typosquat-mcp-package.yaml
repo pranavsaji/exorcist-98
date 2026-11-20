@@ -5,10 +5,11 @@ applies_to:
   - mcp-config
   - config
 match:
-  # Every argument of every configured server; only package-like strings that
+  # The package each package-runner server runs; only names that
   # are one or two edits (or look-alike characters) away from a well-known MCP
   # server package are kept (packages/core/src/known-packages.ts).
-  json_path: "$..mcpServers.*.args[*]"
+  json_path: "$..mcpServers[?(@.command=='npx' || @.command=='bunx' || @.command=='uvx' || @.command=='pnpx')].args"
+  select: package-arg
   value_regex: "^@?[a-z0-9][a-z0-9._-]*(/[a-z0-9._-]+)?(@[0-9a-z.^~*-]+)?$"
   validate: typosquat
 owasp:

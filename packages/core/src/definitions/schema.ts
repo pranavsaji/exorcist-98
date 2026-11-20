@@ -22,9 +22,12 @@ const MatchSchema = z
     // says it is not what the rule means; the rule only runs on a file whose
     // text matches file_regex.
     exclude_regex: z.string().optional(),
-    validate:      z.enum(['base64-text', 'typosquat']).optional(),
+    validate:      z.enum(['base64-text', 'encoded-text', 'typosquat']).optional(),
     // Only for files of role `config`: the rule runs only if the file text matches.
     file_regex:    z.string().optional(),
+    // With json_path selecting an `args` array: check only the package the
+    // runner is told to run, not flags or paths.
+    select:        z.enum(['package-arg']).optional(),
   })
   .superRefine((val, ctx) => {
     const hasAny =

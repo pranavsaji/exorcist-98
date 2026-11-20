@@ -53,11 +53,38 @@ function truncateSpan(s: string): string {
  * Locate a JSON string value in the raw file text so findings carry a real
  * line and column. Falls back to 1:1 if the value cannot be found verbatim.
  */
-function locateJsonValue(original: string, value: string): { line: number; col: number } {
+function locateJsonValue(original: string, value: string, occurrence = 0): { line: number; col: number } {
   const encoded = JSON.stringify(value);
-  const idx = original.indexOf(encoded);
+  // L-011: the n-th time a value is reported, point at its n-th appearance.
+  let idx = original.indexOf(encoded);
+  for (let n = 0; n < occurrence && idx !== -1; n++) {
+    const next = original.indexOf(encoded, idx + encoded.length);
+    if (next === -1) break;
+    idx = next;
+  }
   if (idx === -1) return { line: 1, col: 1 };
   return offsetToPosition(original, idx);
+}
+
+/**
+ * The package a runner (`npx`, `bunx`, `pnpx`, `uvx`) is told to run: the value
+ * of `--package`/`-p`/`--from`, or else the first argument that is not a flag
+ * (L-012). Null when there is none.
+ */
+export function packageArg(args: unknown[]): string | null {
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (typeof a !== 'string') return null;
+    if (a === '--package' || a === '-p' || a === '--from') {
+      const v = args[i + 1];
+      return typeof v === 'string' ? v : null;
+    }
+    const eq = /^--(?:package|from)=(.+)$/.exec(a);
+    if (eq) return eq[1] ?? null;
+    if (a.startsWith('-')) continue; // -y, --yes, --quiet and other flags
+    return a;
+  }
+  return null;
 }
 
 /**
@@ -72,7 +99,17 @@ export function isBase64Text(s: string): boolean {
   if (/^[A-Za-z0-9_.-]*(\/[A-Za-z0-9_.-]+){2,}\/?$/.test(s) && !s.includes('+')) return false;
   if (/^[0-9a-f]+$/i.test(t)) return false;
   if (t.length % 4 === 1) return false;
-  const bytes = Buffer.from(t, 'base64');
+  return looksLikeText(Buffer.from(t, 'base64'));
+}
+
+/** True when `s` is hex (`6375726c...`, `\\x63\\x75...` or `0x...`) that decodes to readable text (L-018). */
+export function isHexText(s: string): boolean {
+  const t = s.replace(/\\x/gi, '').replace(/^0x/i, '');
+  if (t.length < 48 || t.length % 2 !== 0 || /[^0-9a-f]/i.test(t)) return false;
+  return looksLikeText(Buffer.from(t, 'hex'));
+}
+
+function looksLikeText(bytes: Buffer): boolean {
   if (bytes.length < 24) return false;
   let printable = 0;
   for (const b of bytes) if ((b >= 0x20 && b < 0x7f) || b === 0x0a || b === 0x0d || b === 0x09) printable++;
@@ -141,6 +178,7 @@ export function runSignatures(
     const keep = (text: string): boolean => {
       if (exclude && exclude.test(text)) return false;
       if (match.validate === 'base64-text' && !isBase64Text(text)) return false;
+      if (match.validate === 'encoded-text' && !isBase64Text(text) && !isHexText(text)) return false;
       if (match.validate === 'typosquat' && typosquatOf(text) === null) return false;
       return true;
     };
@@ -195,7 +233,8 @@ export function runSignatures(
             const at = toPlain(index);
             if (seen.has(at)) continue;
             seen.add(at);
-            const { line, col } = offsetToPosition(norm.original, at);
+            // L-010: map the decoded-text index back to the original file.
+            const { line, col } = offsetToPosition(norm.original, norm.plainMap?.[at] ?? at);
             findings.push({ ...base, line, col, span: truncateSpan(text) });
           }
         });
@@ -242,14 +281,25 @@ export function runSignatures(
         ? new RegExp(match.value_regex, 'i')
         : null;
 
-      for (const val of results) {
-        if (val === undefined || val === null) continue;
+      const seenValues = new Map<string, number>();
+      for (const raw of results) {
+        if (raw === undefined || raw === null) continue;
+        let val: unknown = raw;
+        if (match.select === 'package-arg') {
+          if (!Array.isArray(raw)) continue;
+          val = packageArg(raw);
+          if (val === null) continue;
+        }
         const text = typeof val === 'string' ? val : JSON.stringify(val);
         if (valueFilter && !valueFilter.test(text)) continue;
         if (!keep(text)) continue;
-        const { line, col } =
-          typeof val === 'string' ? locateJsonValue(norm.original, val) : { line: 1, col: 1 };
-        findings.push({ ...base, line, col, span: truncateSpan(text) });
+        let pos = { line: 1, col: 1 };
+        if (typeof val === 'string') {
+          const n = seenValues.get(val) ?? 0;
+          seenValues.set(val, n + 1);
+          pos = locateJsonValue(norm.original, val, n);
+        }
+        findings.push({ ...base, line: pos.line, col: pos.col, span: truncateSpan(text) });
       }
     }
   }

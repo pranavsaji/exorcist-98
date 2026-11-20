@@ -23,3 +23,4 @@ export type { ScanReport } from './reporters/json-reporter.js';
 export type { SarifLog } from './reporters/sarif-reporter.js';
 export type { SecretHit, StagedHit, StagedResult } from './secrets-check.js';
 export type { PlainEntry } from './plain.js';
+export { SCANNER_VERSION } from './version.js';

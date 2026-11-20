@@ -90,16 +90,42 @@ const NAMED_ENTITIES: Record<string, string> = {
   nbsp: '\u00A0',
 };
 
-function decodeEntities(text: string): string {
-  return text.replace(/&([a-zA-Z]+|#\d+|#x[\da-fA-F]+);/g, (match, body: string) => {
-    if (body.startsWith('#x') || body.startsWith('#X')) {
-      return String.fromCodePoint(parseInt(body.slice(2), 16));
-    }
-    if (body.startsWith('#')) {
-      return String.fromCodePoint(parseInt(body.slice(1), 10));
-    }
-    return NAMED_ENTITIES[body.toLowerCase()] ?? match;
-  });
+function decodeEntity(match: string, body: string): string {
+  try {
+    if (body.startsWith('#x') || body.startsWith('#X')) return String.fromCodePoint(parseInt(body.slice(2), 16));
+    if (body.startsWith('#')) return String.fromCodePoint(parseInt(body.slice(1), 10));
+  } catch {
+    return match; // out-of-range code point: leave the text as it was
+  }
+  return NAMED_ENTITIES[body.toLowerCase()] ?? match;
+}
+
+/**
+ * Decode entities and keep, for every UTF-16 index of the decoded text, the
+ * index in the original text it came from, so findings report the real line
+ * and column (L-010). Returns null when nothing was decoded.
+ */
+function decodeEntitiesWithMap(text: string): { plain: string; map: number[] } | null {
+  const re = /&([a-zA-Z]+|#\d+|#x[\da-fA-F]+);/g;
+  let plain = '';
+  const map: number[] = [];
+  let last = 0;
+  let changed = false;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const decoded = decodeEntity(m[0], m[1] ?? '');
+    if (decoded === m[0]) continue;
+    changed = true;
+    for (let i = last; i < m.index; i++) map.push(i);
+    plain += text.slice(last, m.index);
+    for (let k = 0; k < decoded.length; k++) map.push(m.index);
+    plain += decoded;
+    last = m.index + m[0].length;
+  }
+  if (!changed) return null;
+  for (let i = last; i < text.length; i++) map.push(i);
+  plain += text.slice(last);
+  return { plain, map };
 }
 
 // ── Comment extraction ────────────────────────────────────────────────────────
@@ -160,17 +186,21 @@ export type NormalizedText = {
    * so a phrase split by a zero-width space still matches (L-005).
    */
   visible?:          { text: string; map: number[] };
+  /** For each index of `plain`, the index in `original` (only when entities were decoded). */
+  plainMap?:         number[];
   hiddenUnicode:     UnicodeHit[];
   comments:          string[];
   base64Candidates:  string[];
 };
 
 export function normalize(text: string, _role: FileRole): NormalizedText {
-  const plain           = decodeEntities(text);
+  const decoded         = decodeEntitiesWithMap(text);
+  const plain           = decoded ? decoded.plain : text;
   const hiddenUnicode   = findHiddenUnicode(text);
   const comments        = extractComments(text);
   const base64Candidates = extractBase64Candidates(text);
   const out: NormalizedText = { original: text, plain, hiddenUnicode, comments, base64Candidates };
+  if (decoded) out.plainMap = decoded.map;
   if (hiddenUnicode.length > 0) {
     let vis = '';
     const map: number[] = [];

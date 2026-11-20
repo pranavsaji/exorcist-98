@@ -52,6 +52,12 @@
     ],
     "suspicious-power": [
       "EX-020"
+    ],
+    "hex-payload-hook": [
+      "EX-003"
+    ],
+    "escaped-hex-docs": [
+      "EX-003"
     ]
   },
   "benign": [
@@ -68,6 +74,7 @@
     "cli-flag-readme",
     "long-url-paths",
     "known-mcp-packages",
-    "ordinary-memory"
+    "ordinary-memory",
+    "git-shas"
   ]
 }

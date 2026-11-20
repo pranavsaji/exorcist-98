@@ -120,7 +120,7 @@ export async function scanCommand(argv: string[], io: Io): Promise<number> {
   stats = { ...stats, filesScanned: counted, findingsTotal: findings.length };
 
   const body =
-    format === 'json' ? `${JSON.stringify(toJson(findings, stats), null, 2)}\n`
+    format === 'json' ? `${JSON.stringify(toJson(findings, stats, { target }), null, 2)}\n`
     : format === 'sarif' ? `${JSON.stringify(toSarif(findings, root), null, 2)}\n`
     : format === 'markdown' ? toMarkdown(findings, stats)
     : format === 'badge' ? toBadgeSvg(findings)

@@ -1,3 +1,4 @@
+import { SCANNER_VERSION } from '../version.js';
 import type { Finding } from '../types.js';
 
 // Browser-safe: no Node imports, so the web app can build SARIF in the page.
@@ -84,7 +85,7 @@ export function toSarif(findings: Finding[], repoRoot: string): SarifLog {
       tool: {
         driver: {
           name: 'Exorcist 98',
-          version: '0.1.0',
+          version: SCANNER_VERSION,
           rules: Array.from(ruleMap.values()),
         },
       },

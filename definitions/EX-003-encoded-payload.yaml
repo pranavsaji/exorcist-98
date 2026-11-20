@@ -12,11 +12,12 @@ match:
   # A run of 40 or more base64 characters. Two ordinary kinds of long base64
   # are skipped: package integrity hashes ("sha512-...") that fill lockfiles,
   # and inline data URIs ("data:image/png;base64,...").
-  regex: "(?<!sha(?:1|256|384|512)-)(?<!base64,)(?<![A-Za-z0-9+/=])[A-Za-z0-9+/=]{40,}(?![A-Za-z0-9+/=])"
+  # A run of 40+ base64 characters, or 48+ hex digits (plain, 0x or \\x escaped).
+  regex: "(?:(?<!sha(?:1|256|384|512)-)(?<!base64,)(?<![A-Za-z0-9+/=])[A-Za-z0-9+/=]{40,}(?![A-Za-z0-9+/=])|(?:\\\\x[0-9a-fA-F]{2}){24,})"
   # Only runs that decode to readable text count. URL paths, hashes, git SHAs
   # and identifiers decode to binary noise; before this check they were about
   # 99% of all findings on ordinary repositories (docs/BENCHMARK.md).
-  validate: base64-text
+  validate: encoded-text
 skip_paths:
   - "(^|/)(tests?|__tests__|__mocks__|spec|specs|fixtures?|testdata|test-data|e2e)/|[._-](test|spec)s?\\.[A-Za-z0-9]+$|_tests?\\.(rs|go|py)$"
   - "(^|/)(package-lock\\.json|npm-shrinkwrap\\.json|pnpm-lock\\.yaml|yarn\\.lock|bun\\.lockb?|Cargo\\.lock|poetry\\.lock|Pipfile\\.lock|uv\\.lock|go\\.sum|composer\\.lock|Gemfile\\.lock|[^/]*\\.lock\\.ya?ml)$"

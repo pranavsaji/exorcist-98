@@ -32,7 +32,7 @@ export async function* scanRepo(
   let filesSkipped = 0;
   let findingsTotal = 0;
 
-  for await (const file of walkRepo(root)) {
+  for await (const file of walkRepo(root, options.maxFileSizeBytes)) {
     yield { type: 'file', file };
 
     try {

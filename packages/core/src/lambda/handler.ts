@@ -68,7 +68,7 @@ export async function handler(
 
     const report = toJson(findings, stats ?? {
       filesScanned: 0, filesSkipped: 0, findingsTotal: 0, durationMs: 0,
-    });
+    }, { target: repoUrl });
 
     // Log summary only — never log file contents
     console.log(JSON.stringify({

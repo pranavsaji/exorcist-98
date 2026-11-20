@@ -105,11 +105,11 @@ async function isBinary(filePath: string): Promise<boolean> {
 
 // ── Walker ────────────────────────────────────────────────────────────────────
 
-export async function* walkRepo(root: string): AsyncIterable<RepoFile> {
-  yield* walkDir(root, root);
+/** Every scannable file under `root`. Files larger than `maxFileSize` bytes are skipped (L-023). */
+export async function* walkRepo(root: string, maxFileSize: number = MAX_FILE_SIZE): AsyncIterable<RepoFile> {
+  yield* walkDir(root, root, maxFileSize);
 }
-
-async function* walkDir(root: string, dir: string): AsyncIterable<RepoFile> {
+async function* walkDir(root: string, dir: string, maxFileSize: number): AsyncIterable<RepoFile> {
   const dh = await opendir(dir);
   for await (const entry of dh) {
     const absPath = join(dir, entry.name);
@@ -117,10 +117,10 @@ async function* walkDir(root: string, dir: string): AsyncIterable<RepoFile> {
 
     if (entry.isDirectory()) {
       if (SKIP_DIRS.has(entry.name)) continue;
-      yield* walkDir(root, absPath);
+      yield* walkDir(root, absPath, maxFileSize);
     } else if (entry.isFile()) {
       const info = await stat(absPath);
-      if (info.size > MAX_FILE_SIZE) continue;
+      if (info.size > maxFileSize) continue;
       if (await isBinary(absPath))   continue;
       yield {
         path:      absPath,

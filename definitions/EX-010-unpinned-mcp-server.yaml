@@ -5,9 +5,10 @@ applies_to:
   - mcp-config
   - config
 match:
-  # Only the first two args of servers launched through a package runner are
-  # checked (this covers `npx -y <package>`). Later args are paths or flags.
-  json_path: "$..mcpServers[?(@.command=='npx' || @.command=='bunx' || @.command=='uvx' || @.command=='pnpx')].args[0:2]"
+  # The package each package-runner server is told to run (flags such as -y
+  # and --package are understood; later arguments are paths or options).
+  json_path: "$..mcpServers[?(@.command=='npx' || @.command=='bunx' || @.command=='uvx' || @.command=='pnpx')].args"
+  select: package-arg
   # A package name with no @version after it, e.g. "server" or "@scope/server".
   # "server@1.2.3" and "@scope/server@1.2.3" do not match.
   value_regex: "^(@[a-z0-9._-]+/)?[a-z0-9][a-z0-9._-]*$"
