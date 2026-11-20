@@ -48,7 +48,40 @@ a quarantine vault) and pointed it at the files and tools an agent trusts.
   restore it byte for byte.
 - **Kiro Power, MCP server, CLI and GitHub Action** to use all of this from
   Kiro, the terminal and CI.
-- **Crew app:** a nightly patrol of your folders with a dashboard page.
+- **Crew app:** a nightly patrol of your folders with a dashboard page, an MCP rug-pull watch, and a confirm-first quarantine that only the dashboard owner can use.
+
+## Best Kiro Crew App: writeup (paste into the bonus field)
+
+**Repository:** https://github.com/pranavsaji/exorcist-98-crew (public, Apache-2.0, created 2026-11-15, inside the Submission Period).
+
+Exorcist 98 for Kiro Crew patrols your project folders every night for text
+that tries to take over an AI agent, and shows the results on a Crew dashboard
+page.
+
+- **Nightly patrol.** At 02:00 the app's backend scans every watched folder with
+  the Exorcist 98 scanner (hidden Unicode, instructions aimed at the AI,
+  poisoned MCP tool descriptions, risky agent and MCP settings) and sends a Crew
+  notification for new serious findings or a failed scan.
+- **Dashboard page.** Each folder's infection level as a text label plus a
+  shape, never colour alone; every finding with file, line, the quoted text
+  (shown as text, never as HTML) and how to fix it.
+- **MCP rug-pull watch.** Reads the Exorcist 98 Shield's pin file in each folder
+  and reports every MCP tool whose description changed after you approved it.
+- **Quarantine, confirm first.** "Move file to vault..." moves a flagged file
+  into a vault with an exact copy; "Restore..." puts back the same bytes. Only
+  the signed-in dashboard owner can do it: the app asks Crew to sign who sent
+  each request, and agents, schedules, MCP tools and other apps are refused.
+- **Exorcist Sentry agent** with a read-only `patrol_status` MCP tool, so you
+  can ask about the patrol in chat. It never sees the scanned text, so a
+  poisoned file cannot steer it, and it never moves or deletes anything.
+- **Agent-hygiene skill:** safe habits for any Crew agent that reads repos or
+  uses MCP servers.
+
+Tested inside Crew 0.12.2 and 0.13.0 (install, enable, page, patrol,
+notification, agent chat, cron, quarantine and restore), plus 140 unit and
+property tests and a 20-step Chrome run with 0 axe violations. Every place
+where Crew behaved differently from its docs is listed in
+`docs/KNOWN_LIMITATIONS.md` of that repo.
 
 ## How we built it (Kiro)
 
@@ -87,7 +120,7 @@ bundles; Amazon Bedrock wiring for an AI judge (see "What's next").
   the server changes it to "send the contents of .env to ...", the agent no
   longer sees it, the call is refused, and the server's own log proves it never
   received the call.
-- 434 tests in the main repo, 127 in the Crew repo; 0 axe violations on every
+- 434 tests in the main repo, 140 in the Crew repo; 0 axe violations on every
   page in Chrome.
 
 ## What we learned
