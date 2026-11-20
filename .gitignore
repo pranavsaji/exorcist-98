@@ -157,3 +157,5 @@ packages/mcp-server/definitions/
 
 # Local Shield demo state (pins, alerts, control file)
 .exorcist-kiro-demo/
+.vercel
+.env*.local

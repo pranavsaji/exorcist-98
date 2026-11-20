@@ -5,7 +5,13 @@ cloud credentials and no AI service: GitHub repositories are downloaded as
 tarballs over HTTPS, and only signature rules run. It reads `definitions/` and
 `fixtures/haunted-repo/` from disk, and the standalone build ships both.
 
-No host has been chosen yet. Each option below needs your account.
+**Live:** https://exorcist-98.vercel.app (Vercel Hobby, project `exorcist-98`,
+root directory `apps/web`, Node 22). Deployed 2026-11-20 with `vercel deploy`;
+the full browser suite passed against it (24 of 24 steps, 0 axe violations),
+including a real GitHub scan. Redeploy with `vercel deploy --prod` from the
+repository root.
+
+Each option below needs your account.
 
 ## Option 1: any Node 22 host (tested)
 
@@ -34,10 +40,14 @@ The `Dockerfile` runs the same build as option 1 and starts the server as the
 `git` inside): the browser suite passed against the container, 24 of 24 steps,
 0 axe violations. This is the simplest way to run it on any container host.
 
-## Option 3: Vercel (not yet tried)
+## Option 3: Vercel (live)
 
-Import the repository, set the root directory to `apps/web`, and keep the
-default install and build commands (pnpm is detected from `packageManager`).
+Link the repository root with `vercel link`, then set the root directory to
+`apps/web` (`vercel project update exorcist-98 --root-directory apps/web
+--framework nextjs --node-version 22.x`). Keep the default install and build
+commands (pnpm is detected from `packageManager`). Set
+`EXORCIST_CLIENT_IP_HEADER=x-real-ip` so the rate limiter can tell visitors
+apart.
 The tracing includes in `apps/web/next.config.mjs` should bring
 `definitions/` and the Haunted Repo along. GitHub scans write to the
 function's temporary disk, which serverless hosts allow.
@@ -48,9 +58,18 @@ function's temporary disk, which serverless hosts allow.
 |----------|--------|---------|
 | `PORT`, `HOSTNAME` | Optional | Where the server listens. |
 | `EXORCIST_ROOT` | Optional | Folder that contains `definitions/` and `fixtures/haunted-repo/`, if they are not next to the server. |
+| `EXORCIST_CLIENT_IP_HEADER` | Recommended | The header your host's proxy sets to the visitor's address, used by the rate limiter: `x-real-ip` on Vercel, `fly-client-ip` on Fly (the default). Without it every visitor shares one bucket. |
 
 ## Before going public
 
-- `POST /api/scan` has no rate limit or concurrency cap (W-003). Put the app
-  behind a host or proxy that rate-limits per IP.
+- `POST /api/scan` has a per-visitor rate limit and a cap on scans running at
+  once (W-003, `apps/web/src/lib/limits.ts`): 6 GitHub scans per visitor, then
+  one every 2 minutes; 3 GitHub scans at once. The limits live in one server
+  process, so several instances each keep their own.
 - Check the deployed URL with `E2E_BASE=https://your-url pnpm e2e`.
+
+## Option 4: Fly.io (prepared, not deployed)
+
+`fly.toml` runs the Docker image on one small machine that stops when idle.
+`fly apps create` refused until a payment method is added to the Fly account,
+so it has not been deployed there.

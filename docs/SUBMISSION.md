@@ -7,7 +7,7 @@ below comes from `docs/KIRO_LOG.md` or a test run; update them if they change.
 - **Tagline:** The 90s desktop antivirus, resurrected to protect AI coding agents.
 - **Category:** Resurrection
 - **Bonus prizes:** Best Startup Project, Best Kiro Crew App
-- **Web app (no login):** **[you]** deploy first (see `docs/DEPLOY.md`)
+- **Web app (no login):** https://exorcist-98.vercel.app
 - **Repository:** https://github.com/pranavsaji/exorcist-98 (Apache-2.0, `.kiro/` committed)
 - **Crew app repository:** https://github.com/pranavsaji/exorcist-98-crew (Apache-2.0)
 - **Video:** **[you]** YouTube link (script: `docs/VIDEO_SCRIPT.md`)

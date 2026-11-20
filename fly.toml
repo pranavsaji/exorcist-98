@@ -1,0 +1,36 @@
+# Fly.io deployment of the web app (Dockerfile in this folder).
+#   fly deploy
+# One small machine that stops when idle and starts on the next request.
+app = "exorcist-98"
+primary_region = "sjc"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "3000"
+  HOSTNAME = "0.0.0.0"
+  # The rate limiter keys visitors by this header, which Fly's proxy sets (W-003).
+  EXORCIST_CLIENT_IP_HEADER = "fly-client-ip"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 20
+    hard_limit = 40
+
+  [[http_service.checks]]
+    grace_period = "15s"
+    interval = "30s"
+    method = "GET"
+    path = "/"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"

@@ -2,15 +2,16 @@ import { ScanRequestSchema } from '@/lib/protocol';
 import { parseGithubUrl } from '@/lib/github';
 import { scanTarget } from '@/lib/scan-service';
 import type { ScanTarget } from '@/lib/scan-service';
+import { clientKey, limiter } from '@/lib/limits';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
-function badRequest(message: string): Response {
+function jsonError(status: number, message: string, extra: Record<string, string> = {}): Response {
   return new Response(JSON.stringify({ error: message }), {
-    status: 400,
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    status,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...extra },
   });
 }
 
@@ -19,12 +20,12 @@ export async function POST(request: Request): Promise<Response> {
   try {
     body = await request.json();
   } catch {
-    return badRequest('The request body must be JSON.');
+    return jsonError(400, 'The request body must be JSON.');
   }
-
   const parsed = ScanRequestSchema.safeParse(body);
   if (!parsed.success) {
-    return badRequest(
+    return jsonError(
+      400,
       'Send either { "target": "haunted-repo" } or { "repoUrl": "https://github.com/owner/repo" }.',
     );
   }
@@ -35,24 +36,34 @@ export async function POST(request: Request): Promise<Response> {
   } else {
     const repo = parseGithubUrl(parsed.data.repoUrl);
     if (!repo) {
-      return badRequest('Only public https://github.com/owner/repo links can be scanned.');
+      return jsonError(400, 'Only public https://github.com/owner/repo links can be scanned.');
     }
     target = { kind: 'github', display: `${repo.owner}/${repo.repo}`, owner: repo.owner, repo: repo.repo };
   }
 
+  // W-003: a per-visitor rate limit and a cap on scans running at once.
+  const slot = limiter.acquire(target.kind, clientKey(request.headers));
+  if (!slot.ok) return jsonError(slot.status, slot.error, { 'Retry-After': String(slot.retryAfterSeconds) });
+
   const encoder = new TextEncoder();
   const iterator = scanTarget(target)[Symbol.asyncIterator]();
-
   const stream = new ReadableStream<Uint8Array>({
     async pull(controller) {
-      const next = await iterator.next();
-      if (next.done) {
-        controller.close();
-      } else {
-        controller.enqueue(encoder.encode(`${JSON.stringify(next.value)}\n`));
+      try {
+        const next = await iterator.next();
+        if (next.done) {
+          slot.release();
+          controller.close();
+        } else {
+          controller.enqueue(encoder.encode(`${JSON.stringify(next.value)}\n`));
+        }
+      } catch (err) {
+        slot.release();
+        throw err;
       }
     },
     async cancel() {
+      slot.release();
       // Runs the generator's finally block, which removes any cloned repo.
       await iterator.return?.(undefined);
     },
