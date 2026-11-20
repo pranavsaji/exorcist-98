@@ -31,7 +31,7 @@ describe('parseGithubUrl', () => {
       'https://github.com.evil.com/o/r',
       'https://github.com/o/r?x=1',
       'https://github.com/o/r#frag',
-      'https://github.com/o/r/tree/main',
+      'https://github.com/o/r/blob/main/x.md',
       'https://github.com/o',
       'https://github.com//r',
       'https://github.com/../r',
@@ -75,5 +75,20 @@ describe('parseGithubUrl', () => {
         return true;
       }),
     );
+  });
+});
+
+describe('W-020: branch, tag and commit links', () => {
+  it('accepts /tree/<ref> and /commit/<sha>, keeping the ref', async () => {
+    const { parseGithubUrl } = await import('@/lib/github');
+    expect(parseGithubUrl('https://github.com/acme/widget/tree/release/2.0')).toMatchObject({ owner: 'acme', repo: 'widget', ref: 'release/2.0' });
+    expect(parseGithubUrl('https://github.com/acme/widget/commit/9a72d8d')).toMatchObject({ ref: '9a72d8d' });
+    expect(parseGithubUrl('https://github.com/acme/widget')?.ref).toBeUndefined();
+  });
+  it('refuses refs that could escape the path', async () => {
+    const { parseGithubUrl } = await import('@/lib/github');
+    for (const bad of ['../x', '-x', 'a//b', 'a b', 'a?b']) {
+      expect(parseGithubUrl(`https://github.com/acme/widget/tree/${bad}`), bad).toBeNull();
+    }
   });
 });

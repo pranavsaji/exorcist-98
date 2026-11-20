@@ -8,9 +8,11 @@ const cls =
 export function DesktopIcon({ label, icon, onOpen, href }: Props) {
   if (href) {
     return (
-      <a href={href} className={cls}>
+      // A new tab, so leaving the desktop never loses the current scan (W-012).
+      <a href={href} className={cls} target="_blank" rel="noopener noreferrer">
         {icon}
         <span>{label}</span>
+        <span className="sr-only"> (opens in a new tab)</span>
       </a>
     );
   }

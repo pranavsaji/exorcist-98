@@ -167,7 +167,16 @@ async function gunzipCapped(body: AsyncIterable<Uint8Array>, limits: TarLimits):
 export type FetchLike = (url: string, init: { signal: AbortSignal; redirect: 'follow'; headers: Record<string, string> }) =>
   Promise<{ ok: boolean; status: number; body: AsyncIterable<Uint8Array> | ReadableStream<Uint8Array> | null }>;
 
-/** Download github.com/<owner>/<repo> at its default branch and unpack it into `dir`. */
+/**
+ * A git ref that is safe to put in a URL path: branch, tag or commit names
+ * made of letters, digits, `.`, `_`, `-` and `/`, with no `..`, no leading
+ * `/` or `-`, and no empty segment.
+ */
+export function isSafeRef(ref: string): boolean {
+  return /^[A-Za-z0-9._/-]{1,200}$/.test(ref) && !ref.includes('..') && !ref.startsWith('/') && !ref.startsWith('-') && !ref.endsWith('/') && !ref.includes('//');
+}
+
+/** Download github.com/<owner>/<repo> at its default branch (or `ref`) and unpack it into `dir`. */
 export async function fetchGithubRepo(o: {
   owner: string;
   repo: string;
@@ -175,12 +184,18 @@ export async function fetchGithubRepo(o: {
   limits?: Partial<TarLimits>;
   timeoutMs?: number;
   fetchImpl?: FetchLike;
+  /** A branch, tag or commit; the default branch when omitted (W-020). */
+  ref?: string;
 }): Promise<ExtractResult> {
   const limits = { ...DEFAULT_TAR_LIMITS, ...o.limits };
   if (!/^[A-Za-z0-9_.-]{1,100}$/.test(o.owner) || !/^[A-Za-z0-9_.-]{1,100}$/.test(o.repo)) {
     return { ok: false, error: 'Not a valid GitHub owner and repository name.' };
   }
-  const url = `https://codeload.github.com/${encodeURIComponent(o.owner)}/${encodeURIComponent(o.repo)}/tar.gz/HEAD`;
+  if (o.ref !== undefined && !isSafeRef(o.ref)) {
+    return { ok: false, error: 'Not a valid branch, tag or commit name.' };
+  }
+  const ref = o.ref === undefined ? 'HEAD' : o.ref.split('/').map(encodeURIComponent).join('/');
+  const url = `https://codeload.github.com/${encodeURIComponent(o.owner)}/${encodeURIComponent(o.repo)}/tar.gz/${ref}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), o.timeoutMs ?? 30_000);
   try {

@@ -38,7 +38,10 @@ export async function POST(request: Request): Promise<Response> {
     if (!repo) {
       return jsonError(400, 'Only public https://github.com/owner/repo links can be scanned.');
     }
-    target = { kind: 'github', display: `${repo.owner}/${repo.repo}`, owner: repo.owner, repo: repo.repo };
+    target = {
+      kind: 'github', display: `${repo.owner}/${repo.repo}${repo.ref ? `@${repo.ref}` : ''}`, owner: repo.owner, repo: repo.repo,
+      ...(repo.ref ? { ref: repo.ref } : {}),
+    };
   }
 
   // W-003: a per-visitor rate limit and a cap on scans running at once.

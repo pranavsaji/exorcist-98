@@ -10,10 +10,10 @@ import type { ScanEventMsg, WebFinding } from "./protocol";
 
 export type ScanTarget =
   | { kind: "haunted-repo"; display: string }
-  | { kind: "github"; display: string; owner: string; repo: string };
+  | { kind: "github"; display: string; owner: string; repo: string; ref?: string };
 
 /** Puts a copy of the repository in `dir`. Throws with a plain message on failure. */
-export type CloneFn = (target: { owner: string; repo: string }, dir: string) => Promise<void>;
+export type CloneFn = (target: { owner: string; repo: string; ref?: string }, dir: string) => Promise<void>;
 
 export type ScanServiceOptions = {
   clone?: CloneFn;
@@ -28,8 +28,8 @@ const GENERIC_FILE_ERROR = "This file could not be read.";
  * Download the repository as a tarball over HTTPS (no git binary, no
  * subprocess), with size, file-count and time limits.
  */
-async function defaultClone(t: { owner: string; repo: string }, dir: string): Promise<void> {
-  const r = await fetchGithubRepo({ owner: t.owner, repo: t.repo, dir });
+async function defaultClone(t: { owner: string; repo: string; ref?: string }, dir: string): Promise<void> {
+  const r = await fetchGithubRepo({ owner: t.owner, repo: t.repo, dir, ...(t.ref ? { ref: t.ref } : {}) });
   if (!r.ok) throw new UserFacingError(r.error);
 }
 
@@ -76,7 +76,7 @@ export async function* scanTarget(
     } else {
       const dir = join(tmpdir(), `exorcist-${randomUUID()}`);
       cleanup = () => rm(dir, { recursive: true, force: true });
-      await (options.clone ?? defaultClone)({ owner: target.owner, repo: target.repo }, dir);
+      await (options.clone ?? defaultClone)({ owner: target.owner, repo: target.repo, ...(target.ref ? { ref: target.ref } : {}) }, dir);
       root = dir;
     }
 

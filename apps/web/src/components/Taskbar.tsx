@@ -61,9 +61,12 @@ export function Taskbar({ windows, items, onToggle, soundOn, onToggleSound }: Pr
                   <a
                     role="menuitem"
                     href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="flex items-center gap-2 px-2 py-2 text-sm font-semibold hover:bg-title hover:text-white"
                   >
                     {item.icon} {item.label}
+                    <span className="sr-only"> (opens in a new tab)</span>
                   </a>
                 ) : (
                   <button

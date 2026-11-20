@@ -52,7 +52,8 @@ export function ScanWindow({ state, onScanUrl, onScanHaunted, onCancel, onShowRe
       return;
     }
     setUrlError(null);
-    onScanUrl(repo.cloneUrl.replace(/\.git$/, ''), `${repo.owner}/${repo.repo}`);
+    // Send the link as typed (it may name a branch, tag or commit); the server parses it again.
+    onScanUrl(url.trim(), `${repo.owner}/${repo.repo}${repo.ref ? `@${repo.ref}` : ''}`);
   }
 
   const level = overallLevel(state.findings.map((f) => f.finding));

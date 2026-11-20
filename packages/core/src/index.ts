@@ -10,7 +10,7 @@ export { toBadgeSvg, badgeStatus } from './reporters/badge.js';
 export { loadDefinitions } from './definitions/loader.js';
 export { DefinitionLoadError } from './definitions/schema.js';
 export { findSecrets, findStagedSecrets, redact } from './secrets-check.js';
-export { fetchGithubRepo, readTar, safeRelativePath, writeEntries, DEFAULT_TAR_LIMITS } from './remote/tarball.js';
+export { fetchGithubRepo, isSafeRef, readTar, safeRelativePath, writeEntries, DEFAULT_TAR_LIMITS } from './remote/tarball.js';
 export type { TarLimits, TarEntry, ExtractResult, FetchLike } from './remote/tarball.js';
 export { plainFor, hasPlainEntry } from './plain.js';
 export { decide as decideCommitGuard, isGitCommit } from './hook-guard.js';

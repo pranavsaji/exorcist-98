@@ -41,7 +41,7 @@ describe('POST /api/scan: validation', () => {
   });
 
   it('rejects URLs that are not plain public GitHub repo links', async () => {
-    for (const repoUrl of ['https://gitlab.com/o/r', 'http://github.com/o/r', 'https://github.com/o/r/tree/main', '/etc/passwd']) {
+    for (const repoUrl of ['https://gitlab.com/o/r', 'http://github.com/o/r', 'https://github.com/o/r/blob/main/x.md', 'https://github.com/o/r/tree/../x', '/etc/passwd']) {
       const res = await post({ repoUrl });
       expect(res.status, repoUrl).toBe(400);
     }

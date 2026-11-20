@@ -76,7 +76,11 @@ export function Desktop() {
   const open = useCallback((id: WinId) => {
     topZ.current += 1;
     const z = topZ.current;
-    setWins((w) => ({ ...w, [id]: { ...w[id], open: true, minimized: false, z } }));
+    // W-018: keep the whole window on screen. At 1024 px the results window
+    // used to open at x=750 with more than half of it past the right edge.
+    const vw = typeof window === 'undefined' ? 1366 : window.innerWidth;
+    const maxX = Math.max(8, vw - WIDTHS[id] - 8);
+    setWins((w) => ({ ...w, [id]: { ...w[id], open: true, minimized: false, z, x: Math.min(w[id].x, maxX) } }));
   }, []);
 
   const close = useCallback((id: WinId) => {
@@ -195,8 +199,8 @@ export function Desktop() {
                   placeholder secrets, and nothing in it can run.
                 </p>
                 <p className="m-0 flex flex-wrap gap-x-3">
-                  <a className="font-semibold underline" href="/encyclopedia">
-                    Browse the Threat Encyclopedia
+                  <a className="font-semibold underline" href="/encyclopedia" target="_blank" rel="noopener noreferrer">
+                    Browse the Threat Encyclopedia (opens in a new tab)
                   </a>
                   <a className="font-semibold underline" href="/product">
                     What Exorcist 98 is for
