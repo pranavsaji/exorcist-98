@@ -13,6 +13,8 @@ export { inspectCall, inspectResult, inspectTool, collectStrings, hostsIn, extra
 export { ShieldEngine } from './engine.js';
 export type { Action, EngineOptions, StateIO } from './engine.js';
 export { runProxy } from './proxy.js';
+export { runRemoteProxy, checkRemoteUrl, SseParser } from './remote.js';
+export type { RemoteProxyOptions } from './remote.js';
 export { desktopNotifier, notifyCommand, throttle, cleanText } from './notify.js';
 export type { Notifier } from './notify.js';
 export { findDefinitionsDir, findStateDir } from './locate.js';

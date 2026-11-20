@@ -145,7 +145,7 @@ describe('exorcist scan', () => {
 describe('wrap and unwrap', () => {
   const original = `${JSON.stringify({ mcpServers: { notes: { command: 'node', args: ['notes.js'], env: { A: '1' } }, remote: { url: 'https://mcp.example.invalid/sse' } } }, null, 2)}\n`;
 
-  it('wraps local servers through the shield and unwraps byte for byte', () => {
+  it('wraps local and remote servers through the shield and unwraps byte for byte', () => {
     const d = tmp();
     const f = join(d, 'mcp.json');
     writeFileSync(f, original);
@@ -154,7 +154,10 @@ describe('wrap and unwrap', () => {
     expect(wrapped.mcpServers['notes']?.command).toBe('exorcist');
     expect(wrapped.mcpServers['notes']?.args?.slice(0, 3)).toEqual(['shield', '--server', 'notes']);
     expect(wrapped.mcpServers['notes']?.args?.slice(-2)).toEqual(['node', 'notes.js']);
-    expect(wrapped.mcpServers['remote']).toEqual({ url: 'https://mcp.example.invalid/sse' });
+    // Remote servers are wrapped too, through --url (S-005).
+    expect(wrapped.mcpServers['remote']?.command).toBe('exorcist');
+    expect(wrapped.mcpServers['remote']?.args).toEqual(expect.arrayContaining(['--url', 'https://mcp.example.invalid/sse']));
+    expect(wrapped.mcpServers['remote']?.url).toBeUndefined();
     expect(run(['wrap', f]).err).toContain('Nothing to wrap');
     expect(run(['unwrap', f]).code).toBe(0);
     expect(readFileSync(f, 'utf8')).toBe(original);

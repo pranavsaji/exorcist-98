@@ -32,16 +32,30 @@ export type ProxyOptions = {
   notify?: Notifier;
 };
 
-const FAIL_CLOSED_EXIT = 78;
+export const FAIL_CLOSED_EXIT = 78;
 
-/**
- * Run one MCP server behind the shield. Resolves with the exit code.
- * stdout carries only protocol messages; everything else goes to stderr and to
- * alerts.jsonl, and never contains tool arguments or result text.
- */
-export async function runProxy(o: ProxyOptions): Promise<number> {
-  const stdin = o.stdin ?? process.stdin;
-  const stdout = o.stdout ?? process.stdout;
+/** What both proxies (local stdio and remote HTTP) need: policy, pins, definitions, alerts. */
+export type ShieldSetupOptions = {
+  server: string;
+  dir: string;
+  definitionsDir: string;
+  configPath?: string;
+  stderr?: Writable;
+  pollMs?: number;
+  notify?: Notifier;
+};
+
+export type ShieldContext = {
+  engine: ShieldEngine;
+  log: (s: string) => void;
+  /** Handle every non-forward action (alerts, quarantine). Forwards are returned for the caller to deliver. */
+  handle: (actions: Action[]) => Array<{ to: 'server' | 'client'; message: unknown }>;
+  /** Start watching the pin file for approvals; returns a stop function. */
+  watch: (deliver: (actions: Action[]) => void) => () => void;
+};
+
+/** Load and check everything the Shield needs; a number is a fail-closed exit code. */
+export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContext | number> {
   const stderr = o.stderr ?? process.stderr;
   const log = (s: string): void => void stderr.write(`[exorcist] ${s}\n`);
 
@@ -88,13 +102,6 @@ export async function runProxy(o: ProxyOptions): Promise<number> {
   };
 
   const engine = new ShieldEngine({ server: o.server, io, policy: policy.policy, defs });
-
-  const child = spawn(o.command, o.args, {
-    stdio: ['pipe', 'pipe', 'pipe'],
-    env: o.env ?? process.env,
-    ...(o.cwd ? { cwd: o.cwd } : {}),
-  });
-
   const notifier = policy.policy.notify ? o.notify : undefined;
   const allowNotice = throttle();
   log(`Protecting "${o.server}". State folder: ${o.dir}`);
@@ -108,20 +115,62 @@ export async function runProxy(o: ProxyOptions): Promise<number> {
     try { appendAlert(alertsPath(o.dir), a); } catch { /* the console line above is enough */ }
   };
 
-  const run = (actions: Action[]): void => {
+  const handle = (actions: Action[]): Array<{ to: 'server' | 'client'; message: unknown }> => {
+    const out: Array<{ to: 'server' | 'client'; message: unknown }> = [];
     for (const a of actions) {
-      if (a.type === 'forward') {
-        const line = `${JSON.stringify(a.message)}\n`;
-        if (a.to === 'server') child.stdin.write(line);
-        else stdout.write(line);
-      } else if (a.type === 'alert') {
-        recordAlert(a.alert);
-      } else if (o.configPath) {
+      if (a.type === 'forward') out.push({ to: a.to, message: a.message });
+      else if (a.type === 'alert') recordAlert(a.alert);
+      else if (o.configPath) {
         const r = quarantineServer({ configPath: o.configPath, serverName: o.server, reason: a.reason, vaultDir: vaultPath(o.dir) });
         log(r.ok ? `Quarantined "${o.server}" (vault entry ${r.value.id}). Restore with: exorcist vault restore ${r.value.id}` : `Could not quarantine: ${r.error}`);
       } else {
         log('Auto-quarantine is on but no --config was given, so nothing was disabled.');
       }
+    }
+    return out;
+  };
+
+  // Notice approvals made from the command line while the agent is idle, so a
+  // re-approved tool comes back without a reconnect.
+  const watch = (deliver: (actions: Action[]) => void): (() => void) => {
+    const t = setInterval(() => {
+      if (dirty || readMtime() !== mtime) {
+        dirty = false;
+        deliver(engine.onStateChanged());
+      }
+    }, o.pollMs ?? 1000);
+    t.unref();
+    return () => clearInterval(t);
+  };
+
+  return { engine, log, handle, watch };
+}
+
+/**
+ * Run one MCP server behind the shield. Resolves with the exit code.
+ * stdout carries only protocol messages; everything else goes to stderr and to
+ * alerts.jsonl, and never contains tool arguments or result text.
+ */
+export async function runProxy(o: ProxyOptions): Promise<number> {
+  const stdin = o.stdin ?? process.stdin;
+  const stdout = o.stdout ?? process.stdout;
+  const stderr = o.stderr ?? process.stderr;
+  const prepared = await prepareShield({ ...o, stderr });
+  if (typeof prepared === 'number') return prepared;
+  const { engine, log, handle } = prepared;
+
+  const child = spawn(o.command, o.args, {
+    stdio: ['pipe', 'pipe', 'pipe'],
+    env: o.env ?? process.env,
+    ...(o.cwd ? { cwd: o.cwd } : {}),
+  });
+
+
+  const run = (actions: Action[]): void => {
+    for (const f of handle(actions)) {
+      const line = `${JSON.stringify(f.message)}\n`;
+      if (f.to === 'server') child.stdin.write(line);
+      else stdout.write(line);
     }
   };
 
@@ -137,24 +186,16 @@ export async function runProxy(o: ProxyOptions): Promise<number> {
   child.stderr.on('data', (chunk: Buffer) => void stderr.write(chunk));
   child.stdin.on('error', () => { /* the child went away; its exit is handled below */ });
 
-  // Notice approvals made from the command line while the agent is idle, so a
-  // re-approved tool comes back without a reconnect.
-  const watch = setInterval(() => {
-    if (dirty || readMtime() !== mtime) {
-      dirty = false;
-      run(engine.onStateChanged());
-    }
-  }, o.pollMs ?? 1000);
-  watch.unref();
+  const stopWatch = prepared.watch(run);
 
   return await new Promise<number>((resolve) => {
     child.on('error', (err) => {
-      clearInterval(watch);
+      stopWatch();
       log(`Could not start "${o.command}": ${err.message}`);
       resolve(127);
     });
     child.on('close', (code) => {
-      clearInterval(watch);
+      stopWatch();
       for (const l of fromServer.flush()) run(engine.onServerLine(l));
       resolve(code ?? 1);
     });

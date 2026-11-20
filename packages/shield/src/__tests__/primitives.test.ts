@@ -8,7 +8,7 @@ import { LineSplitter } from '../jsonrpc.js';
 import { hostAllowed, loadPolicy } from '../policy.js';
 import { approveHost, approveTool, emptyState, loadState, saveState, serverState, StateSchema } from '../state.js';
 import type { State } from '../state.js';
-import { unwrapConfig, wrapConfig } from '../wrap.js';
+import { isWrapped, unwrapConfig, wrapConfig } from '../wrap.js';
 import type { McpConfig } from '../wrap.js';
 
 const dirs: string[] = [];
@@ -203,6 +203,16 @@ const entryArb = fc.oneof(
   fc.record({ command: word }),
   fc.record({ command: word, args: fc.array(word, { minLength: 1, maxLength: 3 }), env: fc.constant({ K: 'v' }), autoApprove: fc.constant(['read']), disabled: fc.boolean() }),
   fc.record({ url: fc.constant('https://mcp.example.invalid/sse') }),
+  // Remote servers with any mix of type, headers and env (S-005).
+  fc.record(
+    {
+      url: fc.constantFrom('https://mcp.example.invalid/mcp', 'http://127.0.0.1:8080/mcp'),
+      type: fc.constantFrom('http', 'streamable-http', 'sse'),
+      headers: fc.dictionary(fc.constantFrom('Authorization', 'X-Api-Key', 'X-Team'), fc.string({ maxLength: 30 }), { maxKeys: 3 }),
+      env: fc.dictionary(fc.constantFrom('A', 'B'), fc.string({ maxLength: 10 }), { maxKeys: 2 }),
+    },
+    { requiredKeys: ['url'] },
+  ),
 );
 const configArb: fc.Arbitrary<McpConfig> = fc.record({
   mcpServers: fc.dictionary(fc.stringMatching(/^[a-z][a-z0-9-]{0,8}$/), entryArb, { maxKeys: 4 }),
@@ -211,14 +221,29 @@ const configArb: fc.Arbitrary<McpConfig> = fc.record({
 describe('wrap and unwrap', () => {
   const opts = { bin: 'exorcist', dir: '.exorcist', configPath: '.kiro/settings/mcp.json' };
 
-  it('wraps a stdio server and leaves remote servers alone', () => {
+  it('wraps a stdio server directly and a remote server through --url (S-005)', () => {
     const { config, wrapped } = wrapConfig({ mcpServers: { a: { command: 'npx', args: ['-y', 'x@1.0.0'] }, r: { url: 'https://x.example.invalid' } } }, opts);
-    expect(wrapped).toEqual(['a']);
+    expect(wrapped).toEqual(['a', 'r']);
     expect(config.mcpServers?.['a']).toEqual({
       command: 'exorcist',
       args: ['shield', '--server', 'a', '--config', '.kiro/settings/mcp.json', '--dir', '.exorcist', '--', 'npx', '-y', 'x@1.0.0'],
     });
-    expect(config.mcpServers?.['r']).toEqual({ url: 'https://x.example.invalid' });
+    expect(config.mcpServers?.['r']).toEqual({
+      command: 'exorcist',
+      args: ['shield', '--server', 'r', '--config', '.kiro/settings/mcp.json', '--dir', '.exorcist', '--url', 'https://x.example.invalid', '--remote-env', 'none', '--remote-keys', '["url"]'],
+    });
+  });
+
+  it('moves remote header values into env, never into the arguments', () => {
+    const token = ['Bearer ', 'EXAMPLE_TOKEN_DO_NOT_USE'].join('');
+    const { config } = wrapConfig({ mcpServers: { r: { type: 'http', url: 'https://x.example.invalid/mcp', headers: { Authorization: token } } } }, opts);
+    const e = config.mcpServers?.['r'] ?? {};
+    expect(JSON.stringify(e['args'])).not.toContain('EXAMPLE_TOKEN');
+    expect(e['args']).toContain('Authorization=EXORCIST_REMOTE_HEADER_1');
+    expect(e['env']).toEqual({ EXORCIST_REMOTE_HEADER_1: token });
+    expect(e['url']).toBeUndefined();
+    expect(isWrapped(e)).toBe(true);
+    expect(wrapConfig(config, opts).wrapped).toEqual([]);
   });
 
   it('does not wrap twice', () => {
@@ -238,6 +263,8 @@ describe('wrap and unwrap', () => {
       fc.property(configArb, (cfg) => {
         const { config } = wrapConfig(cfg, opts);
         expect(unwrapConfig(config).config).toEqual(cfg);
+        // Same JSON text too: key order is kept, so a config file comes back byte for byte.
+        expect(JSON.stringify(unwrapConfig(config).config)).toBe(JSON.stringify(cfg));
         return true;
       }),
     );

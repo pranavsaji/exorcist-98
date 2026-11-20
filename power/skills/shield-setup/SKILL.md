@@ -23,3 +23,7 @@ The shield sits between Kiro and each MCP server. It pins every tool the first t
 - A changed tool: the user reviews the diff in `exorcist alerts`, then runs `exorcist approve tool <server> <tool>` if they trust it.
 - An unknown host: the user runs `exorcist approve host <server> <host>`.
 - Never edit files in `.exorcist/` yourself.
+
+## Remote servers
+
+`exorcist wrap` also protects servers configured with a `url`: the entry becomes `exorcist shield --server <name> --url <url>`, which the client starts like a local server. Header values such as tokens are moved into the entry's `env` and passed with `--header-env`, so they never appear on a command line. `exorcist unwrap` restores the original entry exactly. Plain `http` is only allowed to this machine.
