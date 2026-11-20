@@ -50,6 +50,8 @@ export type WebScanStats = z.infer<typeof ScanStatsSchema>;
 
 export const ScanEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('start'),   target: z.string() }),
+  // How many files the scan will look at, sent once before the first file (W-010).
+  z.object({ type: z.literal('total'),   files: z.number().int().nonnegative() }),
   z.object({ type: z.literal('file'),    rel: z.string(), role: z.string() }),
   z.object({ type: z.literal('finding'), finding: WebFindingSchema, snippet: SnippetSchema }),
   z.object({ type: z.literal('error'),   file: z.string(), message: z.string() }),

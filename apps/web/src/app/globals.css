@@ -200,6 +200,9 @@ body {
   .progress-fill[data-state="done"] {
     width: 100%;
   }
+  .progress-fill[data-state="progress"] {
+    transition: width 0.15s linear;
+  }
   .progress-fill[data-state="idle"] {
     width: 0;
   }
@@ -271,6 +274,9 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .progress-fill[data-state="running"] {
     animation: none;
+  }
+  .progress-fill[data-state="progress"] {
+    transition: none;
   }
   .progress[data-possessed="true"] {
     animation: none;

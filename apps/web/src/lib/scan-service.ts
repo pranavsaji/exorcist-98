@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fetchGithubRepo, scanRepo } from "@exorcist-98/core";
+import { fetchGithubRepo, scanRepo, walkRepo } from "@exorcist-98/core";
 import type { Finding } from "@exorcist-98/core";
 import { definitionsDir, hauntedRepoDir } from "./paths";
 import { buildSnippet } from "./snippet";
@@ -85,6 +85,10 @@ export async function* scanTarget(
     const include = (rel: string): boolean =>
       target.kind === "haunted-repo" ? /^EX-\d{3}-/.test(rel) : true;
 
+    // Count first (metadata only), so the page can show real progress (W-010).
+    let total = 0;
+    for await (const f of walkRepo(root)) if (include(f.rel)) total++;
+    yield { type: "total", files: total };
     let emitted = 0;
     let found = 0;
     let filesSeen = 0;

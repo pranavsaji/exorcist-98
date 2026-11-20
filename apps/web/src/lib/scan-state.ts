@@ -13,6 +13,8 @@ export type ScanState = {
   log:           LogLine[];
   findings:      FindingEntry[];
   filesSeen:     number;
+  /** Files the scan will look at, once the server has counted them. */
+  totalFiles:    number | null;
   stats:         WebScanStats | null;
   /** Increments once per finding so the UI can retrigger the glitch effect. */
   threatSeq:     number;
@@ -28,6 +30,7 @@ export const initialScanState: ScanState = {
   log: [],
   findings: [],
   filesSeen: 0,
+  totalFiles: null,
   stats: null,
   threatSeq: 0,
   notice: null,
@@ -69,6 +72,8 @@ export function scanReducer(state: ScanState, action: ScanAction): ScanState {
       switch (ev.type) {
         case 'start':
           return state;
+        case 'total':
+          return { ...state, totalFiles: ev.files };
         case 'file':
           return {
             ...state,

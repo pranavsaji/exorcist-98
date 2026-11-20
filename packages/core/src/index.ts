@@ -24,3 +24,4 @@ export type { SarifLog } from './reporters/sarif-reporter.js';
 export type { SecretHit, StagedHit, StagedResult } from './secrets-check.js';
 export type { PlainEntry } from './plain.js';
 export { SCANNER_VERSION } from './version.js';
+export { walkRepo, classifyFile } from './walker.js';

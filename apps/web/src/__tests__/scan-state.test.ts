@@ -93,3 +93,14 @@ describe('scanReducer', () => {
     expect(failed.notice).toBe('nope');
   });
 });
+
+describe('W-010: real progress', () => {
+  it('records the total the server counted and resets it for the next scan', async () => {
+    const { scanReducer, initialScanState } = await import('@/lib/scan-state');
+    let s = scanReducer(initialScanState, { type: 'reset', target: 'x' });
+    s = scanReducer(s, { type: 'event', event: { type: 'total', files: 20 } });
+    expect(s.totalFiles).toBe(20);
+    s = scanReducer(s, { type: 'reset', target: 'y' });
+    expect(s.totalFiles).toBeNull();
+  });
+});

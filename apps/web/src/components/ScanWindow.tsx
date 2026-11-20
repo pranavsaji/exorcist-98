@@ -132,11 +132,11 @@ export function ScanWindow({ state, onScanUrl, onScanHaunted, onCancel, onShowRe
         ))}
       </div>
 
-      <ProgressBar status={state.status} threatSeq={state.threatSeq} />
+      <ProgressBar status={state.status} threatSeq={state.threatSeq} filesSeen={state.filesSeen} totalFiles={state.totalFiles} />
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm" aria-live="polite">
         <span className="font-semibold">{STATUS_TEXT[state.status]}</span>
-        <span>Files: {state.filesSeen}</span>
+        <span>Files: {state.filesSeen}{state.status === 'running' && state.totalFiles !== null ? ` of ${state.totalFiles}` : ''}</span>
         <span>Threats: {state.findings.length}</span>
         {state.status !== 'idle' && (
           <span className="inline-flex items-center gap-1">
