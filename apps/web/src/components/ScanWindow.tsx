@@ -59,6 +59,11 @@ export function ScanWindow({ state, onScanUrl, onScanHaunted, onCancel, onShowRe
 
   return (
     <div className="flex flex-col gap-3">
+      <p className="m-0 text-sm">
+        <strong>Your AI coding agent obeys what it reads.</strong> Exorcist 98 scans a repository for hidden
+        instructions, poisoned MCP tools and risky agent settings before Kiro, Cursor, Claude Code or Copilot read
+        them. Try the Haunted Repo to see a possessed project, or paste any public GitHub link.
+      </p>
       <form onSubmit={submit} className="flex flex-col gap-2" noValidate>
         <label htmlFor={inputId} className="text-sm font-semibold">
           GitHub repository to scan

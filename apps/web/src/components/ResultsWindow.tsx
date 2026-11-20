@@ -5,20 +5,32 @@ import type { FindingEntry } from '@/lib/scan-state';
 
 type Props = {
   findings:   FindingEntry[];
+  /** Whether a scan has finished, so an empty list can say "clean". */
+  scanDone?:  boolean;
   selectedId: number | null;
   onSelect:   (id: number) => void;
 };
 
-export function ResultsWindow({ findings, selectedId, onSelect }: Props) {
+export function ResultsWindow({ findings, selectedId, onSelect, scanDone = false }: Props) {
   if (findings.length === 0) {
     return (
       <p className="m-0 p-2 text-sm">
-        No threats yet. Run a scan and anything suspicious will be listed here, worst first.
+        {scanDone
+          ? 'Clean. No threats found in this scan.'
+          : 'No threats yet. Run a scan and anything suspicious will be listed here, worst first.'}
       </p>
     );
   }
-
-  const sorted = sortFindings(findings.map((e) => ({ ...e, ...e.finding })));
+  // One row per rule and line: several hits on the same line are one problem.
+  const groups = new Map<string, { entry: FindingEntry; count: number }>();
+  for (const e of findings) {
+    const key = `${e.finding.ruleId}|${e.finding.severity}|${e.finding.file}|${e.finding.line}`;
+    const g = groups.get(key);
+    if (g) g.count++;
+    else groups.set(key, { entry: e, count: 1 });
+  }
+  const counted = new Map([...groups.values()].map((g) => [g.entry.id, g.count]));
+  const sorted = sortFindings([...groups.values()].map((g) => ({ ...g.entry, ...g.entry.finding })));
   const counts = SEVERITY_ORDER.map((s) => ({
     s,
     n: findings.filter((e) => e.finding.severity === s).length,
@@ -49,6 +61,7 @@ export function ResultsWindow({ findings, selectedId, onSelect }: Props) {
                 </span>
                 <span className="font-mono text-xs">
                   {e.finding.file}:{e.finding.line} &middot; {e.finding.ruleId}
+                  {(counted.get(e.id) ?? 1) > 1 && ` \u00b7 ${counted.get(e.id)} places on this line`}
                 </span>
               </button>
             </li>

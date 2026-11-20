@@ -8,6 +8,7 @@ import { BookIcon, GhostIcon, InfoIcon, ShieldIcon, SkullIcon } from './Icons';
 import { DesktopIcon } from './DesktopIcon';
 import { FindingDetail } from './FindingDetail';
 import { ResultsWindow } from './ResultsWindow';
+import { NextSteps } from './NextSteps';
 import { ScanWindow } from './ScanWindow';
 import { Taskbar } from './Taskbar';
 import { Window } from './Window';
@@ -171,10 +172,11 @@ export function Desktop() {
             )}
             {id === 'results' && (
               <div className="flex flex-col gap-2">
-                <ResultsWindow findings={state.findings} selectedId={selectedId} onSelect={select} />
+                <ResultsWindow findings={state.findings} selectedId={selectedId} onSelect={select} scanDone={state.status === 'done'} />
                 {state.status === 'done' && (
                   <ReportButtons findings={state.findings.map((f) => f.finding)} stats={state.stats} target={state.target} />
                 )}
+                {state.status === 'done' && <NextSteps />}
               </div>
             )}
             {id === 'detail' && <FindingDetail entry={selected} />}

@@ -72,6 +72,16 @@ describe('ResultsWindow', () => {
     expect(html).toContain('3 threats found');
   });
 
+  it('shows several hits of one rule on one line as one row, and says clean after a clean scan', () => {
+    const e = entry(1, 'high');
+    const twin = { ...entry(2, 'high'), finding: { ...entry(2, 'high').finding, col: 9 } };
+    const html = renderToStaticMarkup(<ResultsWindow findings={[e, twin]} selectedId={null} onSelect={() => undefined} />);
+    expect(html.match(/<li>/g)?.length).toBe(1);
+    expect(html).toContain('2 places on this line');
+    expect(renderToStaticMarkup(<ResultsWindow findings={[]} selectedId={null} onSelect={() => undefined} scanDone />)).toContain('Clean. No threats found');
+    expect(renderToStaticMarkup(<ResultsWindow findings={[]} selectedId={null} onSelect={() => undefined} />)).toContain('No threats yet');
+  });
+
   it('marks the selected row', () => {
     const html = renderToStaticMarkup(<ResultsWindow findings={[entry(7, 'high')]} selectedId={7} onSelect={() => undefined} />);
     expect(html).toContain('aria-current="true"');

@@ -103,8 +103,9 @@ export function Taskbar({ windows, items, onToggle, soundOn, onToggleSound }: Pr
 
       <button
         type="button"
-        className="btn"
+        className="btn shrink-0"
         aria-pressed={soundOn}
+        aria-label={soundOn ? 'Sound on' : 'Sound off'}
         onClick={onToggleSound}
       >
         <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
@@ -115,10 +116,11 @@ export function Taskbar({ windows, items, onToggle, soundOn, onToggleSound }: Pr
             <path d="M11 5.5l4 5M15 5.5l-4 5" fill="none" stroke="currentColor" strokeWidth="1.6" />
           )}
         </svg>
-        <span className="text-xs">{soundOn ? 'Sound on' : 'Sound off'}</span>
+        {/* Text only on wider screens; it overlapped the window buttons at 390 px. */}
+        <span className="hidden text-xs sm:inline" aria-hidden="true">{soundOn ? 'Sound on' : 'Sound off'}</span>
       </button>
 
-      <div className="bevel-in px-3 py-1 font-mono text-sm" aria-label="Clock" suppressHydrationWarning>
+      <div className="bevel-in hidden shrink-0 px-3 py-1 font-mono text-sm sm:block" aria-label="Clock" suppressHydrationWarning>
         {clock}
       </div>
     </nav>
