@@ -1,3 +1,4 @@
+import vm from 'node:vm';
 import { JSONPath } from 'jsonpath-plus';
 import type { RepoFile, SignatureFinding, Severity } from '../types.js';
 import type { NormalizedText, UnicodeHit } from '../normalizer.js';
@@ -82,13 +83,51 @@ export function isBase64Text(s: string): boolean {
   return words >= 4 || /(https?:\/\/|\bcurl\b|\bwget\b|\|\s*(ba|z)?sh\b|powershell|\$\(|`)/i.test(text);
 }
 
+// ── Time limit for rule regexes (L-004) ────────────────────────────────────────
+// Rules run on attacker-controlled text. A crafted file could make a regex
+// backtrack for minutes, so all of a file's regex rules run inside one vm call
+// with a time limit (one call per file keeps the overhead near 0.1 ms).
+type RawMatch = [index: number, text: string];
+type Job = { re: RegExp; text: string };
+function rawMatches(re: RegExp, text: string): RawMatch[] {
+  const out: RawMatch[] = [];
+  re.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m[0].length === 0) { re.lastIndex++; continue; } // avoid infinite loop on empty matches
+    out.push([m.index, m[0]]);
+  }
+  return out;
+}
+const guardCtx = vm.createContext({ run: (jobs: Job[]) => jobs.map((j) => rawMatches(j.re, j.text)), jobs: null as Job[] | null, out: null as RawMatch[][] | null });
+const guardScript = new vm.Script('out = run(jobs)');
+/** Time allowed for all regex rules on one file. */
+export const REGEX_TIME_LIMIT_MS = 1500;
+function guarded(jobs: Job[], ms: number): RawMatch[][] | null {
+  guardCtx['jobs'] = jobs;
+  try {
+    guardScript.runInContext(guardCtx, { timeout: ms });
+    return guardCtx['out'] as RawMatch[][];
+  } catch (err) {
+    if ((err as { code?: string }).code === 'ERR_SCRIPT_EXECUTION_TIMEOUT') return null;
+    throw err;
+  } finally {
+    guardCtx['jobs'] = null;
+    guardCtx['out'] = null;
+  }
+}
+
 export function runSignatures(
   file: RepoFile,
   norm: NormalizedText,
   defs: VirusDefinition[],
+  limitMs: number = REGEX_TIME_LIMIT_MS,
 ): SignatureFinding[] {
   const findings: SignatureFinding[] = [];
-
+  type Active = { def: VirusDefinition; base: Omit<SignatureFinding, 'line' | 'col' | 'span'>; keep: (t: string) => boolean; jobs: number[] };
+  const active: Active[] = [];
+  const jobs: Job[] = [];
+  const vis = norm.visible;
   for (const def of defs) {
     if (def.enabled === false) continue;
     if (!def.applies_to.includes(file.role)) continue;
@@ -112,30 +151,54 @@ export function runSignatures(
       owasp:    def.owasp,
       fix:      def.fix,
     };
-
-    // ── regex ────────────────────────────────────────────────────────────────
+    const mine: number[] = [];
     if (match.regex) {
       const re = getRegex(match.regex, 'gi');
-      const seen = new Set<number>();
-      const scan = (text: string, toPlain: (i: number) => number): void => {
-        re.lastIndex = 0;
-        let m: RegExpExecArray | null;
-        while ((m = re.exec(text)) !== null) {
-          if (m[0].length === 0) { re.lastIndex++; continue; } // avoid infinite loop on empty matches
-          if (!keep(m[0])) continue;
-          const at = toPlain(m.index);
-          if (seen.has(at)) continue;
-          seen.add(at);
-          const { line, col } = offsetToPosition(norm.original, at);
-          findings.push({ ...base, line, col, span: truncateSpan(m[0]) });
-        }
-      };
-      scan(norm.plain, (i) => i);
+      mine.push(jobs.push({ re, text: norm.plain }) - 1);
       // L-005: the same text with hidden characters removed, mapped back.
-      const vis = norm.visible;
-      if (vis) scan(vis.text, (i) => vis.map[i] ?? i);
+      if (vis) mine.push(jobs.push({ re, text: vis.text }) - 1);
     }
+    active.push({ def, base, keep, jobs: mine });
+  }
 
+  // Run every regex job for this file under one time limit. If the file runs
+  // out of time, retry each job alone so only the slow rule is affected.
+  let results: (RawMatch[][] | null) = jobs.length > 0 ? guarded(jobs, limitMs) : [];
+  const timedOut = new Set<number>();
+  if (results === null) {
+    results = jobs.map((j, i) => {
+      const r = guarded([j], Math.max(50, Math.floor(limitMs / 3)));
+      if (r === null) { timedOut.add(i); return []; }
+      return r[0] ?? [];
+    });
+  }
+
+  for (const { def, base, keep, jobs: mine } of active) {
+    const { match } = def;
+    // ── regex ────────────────────────────────────────────────────────────────
+    if (match.regex) {
+      if (mine.some((i) => timedOut.has(i))) {
+        // Never silently clean: the rule could not finish on this file.
+        findings.push({
+          ...base, severity: 'medium', line: 1, col: 1,
+          span: `${def.id} ran out of time on this file`,
+          fix: `This file made the ${def.id} check run too long, which can be a deliberate attack on the scanner. Review the file by hand. ${def.fix}`,
+        });
+      } else {
+        const seen = new Set<number>();
+        mine.forEach((jobIndex, k) => {
+          const toPlain = k === 0 || !vis ? (i: number) => i : (i: number) => vis.map[i] ?? i;
+          for (const [index, text] of results?.[jobIndex] ?? []) {
+            if (!keep(text)) continue;
+            const at = toPlain(index);
+            if (seen.has(at)) continue;
+            seen.add(at);
+            const { line, col } = offsetToPosition(norm.original, at);
+            findings.push({ ...base, line, col, span: truncateSpan(text) });
+          }
+        });
+      }
+    }
     // ── unicode_class ────────────────────────────────────────────────────────
     if (match.unicode_class && match.unicode_class.length > 0) {
       // Adjacent hidden characters are one finding: a payload of 37 tag
@@ -159,7 +222,6 @@ export function runSignatures(
       }
       flush();
     }
-
     // ── json_path (+ optional value_regex filter) ────────────────────────────
     if (match.json_path) {
       let parsed: unknown;
