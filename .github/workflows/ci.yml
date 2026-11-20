@@ -24,6 +24,10 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r typecheck
+      # L-044: the EX-001 fixture holds real invisible characters that editors
+      # can strip; regenerating it must give the committed bytes.
+      - name: Hidden-character fixture regenerates unchanged
+        run: node scripts/make-ex001-fixture.mjs && git diff --exit-code fixtures/haunted-repo/EX-001-hidden-unicode.md
       - run: pnpm test
 
   build:

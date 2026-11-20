@@ -6,7 +6,7 @@ import { scanRepo } from '../scanner/orchestrator.js';
 import type { Finding } from '../types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = resolve(__dirname, '../../../..');
+const ROOT = fromRoot();
 const BENCH = join(ROOT, 'fixtures/benchmark');
 const DEFS = join(ROOT, 'definitions');
 const labels = JSON.parse(readFileSync(join(BENCH, 'labels.json'), 'utf8')) as { attacks: Record<string, string[]>; benign: string[] };
@@ -33,6 +33,7 @@ describe('BENCH: labelled detection corpus (fixtures/benchmark)', () => {
 });
 
 import { fetchGithubRepo, isSafeRef } from '../remote/tarball.js';
+import { fromRoot } from './repo-root.js';
 describe('W-020: fetching a ref', () => {
   it('asks GitHub for that ref, and refuses unsafe ones without a request', async () => {
     const urls: string[] = [];

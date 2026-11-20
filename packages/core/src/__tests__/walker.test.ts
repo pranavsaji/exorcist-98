@@ -2,9 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { classifyFile, walkRepo } from '../walker.js';
+import { fromRoot } from './repo-root.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const FIXTURE_DIR = resolve(__dirname, '../../../../fixtures/haunted-repo');
+const FIXTURE_DIR = fromRoot('fixtures/haunted-repo');
 
 describe('classifyFile', () => {
   it('README.md → instruction', () => expect(classifyFile('README.md')).toBe('instruction'));

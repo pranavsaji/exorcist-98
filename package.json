@@ -10,7 +10,8 @@
     "build": "pnpm -r build",
     "test": "vitest run",
     "typecheck": "pnpm -r typecheck",
-    "e2e": "node scripts/e2e-chrome.mjs"
+    "e2e": "node scripts/e2e-chrome.mjs",
+    "build:lambda": "node scripts/build-lambda.mjs"
   },
   "devDependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.600",

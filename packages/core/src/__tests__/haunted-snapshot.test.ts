@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { scanRepo } from '../scanner/orchestrator.js';
+import { fromRoot } from './repo-root.js';
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
+const ROOT = fromRoot();
 
 describe('W-016: the Haunted Repo scan is pinned', () => {
   it('finds exactly the expected (rule, file, line) set; review any change to the snapshot on purpose', async () => {

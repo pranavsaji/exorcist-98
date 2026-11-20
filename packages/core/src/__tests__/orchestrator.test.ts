@@ -4,10 +4,11 @@ import { statSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { scanRepo } from '../scanner/orchestrator.js';
 import type { ScanEvent, Finding } from '../types.js';
+import { fromRoot } from './repo-root.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const FIXTURE_DIR     = resolve(__dirname, '../../../../fixtures/haunted-repo');
-const DEFINITIONS_DIR = resolve(__dirname, '../../../../definitions');
+const FIXTURE_DIR     = fromRoot('fixtures/haunted-repo');
+const DEFINITIONS_DIR = fromRoot('definitions');
 
 async function collectEvents(root: string, defsDir = DEFINITIONS_DIR): Promise<ScanEvent[]> {
   const events: ScanEvent[] = [];

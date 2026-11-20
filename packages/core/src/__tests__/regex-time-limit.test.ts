@@ -41,8 +41,9 @@ import { packageArg } from '../scanner/signature-engine.js';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadDefinitions } from '../definitions/loader.js';
+import { fromRoot } from './repo-root.js';
 
-const DEFS = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../definitions');
+const DEFS = fromRoot('definitions');
 
 describe('L-012: the package a runner runs', () => {
   it('skips flags and reads --package, -p and --from', () => {

@@ -6,10 +6,11 @@ import { loadDefinitions } from '../definitions/loader.js';
 import { runSignatures } from '../scanner/signature-engine.js';
 import { normalize } from '../normalizer.js';
 import type { RepoFile } from '../types.js';
+import { fromRoot } from './repo-root.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DEFINITIONS_DIR = resolve(__dirname, '../../../../definitions');
-const FIXTURE_DIR     = resolve(__dirname, '../../../../fixtures/haunted-repo');
+const DEFINITIONS_DIR = fromRoot('definitions');
+const FIXTURE_DIR     = fromRoot('fixtures/haunted-repo');
 
 // role map for each fixture by threat type
 const ROLE_MAP: Record<string, RepoFile['role']> = {

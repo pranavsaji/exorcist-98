@@ -7,9 +7,10 @@ import { runSignatures } from '../scanner/signature-engine.js';
 import { normalize } from '../normalizer.js';
 import type { RepoFile } from '../types.js';
 import type { VirusDefinition } from '../definitions/schema.js';
+import { fromRoot } from './repo-root.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const FIXTURE_DIR = resolve(__dirname, '../../../../fixtures/haunted-repo');
+const FIXTURE_DIR = fromRoot('fixtures/haunted-repo');
 
 const fixtureFiles = readdirSync(FIXTURE_DIR)
   .filter(f => /^EX-\d{3}-/.test(f))

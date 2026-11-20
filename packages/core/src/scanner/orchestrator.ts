@@ -12,9 +12,16 @@ function dedupeKey(f: Finding): string {
   return `${f.ruleId}:${f.file}:${f.line}:${f.col}`;
 }
 
-function deduplicate(findings: Finding[]): Finding[] {
+/**
+ * One finding per rule and position, and no AI (heuristic) finding on a line a
+ * signature already reported in the same file: the signature is exact and
+ * explains itself, so the heuristic one would only repeat it (L-019).
+ */
+export function deduplicate(findings: Finding[]): Finding[] {
   const seen = new Set<string>();
+  const signatureLines = new Set(findings.filter((f) => f.source === 'signature').map((f) => `${f.file}:${f.line}`));
   return findings.filter(f => {
+    if (f.source === 'heuristic' && signatureLines.has(`${f.file}:${f.line}`)) return false;
     const key = dedupeKey(f);
     if (seen.has(key)) return false;
     seen.add(key);

@@ -2,10 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { fromRoot } from './repo-root.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // packages/core/src/__tests__/ → packages/core/src/ → packages/core/ → packages/ → root
-const root = resolve(__dirname, '../../../../');
+const root = fromRoot();
 
 const required: string[] = [
   'pnpm-workspace.yaml',

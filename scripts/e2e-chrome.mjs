@@ -6,18 +6,28 @@
 //
 // Environment:
 //   E2E_BASE     app URL (default http://localhost:3000)
-//   CHROME_PATH  Chrome executable (default: the macOS install path)
+//   CHROME_PATH  Chrome executable (default: found in the usual install path)
 //   E2E_OUT      output folder for screenshots and results.json (default e2e-output)
 //
 // The GitHub steps clone public repos (octocat/Hello-World, expressjs/express),
 // so they need network access. Exit code is 1 if any step fails.
 import { chromium } from 'playwright-core';
-import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 
 const BASE = process.env.E2E_BASE ?? 'http://localhost:3000';
-const CHROME = process.env.CHROME_PATH ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+// W-017: CHROME_PATH, else the usual install path for this platform.
+const CHROME_CANDIDATES = {
+  darwin: ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium'],
+  linux: ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser'],
+  win32: ['C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'],
+};
+const CHROME = process.env.CHROME_PATH ?? (CHROME_CANDIDATES[process.platform] ?? []).find((p) => existsSync(p));
+if (!CHROME) {
+  console.error('No Chrome found. Install Chrome or set CHROME_PATH to its executable.');
+  process.exit(2);
+}
 const OUT = process.env.E2E_OUT ?? 'e2e-output';
 const SHOTS = join(OUT, 'shots');
 mkdirSync(SHOTS, { recursive: true });

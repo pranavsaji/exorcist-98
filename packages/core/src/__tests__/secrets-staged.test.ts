@@ -6,9 +6,10 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { findSecrets, findStagedSecrets, redact } from '../secrets-check.js';
 import { decide, isGitCommit } from '../hook-guard.js';
+import { fromRoot } from './repo-root.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = resolve(__dirname, '../../../..');
+const ROOT = fromRoot();
 const TSX = join(ROOT, 'node_modules/.bin/tsx');
 const HOOK = join(ROOT, 'scripts/hook-pre-commit-secrets.ts');
 

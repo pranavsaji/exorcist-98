@@ -7,11 +7,12 @@ import { scanText } from '../scanner/scan-text.js';
 import { toMarkdown } from '../reporters/markdown-reporter.js';
 import type { VirusDefinition } from '../definitions/schema.js';
 import type { Finding } from '../types.js';
+import { fromRoot } from './repo-root.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 let defs: VirusDefinition[] = [];
 beforeAll(async () => {
-  defs = await loadDefinitions(resolve(__dirname, '../../../../definitions'));
+  defs = await loadDefinitions(fromRoot('definitions'));
 });
 
 const ids = (text: string) => scanText(text, 'tool-result', defs).map((f) => f.ruleId);

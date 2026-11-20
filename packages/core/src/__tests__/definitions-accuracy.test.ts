@@ -7,9 +7,10 @@ import { runSignatures } from '../scanner/signature-engine.js';
 import { normalize } from '../normalizer.js';
 import type { FileRole, RepoFile } from '../types.js';
 import type { VirusDefinition } from '../definitions/schema.js';
+import { fromRoot } from './repo-root.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DEFINITIONS_DIR = resolve(__dirname, '../../../../definitions');
+const DEFINITIONS_DIR = fromRoot('definitions');
 
 let defs: VirusDefinition[] = [];
 beforeAll(async () => {

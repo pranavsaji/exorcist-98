@@ -5,11 +5,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 process.env['AWS_REGION']       = 'us-east-1';
 process.env['DEFINITIONS_PATH'] = '/definitions';
 
-// Mock simple-git so the handler never makes a real network call
-vi.mock('simple-git', () => ({
-  default: () => ({
-    clone: vi.fn().mockResolvedValue(undefined),
-  }),
+// Mock the tarball download so the handler never makes a real network call
+vi.mock('../remote/tarball.js', () => ({
+  fetchGithubRepo: vi.fn().mockImplementation(async ({ repo }: { repo: string }) =>
+    repo === 'missing' ? { ok: false, error: 'That repository was not found, or it is private.' } : { ok: true, files: 1, skipped: 0 }),
 }));
 
 // Mock scanRepo so we don't need a real definitions dir
@@ -72,6 +71,19 @@ describe('Lambda handler', () => {
     if (typeof result !== 'string' && 'body' in result) {
       expect(result.body).not.toContain('at ');
       expect(result.body).not.toContain('.ts:');
+    }
+  });
+  it('a repository that cannot be downloaded returns HTTP 400 with a plain reason', async () => {
+    const result = await handler(makeEvent({ repoUrl: 'https://github.com/owner/missing' }));
+    if (typeof result !== 'string' && 'statusCode' in result) {
+      expect(result.statusCode).toBe(400);
+      expect(result.body).toContain('not found');
+    }
+  });
+  it('rejects extra paths and credentials in the URL', async () => {
+    for (const repoUrl of ['https://github.com/o/r/../x', 'https://u:p@github.com/o/r', 'https://github.com/o']) {
+      const result = await handler(makeEvent({ repoUrl }));
+      expect(typeof result !== 'string' && 'statusCode' in result ? result.statusCode : null, repoUrl).toBe(400);
     }
   });
 });

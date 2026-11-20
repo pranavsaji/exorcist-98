@@ -2,7 +2,7 @@ import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import simpleGit from 'simple-git';
+import { fetchGithubRepo } from '../remote/tarball.js';
 import { scanRepo } from '../scanner/orchestrator.js';
 import { toJson } from '../reporters/json-reporter.js';
 import type { Finding, ScanStats } from '../types.js';
@@ -12,17 +12,21 @@ import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda
 
 const EnvSchema = z.object({
   AWS_REGION:       z.string().min(1),
+  // scripts/build-lambda.mjs puts definitions/ next to the bundle, which Lambda
+  // unpacks to /var/task.
   DEFINITIONS_PATH: z.string().min(1).default('/var/task/definitions'),
 });
 
 // ── Request schema ────────────────────────────────────────────────────────────
 
+// Same rule as the web app: https://github.com/<owner>/<repo>, nothing else.
+const GITHUB_REPO = /^https:\/\/github\.com\/([A-Za-z0-9_.-]{1,100})\/([A-Za-z0-9_.-]{1,100}?)(?:\.git)?\/?$/;
 const BodySchema = z.object({
   repoUrl: z
     .string()
-    .url()
-    .refine(u => u.startsWith('https://github.com/'), {
-      message: 'Only https://github.com/ URLs are accepted',
+    .max(200)
+    .refine(u => GITHUB_REPO.test(u), {
+      message: 'Only https://github.com/owner/repo URLs are accepted',
     }),
 });
 
@@ -55,8 +59,11 @@ export async function handler(
   const tmpDir = join('/tmp', randomUUID());
 
   try {
-    // Clone — depth 1 to keep it fast and within /tmp limits
-    await simpleGit().clone(repoUrl, tmpDir, ['--depth', '1', '--single-branch']);
+    // A tarball over HTTPS with size, file-count and time limits; Lambda has
+    // no git binary (L-031).
+    const [, owner = '', repo = ''] = GITHUB_REPO.exec(repoUrl) ?? [];
+    const fetched = await fetchGithubRepo({ owner, repo, dir: tmpDir });
+    if (!fetched.ok) return json(400, { error: fetched.error });
 
     const findings: Finding[] = [];
     let stats: ScanStats | null = null;
