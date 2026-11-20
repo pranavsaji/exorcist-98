@@ -1,0 +1,17 @@
+id: EX-019
+title: Agent memory poisoning
+severity: high
+applies_to:
+  - memory
+  - instruction
+match:
+  # Notes the agent reloads every session that leak secrets, hide themselves,
+  # or grant standing permissions.
+  regex: "(?:\\binclude\\s+(?:any\\s+|all\\s+)?(?:secret|secrets|keys?|tokens?|passwords?|credentials)\\b[^.\\n]{0,40}\\b(?:in\\s+full|verbatim|as\\s+is|unredacted)\\b|\\bnever\\s+mention\\s+this\\s+(?:note|file|instruction|memory)\\b|\\bif\\s+asked(?:\\s+about\\s+(?:it|this))?,?\\s+say\\s+(?:it|this)\\s+does\\s+not\\s+exist\\b|\\b(?:permanent|standing)\\s+(?:shell|command|execution)\\s+(?:execution\\s+)?permission\\b|\\balways\\s+approve\\s+requests\\s+from\\b)"
+owasp:
+  - "ASI04 Memory Poisoning"
+  - "LLM01:2025 Prompt Injection"
+fix: >
+  Delete the planted lines from the agent's memory or notes file, then check
+  its history for who added them. Memory should record facts about the
+  project, never permissions, secrets or instructions to hide something.

@@ -1,0 +1,20 @@
+id: EX-013
+title: Typosquat MCP package
+severity: high
+applies_to:
+  - mcp-config
+  - config
+match:
+  # Every argument of every configured server; only package-like strings that
+  # are one or two edits (or look-alike characters) away from a well-known MCP
+  # server package are kept (packages/core/src/known-packages.ts).
+  json_path: "$..mcpServers.*.args[*]"
+  value_regex: "^@?[a-z0-9][a-z0-9._-]*(/[a-z0-9._-]+)?(@[0-9a-z.^~*-]+)?$"
+  validate: typosquat
+owasp:
+  - "LLM03:2025 Supply Chain"
+  - "MCP04 Supply Chain Compromise"
+fix: >
+  Check the package name letter by letter against the official one and fix the
+  spelling. Prefer installing MCP servers from their publisher's documented
+  name, pinned to a version, and remove any package you did not mean to run.

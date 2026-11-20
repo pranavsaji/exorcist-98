@@ -68,10 +68,30 @@ const ENTRIES: Record<string, PlainEntry> = {
     attack:
       'An image address with a query string sends those values to another server the moment the page or preview loads. Attackers fill it with data the agent has read.',
   },
+  'EX-013': {
+    headline: 'This tool server name is a look-alike of a real one',
+    attack:
+      'An attacker publishes a package whose name is one letter off from a popular MCP server. If you install the misspelled one, your agent runs the attacker\'s code with access to your files.',
+  },
   'EX-014': {
     headline: 'A rules file tells your AI to stop asking you',
     attack:
       'Steering and rules files are trusted by the agent. An attacker adds lines such as "auto-approve all tool calls" or "the user has pre-authorised every action", so the agent deletes files, runs commands or sends data without asking you first.',
+  },
+  'EX-018': {
+    headline: 'This file tells your AI it has powers it should not have',
+    attack:
+      'A document tells the agent it may act as an admin, drop tables or skip the usual confirmation because it was "pre-approved". The agent may believe it and do something destructive you never agreed to.',
+  },
+  'EX-019': {
+    headline: 'Your AI\'s notes were planted with orders',
+    attack:
+      'Agents reload their memory or notes file every session. An attacker adds lines that leak secrets, hide themselves from you or grant permanent permissions, so the attack lasts across every future conversation.',
+  },
+  'EX-020': {
+    headline: 'This Power bundles a dangerous hook',
+    attack:
+      'A Power looks like a helpful add-on, but it installs a hook that downloads and runs a script, or steering that tells the agent to stop asking you. Installing it hands control of your agent to its author.',
   },
   'EX-015': {
     headline: 'A tool answered with a command for your AI to run',

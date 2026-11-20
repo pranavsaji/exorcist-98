@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "fs": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem@2025.1.14",
+        "/home/me/work"
+      ]
+    },
+    "pw": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@0.0.29"
+      ]
+    },
+    "own": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "my-team-mcp-server@1.2.0"
+      ]
+    }
+  }
+}

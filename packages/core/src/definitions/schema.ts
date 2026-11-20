@@ -22,7 +22,7 @@ const MatchSchema = z
     // says it is not what the rule means; the rule only runs on a file whose
     // text matches file_regex.
     exclude_regex: z.string().optional(),
-    validate:      z.enum(['base64-text']).optional(),
+    validate:      z.enum(['base64-text', 'typosquat']).optional(),
     // Only for files of role `config`: the rule runs only if the file text matches.
     file_regex:    z.string().optional(),
   })

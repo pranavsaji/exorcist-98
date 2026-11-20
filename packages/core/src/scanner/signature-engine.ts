@@ -3,6 +3,7 @@ import { JSONPath } from 'jsonpath-plus';
 import type { RepoFile, SignatureFinding, Severity } from '../types.js';
 import type { NormalizedText, UnicodeHit } from '../normalizer.js';
 import type { VirusDefinition } from '../definitions/schema.js';
+import { typosquatOf } from '../known-packages.js';
 
 const MAX_SPAN = 120;
 
@@ -140,6 +141,7 @@ export function runSignatures(
     const keep = (text: string): boolean => {
       if (exclude && exclude.test(text)) return false;
       if (match.validate === 'base64-text' && !isBase64Text(text)) return false;
+      if (match.validate === 'typosquat' && typosquatOf(text) === null) return false;
       return true;
     };
     const base: Omit<SignatureFinding, 'line' | 'col' | 'span'> = {

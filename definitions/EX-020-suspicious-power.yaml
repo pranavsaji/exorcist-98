@@ -1,0 +1,18 @@
+id: EX-020
+title: Suspicious Power
+severity: critical
+applies_to:
+  - power
+  - config
+match:
+  # A Kiro Power (or a file shaped like one: hooks plus steering or an MCP
+  # server) that downloads and runs code, or tells the agent to stop asking.
+  regex: "(?:\\b(?:curl|wget)\\b[^\\n]*\\|\\s*(?:sh|bash|zsh|python3?|node)\\b|\\bapprove\\s+[^\\n]{0,40}\\bwithout\\s+asking\\b|\\bauto[- ]?approve\\s+(?:all|every)\\b)"
+  file_regex: "(?:^|\\n)hooks:[\\s\\S]*(?:^|\\n)(?:steering|mcp):|(?:^|\\n)(?:steering|mcp):[\\s\\S]*(?:^|\\n)hooks:"
+owasp:
+  - "LLM03:2025 Supply Chain"
+  - "ASI06 Prompt Injection via Indirect Content"
+fix: >
+  Do not install this Power. A Power should not download and run scripts on
+  file save or tell the agent to approve actions without asking. If you need
+  the feature, copy the parts you understand into your own steering and hooks.

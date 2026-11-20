@@ -25,7 +25,11 @@ const ROLE_MAP: Record<string, RepoFile['role']> = {
   'EX-010': 'config',
   'EX-011': 'unknown',
   'EX-012': 'docs',
+  'EX-013': 'config',
   'EX-014': 'instruction',
+  'EX-018': 'docs',
+  'EX-019': 'memory',
+  'EX-020': 'config',
   'EX-015': 'tool-result',
 };
 

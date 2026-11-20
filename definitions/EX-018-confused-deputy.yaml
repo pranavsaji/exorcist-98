@@ -1,0 +1,19 @@
+id: EX-018
+title: Confused-deputy request
+severity: high
+applies_to:
+  - instruction
+  - docs
+  - memory
+match:
+  # Text that hands the agent powers it should not assume: admin rights,
+  # permission to destroy data, or a claim that approval was already given.
+  regex: "(?:\\bact\\s+with\\s+(?:admin|administrator|root|elevated|full|superuser)\\s+(?:permissions|privileges|rights|access)\\b|\\byou\\s+are\\s+(?:authori[sz]ed|permitted|allowed)\\s+to\\s+(?:drop|delete|wipe|truncate|bypass|disable|override|force[- ]push)\\b|\\bbypass\\s+(?:the\\s+)?(?:usual\\s+|normal\\s+|standard\\s+)?(?:confirmation|approval|review|safety)\\s+(?:steps?|checks?|prompts?)\\b|\\bthis\\s+(?:has\\s+been|is|was)\\s+(?:already\\s+)?pre-?approved\\b)"
+owasp:
+  - "ASI02 Inadequate Human-in-the-Loop Controls"
+  - "LLM06:2025 Excessive Agency"
+fix: >
+  Remove the instruction. Documentation can say what a migration or script
+  does, but it should not grant the agent permissions or claim that a
+  destructive step is already approved. Keep confirmation prompts for
+  anything that deletes or rewrites data.
