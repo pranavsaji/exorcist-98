@@ -2,6 +2,7 @@ import { plainFor, scanText } from '@exorcist-98/core';
 import type { VirusDefinition } from '@exorcist-98/core';
 import { hostAllowed } from './policy.js';
 import { hostsIn } from './hosts.js';
+import { detectParaphrase } from './paraphrase.js';
 import { describeCredential, findCredentials } from './secrets.js';
 
 export { hostsIn };
@@ -126,10 +127,17 @@ function reasonsFrom(findings: ReturnType<typeof scanText>): Reason[] {
   return reasons;
 }
 
+/** A reworded or disguised attack that no fixed signature names (S-009). */
+function paraphraseReasons(text: string): Reason[] {
+  const v = detectParaphrase(text);
+  if (v.level !== 'block') return [];
+  return [{ ruleId: 'EX-002', message: `${plainFor('EX-002', '').headline} (reworded or disguised: ${v.signals.join(' + ')})` }];
+}
+
 export function inspectResult(result: unknown, defs: VirusDefinition[]): ResultVerdict {
   const text = extractResultText(result);
   if (!text) return { action: 'allow', reasons: [] };
-  const reasons = reasonsFrom(scanText(text, 'tool-result', defs, '(tool result)'));
+  const reasons = [...reasonsFrom(scanText(text, 'tool-result', defs, '(tool result)')), ...paraphraseReasons(text)];
   return reasons.length > 0 ? { action: 'block', reasons } : { action: 'allow', reasons: [] };
 }
 
@@ -150,7 +158,7 @@ export function inspectTool(tool: ToolDef, defs: VirusDefinition[]): Reason[] {
   const text = toolText(tool);
   const poisoning = scanText(text, 'mcp-config', defs.filter((d) => TOOL_TEXT_RULES.has(d.id)), tool.name);
   const injection = scanText(text, 'tool-result', defs, tool.name);
-  return reasonsFrom([...poisoning, ...injection]);
+  return [...reasonsFrom([...poisoning, ...injection]), ...paraphraseReasons(text)];
 }
 
 // ── requests and notifications the server starts (S-010) ──────────────────────
@@ -162,7 +170,7 @@ const QUIET = new Set(['notifications/cancelled', 'notifications/tools/list_chan
 export function inspectServerText(params: unknown, defs: VirusDefinition[]): ResultVerdict {
   const text = collectStrings(params).join('\n').slice(0, MAX_SCAN_CHARS);
   if (!text) return { action: 'allow', reasons: [] };
-  const reasons = reasonsFrom(scanText(text, 'tool-result', defs, '(server request)'));
+  const reasons = [...reasonsFrom(scanText(text, 'tool-result', defs, '(server request)')), ...paraphraseReasons(text)];
   return reasons.length > 0 ? { action: 'block', reasons } : { action: 'allow', reasons: [] };
 }
 
