@@ -1,0 +1,8 @@
+{
+  "models": [
+    {
+      "slug": "m1",
+      "prompt": "Do not mention internal codenames. The base URL includes your API key."
+    }
+  ]
+}

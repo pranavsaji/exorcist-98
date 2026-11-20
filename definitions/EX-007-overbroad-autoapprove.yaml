@@ -8,7 +8,7 @@ match:
   json_path: "$..autoApprove[*]"
   # Only tools that write, delete, execute or run shell commands are flagged.
   # Read-only tools in autoApprove are fine.
-  value_regex: "(write|delete|remove|rm_|exec|run_|shell|terminal|command|bash|edit|create|move|rename|deploy|install)"
+  value_regex: "(^\\*$|write|delete|remove|rm_|exec|run_|shell|terminal|command|bash|edit|create|move|rename|deploy|install)"
 owasp:
   - "ASI02 Inadequate Human-in-the-Loop Controls"
   - "MCP05 Excessive Tool Permissions"

@@ -8,6 +8,9 @@ match:
   # A download piped into a shell, an encoded PowerShell command, or an
   # explicit order to run a command. Ordinary mentions of curl are not flagged.
   regex: "(?:\\b(?:curl|wget)\\b[^\\n]*\\|\\s*(?:sh|bash|zsh|fish)\\b|\\bpowershell(?:\\.exe)?\\s+-e(?:nc|ncodedcommand)\\b|\\b(?:you\\s+must|always|now|first)\\s+run\\s+(?:the\\s+following|this)\\s+(?:command|script))"
+skip_paths:
+  - "^\\.github/workflows/"
+  - "(^|/)action\\.ya?ml$"
 owasp:
   - "ASI06 Prompt Injection via Indirect Content"
   - "LLM01:2025 Prompt Injection"

@@ -1,0 +1,56 @@
+{
+  "attacks": {
+    "cursor-mdc-backdoor": [
+      "EX-001",
+      "EX-002"
+    ],
+    "word-joiner-agents": [
+      "EX-001"
+    ],
+    "tag-smuggling-claude": [
+      "EX-001"
+    ],
+    "bidi-copilot": [
+      "EX-001"
+    ],
+    "clinerules-dev-mode": [
+      "EX-002"
+    ],
+    "paraphrased-tool-poison": [
+      "EX-005"
+    ],
+    "autoapprove-wildcard": [
+      "EX-007"
+    ],
+    "base64-hook": [
+      "EX-003",
+      "EX-008"
+    ],
+    "steering-override": [
+      "EX-014"
+    ],
+    "html-comment-readme": [
+      "EX-004"
+    ],
+    "image-exfil-docs": [
+      "EX-012"
+    ],
+    "claude-settings-hook": [
+      "EX-008"
+    ]
+  },
+  "benign": [
+    "badges-readme",
+    "emoji-and-bom",
+    "lockfiles",
+    "ci-installer",
+    "test-fake-tokens",
+    "placeholder-secrets",
+    "comment-markers",
+    "model-config",
+    "readonly-autoapprove",
+    "ordinary-steering",
+    "cli-flag-readme",
+    "long-url-paths"
+  ]
+}

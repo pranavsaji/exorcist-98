@@ -71,10 +71,19 @@ export async function main(argv: string[]): Promise<number> {
   }
 }
 
+/**
+ * Exit only after stdout and stderr are flushed. Writes to a pipe are
+ * asynchronous, so process.exit() straight away cut JSON reports at 64 KB
+ * when another program read them (found on large real repositories).
+ */
+function exitAfterFlush(code: number): void {
+  process.exitCode = code;
+  process.stdout.write('', () => process.stderr.write('', () => process.exit(code)));
+}
 main(process.argv.slice(2)).then(
-  (code) => process.exit(code),
+  (code) => exitAfterFlush(code),
   (err: unknown) => {
     stdio.err(`Unexpected error: ${String(err).split('\n')[0]}`);
-    process.exit(1);
+    exitAfterFlush(1);
   },
 );

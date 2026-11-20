@@ -23,11 +23,21 @@ afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, f
 const tmp = (): string => { const d = mkdtempSync(join(tmpdir(), 'exorcist-cli-')); dirs.push(d); return d; };
 
 function run(args: string[], o: { cwd?: string; input?: string } = {}) {
-  const r = spawnSync(process.execPath, [BUNDLE, ...args], { cwd: o.cwd ?? ROOT, input: o.input, encoding: 'utf8' });
+  const r = spawnSync(process.execPath, [BUNDLE, ...args], { cwd: o.cwd ?? ROOT, input: o.input, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   return { code: r.status, out: r.stdout, err: r.stderr };
 }
 
 describe('the built bundle', () => {
+  it('prints a complete JSON report larger than a pipe buffer (64 KB) to another program', () => {
+    const d = tmp();
+    // 3,000 lines, each with one hidden character: about 3,000 findings, far over 64 KB of JSON.
+    writeFileSync(join(d, 'AGENTS.md'), Array.from({ length: 3000 }, (_, i) => `line ${i} a\u200Bb`).join('\n'));
+    const r = run(['scan', d, '--format', 'json', '--fail-on', 'none']);
+    expect(r.out.length).toBeGreaterThan(65_536);
+    const report = JSON.parse(r.out) as { findings: unknown[] };
+    expect(report.findings.length).toBe(3000);
+  });
+
   it('is a runnable file with a shebang, and ships the definitions', () => {
     expect(readFileSync(BUNDLE, 'utf8').startsWith('#!/usr/bin/env node')).toBe(true);
     const defs = readdirSync(join(CLI_DIR, 'definitions')).filter((f) => f.endsWith('.yaml'));

@@ -58,6 +58,30 @@ function locateJsonValue(original: string, value: string): { line: number; col: 
   return offsetToPosition(original, idx);
 }
 
+/**
+ * True when `s` is base64 that decodes to mostly readable text. Random hashes,
+ * URL paths and identifiers decode to binary noise and are rejected, which is
+ * what made EX-003 fire thousands of times on ordinary repositories.
+ */
+export function isBase64Text(s: string): boolean {
+  const t = s.replace(/=+$/, '');
+  if (t.length < 40 || /[^A-Za-z0-9+/]/.test(t)) return false;
+  // Path-like runs (a/b/c) are not payloads.
+  if (/^[A-Za-z0-9_.-]*(\/[A-Za-z0-9_.-]+){2,}\/?$/.test(s) && !s.includes('+')) return false;
+  if (/^[0-9a-f]+$/i.test(t)) return false;
+  if (t.length % 4 === 1) return false;
+  const bytes = Buffer.from(t, 'base64');
+  if (bytes.length < 24) return false;
+  let printable = 0;
+  for (const b of bytes) if ((b >= 0x20 && b < 0x7f) || b === 0x0a || b === 0x0d || b === 0x09) printable++;
+  if (printable / bytes.length < 0.95) return false;
+  // A payload is words or a command. JSON (JWTs), IDs and keys are not.
+  const text = bytes.toString('latin1');
+  if (/^\s*[{[]/.test(text)) return false;
+  const words = text.split(/\s+/).filter((w) => /[A-Za-z]{2,}/.test(w)).length;
+  return words >= 4 || /(https?:\/\/|\bcurl\b|\bwget\b|\|\s*(ba|z)?sh\b|powershell|\$\(|`)/i.test(text);
+}
+
 export function runSignatures(
   file: RepoFile,
   norm: NormalizedText,
@@ -68,8 +92,17 @@ export function runSignatures(
   for (const def of defs) {
     if (def.enabled === false) continue;
     if (!def.applies_to.includes(file.role)) continue;
-
+    if (def.skip_paths?.some((p) => getRegex(p, 'i').test(file.rel))) continue;
     const { match } = def;
+    // file_regex narrows generic config files only; MCP configs and tool
+    // descriptions (the Shield scans those) always qualify.
+    if (match.file_regex && file.role === 'config' && !getRegex(match.file_regex, 'i').test(norm.plain)) continue;
+    const exclude = match.exclude_regex ? getRegex(match.exclude_regex, 'i') : null;
+    const keep = (text: string): boolean => {
+      if (exclude && exclude.test(text)) return false;
+      if (match.validate === 'base64-text' && !isBase64Text(text)) return false;
+      return true;
+    };
     const base: Omit<SignatureFinding, 'line' | 'col' | 'span'> = {
       source:   'signature',
       ruleId:   def.id,
@@ -83,13 +116,24 @@ export function runSignatures(
     // ── regex ────────────────────────────────────────────────────────────────
     if (match.regex) {
       const re = getRegex(match.regex, 'gi');
-      re.lastIndex = 0;
-      let m: RegExpExecArray | null;
-      while ((m = re.exec(norm.plain)) !== null) {
-        const { line, col } = offsetToPosition(norm.original, m.index);
-        findings.push({ ...base, line, col, span: truncateSpan(m[0]) });
-        if (m[0].length === 0) re.lastIndex++; // avoid infinite loop on empty matches
-      }
+      const seen = new Set<number>();
+      const scan = (text: string, toPlain: (i: number) => number): void => {
+        re.lastIndex = 0;
+        let m: RegExpExecArray | null;
+        while ((m = re.exec(text)) !== null) {
+          if (m[0].length === 0) { re.lastIndex++; continue; } // avoid infinite loop on empty matches
+          if (!keep(m[0])) continue;
+          const at = toPlain(m.index);
+          if (seen.has(at)) continue;
+          seen.add(at);
+          const { line, col } = offsetToPosition(norm.original, at);
+          findings.push({ ...base, line, col, span: truncateSpan(m[0]) });
+        }
+      };
+      scan(norm.plain, (i) => i);
+      // L-005: the same text with hidden characters removed, mapped back.
+      const vis = norm.visible;
+      if (vis) scan(vis.text, (i) => vis.map[i] ?? i);
     }
 
     // ── unicode_class ────────────────────────────────────────────────────────
@@ -138,6 +182,7 @@ export function runSignatures(
         if (val === undefined || val === null) continue;
         const text = typeof val === 'string' ? val : JSON.stringify(val);
         if (valueFilter && !valueFilter.test(text)) continue;
+        if (!keep(text)) continue;
         const { line, col } =
           typeof val === 'string' ? locateJsonValue(norm.original, val) : { line: 1, col: 1 };
         findings.push({ ...base, line, col, span: truncateSpan(text) });

@@ -21,12 +21,26 @@ export function classifyFile(rel: string): FileRole {
   const base = basename(norm);
   const ext  = extname(norm).toLowerCase();
 
-  // 1 — instruction
+  // 1 — instruction: every file an AI coding agent reads as instructions.
+  // The Rules File Backdoor research targets these (Cursor, Cline, Windsurf,
+  // Copilot, Claude Code, Gemini, Kiro).
   if (
     base === 'AGENTS.md' ||
+    base === 'AGENT.md' ||
     base === 'CLAUDE.md' ||
+    base === 'CLAUDE.local.md' ||
+    base === 'GEMINI.md' ||
     base === '.cursorrules' ||
+    base === '.windsurfrules' ||
+    base === '.clinerules' ||
+    norm.startsWith('.clinerules/') ||
+    norm.startsWith('.cursor/rules/') ||
+    norm.startsWith('.windsurf/rules/') ||
+    norm.startsWith('.amazonq/rules/') ||
     norm === '.github/copilot-instructions.md' ||
+    norm.startsWith('.github/instructions/') ||
+    norm.startsWith('.github/prompts/') ||
+    /^\.claude\/(commands|agents|skills)\//.test(norm) ||
     base === 'SKILL.md' ||
     base.startsWith('README') ||
     norm.startsWith('.kiro/steering/')
@@ -37,6 +51,11 @@ export function classifyFile(rel: string): FileRole {
     norm.endsWith('.kiro/settings/mcp.json') ||
     norm.endsWith('.cursor/mcp.json')        ||
     norm.endsWith('.vscode/mcp.json')        ||
+    norm.endsWith('.amazonq/mcp.json')       ||
+    norm.endsWith('.gemini/settings.json')   ||
+    norm.endsWith('.claude/settings.json')   ||
+    norm.endsWith('.claude/settings.local.json') ||
+    norm === 'mcp.json' || norm === '.mcp.json' ||
     base === 'claude_desktop_config.json'
   ) return 'mcp-config';
 

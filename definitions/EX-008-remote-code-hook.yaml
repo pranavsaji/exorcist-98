@@ -3,10 +3,15 @@ title: Remote code in hook
 severity: critical
 applies_to:
   - hook
+  - mcp-config
   - config
   - tool-result
 match:
-  regex: "(curl|wget)[^\\n]*\\|\\s*(sh|bash|zsh|fish|dash)"
+  regex: "((curl|wget)[^\\n]*\\|\\s*(sh|bash|zsh|fish|dash|python3?|node)\\b|base64\\s+(-d|--decode|-D)\\b[^\\n]*\\|\\s*(sh|bash|zsh|python3?|node)\\b)"
+# CI workflows are not agent hooks; installers there are a separate supply-chain topic.
+skip_paths:
+  - "^\\.github/workflows/"
+  - "(^|/)action\\.ya?ml$"
 owasp:
   - "ASI06 Prompt Injection via Indirect Content"
   - "LLM01:2025 Prompt Injection"

@@ -15,7 +15,8 @@ export type UnicodeHit = {
 const UNICODE_RANGES: Array<{ class: UnicodeClass; points: number[] }> = [
   {
     class: 'zero-width',
-    points: [0x200B, 0x200C, 0x200D, 0xFEFF],
+    // U+2060-2064 (word joiner, invisible operators) and U+180E were missed before (L-006).
+    points: [0x200B, 0x200C, 0x200D, 0xFEFF, 0x2060, 0x2061, 0x2062, 0x2063, 0x2064, 0x180E],
   },
   {
     class: 'bidi-override',
@@ -39,6 +40,28 @@ for (const range of UNICODE_RANGES) {
   }
 }
 
+const PICTO = /\p{Extended_Pictographic}/u;
+/** The characters before and after `offset`, by code point. */
+function neighbours(text: string, offset: number, len: number): [string, string] {
+  const before = Array.from(text.slice(Math.max(0, offset - 4), offset)).pop() ?? '';
+  const after = Array.from(text.slice(offset + len, offset + len + 4))[0] ?? '';
+  return [before, after];
+}
+/**
+ * Two legitimate uses are not hidden text: a zero-width joiner between two
+ * emoji (family and profession emoji are built that way) and a byte-order
+ * mark at the very start of a file.
+ */
+function isBenign(text: string, cp: number, offset: number, len: number): boolean {
+  if (cp === 0xFEFF && offset === 0) return true;
+  if (cp === 0x200D) {
+    const [b, a] = neighbours(text, offset, len);
+    const emojiBefore = PICTO.test(b) || b === '\uFE0F' || /[\u{1F3FB}-\u{1F3FF}]/u.test(b);
+    return emojiBefore && PICTO.test(a);
+  }
+  return false;
+}
+
 function findHiddenUnicode(text: string): UnicodeHit[] {
   const hits: UnicodeHit[] = [];
   let offset = 0;
@@ -46,7 +69,7 @@ function findHiddenUnicode(text: string): UnicodeHit[] {
     const cp = char.codePointAt(0);
     if (cp !== undefined) {
       const cls = CP_TO_CLASS.get(cp);
-      if (cls !== undefined) {
+      if (cls !== undefined && !isBenign(text, cp, offset, char.length)) {
         hits.push({ char, codePoint: cp, offset, class: cls });
       }
     }
@@ -131,6 +154,12 @@ function extractBase64Candidates(text: string): string[] {
 export type NormalizedText = {
   original:          string;
   plain:             string;
+  /**
+   * `plain` with hidden characters removed, and for each of its characters the
+   * index in `plain` it came from. Only set when the file has hidden characters,
+   * so a phrase split by a zero-width space still matches (L-005).
+   */
+  visible?:          { text: string; map: number[] };
   hiddenUnicode:     UnicodeHit[];
   comments:          string[];
   base64Candidates:  string[];
@@ -141,6 +170,20 @@ export function normalize(text: string, _role: FileRole): NormalizedText {
   const hiddenUnicode   = findHiddenUnicode(text);
   const comments        = extractComments(text);
   const base64Candidates = extractBase64Candidates(text);
-
-  return { original: text, plain, hiddenUnicode, comments, base64Candidates };
+  const out: NormalizedText = { original: text, plain, hiddenUnicode, comments, base64Candidates };
+  if (hiddenUnicode.length > 0) {
+    let vis = '';
+    const map: number[] = [];
+    let i = 0;
+    for (const ch of plain) {
+      const cp = ch.codePointAt(0) ?? 0;
+      if (!CP_TO_CLASS.has(cp)) {
+        vis += ch;
+        for (let k = 0; k < ch.length; k++) map.push(i + k);
+      }
+      i += ch.length;
+    }
+    if (vis.length !== plain.length) out.visible = { text: vis, map };
+  }
+  return out;
 }

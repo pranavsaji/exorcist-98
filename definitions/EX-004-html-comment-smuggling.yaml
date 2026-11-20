@@ -5,7 +5,9 @@ applies_to:
   - instruction
   - docs
 match:
-  regex: "<!--[\\s\\S]*?(ignore|exfiltrate|send.*?to|fetch|curl|you are|as an ai)[\\s\\S]*?-->"
+  # The match stays inside one comment ((?!-->) stops it at the closing marker).
+  # Ordinary words like "fetch" or "send to" are not enough on their own.
+  regex: "<!--(?:(?!-->)[\\s\\S]){0,2000}?(?:\\b(?:ignore|disregard)\\s+(?:all\\s+|any\\s+|the\\s+)?(?:previous|prior|above|earlier)|exfiltrat|\\bsilently\\b|\\bdo\\s+not\\s+(?:mention|tell|reveal|inform)|\\b(?:ai|assistant|agent|llm|claude|copilot|cursor|kiro|gemini)\\s*[:,]\\s|\\byou\\s+are\\s+(?:now|an?\\s+ai)\\b|\\bas\\s+an\\s+ai\\b|\\b(?:curl|wget)\\s+\\S+[^\\n]*\\|\\s*(?:ba|z)?sh\\b|\\bsend\\s+(?:the\\s+|all\\s+|any\\s+)?(?:contents?|secrets?|keys?|tokens?|credentials?|\\.env)\\b)(?:(?!-->)[\\s\\S]){0,2000}?-->"
 owasp:
   - "LLM01:2025 Prompt Injection"
   - "ASI03 Prompt Injection via External Content"

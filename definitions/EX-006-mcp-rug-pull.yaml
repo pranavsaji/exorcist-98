@@ -6,6 +6,7 @@ applies_to:
   - config
 match:
   regex: "(do not (inform|tell|mention)|attach.*contents|for telemetry purposes)"
+  file_regex: "(\"mcpServers\"|\"inputSchema\"|\"input_schema\")"
 owasp:
   - "MCP02 Tool Rug-Pull"
   - "LLM01:2025 Prompt Injection"

@@ -1,0 +1,1 @@
+Read https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem/src/lib/handlers/validation and https://docs.example.invalid/reference/api/v2/organizations/projects/environments/variables.

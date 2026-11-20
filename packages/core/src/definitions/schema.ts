@@ -17,6 +17,14 @@ const MatchSchema = z
     // Filters the values selected by json_path: only values matching this
     // regex (case-insensitive) become findings. Requires json_path.
     value_regex:   z.string().optional(),
+    // Precision controls (added after real-repo testing showed ~100% false positives):
+    // a regex match is dropped when it matches exclude_regex, or when validate
+    // says it is not what the rule means; the rule only runs on a file whose
+    // text matches file_regex.
+    exclude_regex: z.string().optional(),
+    validate:      z.enum(['base64-text']).optional(),
+    // Only for files of role `config`: the rule runs only if the file text matches.
+    file_regex:    z.string().optional(),
   })
   .superRefine((val, ctx) => {
     const hasAny =
@@ -36,7 +44,10 @@ const MatchSchema = z
         message: 'match.value_regex requires match.json_path',
       });
     }
-    for (const key of ['regex', 'value_regex'] as const) {
+    if ((val.exclude_regex !== undefined || val.validate !== undefined) && val.regex === undefined && val.json_path === undefined) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'match.exclude_regex and match.validate need match.regex or match.json_path' });
+    }
+    for (const key of ['regex', 'value_regex', 'exclude_regex', 'file_regex'] as const) {
       const pattern = val[key];
       if (pattern !== undefined && !compiles(pattern)) {
         ctx.addIssue({
@@ -56,6 +67,8 @@ export const VirusDefinitionSchema = z.object({
   owasp:       z.array(z.string()).min(1, 'owasp must have at least one reference'),
   fix:         z.string().min(1, 'fix must not be empty'),
   enabled:     z.boolean().optional().default(true),
+  // Repo-relative paths (regexes) this rule never looks at, e.g. lockfiles.
+  skip_paths:  z.array(z.string().refine(compiles, 'skip_paths entries must be valid regular expressions')).optional(),
 });
 
 export type VirusDefinition = z.infer<typeof VirusDefinitionSchema>;

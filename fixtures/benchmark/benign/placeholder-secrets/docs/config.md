@@ -1,0 +1,5 @@
+Set the token:
+
+    GITHUB_TOKEN=<your token>
+    OPENAI_API_KEY=${OPENAI_API_KEY}
+    AWS_SECRET_ACCESS_KEY=[REDACTED]
