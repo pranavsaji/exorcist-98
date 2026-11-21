@@ -52,7 +52,7 @@ export function resolveInside(
   });
   if (!base) {
     const where = bases.length > 1 ? `the project folder (${bases[0]}) or the folders your client shared` : `the project folder (${bases[0]})`;
-    return { ok: false, error: `"${p}" is outside ${where}. Only paths inside them can be used.` };
+    return { ok: false, error: `"${p}" is outside ${where}. Only paths inside ${bases.length > 1 ? 'them' : 'it'} can be used.` };
   }
   return { ok: true, path: real, base };
 }
