@@ -16,8 +16,9 @@ Built with [Kiro](https://kiro.dev) for **Kiroween 2026** (category: Resurrectio
 
 A scanner that cries wolf gets switched off. We measured it ([`docs/BENCHMARK.md`](docs/BENCHMARK.md)):
 
-- **5 well-known public repos** (modelcontextprotocol/servers, github/github-mcp-server, openai/codex, anthropics/claude-code-action, cline/cline): **2 findings in total**, down from 4,457 before we tuned the rules. One of the two is a real hidden instruction to Copilot in an HTML comment.
-- **A labelled attack corpus** (`fixtures/benchmark/`): 19 of 19 defanged attacks caught (including Rules File Backdoor tricks in `.cursor/rules`, typosquatted MCP packages, memory poisoning and hex payloads), and 15 of 15 look-alike ordinary files left alone. It runs on every test run.
+- **5 well-known public repos we tuned on** (modelcontextprotocol/servers, github/github-mcp-server, openai/codex, anthropics/claude-code-action, cline/cline): **2 findings in total**, down from 4,457. One is a real hidden instruction to Copilot in an HTML comment.
+- **5 repos no rule was ever adjusted for** (anthropics/claude-code, microsoft/vscode-copilot-chat, punkpeye/fastmcp, wong2/awesome-mcp-servers, ComposioHQ/awesome-claude-skills; about 9,500 files): **1 finding**, and it is correct (an MCP server not pinned to a version). Two earlier held-out rounds, one of which went badly, are written up in full.
+- **A labelled attack corpus** (`fixtures/benchmark/`): 19 of 19 defanged attacks caught (including Rules File Backdoor tricks in `.cursor/rules`, typosquatted MCP packages, memory poisoning and hex payloads), and 19 of 19 look-alike ordinary files left alone (this corpus shows coverage of known patterns; we wrote it). It runs on every test run.
 
 ## Protect a repo in one step
 
@@ -44,7 +45,7 @@ jobs:
 | Part                  | What it does                                                                                                                                                          | Where                                        |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | **Full System Scan**  | Paste a GitHub URL, or scan a folder. Findings show the file, line, quoted span, severity and fix.                                                                    | `apps/web`, `packages/cli` (`exorcist scan`) |
-| **Virus Definitions** | 18 YAML signatures with per-rule precision controls, plus an optional AI judge on Amazon Bedrock (built, not yet run against the service).                          | `definitions/`, `packages/core`              |
+| **Virus Definitions** | 18 YAML signatures with per-rule precision controls, plus an optional AI judge on Amazon Bedrock (calls reach the service; no scan has completed through it yet, L-020).                          | `definitions/`, `packages/core`              |
 | **Real-Time Shield**  | An MCP firewall: pins each tool's hash, hides a tool that changes after approval, blocks secrets and unknown hosts in tool calls, withholds attack-like tool results. | `packages/shield` (`exorcist shield`)        |
 | **Quarantine Vault**  | Disable an infected MCP server, hook or steering file, with a backup, a diff and an exact restore.                                                                    | `packages/shield`, `exorcist vault`          |
 
@@ -76,7 +77,7 @@ pnpm e2e         # drives Chrome against a running web app (see scripts/e2e-chro
 
 Built and tested: the scan engine and virus definitions, the web app (live, with sound, report downloads, a README badge and a `/product` page), the Real-Time Shield, the Quarantine Vault, the CLI, an MCP server, a Kiro Power, a GitHub Action and a Kiro Crew app (run inside Crew 0.12.2 and 0.13.0).
 
-**Read [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) before trusting any claim here.** The main open gaps: the Shield, the Power and the MCP server have not been run inside Kiro itself (only through their own tests and a terminal demo), nothing is published to npm, and the AI (Bedrock) layer has never run against the real service.
+**Read [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) before trusting any claim here.** The main open gaps: the Shield, the Power and the MCP server have not been run inside Kiro itself (only through their own tests and a terminal demo), nothing is published to npm, and the AI (Bedrock) judge has reached the real service but no scan has completed through it yet (L-020).
 
 ## Using it with Kiro
 

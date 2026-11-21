@@ -104,3 +104,16 @@ describe('W-010: real progress', () => {
     expect(s.totalFiles).toBeNull();
   });
 });
+
+describe('log: repeated lines are counted, not repeated', () => {
+  it('shows one line with a count when a rule hits one line several times', async () => {
+    const { scanReducer, initialScanState } = await import('@/lib/scan-state');
+    let s = scanReducer(initialScanState, { type: 'reset', target: 'x' });
+    const ev = (col: number) => ({ type: 'event' as const, event: { type: 'finding' as const, snippet: { lines: [] }, finding: { source: 'signature' as const, ruleId: 'EX-001', title: 'Hidden', severity: 'critical' as const, file: 'a.md', line: 3, col, span: 'x', owasp: [], fix: '' } } });
+    s = scanReducer(s, ev(1)); s = scanReducer(s, ev(5)); s = scanReducer(s, ev(9));
+    const lines = s.log.filter((l) => l.text.includes('a.md:3'));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]?.text).toMatch(/\(x3\)$/);
+    expect(s.findings).toHaveLength(3);
+  });
+});

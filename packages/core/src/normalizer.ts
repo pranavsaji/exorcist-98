@@ -41,6 +41,8 @@ for (const range of UNICODE_RANGES) {
 }
 
 const PICTO = /\p{Extended_Pictographic}/u;
+/** A letter or combining mark outside Latin and ASCII. */
+const NON_LATIN_LETTER = /^(?![\p{Script=Latin}\p{ASCII}])[\p{L}\p{M}]$/u;
 /** The characters before and after `offset`, by code point. */
 function neighbours(text: string, offset: number, len: number): [string, string] {
   const before = Array.from(text.slice(Math.max(0, offset - 4), offset)).pop() ?? '';
@@ -54,6 +56,12 @@ function neighbours(text: string, offset: number, len: number): [string, string]
  */
 function isBenign(text: string, cp: number, offset: number, len: number): boolean {
   if (cp === 0xFEFF && offset === 0) return true;
+  // Persian, Arabic, Hindi and other scripts need U+200C and U+200D between
+  // letters to spell words correctly (seen: 2,180 hits in one Persian README).
+  if (cp === 0x200C || cp === 0x200D) {
+    const [b, a] = neighbours(text, offset, len);
+    if (NON_LATIN_LETTER.test(b) && NON_LATIN_LETTER.test(a)) return true;
+  }
   if (cp === 0x200D) {
     const [b, a] = neighbours(text, offset, len);
     const emojiBefore = PICTO.test(b) || b === '\uFE0F' || /[\u{1F3FB}-\u{1F3FF}]/u.test(b);

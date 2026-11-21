@@ -44,6 +44,14 @@ export type ScanAction =
   | { type: 'cancelled' };
 
 function addLog(state: ScanState, kind: LogKind, text: string): Pick<ScanState, 'log' | 'nextId'> {
+  // The same line twice in a row (one rule hitting one line several times) is
+  // shown once, with a count, instead of repeated.
+  const last = state.log[state.log.length - 1];
+  const base = last?.text.replace(/ \(x\d+\)$/, '');
+  if (last && last.kind === kind && base === text) {
+    const n = Number(/ \(x(\d+)\)$/.exec(last.text)?.[1] ?? '1') + 1;
+    return { log: [...state.log.slice(0, -1), { ...last, text: `${text} (x${n})` }], nextId: state.nextId };
+  }
   const line: LogLine = { id: state.nextId, kind, text };
   const log = [...state.log, line];
   return {

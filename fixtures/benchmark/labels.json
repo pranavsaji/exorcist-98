@@ -75,6 +75,10 @@
     "long-url-paths",
     "known-mcp-packages",
     "ordinary-memory",
-    "git-shas"
+    "git-shas",
+    "persian-zwnj",
+    "stat-card-images",
+    "shell-env-setup",
+    "defensive-rules"
   ]
 }

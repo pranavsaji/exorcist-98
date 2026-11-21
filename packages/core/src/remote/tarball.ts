@@ -132,6 +132,9 @@ export function writeEntries(dir: string, entries: TarEntry[]): number {
   return n;
 }
 
+/** What to do instead when a repository is too big to download here. */
+export const TOO_BIG_HINT = 'Upload a .zip of the folders that matter (agent files, rules, MCP configs), or run the Exorcist 98 CLI on your machine, which has no size limit.';
+
 async function gunzipCapped(body: AsyncIterable<Uint8Array>, limits: TarLimits): Promise<Buffer> {
   const gunzip = createGunzip();
   const out: Buffer[] = [];
@@ -141,7 +144,7 @@ async function gunzipCapped(body: AsyncIterable<Uint8Array>, limits: TarLimits):
   gunzip.on('data', (c: Buffer) => {
     unpacked += c.length;
     if (unpacked > limits.maxUnpackedBytes) {
-      failure = new Error(`The repository is larger than ${Math.round(limits.maxUnpackedBytes / 1048576)} MB unpacked.`);
+      failure = new Error(`The repository is larger than ${Math.round(limits.maxUnpackedBytes / 1048576)} MB unpacked. ${TOO_BIG_HINT}`);
       gunzip.destroy(failure);
     } else out.push(c);
   });
@@ -154,7 +157,7 @@ async function gunzipCapped(body: AsyncIterable<Uint8Array>, limits: TarLimits):
     compressed += chunk.length;
     if (compressed > limits.maxCompressedBytes) {
       gunzip.destroy();
-      throw new Error(`The repository download is larger than ${Math.round(limits.maxCompressedBytes / 1048576)} MB.`);
+      throw new Error(`The repository download is larger than ${Math.round(limits.maxCompressedBytes / 1048576)} MB. ${TOO_BIG_HINT}`);
     }
     if (failure) throw failure;
     if (!gunzip.write(chunk)) await new Promise((r) => gunzip.once('drain', r));

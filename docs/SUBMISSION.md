@@ -43,7 +43,7 @@ a quarantine vault) and pointed it at the files and tools an agent trusts.
   maps to the OWASP LLM, Agentic or MCP Top 10. A Threat Encyclopedia explains
   each one in plain language.
 - **Measured precision:** on five well-known public agent and MCP repos it
-  raises 2 alarms in total (down from 4,457 before tuning), and it catches 19
+  raises 2 alarms in total (down from 4,457 before tuning); on five more repos never used for tuning (about 9,500 files) it raised 1, and that one is correct, and it catches 19
   of 19 attacks in a labelled corpus that runs with the tests
   (`docs/BENCHMARK.md`).
 - **Private code too:** upload a .zip (up to 4 MB) instead of a GitHub link;
@@ -65,7 +65,7 @@ a quarantine vault) and pointed it at the files and tools an agent trusts.
 
 ## Best Kiro Crew App: writeup (paste into the bonus field)
 
-**Repository:** https://github.com/pranavsaji/exorcist-98-crew (public, Apache-2.0, created 2026-11-15, inside the Submission Period).
+**Repository:** https://github.com/pranavsaji/exorcist-98-crew (public, Apache-2.0, first commit 2026-11-14, created on GitHub 2026-11-15; both inside the Submission Period of 2026-10-30 to 2026-12-04).
 
 Exorcist 98 for Kiro Crew patrols your project folders every night for text
 that tries to take over an AI agent, and shows the results on a Crew dashboard
@@ -102,7 +102,7 @@ where Crew behaved differently from its docs is listed in
 |---|---|---|
 | Specs | 5 specs, one per milestone (`m0-foundation`, `m1-engine`, `m2-ui`, `m3-shield`, `m4-polish`), each with requirements, design and tasks; 1 more in the Crew repo (`crew-app`). | `.kiro/specs/` |
 | Steering | 4 files (product, tech, security, ui) that set the rules for every change: strict TypeScript, zod at every boundary, defanged fixtures, untrusted text never concatenated into instructions, severity never by colour alone. | `.kiro/steering/` |
-| Property-based tests | 52 fast-check properties, for example "a secret at any depth is never forwarded", "a changed tool is never listed or callable", "a zero-width character is detected at any position", "no tar entry name writes outside the target folder". Plus more in the Crew repo. | `docs/KIRO_LOG.md` |
+| Property-based tests | 71 fast-check properties, for example "a secret at any depth is never forwarded", "a changed tool is never listed or callable", "a zero-width character is detected at any position", "no tar entry name writes outside the target folder". Plus more in the Crew repo. | `docs/KIRO_LOG.md` |
 | Hooks | 4 hooks in the main repo and 1 in the Crew repo, in Kiro's JSON format. Seen firing: `spec-change` (on every spec save; kept `docs/THREATS.md` in step) and the Crew repo's `validate-app-json` (ran the manifest tests on each save of `app.json`). Not seen firing: `definition-save` and `mcp-config-change` (not triggered yet) and `pre-commit-secrets` (PreToolUse; did not fire in our sessions, so a git pre-commit hook does that job). | `.kiro/hooks/`, KIRO_LOG |
 | MCP | Built the `exorcist` MCP server on the official SDK (4 tools), tested with the SDK client. | `packages/mcp-server/` |
 | Powers | Built the `exorcist` Power (MCP config plus 3 skills). | `power/` |

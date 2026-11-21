@@ -5,9 +5,13 @@ applies_to:
   - instruction
   - docs
 match:
-  regex: "!\\[[^\\]]*\\]\\(https?://[^)]+\\?[^)]+\\)"
+  # A markdown image whose query string carries data: a parameter named like
+  # data, token, env or user, or a template such as {{...}} or ${...}. Ordinary
+  # images with query strings (stat cards, size options) are not flagged; that
+  # was 390 false alarms in one README in the second blind round.
+  regex: "!\\[[^\\]]*\\]\\(https?://[^)?\\s]+(?=\\?)[^)\\s]*(?:[?&](?:d|q|data|payload|content|text|msg|token|key|secret|password|pass|pwd|env|cookie|session|auth|creds?|leak|info|user|email)=|\\{\\{|\\$\\{|%s|<[a-z_]+>|\\b(?:PLACEHOLDER|REPLACE_ME|INSERT)\\b)[^)\\s]*\\)"
   # Well-known badge services take query strings by design.
-  exclude_regex: "\\]\\(https?://(?:(?:img\\.shields\\.io|shields\\.io|badgen\\.net|badge\\.fury\\.io|(?:app\\.)?codecov\\.io|coveralls\\.io|(?:api\\.)?travis-ci\\.(?:org|com)|(?:dl\\.)?circleci\\.com|api\\.netlify\\.com|deepwiki\\.com/badge|www\\.bestpractices\\.dev|api\\.securityscorecards\\.dev|(?:static\\.)?pepy\\.tech|sonarcloud\\.io|readthedocs\\.org|img\\.badgesize\\.io|snyk\\.io/test|discord(?:app)?\\.com/api/guilds|camo\\.githubusercontent\\.com|vercel\\.com/button|deploy\\.workers\\.cloudflare\\.com)/|github\\.com/[^)]*/(?:badge\\.svg|actions/workflows/))"
+  exclude_regex: "\\]\\(https?://(?:(?:img\\.shields\\.io|shields\\.io|badgen\\.net|badge\\.fury\\.io|(?:app\\.)?codecov\\.io|coveralls\\.io|(?:api\\.)?travis-ci\\.(?:org|com)|(?:dl\\.)?circleci\\.com|api\\.netlify\\.com|deepwiki\\.com/badge|www\\.bestpractices\\.dev|api\\.securityscorecards\\.dev|(?:static\\.)?pepy\\.tech|sonarcloud\\.io|readthedocs\\.org|img\\.badgesize\\.io|snyk\\.io/test|discord(?:app)?\\.com/api/guilds|camo\\.githubusercontent\\.com|vercel\\.com/button|deploy\\.workers\\.cloudflare\\.com)/|github\\.com/[^)]*/(?:badge\\.svg|actions/workflows/))|\\]\\(https?://(?:github\\.com/[^)?]+\\?raw=true\\)|raw\\.githubusercontent\\.com/)"
 owasp:
   - "LLM02:2025 Sensitive Information Disclosure"
   - "ASI05 Sensitive Data Leakage"

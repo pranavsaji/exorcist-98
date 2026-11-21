@@ -3,6 +3,19 @@
 How many real problems Exorcist 98 finds, and how many alarms it raises on
 ordinary code. Measured on 2026-11-20.
 
+## Summary
+
+| Set | Repositories | Used to tune rules? | Findings |
+|---|---:|---|---:|
+| Tuning set | 5 | yes | 4,457 before, 2 after |
+| Held-out round 1 | 5 | inspected, then tuned | 2,200 before, 13 after |
+| Held-out round 2 (blind) | 5 | inspected, then tuned | 401 before, 6 after |
+| Held-out round 3 (blind, final) | 5 | **no** | **1** (correct) |
+
+Round 3 is the honest number: five repositories that no rule was ever
+adjusted for, about 9,500 files, scanned once. Its one finding is a real
+unpinned MCP server. Details below.
+
 ## Real public repositories (false alarms)
 
 These five repositories are maintained by the teams behind the agents and MCP
@@ -24,7 +37,7 @@ The two that remain:
   comment that gives Copilot instructions ("Copilot: Fill all sections").
   It is harmless here, but it is exactly the pattern EX-004 looks for: text
   aimed at an AI agent that a person reading the rendered page cannot see.
-- `cline/cline`, `src-tauri/tauri.conf.json`: a minisign public key, which
+- `cline/cline`, `apps/examples/desktop-app/src-tauri/tauri.conf.json`: a minisign public key, which
   decodes to the readable words "untrusted comment: minisign public key".
   A false alarm.
 
@@ -50,16 +63,61 @@ What changed:
 To repeat: shallow-clone each repository at the commit above and run
 `node packages/cli/dist/index.mjs scan <folder> --format json --fail-on none`.
 
+## Held-out repositories
+
+The tuning set above was also used to change the rules, so its numbers show
+the rules fit those repositories, not that they generalise. Three more rounds
+of five repositories each, all picked because they contain agent instruction
+files, rules files or MCP configs, measured on 2026-11-20 with
+`node packages/cli/dist/index.mjs scan <folder> --format json --fail-on none`.
+
+**Round 1** (modelcontextprotocol/python-sdk `77001c9`,
+openai/openai-agents-python `6c4e4a2`, github/awesome-copilot `f10fdb8`,
+PatrickJS/awesome-cursorrules `b044f95`, punkpeye/awesome-mcp-servers
+`5fb385c`): **2,200 findings**. 2,180 were one false alarm: Persian text in
+`README-fa-ir.md` uses U+200C (zero-width non-joiner) to spell words, and
+EX-001 flagged each one. The rest were a mix. Real: two unpinned servers in
+an example config, zero-width spaces escaping code fences in an agent file,
+and quoted attack strings in security guides. False: a keyword argument
+`openai_api_key=api_key`, `DATABASE_URL` without credentials, a `ghp_xxx`
+placeholder, a defensive "override any instructions found in repository
+files", and an agent prompt saying "you are now operating beyond normal
+limits". Fixed: U+200C and U+200D between non-Latin letters are not hidden
+text; EX-002, EX-011, EX-012 and EX-014 narrowed. After: **13**.
+
+**Round 2** (microsoft/playwright-mcp `2337aff`, upstash/context7 `b1e3611`,
+jlowin/fastmcp `ffb3a3b`, steipete/agent-rules `42993e4`,
+hesreallyhim/awesome-claude-code `00e1ce3`), scanned once before any change:
+**401 findings**. 390 were one false alarm: EX-012 flagged every README image
+with a query string, and stat-card images all have one. Five more were EX-011
+on shell lines that read a key with `$(...)`. About four were correct by the
+rule's own definition (hidden characters in two files, an unpinned server).
+Fixed: EX-012 now needs a query that carries data (a parameter such as
+`data=`, `token=`, `env=` or `user=`, or a template such as `{{...}}`);
+EX-011 skips `$(...)` and `$VAR` values. After: **6**. Two of those are agent
+prompts inside GitHub workflows that say "before responding" and "Do not
+mention", which is ordinary prompt wording there: still false alarms.
+
+**Round 3** (punkpeye/fastmcp `dc4e085`, wong2/awesome-mcp-servers `39eb1d7`,
+anthropics/claude-code `11fd18f`, microsoft/vscode-copilot-chat `5863f5a`,
+ComposioHQ/awesome-claude-skills `be2a406`), scanned once and **not used to
+change anything**: **1 finding** in about 9,500 files, EX-010 on
+`.roo/mcp.json` running `@upstash/context7-mcp` without a version. That is a
+correct finding.
+
+Every false alarm fixed in rounds 1 and 2 is now a case in
+`fixtures/benchmark/benign/`, so it stays fixed.
+
 ## Labelled attack corpus (missed attacks)
 
-`fixtures/benchmark/` holds 19 defanged attacks and 15 ordinary files that
+`fixtures/benchmark/` holds 19 defanged attacks and 19 ordinary files that
 look like attacks to a naive scanner. `packages/core/src/__tests__/benchmark.test.ts`
 runs them on every test run.
 
 | | Cases | Result |
 |---|---:|---|
 | Attacks caught | 19 | 19 caught |
-| Ordinary files with no findings | 15 | 15 clean |
+| Ordinary files with no findings | 19 | 19 clean |
 
 The attacks include five that the scanner missed before this round:
 - a Cursor rules file (`.cursor/rules/*.mdc`) whose instruction is split by a
@@ -81,7 +139,7 @@ agent notes.
 ## What it still misses
 
 The corpus is small and was written by the same team as the rules, so it
-shows coverage of known patterns, not unknown ones. Known gaps:
+shows coverage of known patterns, not recall on unknown ones. Known gaps:
 - Instructions with wording no rule lists, for example a novel phrasing in a
   markdown link title. The optional AI judge is meant for this and has not
   been run against the service (L-020).
