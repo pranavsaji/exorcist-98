@@ -137,6 +137,14 @@ export function severityFor(
   return base === "critical" ? "high" : base === "high" ? "medium" : "low";
 }
 
+/** The model's threat label as a short title: "prompt_injection supply_chain" becomes "Prompt injection, supply chain". */
+export function readableTitle(threatClass: string): string {
+  const parts = threatClass.replace(/[^\p{L}\p{N}_\- ,/]+/gu, ' ').split(/[\s,/]+/).filter(Boolean).map((w) => w.replace(/[_-]+/g, ' ').toLowerCase().trim()).filter(Boolean);
+  const unique = [...new Set(parts)].slice(0, 3);
+  const t = unique.join(', ');
+  return t ? `${t.charAt(0).toUpperCase()}${t.slice(1)}`.slice(0, 80) : 'Suspicious text for an AI agent';
+}
+
 function safeParseJson(raw: string): unknown {
   try {
     // Extract the first JSON object if the model wrapped it in prose.
@@ -199,7 +207,7 @@ export async function runHeuristics(
     findings.push({
       source: "heuristic",
       ruleId: sameLine?.ruleId ?? "HEU-000",
-      title: sameLine?.title ?? verdict.threat_class.slice(0, 80),
+      title: sameLine?.title ?? readableTitle(verdict.threat_class),
       severity:
         sameLine?.severity ??
         severityFor(verdict.threat_class, verdict.verdict),
