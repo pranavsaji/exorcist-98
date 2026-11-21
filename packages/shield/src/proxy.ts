@@ -6,9 +6,12 @@ import { ShieldEngine } from './engine.js';
 import type { Action } from './engine.js';
 import { LineSplitter } from './jsonrpc.js';
 import { loadPolicy } from './policy.js';
-import { alertsPath, appendAlert, loadState, policyPath, saveState, statePath, vaultPath } from './state.js';
+import { alertsPath, appendAlert, loadState, policyPath, saveState, serverState, statePath, vaultPath } from './state.js';
 import type { Alert, State } from './state.js';
 import { quarantineServer } from './vault.js';
+import { checkLaunch, launchFingerprint, packageSpec, specIsPinned } from './launch.js';
+import { AiReview } from './ai-review.js';
+import type { AiJudge } from './ai-review.js';
 import { throttle } from './notify.js';
 import type { Notifier } from './notify.js';
 
@@ -30,6 +33,8 @@ export type ProxyOptions = {
   pollMs?: number;
   /** Shows desktop notifications for critical and high alerts, unless the policy sets `notify: false`. */
   notify?: Notifier;
+  /** The AI judge for `aiReview: true`; defaults to Amazon Bedrock. Tests pass a fake. */
+  aiJudge?: AiJudge;
 };
 
 export const FAIL_CLOSED_EXIT = 78;
@@ -43,6 +48,10 @@ export type ShieldSetupOptions = {
   stderr?: Writable;
   pollMs?: number;
   notify?: Notifier;
+  /** The local server's program, pinned before it starts (S-006). Remote servers have none. */
+  launch?: { command: string; args: string[]; cwd: string };
+  /** The AI judge for `aiReview: true`; defaults to Amazon Bedrock. Tests pass a fake. */
+  aiJudge?: AiJudge;
 };
 
 export type ShieldContext = {
@@ -50,6 +59,11 @@ export type ShieldContext = {
   log: (s: string) => void;
   /** Handle every non-forward action (alerts, quarantine). Forwards are returned for the caller to deliver. */
   handle: (actions: Action[]) => Array<{ to: 'server' | 'client'; message: unknown }>;
+  /**
+   * With AI review on, await this for every server line before the engine
+   * sees it, in order: it judges new tool descriptions first (S-009).
+   */
+  prepareServerLine?: (line: string) => Promise<void>;
   /** Start watching the pin file for approvals; returns a stop function. */
   watch: (deliver: (actions: Action[]) => void) => () => void;
 };
@@ -77,6 +91,42 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
     return FAIL_CLOSED_EXIT;
   }
 
+  const launchAlerts: Alert[] = [];
+  if (o.launch && policy.policy.launchPin !== 'off') {
+    const { command, args, cwd } = o.launch;
+    const s = serverState(first.state, o.server);
+    const check = checkLaunch(s, launchFingerprint(command, args, cwd));
+    if (check.result !== 'same') {
+      try { saveState(statePath(o.dir), first.state); } catch (err) { log(`Could not save the pin file: ${String(err)}`); return FAIL_CLOSED_EXIT; }
+    }
+    if (check.result === 'pinned') log(`Pinned the program behind "${o.server}".`);
+    if (check.result === 'changed') {
+      const blocking = policy.policy.launchPin === 'block' && policy.policy.mode === 'enforce';
+      launchAlerts.push({
+        time: new Date().toISOString(), server: o.server, ruleId: 'EX-010', severity: 'high',
+        message: `The program behind "${o.server}" changed since it was pinned. ${blocking ? 'It was not started.' : 'It was started anyway (policy).'} ` +
+          `Check the change, then run: exorcist approve server ${o.server}`,
+        detail: [...check.removed.map((l) => `- ${l}`), ...check.added.map((l) => `+ ${l}`)].join('\n'),
+      });
+      if (blocking) {
+        for (const a of launchAlerts) recordLaunchAlert(a);
+        return FAIL_CLOSED_EXIT;
+      }
+    }
+    const spec = packageSpec(command, args);
+    if (spec && !specIsPinned(spec)) {
+      launchAlerts.push({
+        time: new Date().toISOString(), server: o.server, ruleId: 'EX-010', severity: 'medium',
+        message: `"${o.server}" runs the package ${spec} without a fixed version, so a new release would run without review. Pin it, for example ${spec.replace(/@[^@/]*$/, '')}@1.2.3.`,
+      });
+    }
+  }
+  function recordLaunchAlert(a: Alert): void {
+    log(`${a.severity.toUpperCase()} ${a.ruleId}: ${a.message}`);
+    if (a.detail) log(a.detail.split('\n').map((l) => `    ${l}`).join('\n'));
+    try { appendAlert(alertsPath(o.dir), a); } catch { /* the console line above is enough */ }
+    if (o.notify && policy.ok && policy.policy.notify && a.severity === 'high') o.notify(`Exorcist 98: warning (${o.server})`, a.message);
+  }
   // State is re-read when the file changes, so `exorcist approve` takes effect
   // without restarting the proxy.
   let cached: State = first.state;
@@ -101,10 +151,20 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
     },
   };
 
-  const engine = new ShieldEngine({ server: o.server, io, policy: policy.policy, defs });
+  let review: AiReview | undefined;
+  if (policy.policy.aiReview) {
+    const judge = o.aiJudge ?? await bedrockJudge();
+    if (typeof judge === 'string') log(`AI review is on in the policy, but ${judge}. The signature checks still run.`);
+    else review = new AiReview(judge, { log });
+  }
+  const engine = new ShieldEngine({
+    server: o.server, io, policy: policy.policy, defs,
+    ...(review ? { aiFindings: (fp: string) => (review as AiReview).findings(fp) } : {}),
+  });
   const notifier = policy.policy.notify ? o.notify : undefined;
   const allowNotice = throttle();
   log(`Protecting "${o.server}". State folder: ${o.dir}`);
+  for (const a of launchAlerts) recordLaunchAlert(a);
 
   const recordAlert = (a: Alert): void => {
     log(`${a.severity.toUpperCase()} ${a.ruleId}${a.tool ? ` [${a.tool}]` : ''}: ${a.message}`);
@@ -144,9 +204,36 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
     return () => clearInterval(t);
   };
 
-  return { engine, log, handle, watch };
+  const prepareServerLine = review
+    ? (line: string): Promise<void> => (review as AiReview).prepare(line, (name) => Boolean(io.load().servers[o.server]?.tools[name]))
+    : undefined;
+  return { engine, log, handle, watch, ...(prepareServerLine ? { prepareServerLine } : {}) };
 }
 
+/** The AI judge on Amazon Bedrock, or the reason it cannot run. */
+async function bedrockJudge(): Promise<AiJudge | string> {
+  if (!process.env['AWS_REGION'] && !process.env['AWS_DEFAULT_REGION']) return 'AWS_REGION is not set';
+  let llm: typeof import('@exorcist-98/core/llm');
+  try {
+    llm = await import('@exorcist-98/core/llm');
+  } catch {
+    return 'the AI judge could not be loaded';
+  }
+  const client = new llm.BedrockClientImpl();
+  return async (text, label) => {
+    let failed: string | undefined;
+    const watched = {
+      call: async (p: Parameters<typeof client.call>[0]) => {
+        const r = await client.call(p);
+        if (!r.ok) failed = r.error;
+        return r;
+      },
+    };
+    const v = await llm.judgeText(text, label, watched);
+    if (failed) throw new Error(failed.split('\n')[0]?.slice(0, 200) ?? 'the model call failed');
+    return v ? { verdict: v.verdict, threatClass: v.threatClass, span: v.span } : null;
+  };
+}
 /**
  * Run one MCP server behind the shield. Resolves with the exit code.
  * stdout carries only protocol messages; everything else goes to stderr and to
@@ -156,7 +243,7 @@ export async function runProxy(o: ProxyOptions): Promise<number> {
   const stdin = o.stdin ?? process.stdin;
   const stdout = o.stdout ?? process.stdout;
   const stderr = o.stderr ?? process.stderr;
-  const prepared = await prepareShield({ ...o, stderr });
+  const prepared = await prepareShield({ ...o, stderr, launch: { command: o.command, args: o.args, cwd: o.cwd ?? process.cwd() } });
   if (typeof prepared === 'number') return prepared;
   const { engine, log, handle } = prepared;
 
@@ -183,7 +270,14 @@ export async function runProxy(o: ProxyOptions): Promise<number> {
     for (const l of fromClient.flush()) run(engine.onClientLine(l));
     child.stdin.end();
   });
-  child.stdout.on('data', (chunk: Buffer) => { for (const l of fromServer.push(chunk)) run(engine.onServerLine(l)); });
+  // With AI review on, server lines wait in order while new tool descriptions are judged.
+  let serverQueue: Promise<void> = Promise.resolve();
+  const prep = prepared.prepareServerLine;
+  const fromServerLine = (l: string): void => {
+    if (!prep) { run(engine.onServerLine(l)); return; }
+    serverQueue = serverQueue.then(() => prep(l)).catch(() => undefined).then(() => run(engine.onServerLine(l)));
+  };
+  child.stdout.on('data', (chunk: Buffer) => { for (const l of fromServer.push(chunk)) fromServerLine(l); });
   child.stderr.on('data', (chunk: Buffer) => void stderr.write(chunk));
   child.stdin.on('error', () => { /* the child went away; its exit is handled below */ });
 
@@ -197,8 +291,8 @@ export async function runProxy(o: ProxyOptions): Promise<number> {
     });
     child.on('close', (code) => {
       stopWatch();
-      for (const l of fromServer.flush()) run(engine.onServerLine(l));
-      resolve(code ?? 1);
+      for (const l of fromServer.flush()) fromServerLine(l);
+      void serverQueue.then(() => resolve(code ?? 1));
     });
   });
 }

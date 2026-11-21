@@ -108,6 +108,7 @@ export async function runRemoteProxy(o: RemoteProxyOptions): Promise<number> {
   let initializeId: JsonRpcId | null = null;
   let getStreamOpen = false;
   let closing = false;
+  let serverQueue: Promise<void> = Promise.resolve();
   const getCtl = new AbortController();
   const inFlight = new Set<Promise<void>>();
 
@@ -133,7 +134,10 @@ export async function runRemoteProxy(o: RemoteProxyOptions): Promise<number> {
         }
       } catch { /* the engine reports bad lines */ }
     }
-    deliver(engine.onServerLine(raw));
+    const prep = prepared.prepareServerLine;
+    if (!prep) { deliver(engine.onServerLine(raw)); return; }
+    // AI review: lines wait in order while new tool descriptions are judged.
+    serverQueue = serverQueue.then(() => prep(raw)).catch(() => undefined).then(() => deliver(engine.onServerLine(raw)));
   };
 
   const readBody = async (res: Response): Promise<void> => {
@@ -260,6 +264,7 @@ export async function runRemoteProxy(o: RemoteProxyOptions): Promise<number> {
         // Let requests already sent finish, but not the open-ended GET stream.
         const deadline = Date.now() + 5_000;
         while ([...inFlight].length > (getStreamOpen ? 1 : 0) && Date.now() < deadline) await new Promise((r) => setTimeout(r, 50));
+        await serverQueue;
         getCtl.abort();
         if (sessionId) {
           try { await fetchFn(url, { method: 'DELETE', headers: headers(), signal: AbortSignal.timeout(5_000) }); } catch { /* best effort */ }

@@ -1,15 +1,17 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { alertsPath, approveHost, approveTool, loadState, saveState, statePath } from '@exorcist-98/shield';
+import { alertsPath, approveHost, approveServer, approveTool, loadState, saveState, statePath } from '@exorcist-98/shield';
 import { DEFAULT_DIR, stateDir, parse, str } from '../util.js';
 import type { Io } from '../util.js';
 
 export const APPROVE_HELP = `Usage: exorcist approve tool <server> <tool> [--dir <folder>]
        exorcist approve host <server> <host> [--dir <folder>]
+       exorcist approve server <server> [--dir <folder>]
        exorcist alerts [--dir <folder>] [--last <n>]
 
 approve tool   Accept the changed version of a tool the shield hid (re-pins it).
 approve host   Let a server send data to a host (a name like api.example.com, or *.example.com).
+approve server Accept a changed program behind a server (new code or arguments) and pin it.
 alerts         Show recent shield alerts.
 
 The running shield picks the change up on the next request. Your AI client may
@@ -21,14 +23,16 @@ export async function approveCommand(argv: string[], io: Io): Promise<number> {
   if (!p.ok) { io.err(`${p.error}\n\n${APPROVE_HELP}`); return 2; }
   if (p.values['help']) { io.out(APPROVE_HELP); return 0; }
   const [kind, server, name] = p.positionals;
-  if (!kind || !server || !name || (kind !== 'tool' && kind !== 'host')) {
+  const known = kind === 'server' ? Boolean(server) : (kind === 'tool' || kind === 'host') && Boolean(server && name);
+  if (!kind || !server || !known) {
     io.err(`Say what to approve.\n\n${APPROVE_HELP}`);
     return 2;
   }
   const path = statePath(stateDir(str(p.values['dir'])));
   const loaded = loadState(path);
   if (!loaded.ok) { io.err(loaded.error); return 1; }
-  const r = kind === 'tool' ? approveTool(loaded.state, server, name) : approveHost(loaded.state, server, name);
+  const r = kind === 'server' ? approveServer(loaded.state, server)
+    : kind === 'tool' ? approveTool(loaded.state, server, name as string) : approveHost(loaded.state, server, name as string);
   if (!r.ok) { io.err(r.error); return 1; }
   saveState(path, loaded.state);
   io.out(r.message);

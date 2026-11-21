@@ -24,12 +24,26 @@ const UnreviewedSchema = z.object({
   seenAt:      z.string(),
 });
 
+/** The program behind a server: command, arguments (hashed) and file contents (S-006). */
+const LaunchSchema = z.object({
+  hash:     Sha256,
+  parts:    z.array(z.string()),
+  pinnedAt: z.string(),
+});
+const PendingLaunchSchema = z.object({
+  hash:   Sha256,
+  parts:  z.array(z.string()),
+  seenAt: z.string(),
+});
 const ServerStateSchema = z.object({
   tools:         z.record(PinSchema).default({}),
   pending:       z.record(PendingSchema).default({}),
   /** Tools seen for the first time under `firstUse: review`, not yet approved. */
   unreviewed:    z.record(UnreviewedSchema).default({}),
   approvedHosts: z.array(z.string()).default([]),
+  launch:        LaunchSchema.optional(),
+  /** A changed program, held until `exorcist approve server <server>`. */
+  pendingLaunch: PendingLaunchSchema.optional(),
 });
 
 export const StateSchema = z.object({
@@ -117,6 +131,15 @@ export function approveTool(state: State, server: string, tool: string, now: Dat
   return { ok: true, message: `Approved the new version of "${tool}" on "${server}".` };
 }
 
+/** Accept the changed program behind a server and pin it. */
+export function approveServer(state: State, server: string, now: Date = new Date()): ApproveResult {
+  const s = state.servers[server];
+  const pending = s?.pendingLaunch;
+  if (!s || !pending) return { ok: false, error: `There is no pending program change for "${server}".` };
+  s.launch = { hash: pending.hash, parts: pending.parts, pinnedAt: now.toISOString() };
+  delete s.pendingLaunch;
+  return { ok: true, message: `Approved the new program behind "${server}". It starts on the next connect.` };
+}
 export function approveHost(state: State, server: string, host: string): ApproveResult {
   const clean = host.trim().toLowerCase();
   const ipv6 = /^\[[0-9a-f:.]{2,45}\]$/.test(clean); // as the host check reports it: [2001:db8::1]

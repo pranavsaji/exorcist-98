@@ -97,4 +97,5 @@ export class BedrockClientImpl implements BedrockClient {
 
 // What the CLI's --ai needs, through `@exorcist-98/core/llm` only.
 export type { BedrockClient, BedrockParams, BedrockResult } from '../types.js';
-export { MAX_SPANS_PER_FILE } from '../scanner/heuristic-engine.js';
+export { MAX_SPANS_PER_FILE, judgeText, MAX_JUDGED_CHARS } from '../scanner/heuristic-engine.js';
+export type { TextVerdict } from '../scanner/heuristic-engine.js';

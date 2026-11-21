@@ -225,3 +225,35 @@ export async function runHeuristics(
   }
   return findings;
 }
+
+/** Most characters of one text sent to the model by judgeText. */
+export const MAX_JUDGED_CHARS = 4_000;
+
+export type TextVerdict = {
+  verdict: "malicious" | "suspicious";
+  threatClass: string;
+  /** Verbatim in the judged text; a verdict whose span is not found is dropped. */
+  span: string;
+  rationale: string;
+};
+
+/**
+ * Judge one short text with no signature hit to go on (S-009), such as a tool
+ * description the Shield sees for the first time: triage, then the judge. The
+ * model only labels; the caller decides what a label means. `null` is "no
+ * finding" (benign, unparseable, or a span not found in the text).
+ */
+export async function judgeText(
+  text: string,
+  label: string,
+  client: BedrockClient,
+): Promise<TextVerdict | null> {
+  const span = text.slice(0, MAX_JUDGED_CHARS);
+  if (span.trim().length === 0) return null;
+  const triage = await classify(client, "haiku", buildHeuristicPrompt(span, "", label, generateNonce()));
+  if (!triage || triage.verdict === "benign") return null;
+  const verdict = await classify(client, "sonnet", buildHeuristicPrompt(span, "", label, generateNonce(), triage));
+  if (!verdict || verdict.verdict === "benign") return null;
+  if (!span.includes(verdict.quoted_span)) return null;
+  return { verdict: verdict.verdict, threatClass: verdict.threat_class, span: verdict.quoted_span, rationale: verdict.rationale };
+}

@@ -29,6 +29,8 @@ export type EngineOptions = {
   policy: Policy;
   defs: VirusDefinition[];
   now?: () => Date;
+  /** AI review findings for a tool version not pinned yet (S-009); absent when AI review is off. */
+  aiFindings?: (fingerprint: string) => { block: Reason[]; warn: Reason[] };
 };
 
 /** A tool hidden from the agent. `fingerprint` is the version that was hidden (rug pulls only). */
@@ -481,7 +483,16 @@ export class ShieldEngine {
       const pin = ss.tools[tool.name];
 
       if (!pin) {
-        const reasons = inspectTool(tool, this.o.defs);
+        const ai = this.o.aiFindings?.(fp);
+        const reasons = [...inspectTool(tool, this.o.defs), ...(ai?.block ?? [])];
+        if (ai && ai.warn.length > 0 && reasons.length === 0 && this.firstTime(`ai:${tool.name}`, fp)) {
+          actions.push(this.alert({
+            ruleId: 'AI-JUDGE',
+            severity: 'medium',
+            tool: tool.name,
+            message: `The new tool "${tool.name}" was kept, but check it: ${joinReasons(ai.warn)}`,
+          }));
+        }
         if (reasons.length === 0 && this.o.policy.firstUse === 'review' && this.enforcing()) {
           // S-006: a never-seen tool waits for the user's review before it is trusted.
           if (!ss.unreviewed[tool.name] || ss.unreviewed[tool.name]?.hash !== fp) {

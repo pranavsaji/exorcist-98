@@ -8,7 +8,7 @@
       "matcher": "(^|/)definitions/.+\\.yaml$",
       "action": {
         "type": "command",
-        "command": "pnpm exec vitest run --project @exorcist-98/core"
+        "command": "sh scripts/kiro-hook.sh node_modules/.bin/vitest run --project @exorcist-98/core"
       },
       "timeout": 180
     }

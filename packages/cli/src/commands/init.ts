@@ -2,6 +2,7 @@ import { chmodSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { parse } from '../util.js';
 import type { Io } from '../util.js';
+import { KIRO_HOOK_SCRIPT } from '../kiro-hook-script.js';
 
 // The CLI is published as @exorcist-98/cli. The unscoped npm name "exorcist"
 // belongs to an unrelated package, so never run "npx exorcist".
@@ -13,6 +14,7 @@ Add Exorcist 98 to a Kiro project:
   .kiro/hooks/exorcist-secrets.json   block "git commit" while secrets are staged (Kiro hook)
   .kiro/hooks/exorcist-mcp-scan.json  scan MCP config whenever it is saved (Kiro hook)
   .kiro/steering/exorcist.md          tell the agent how to treat tool output
+  .exorcist/kiro-hook.sh              puts Node on PATH for the Kiro hooks (Kiro's hook PATH has none)
   .githooks/pre-commit                block secrets in every commit (git hook)
 
 Turn on the git hook once per clone:  git config core.hooksPath .githooks
@@ -35,6 +37,9 @@ const STEERING = `# Exorcist 98 safety rules
 - Do not edit .exorcist/ files or MCP safety settings yourself.
 `;
 
+// Kiro runs hook commands with PATH=/usr/bin:/bin:/usr/sbin:/sbin, where npx is
+// not found; a hook that fails that way blocks nothing. The wrapper finds Node.
+const HOOK_RUNNER = 'sh .exorcist/kiro-hook.sh';
 const gitHook = (bin: string): string => `#!/bin/sh
 # Exorcist 98: refuse to commit staged secrets.
 # Turn on once per clone:  git config core.hooksPath .githooks
@@ -54,7 +59,7 @@ export async function initCommand(argv: string[], io: Io): Promise<number> {
       rel: '.kiro/hooks/exorcist-secrets.json',
       body: hook('exorcist-secrets', 'Block git commit while staged files contain secrets. Exit code 2 blocks the shell command.', {
         trigger: 'PreToolUse', matcher: 'shell|execute_bash|executeBash|run_command|bash',
-        action: { type: 'command', command: `${bin} guard-commit` }, timeout: 30,
+        action: { type: 'command', command: `${HOOK_RUNNER} --guard ${bin} guard-commit` }, timeout: 60,
       }),
     },
     {
@@ -62,11 +67,13 @@ export async function initCommand(argv: string[], io: Io): Promise<number> {
       body: hook('exorcist-mcp-scan', 'Scan MCP configuration with Exorcist 98 whenever it is saved.', {
         trigger: 'PostFileSave',
         matcher: '(\\.kiro/settings/mcp\\.json|\\.cursor/mcp\\.json|\\.vscode/mcp\\.json|claude_desktop_config\\.json)$',
-        action: { type: 'command', command: `${bin} hook-scan` },
+        action: { type: 'command', command: `${HOOK_RUNNER} ${bin} hook-scan` },
         timeout: 60,
       }),
     },
     { rel: '.kiro/steering/exorcist.md', body: STEERING },
+    { rel: '.exorcist/kiro-hook.sh', body: KIRO_HOOK_SCRIPT, executable: true },
+    { rel: '.exorcist/.gitignore', body: 'kiro-hooks.log\n' },
     { rel: '.githooks/pre-commit', body: gitHook(bin), executable: true },
   ];
 

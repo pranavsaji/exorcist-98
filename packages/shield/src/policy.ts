@@ -21,12 +21,25 @@ export const PolicySchema = z
      * be seen otherwise.
      */
     verifyCalls:    z.boolean().default(true),
+    /**
+     * What happens when the program behind a server changes since it was
+     * pinned (S-006): `block` does not start it until `exorcist approve server`,
+     * `warn` starts it with an alert, `off` does not pin the program.
+     */
+    launchPin:      z.enum(['block', 'warn', 'off']).default('block'),
+    /**
+     * Ask the AI judge (Amazon Bedrock) about every tool description the
+     * Shield has not pinned yet, before the agent sees it (S-009). Needs
+     * AWS_REGION and AWS credentials. Off by default: it costs money and adds
+     * a few seconds to the first tool list.
+     */
+    aiReview:       z.boolean().default(false),
   })
   .strict();
 
 export type Policy = z.infer<typeof PolicySchema>;
 
-export const DEFAULT_POLICY: Policy = { allowedHosts: [], mode: 'enforce', autoQuarantine: false, firstUse: 'pin', notify: true, verifyCalls: true };
+export const DEFAULT_POLICY: Policy = { allowedHosts: [], mode: 'enforce', autoQuarantine: false, firstUse: 'pin', notify: true, verifyCalls: true, launchPin: 'block', aiReview: false };
 
 export type PolicyResult = { ok: true; policy: Policy } | { ok: false; error: string };
 

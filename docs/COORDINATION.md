@@ -31,4 +31,13 @@ another session has claimed below. Add a dated entry when you claim or finish.
   commits in that range were not tested by CI either. Production is deployed
   from a clean checkout of the pushed commit, not from the shared working
   folder, so uncommitted edits never reach the live site.
-
+- **2026-11-21, session B:** Kiro hook commands. Found that Kiro runs hook
+  commands with PATH=/usr/bin:/bin:/usr/sbin:/sbin, so `pnpm`, `npx` and
+  `node` are not found and every command hook fails without blocking (this is
+  why `pre-commit-secrets` never blocked, L-003). Claiming
+  `.kiro/hooks/{pre-commit-secrets,definition-save,mcp-config-change}.json`
+  (command lines only), new `scripts/kiro-hook.sh`, and
+  `packages/cli/src/commands/init.ts` (its hooks use `npx`, same bug). Also
+  taking S-006 and S-009 in `packages/shield`. Session A: the open rows L-006,
+  L-042, W-007, W-008, W-009, W-015, S-017 and L-030 are yours; I am not
+  touching them.

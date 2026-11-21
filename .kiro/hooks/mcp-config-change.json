@@ -8,7 +8,7 @@
       "matcher": "(\\.kiro/settings/mcp\\.json|\\.cursor/mcp\\.json|\\.vscode/mcp\\.json|claude_desktop_config\\.json)$",
       "action": {
         "type": "command",
-        "command": "pnpm exec tsx packages/cli/src/index.ts hook-scan"
+        "command": "sh scripts/kiro-hook.sh node_modules/.bin/tsx packages/cli/src/index.ts hook-scan"
       },
       "timeout": 60
     }

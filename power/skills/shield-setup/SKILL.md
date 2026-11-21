@@ -14,6 +14,8 @@ The shield sits between Kiro and each MCP server. It pins every tool the first t
 3. Run `exorcist init` to add the secrets guard hook, the MCP config scan hook and a steering file.
 4. Optional: write `.exorcist/policy.json`, for example `{ "allowedHosts": ["api.github.com"], "mode": "enforce", "autoQuarantine": true }`.
    Add `"firstUse": "review"` to hold every new tool back until the user runs `exorcist approve tool <server> <tool>` (the default, `"pin"`, trusts a tool the first time it is seen).
+   Add `"aiReview": true` to have the AI judge (Amazon Bedrock; needs AWS_REGION and credentials, and costs a little per new tool) check every new tool description before the agent sees it.
+   The shield also pins the program behind each server; set `"launchPin": "warn"` to start a changed program with an alert instead of refusing it.
    If the client supports MCP elicitation, a call to a host that is not allowed shows the user a prompt (allow once, or always allow the host); otherwise the call is refused with the exact `exorcist approve host` command.
 5. Tell the user to reconnect their MCP servers so Kiro starts them through the shield.
 
@@ -22,6 +24,7 @@ The shield sits between Kiro and each MCP server. It pins every tool the first t
 - Do not look for a way around it. Tell the user what was blocked and why.
 - A changed tool: the user reviews the diff in `exorcist alerts`, then runs `exorcist approve tool <server> <tool>` if they trust it.
 - An unknown host: the user runs `exorcist approve host <server> <host>`.
+- A server that will not start because its program changed (EX-010): the user checks the change in `exorcist alerts`, then runs `exorcist approve server <server>` and reconnects it.
 - Never edit files in `.exorcist/` yourself.
 
 ## Remote servers
