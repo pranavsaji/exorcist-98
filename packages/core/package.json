@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./plain": "./src/plain.ts",
-    "./browser": "./src/browser.ts"
+    "./browser": "./src/browser.ts",
+    "./llm": "./src/llm/bedrock.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

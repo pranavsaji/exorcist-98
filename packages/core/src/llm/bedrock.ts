@@ -1,4 +1,4 @@
-import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
+import type { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime';
 import type { BedrockClient, BedrockParams, BedrockResult } from '../types.js';
 
 /**
@@ -40,21 +40,33 @@ export function modelIdFor(model: 'haiku' | 'sonnet', env: Record<string, string
   return `${geographyFor(env['AWS_REGION'] ?? env['AWS_DEFAULT_REGION'])}.${DEFAULT_MODELS[model]}`;
 }
 
+/** Model calls made by this process, by role (for cost reporting). */
+export type CallCounts = { haiku: number; sonnet: number; failed: number };
+
+/**
+ * The real Bedrock client. The SDK is loaded the first time a call is made,
+ * so programs that bundle this module (the CLI) start and work without it
+ * installed until AI analysis is actually asked for.
+ */
 export class BedrockClientImpl implements BedrockClient {
   private client: BedrockRuntimeClient | null = null;
+  private sdk: typeof import('@aws-sdk/client-bedrock-runtime') | null = null;
+  readonly counts: CallCounts = { haiku: 0, sonnet: 0, failed: 0 };
 
-  private getClient(): BedrockRuntimeClient {
+  private async getClient(): Promise<BedrockRuntimeClient> {
     if (!this.client) {
-      const region = process.env['AWS_REGION'];
+      const region = process.env['AWS_REGION'] ?? process.env['AWS_DEFAULT_REGION'];
       if (!region) throw new Error('AWS_REGION environment variable is not set');
-      this.client = new BedrockRuntimeClient({ region });
+      this.sdk = await import('@aws-sdk/client-bedrock-runtime');
+      this.client = new this.sdk.BedrockRuntimeClient({ region });
     }
     return this.client;
   }
 
   async call(params: BedrockParams): Promise<BedrockResult> {
     try {
-      const client  = this.getClient();
+      const client  = await this.getClient();
+      const sdk     = this.sdk as typeof import('@aws-sdk/client-bedrock-runtime');
       const modelId = modelIdFor(params.model);
 
       const body = JSON.stringify({
@@ -63,7 +75,7 @@ export class BedrockClientImpl implements BedrockClient {
         messages: [{ role: 'user', content: params.prompt }],
       });
 
-      const cmd = new InvokeModelCommand({
+      const cmd = new sdk.InvokeModelCommand({
         modelId,
         contentType: 'application/json',
         accept:      'application/json',
@@ -74,9 +86,15 @@ export class BedrockClientImpl implements BedrockClient {
       const decoded  = new TextDecoder().decode(response.body);
       const parsed   = JSON.parse(decoded) as { content?: Array<{ text?: string }> };
       const raw      = parsed.content?.[0]?.text ?? '';
+      this.counts[params.model]++;
       return { ok: true, raw };
     } catch (err) {
+      this.counts.failed++;
       return { ok: false, error: String(err) };
     }
   }
 }
+
+// What the CLI's --ai needs, through `@exorcist-98/core/llm` only.
+export type { BedrockClient, BedrockParams, BedrockResult } from '../types.js';
+export { MAX_SPANS_PER_FILE } from '../scanner/heuristic-engine.js';
