@@ -32,19 +32,23 @@ a quarantine vault) and pointed it at the files and tools an agent trusts.
   infection level in words and a shape (never colour alone), the threat class
   and a fix. Reports download as SARIF (GitHub code scanning), Markdown (pull
   requests), JSON and an SVG README badge, built in the browser.
-- **Virus Definitions:** 14 open YAML signatures for hidden Unicode,
+- **Virus Definitions:** 18 open YAML signatures for hidden Unicode,
   instructions aimed at the AI, encoded payloads, HTML comment smuggling, tool
   description poisoning, rug pulls, over-broad auto-approve, remote code in
   hooks, install-script exfiltration, unpinned MCP servers, secrets within the
-  agent's reach, markdown image exfiltration, steering overrides and shell in
-  tool output, across the files Kiro, Cursor, Cline, Windsurf, Copilot, Claude
+  agent's reach, markdown image exfiltration, steering overrides, typosquatted
+  MCP packages, confused-deputy requests, agent memory poisoning, suspicious
+  Powers and shell in tool output, across the files Kiro, Cursor, Cline, Windsurf, Copilot, Claude
   Code and Gemini read. Each
   maps to the OWASP LLM, Agentic or MCP Top 10. A Threat Encyclopedia explains
   each one in plain language.
 - **Measured precision:** on five well-known public agent and MCP repos it
-  raises 2 alarms in total (down from 4,457 before tuning), and it catches 12
-  of 12 attacks in a labelled corpus that runs with the tests
+  raises 2 alarms in total (down from 4,457 before tuning), and it catches 19
+  of 19 attacks in a labelled corpus that runs with the tests
   (`docs/BENCHMARK.md`).
+- **Private code too:** upload a .zip (up to 4 MB) instead of a GitHub link;
+  it is unpacked only for the scan and deleted straight after. Branch, tag and
+  commit links work as well.
 - **Protect a repo in one step:** a GitHub Action that scans every pull
   request and comments on new threats; the web app shows the workflow file to
   copy after each scan.
@@ -102,7 +106,7 @@ where Crew behaved differently from its docs is listed in
 | Hooks | 4 hooks in the main repo and 1 in the Crew repo, in Kiro's JSON format. Seen firing: `spec-change` (on every spec save; kept `docs/THREATS.md` in step) and the Crew repo's `validate-app-json` (ran the manifest tests on each save of `app.json`). Not seen firing: `definition-save` and `mcp-config-change` (not triggered yet) and `pre-commit-secrets` (PreToolUse; did not fire in our sessions, so a git pre-commit hook does that job). | `.kiro/hooks/`, KIRO_LOG |
 | MCP | Built the `exorcist` MCP server on the official SDK (4 tools), tested with the SDK client. | `packages/mcp-server/` |
 | Powers | Built the `exorcist` Power (MCP config plus 3 skills). | `power/` |
-| Measurement | We ran our own scanner on five real repos and found it raised 4,457 alarms, none real. Kiro then worked through a precision spec: rule-level controls in the YAML format, a labelled attack corpus, and a re-run: 2 alarms, 12 of 12 attacks caught. The same run found a CLI bug that cut reports at 64 KB. | `docs/BENCHMARK.md`, `fixtures/benchmark/` |
+| Measurement | We ran our own scanner on five real repos and found it raised 4,457 alarms, none real. Kiro then worked through a precision spec: rule-level controls in the YAML format, a labelled attack corpus, and a re-run: 2 alarms, 19 of 19 attacks caught. The same run found a CLI bug that cut reports at 64 KB. | `docs/BENCHMARK.md`, `fixtures/benchmark/` |
 | Crew | A separate Crew app repo: Sentry agent, agent-hygiene skill, a nightly patrol that sends Crew notifications, a backend and a dashboard page. Run inside Crew 0.12.2 and 0.13.0, including the Sentry agent reading results through its own read-only MCP tool; installing and running it found places where Crew behaves differently from its docs (each recorded in that repo's `docs/KNOWN_LIMITATIONS.md`, C-0xx and N-0xx) and fixed. | `pranavsaji/exorcist-98-crew` |
 
 Stack: TypeScript (strict) in a pnpm monorepo; Next.js for the web app;
@@ -166,8 +170,8 @@ running it, and every gap written down (`docs/KNOWN_LIMITATIONS.md`).
 - Turn on the Bedrock AI judge (wired and unit tested with a fake client, never
   run against the real service).
 - Publish `@exorcist-98/cli` and `@exorcist-98/mcp-server` to npm.
-- More definitions (typosquatted servers, memory poisoning, confused deputy)
-  and a bigger benchmark corpus.
+- A bigger benchmark corpus and more well-known MCP packages for the
+  typosquat check.
 
 ## Startup (Best Startup Project)
 

@@ -2,7 +2,7 @@
 
 **The 90s antivirus, resurrected for AI coding agents.**
 
-**Try it now, no install:** https://exorcist-98.vercel.app (paste any public GitHub repo, or scan the Haunted Repo)
+**Try it now, no install:** https://exorcist-98.vercel.app (paste any public GitHub repo or branch link, upload a .zip of a private project, or scan the Haunted Repo)
 
 Your AI coding agent obeys what it reads: READMEs, steering and rules files, MCP tool descriptions, hooks. Anyone can write those. Exorcist 98 scans them for hidden instructions, poisoned or changed MCP tools and dangerous hooks, and runs a real-time shield between Kiro and its MCP servers.
 
@@ -17,7 +17,7 @@ Built with [Kiro](https://kiro.dev) for **Kiroween 2026** (category: Resurrectio
 A scanner that cries wolf gets switched off. We measured it ([`docs/BENCHMARK.md`](docs/BENCHMARK.md)):
 
 - **5 well-known public repos** (modelcontextprotocol/servers, github/github-mcp-server, openai/codex, anthropics/claude-code-action, cline/cline): **2 findings in total**, down from 4,457 before we tuned the rules. One of the two is a real hidden instruction to Copilot in an HTML comment.
-- **A labelled attack corpus** (`fixtures/benchmark/`): 12 of 12 defanged attacks caught, including Rules File Backdoor tricks in `.cursor/rules`, and 12 of 12 look-alike ordinary files left alone. It runs on every test run.
+- **A labelled attack corpus** (`fixtures/benchmark/`): 19 of 19 defanged attacks caught (including Rules File Backdoor tricks in `.cursor/rules`, typosquatted MCP packages, memory poisoning and hex payloads), and 15 of 15 look-alike ordinary files left alone. It runs on every test run.
 
 ## Protect a repo in one step
 
@@ -44,7 +44,7 @@ jobs:
 | Part                  | What it does                                                                                                                                                          | Where                                        |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | **Full System Scan**  | Paste a GitHub URL, or scan a folder. Findings show the file, line, quoted span, severity and fix.                                                                    | `apps/web`, `packages/cli` (`exorcist scan`) |
-| **Virus Definitions** | 14 YAML signatures with per-rule precision controls, plus an optional AI judge on Amazon Bedrock (built, not yet run against the service).                          | `definitions/`, `packages/core`              |
+| **Virus Definitions** | 18 YAML signatures with per-rule precision controls, plus an optional AI judge on Amazon Bedrock (built, not yet run against the service).                          | `definitions/`, `packages/core`              |
 | **Real-Time Shield**  | An MCP firewall: pins each tool's hash, hides a tool that changes after approval, blocks secrets and unknown hosts in tool calls, withholds attack-like tool results. | `packages/shield` (`exorcist shield`)        |
 | **Quarantine Vault**  | Disable an infected MCP server, hook or steering file, with a backup, a diff and an exact restore.                                                                    | `packages/shield`, `exorcist vault`          |
 

@@ -52,14 +52,14 @@ To repeat: shallow-clone each repository at the commit above and run
 
 ## Labelled attack corpus (missed attacks)
 
-`fixtures/benchmark/` holds 12 defanged attacks and 12 ordinary files that
+`fixtures/benchmark/` holds 19 defanged attacks and 15 ordinary files that
 look like attacks to a naive scanner. `packages/core/src/__tests__/benchmark.test.ts`
 runs them on every test run.
 
 | | Cases | Result |
 |---|---:|---|
-| Attacks caught | 12 | 12 caught |
-| Ordinary files with no findings | 12 | 12 clean |
+| Attacks caught | 19 | 19 caught |
+| Ordinary files with no findings | 15 | 15 clean |
 
 The attacks include five that the scanner missed before this round:
 - a Cursor rules file (`.cursor/rules/*.mdc`) whose instruction is split by a
@@ -70,8 +70,13 @@ The attacks include five that the scanner missed before this round:
 - `"autoApprove": ["*"]`;
 - a Kiro hook that pipes `base64 -d` into a shell.
 
-It also covers a steering file that switches off approvals (new rule EX-014),
-and a `.claude/settings.json` hook that downloads and runs a script.
+It also covers a steering file that switches off approvals (EX-014), a
+`.claude/settings.json` hook that downloads and runs a script, a private key
+pasted into docs, a typosquatted MCP package, planted agent memory, a
+confused-deputy request, a suspicious Power, and hex-encoded payloads. The
+ordinary files include badges, emoji, lockfiles, git SHAs and checksums, CI
+installers, test tokens, placeholders, well-known MCP packages and ordinary
+agent notes.
 
 ## What it still misses
 
@@ -81,4 +86,5 @@ shows coverage of known patterns, not unknown ones. Known gaps:
   markdown link title. The optional AI judge is meant for this and has not
   been run against the service (L-020).
 - Attacks split across files.
-- Rules EX-013, EX-018, EX-019 and EX-020 have fixtures but no rule yet.
+- A typosquat is only caught for the well-known MCP packages in
+  `packages/core/src/known-packages.ts`.
