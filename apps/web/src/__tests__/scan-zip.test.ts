@@ -22,7 +22,7 @@ function zipOf(files: Record<string, string>): Buffer {
   return Buffer.concat([...locals, cd, end]);
 }
 const post = (body: Buffer | string, type = 'application/zip', headers: Record<string, string> = {}) =>
-  POST(new Request('http://localhost/api/scan-zip', { method: 'POST', body, headers: { 'content-type': type, 'fly-client-ip': `10.0.0.${Math.floor(Math.random() * 250)}`, ...headers } }));
+  POST(new Request('http://localhost/api/scan-zip', { method: 'POST', body: typeof body === 'string' ? body : new Uint8Array(body), headers: { 'content-type': type, 'fly-client-ip': `10.0.0.${Math.floor(Math.random() * 250)}`, ...headers } }));
 async function events(res: Response): Promise<ScanEventMsg[]> {
   const out: ScanEventMsg[] = [];
   for await (const r of parseNdjsonStream(res.body!)) if (r.ok) out.push(r.event);
