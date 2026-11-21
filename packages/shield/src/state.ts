@@ -119,7 +119,8 @@ export function approveTool(state: State, server: string, tool: string, now: Dat
 
 export function approveHost(state: State, server: string, host: string): ApproveResult {
   const clean = host.trim().toLowerCase();
-  if (!/^(\*\.)?[a-z0-9.-]+$/.test(clean) || clean.length > 253) return { ok: false, error: `"${host}" is not a valid host name.` };
+  const ipv6 = /^\[[0-9a-f:.]{2,45}\]$/.test(clean); // as the host check reports it: [2001:db8::1]
+  if ((!ipv6 && !/^(\*\.)?[a-z0-9.-]+$/.test(clean)) || clean.length > 253) return { ok: false, error: `"${host}" is not a valid host name.` };
   const s = serverState(state, server);
   if (!s.approvedHosts.includes(clean)) s.approvedHosts.push(clean);
   return { ok: true, message: `"${server}" may now send data to ${clean}.` };

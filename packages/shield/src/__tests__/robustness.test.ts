@@ -78,11 +78,23 @@ describe('approval prompts cannot pile up or mislead', () => {
   it('"always allow" that cannot be saved is reported, not silently ignored', () => {
     const t = make();
     list(t.engine, [sendTool('send_report')], 1);
-    const prompt = fwd(t.engine.onClient(call(5, 'send_report', 'http://[2001:db8::1]/x')), 'client')[0];
+    const longHost = `${'a'.repeat(60)}.${'b'.repeat(60)}.${'c'.repeat(60)}.${'d'.repeat(60)}.example.invalid`; // over 253 characters
+    const prompt = fwd(t.engine.onClient(call(5, 'send_report', `https://${longHost}/x`)), 'client')[0];
     const acts = t.engine.onClient({ jsonrpc: '2.0', id: prompt?.['id'], result: { action: 'accept', content: { remember: true } } });
     expect(fwd(acts, 'server')).toHaveLength(1); // it still runs once
     const alert = acts.find((a) => a.type === 'alert') as { alert: { message: string } } | undefined;
     expect(alert?.alert.message).toMatch(/could not be saved|only this once/i);
+  });
+});
+
+describe('IPv6 hosts', () => {
+  it('"always allow" works for an IPv6 address, and the next call goes straight through', () => {
+    const t = make();
+    list(t.engine, [sendTool('send_report')], 1);
+    const prompt = fwd(t.engine.onClient(call(5, 'send_report', 'http://[2001:db8::1]:8080/x')), 'client')[0];
+    t.engine.onClient({ jsonrpc: '2.0', id: prompt?.['id'], result: { action: 'accept', content: { remember: true } } });
+    expect(t.state.servers['notes']?.approvedHosts).toEqual(['[2001:db8::1]']);
+    expect(fwd(t.engine.onClient(call(6, 'send_report', 'http://[2001:db8::1]/y')), 'server')).toHaveLength(1);
   });
 });
 
