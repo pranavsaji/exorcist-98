@@ -64,7 +64,10 @@ function's temporary disk, which serverless hosts allow.
 
 - `POST /api/scan` has a per-visitor rate limit and a cap on scans running at
   once (W-003, `apps/web/src/lib/limits.ts`): 6 GitHub scans per visitor, then
-  one every 2 minutes; 3 GitHub scans at once. The limits live in one server
+  one every 2 minutes; 3 GitHub scans at once. Downloads are unpacked while they
+  arrive and only files the scanner reads are kept (120 MB download, 800 MB
+  unpacked, 150 MB of text kept, 20,000 files, 30 s); openai/codex (10,504
+  files) scans with the server at about 185 MB of memory. The limits live in one server
   process, so several instances each keep their own.
 - Check the deployed URL with `E2E_BASE=https://your-url pnpm e2e`.
 
