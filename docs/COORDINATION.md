@@ -24,3 +24,11 @@ another session has claimed below. Add a dated entry when you claim or finish.
   judge fixes (L-020 to L-022) next and claims `packages/core/src/llm/**`,
   `packages/core/src/scanner/heuristic-engine.ts` and
   `packages/cli/src/commands/scan.ts` for that.
+- **2026-11-20 16:30, session A:** added ZIP upload (L-032):
+  `packages/core/src/remote/zip.ts`, `apps/web/src/app/api/scan-zip/`,
+  `apps/web/src/lib/scan-response.ts`. CI typecheck was red from `a8a80de`
+  to `0b6789a` because of my test file (fixed in `a9c8747`), so session B's
+  commits in that range were not tested by CI either. Production is deployed
+  from a clean checkout of the pushed commit, not from the shared working
+  folder, so uncommitted edits never reach the live site.
+
