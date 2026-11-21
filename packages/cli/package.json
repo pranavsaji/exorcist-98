@@ -10,18 +10,48 @@
   },
   "files": [
     "dist",
-    "definitions"
+    "definitions",
+    "README.md"
   ],
   "engines": {
     "node": ">=20"
   },
   "scripts": {
     "build": "node build.mjs",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "prepack": "node build.mjs"
   },
   "devDependencies": {
     "@exorcist-98/core": "workspace:*",
     "@exorcist-98/shield": "workspace:*",
     "esbuild": "^0.25.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pranavsaji/exorcist-98.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/pranavsaji/exorcist-98#readme",
+  "bugs": {
+    "url": "https://github.com/pranavsaji/exorcist-98/issues"
+  },
+  "keywords": [
+    "mcp",
+    "security",
+    "prompt-injection",
+    "ai-agents",
+    "kiro",
+    "antivirus"
+  ],
+  "peerDependencies": {
+    "@aws-sdk/client-bedrock-runtime": ">=3.600"
+  },
+  "peerDependenciesMeta": {
+    "@aws-sdk/client-bedrock-runtime": {
+      "optional": true
+    }
   }
 }

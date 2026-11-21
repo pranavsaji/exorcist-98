@@ -10,22 +10,42 @@
   },
   "files": [
     "dist",
-    "definitions"
+    "definitions",
+    "README.md"
   ],
   "engines": {
     "node": ">=20"
   },
   "scripts": {
     "build": "node build.mjs",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.20.0",
-    "zod": "^3.23"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "prepack": "node build.mjs"
   },
   "devDependencies": {
     "@exorcist-98/core": "workspace:*",
     "@exorcist-98/shield": "workspace:*",
-    "esbuild": "^0.25.0"
-  }
+    "esbuild": "^0.25.0",
+    "@modelcontextprotocol/sdk": "^1.20.0",
+    "zod": "^3.23"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pranavsaji/exorcist-98.git",
+    "directory": "packages/mcp-server"
+  },
+  "homepage": "https://github.com/pranavsaji/exorcist-98#readme",
+  "bugs": {
+    "url": "https://github.com/pranavsaji/exorcist-98/issues"
+  },
+  "keywords": [
+    "mcp",
+    "security",
+    "prompt-injection",
+    "ai-agents",
+    "kiro",
+    "antivirus"
+  ]
 }
