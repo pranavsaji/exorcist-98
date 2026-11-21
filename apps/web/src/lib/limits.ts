@@ -12,7 +12,7 @@
  * missing, every request shares one bucket: stricter, never looser.
  */
 
-export type ScanKind = 'github' | 'haunted-repo';
+export type ScanKind = 'github' | 'haunted-repo' | 'upload';
 
 type Bucket = { tokens: number; updated: number };
 type Policy = { capacity: number; refillPerMs: number };
@@ -23,20 +23,22 @@ export const POLICIES: Record<ScanKind, Policy> = {
   github: { capacity: 6, refillPerMs: 1 / (2 * MINUTE) },
   // The Haunted Repo is local and small: 20 at once, then 1 every 10 seconds.
   'haunted-repo': { capacity: 20, refillPerMs: 1 / 10_000 },
+  // Uploaded ZIP files (L-032): like GitHub scans, they unpack to disk.
+  upload: { capacity: 6, refillPerMs: 1 / (2 * MINUTE) },
 };
-export const MAX_CONCURRENT: Record<ScanKind, number> = { github: 3, 'haunted-repo': 8 };
+export const MAX_CONCURRENT: Record<ScanKind, number> = { github: 3, 'haunted-repo': 8, upload: 3 };
 const MAX_BUCKETS = 10_000;
 
 export type Decision =
   | { ok: true; release: () => void }
   | { ok: false; status: 429 | 503; retryAfterSeconds: number; error: string };
 
-export function createLimiter(o: { policies?: Record<ScanKind, Policy>; maxConcurrent?: Record<ScanKind, number>; now?: () => number } = {}) {
-  const policies = o.policies ?? POLICIES;
-  const maxConcurrent = o.maxConcurrent ?? MAX_CONCURRENT;
+export function createLimiter(o: { policies?: Partial<Record<ScanKind, Policy>>; maxConcurrent?: Partial<Record<ScanKind, number>>; now?: () => number } = {}) {
+  const policies: Record<ScanKind, Policy> = { ...POLICIES, ...o.policies };
+  const maxConcurrent: Record<ScanKind, number> = { ...MAX_CONCURRENT, ...o.maxConcurrent };
   const now = o.now ?? (() => Date.now());
   const buckets = new Map<string, Bucket>();
-  const running: Record<ScanKind, number> = { github: 0, 'haunted-repo': 0 };
+  const running: Record<ScanKind, number> = { github: 0, 'haunted-repo': 0, upload: 0 };
 
   function take(key: string, p: Policy, t: number): number {
     let b = buckets.get(key);

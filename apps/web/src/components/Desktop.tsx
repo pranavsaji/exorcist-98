@@ -111,6 +111,12 @@ export function Desktop() {
     open('scan');
   }
 
+  function scanZip(file: File) {
+    start({ file }, file.name);
+    setSelectedId(null);
+    open('results');
+    open('scan');
+  }
   function scanUrl(repoUrl: string, label: string) {
     start({ repoUrl }, label);
     setSelectedId(null);
@@ -169,6 +175,7 @@ export function Desktop() {
               <ScanWindow
                 state={state}
                 onScanUrl={scanUrl}
+                onScanZip={scanZip}
                 onScanHaunted={scanHaunted}
                 onCancel={cancel}
                 onShowResults={() => open('results')}

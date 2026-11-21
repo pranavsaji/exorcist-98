@@ -6,9 +6,11 @@ import { initialScanState, scanReducer } from '@/lib/scan-state';
 import type { ScanRequest } from '@/lib/protocol';
 import type { ScanState } from '@/lib/scan-state';
 
+/** A JSON scan request, or a ZIP file to upload (L-032). */
+export type ScanInput = ScanRequest | { file: File };
 export type UseScan = {
   state:  ScanState;
-  start:  (request: ScanRequest, label: string) => void;
+  start:  (request: ScanInput, label: string) => void;
   cancel: () => void;
 };
 
@@ -26,7 +28,7 @@ export function useScan(): UseScan {
     }
   }, []);
 
-  const start = useCallback((request: ScanRequest, label: string) => {
+  const start = useCallback((request: ScanInput, label: string) => {
     // Starting a scan cancels any scan still running.
     controller.current?.abort();
     const ctl = new AbortController();
@@ -35,12 +37,19 @@ export function useScan(): UseScan {
 
     void (async () => {
       try {
-        const res = await fetch('/api/scan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(request),
-          signal: ctl.signal,
-        });
+        const res = 'file' in request
+          ? await fetch('/api/scan-zip', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/zip', 'X-File-Name': encodeURIComponent(request.file.name) },
+              body: request.file,
+              signal: ctl.signal,
+            })
+          : await fetch('/api/scan', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(request),
+              signal: ctl.signal,
+            });
         if (!res.ok || !res.body) {
           let message = 'The scan was rejected.';
           try {

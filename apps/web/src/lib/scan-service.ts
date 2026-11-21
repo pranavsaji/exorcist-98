@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import { readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fetchGithubRepo, scanRepo, walkRepo } from "@exorcist-98/core";
+import { mkdir } from "node:fs/promises";
+import { fetchGithubRepo, readZip, scanRepo, walkRepo, writeEntries } from "@exorcist-98/core";
 import type { Finding } from "@exorcist-98/core";
 import { definitionsDir, hauntedRepoDir } from "./paths";
 import { buildSnippet } from "./snippet";
@@ -10,7 +11,9 @@ import type { ScanEventMsg, WebFinding } from "./protocol";
 
 export type ScanTarget =
   | { kind: "haunted-repo"; display: string }
-  | { kind: "github"; display: string; owner: string; repo: string; ref?: string };
+  | { kind: "github"; display: string; owner: string; repo: string; ref?: string }
+  /** An uploaded ZIP (L-032). Unpacked to a temporary folder that is always removed. */
+  | { kind: "upload"; display: string; zip: Buffer };
 
 /** Puts a copy of the repository in `dir`. Throws with a plain message on failure. */
 export type CloneFn = (target: { owner: string; repo: string; ref?: string }, dir: string) => Promise<void>;
@@ -73,6 +76,15 @@ export async function* scanTarget(
     let root: string;
     if (target.kind === "haunted-repo") {
       root = hauntedRepoDir();
+    } else if (target.kind === "upload") {
+      const dir = join(tmpdir(), `exorcist-${randomUUID()}`);
+      cleanup = () => rm(dir, { recursive: true, force: true });
+      const z = readZip(target.zip);
+      if (!z.ok) throw new UserFacingError(z.error);
+      if (z.entries.length === 0) throw new UserFacingError("The ZIP file has no files that can be scanned.");
+      await mkdir(dir, { recursive: true });
+      writeEntries(dir, z.entries);
+      root = dir;
     } else {
       const dir = join(tmpdir(), `exorcist-${randomUUID()}`);
       cleanup = () => rm(dir, { recursive: true, force: true });

@@ -11,6 +11,8 @@ import type { ScanState } from '@/lib/scan-state';
 type Props = {
   state:         ScanState;
   onScanUrl:     (repoUrl: string, label: string) => void;
+  /** Upload a ZIP of a project (L-032). */
+  onScanZip?:    (file: File) => void;
   onScanHaunted: () => void;
   onCancel:      () => void;
   onShowResults: () => void;
@@ -24,12 +26,15 @@ const STATUS_TEXT: Record<ScanState['status'], string> = {
   cancelled: 'Scan cancelled.',
 };
 
-export function ScanWindow({ state, onScanUrl, onScanHaunted, onCancel, onShowResults }: Props) {
+export function ScanWindow({ state, onScanUrl, onScanZip, onScanHaunted, onCancel, onShowResults }: Props) {
   const [url, setUrl] = useState('');
   const [urlError, setUrlError] = useState<string | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
   const inputId = useId();
   const errorId = useId();
+  const zipId = useId();
+  const zipHelpId = useId();
+  const fileRef = useRef<HTMLInputElement>(null);
   const running = state.status === 'running';
 
   // A scan can start from the desktop icon or Start menu too, so clear any
@@ -115,6 +120,33 @@ export function ScanWindow({ state, onScanUrl, onScanHaunted, onCancel, onShowRe
           </button>
         </div>
       </form>
+      {onScanZip && (
+        <div className="flex flex-col gap-1">
+          <label htmlFor={zipId} className="text-sm font-semibold">
+            Or scan a private project: upload a .zip
+          </label>
+          <input
+            ref={fileRef}
+            id={zipId}
+            type="file"
+            accept=".zip,application/zip"
+            className="text-sm"
+            aria-describedby={zipHelpId}
+            disabled={running}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (!f) return;
+              if (!/\.zip$/i.test(f.name)) setUrlError('Choose a .zip file.');
+              else if (f.size > 4 * 1024 * 1024) setUrlError('The ZIP file is larger than 4 MB. Leave out node_modules, build output and assets.');
+              else { setUrlError(null); onScanZip(f); }
+              if (fileRef.current) fileRef.current.value = '';
+            }}
+          />
+          <p id={zipHelpId} className="m-0 text-xs">
+            Up to 4 MB. The files are unpacked on the server only for this scan and deleted straight after; nothing is kept.
+          </p>
+        </div>
+      )}
 
       <div
         ref={logRef}

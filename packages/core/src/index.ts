@@ -25,3 +25,5 @@ export type { SecretHit, StagedHit, StagedResult } from './secrets-check.js';
 export type { PlainEntry } from './plain.js';
 export { SCANNER_VERSION } from './version.js';
 export { walkRepo, classifyFile } from './walker.js';
+export { readZip, DEFAULT_ZIP_LIMITS } from './remote/zip.js';
+export type { ZipLimits, ZipResult } from './remote/zip.js';
