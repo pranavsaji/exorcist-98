@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 const REPO = 'https://github.com/pranavsaji/exorcist-98';
-const FOUNDER = { name: 'Pranav Saji', github: 'https://github.com/pranavsaji' };
+const FOUNDER = { name: 'Pranav Saji', github: 'https://github.com/pranavsaji', linkedin: 'https://www.linkedin.com/in/pranav-saji' };
 
 function Panel({ title, icon, children }: { title: string; icon?: ReactNode; children: ReactNode }) {
   return (
@@ -128,7 +128,8 @@ export default function ProductPage() {
           property-based tests. It ships as a Kiro Power, an MCP server and a command-line tool.
         </p>
         <p className="mb-0">
-          Made by {FOUNDER.name} (<a className="underline" href={FOUNDER.github}>GitHub</a>).
+          Founded and built by {FOUNDER.name} (<a className="underline" href={FOUNDER.linkedin}>LinkedIn</a>,{' '}
+          <a className="underline" href={FOUNDER.github}>GitHub</a>).
         </p>
       </Panel>
       </main>

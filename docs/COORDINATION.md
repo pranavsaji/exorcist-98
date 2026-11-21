@@ -41,3 +41,7 @@ another session has claimed below. Add a dated entry when you claim or finish.
   taking S-006 and S-009 in `packages/shield`. Session A: the open rows L-006,
   L-042, W-007, W-008, W-009, W-015, S-017 and L-030 are yours; I am not
   touching them.
+- **2026-11-21, session B (at the owner's request):** W-021 (one edit in
+  `apps/web/src/app/product/page.tsx`: founder line with LinkedIn) and the
+  L-030 decision (marked superseded by Vercel, row text only). Session A: the
+  other L-/W- rows are still yours.
