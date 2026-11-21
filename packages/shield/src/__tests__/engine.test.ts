@@ -28,7 +28,8 @@ const tool = (description = BENIGN, name = 'read_note') => ({
 function setup(policy: Partial<Policy> = {}) {
   let state: State = emptyState();
   const io = { load: () => state, save: (s: State) => { state = structuredClone(s); } };
-  const engine = new ShieldEngine({ server: 'notes', io, policy: { ...DEFAULT_POLICY, ...policy }, defs, now: () => new Date('2026-11-20T10:00:00Z') });
+  // These tests check inspection on its own; the check before each call (verifyCalls) has its own suite, s026-verify.test.ts.
+  const engine = new ShieldEngine({ server: 'notes', io, policy: { ...DEFAULT_POLICY, verifyCalls: false, ...policy }, defs, now: () => new Date('2026-11-20T10:00:00Z') });
   return { engine, io, getState: () => state };
 }
 

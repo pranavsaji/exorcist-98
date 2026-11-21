@@ -178,7 +178,7 @@ describe('policy', () => {
   it('uses defaults when there is no file, and rejects unknown keys', () => {
     const dir = tmp();
     const none = loadPolicy(join(dir, 'policy.json'));
-    expect(none.ok && none.policy).toEqual({ allowedHosts: [], mode: 'enforce', autoQuarantine: false, firstUse: 'pin', notify: true });
+    expect(none.ok && none.policy).toEqual({ allowedHosts: [], mode: 'enforce', autoQuarantine: false, firstUse: 'pin', notify: true, verifyCalls: true });
     writeFileSync(join(dir, 'policy.json'), JSON.stringify({ mode: 'monitor', surprise: true }));
     expect(loadPolicy(join(dir, 'policy.json')).ok).toBe(false);
   });

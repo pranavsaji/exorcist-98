@@ -222,7 +222,7 @@ export async function runRemoteProxy(o: RemoteProxyOptions): Promise<number> {
         if (!res.ok) {
           const why = res.status === 404 && sessionId ? 'the remote session expired' : `HTTP ${res.status}`;
           log(`The remote server refused a message (${why}).`);
-          if (isRequest) toClient(errorResponse(m['id'] as JsonRpcId, -32000, `Exorcist 98: the remote MCP server refused the request (${why}).`));
+          if (isRequest) fromServer(JSON.stringify(errorResponse(m['id'] as JsonRpcId, -32000, `Exorcist 98: the remote MCP server refused the request (${why}).`)));
           return;
         }
         await readBody(res);
@@ -230,7 +230,8 @@ export async function runRemoteProxy(o: RemoteProxyOptions): Promise<number> {
       } catch (err) {
         const why = ctl.signal.aborted ? `no answer within ${Math.round(timeoutMs / 1000)} s` : String(err).split('\n')[0]?.slice(0, 160);
         log(`Could not reach the remote server: ${why}`);
-        if (isRequest) toClient(errorResponse(m['id'] as JsonRpcId, -32000, `Exorcist 98: could not reach the remote MCP server (${why}).`));
+        // Through the engine like any server reply: the request may be the Shield's own (a check before a call).
+        if (isRequest) fromServer(JSON.stringify(errorResponse(m['id'] as JsonRpcId, -32000, `Exorcist 98: could not reach the remote MCP server (${why}).`)));
       } finally {
         clearTimeout(timer);
       }

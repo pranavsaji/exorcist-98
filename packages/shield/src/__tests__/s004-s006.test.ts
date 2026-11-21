@@ -14,7 +14,8 @@ const defs = await loadDefinitions(join(import.meta.dirname, '../../../../defini
 function make(policy: Partial<Policy> = {}) {
   let state: State = emptyState();
   const io = { load: () => structuredClone(state), save: (s: State) => { state = structuredClone(s); } };
-  const engine = new ShieldEngine({ server: 'notes', defs, policy: { ...DEFAULT_POLICY, ...policy }, io });
+  // The check before each call (verifyCalls) has its own suite, s026-verify.test.ts.
+  const engine = new ShieldEngine({ server: 'notes', defs, policy: { ...DEFAULT_POLICY, verifyCalls: false, ...policy }, io });
   return { engine, get state() { return state; }, set state(s: State) { state = s; } };
 }
 

@@ -14,12 +14,19 @@ export const PolicySchema = z
     firstUse:       z.enum(['pin', 'review']).default('pin'),
     /** Show a desktop notification for critical and high alerts (S-012). */
     notify:         z.boolean().default(true),
+    /**
+     * Before each tool call, re-read the server's tool list and check the
+     * tool still matches its pin (S-026). Needed because a client may cache
+     * the tool list and never fetch it again, so a changed tool would never
+     * be seen otherwise.
+     */
+    verifyCalls:    z.boolean().default(true),
   })
   .strict();
 
 export type Policy = z.infer<typeof PolicySchema>;
 
-export const DEFAULT_POLICY: Policy = { allowedHosts: [], mode: 'enforce', autoQuarantine: false, firstUse: 'pin', notify: true };
+export const DEFAULT_POLICY: Policy = { allowedHosts: [], mode: 'enforce', autoQuarantine: false, firstUse: 'pin', notify: true, verifyCalls: true };
 
 export type PolicyResult = { ok: true; policy: Policy } | { ok: false; error: string };
 

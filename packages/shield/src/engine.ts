@@ -50,6 +50,11 @@ function boundedSet<K, V>(map: Map<K, V>, key: K, value: V, max = MAX_TRACKED): 
   }
 }
 
+/** Ids of the Shield's own tool-list requests made before a call (S-026). */
+const VERIFY_PREFIX = 'exorcist-98:verify:';
+/** Most tool-list pages read while checking one call. */
+const MAX_VERIFY_PAGES = 10;
+
 /** Ids of the Shield's own approval prompts to the client (S-004). */
 const PROMPT_PREFIX = 'exorcist-98:approve:';
 
@@ -88,6 +93,9 @@ export class ShieldEngine {
   private noiseLines = 0;
   /** Tool calls waiting for the user's answer to an approval prompt, by prompt id. */
   private readonly heldCalls = new Map<string, { call: JsonRpcMessage; id: JsonRpcId; tool: string; hosts: string[] }>();
+  /** Calls waiting while the Shield re-reads the tool list (S-026), by the Shield's request id. */
+  private readonly verifying = new Map<string, { call: JsonRpcMessage; id: JsonRpcId; tool: string; pages: number; seen: boolean }>();
+  private verifySeq = 0;
 
   constructor(private readonly o: EngineOptions) {}
 
@@ -112,8 +120,8 @@ export class ShieldEngine {
   }
 
   /** How many requests are being tracked (for tests and diagnostics). */
-  openCounts(): { pending: number; serverRequests: number; prompts: number } {
-    return { pending: this.pending.size, serverRequests: this.serverRequests.size, prompts: this.heldCalls.size };
+  openCounts(): { pending: number; serverRequests: number; prompts: number; verifying: number } {
+    return { pending: this.pending.size, serverRequests: this.serverRequests.size, prompts: this.heldCalls.size, verifying: this.verifying.size };
   }
 
   /** Names of tools currently hidden from the agent. */
@@ -186,10 +194,7 @@ export class ShieldEngine {
     if (name === null) return [{ type: 'forward', to: 'server', message: msg }];
 
     const actions: Action[] = [];
-    const forward = (): Action[] => {
-      boundedSet(this.pending, id, { method: 'tools/call', tool: name });
-      return [...actions, { type: 'forward', to: 'server', message: msg }];
-    };
+    const forward = (): Action[] => [...actions, ...this.sendCall(msg, id, name)];
 
     // 1. A tool that was withheld (rug pull or poisoned): never call it.
     const held = this.withheld.get(name);
@@ -249,6 +254,8 @@ export class ShieldEngine {
     const isResponse = msg.id !== undefined && msg.method === undefined && (msg.result !== undefined || msg.error !== undefined);
     if (msg.method !== undefined) return this.onServerInitiated(msg);
     if (!isResponse || msg.id === undefined) return [{ type: 'forward', to: 'client', message: msg }];
+
+    if (typeof msg.id === 'string' && msg.id.startsWith(VERIFY_PREFIX)) return this.onVerifyList(msg, msg.id);
 
     const ctx = this.pending.get(msg.id);
     this.pending.delete(msg.id);
@@ -328,8 +335,7 @@ export class ShieldEngine {
       tool: cleanText(held.tool, 80),
       message: `You allowed a call to ${held.hosts.map((h) => cleanText(h, 80)).join(', ')}${saved}${caveat}.`,
     }));
-    boundedSet(this.pending, held.id, { method: 'tools/call', tool: held.tool });
-    actions.push({ type: 'forward', to: 'server', message: held.call });
+    actions.push(...this.sendCall(held.call, held.id, held.tool));
     return actions;
   }
 
@@ -398,7 +404,66 @@ export class ShieldEngine {
   private onToolsList(msg: JsonRpcMessage): Action[] {
     const result = msg.result as { tools?: unknown } | undefined;
     if (!result || !Array.isArray(result.tools)) return [{ type: 'forward', to: 'client', message: msg }];
+    const { actions, kept } = this.reviewTools(result.tools);
+    actions.push({ type: 'forward', to: 'client', message: { ...msg, result: { ...result, tools: kept } } });
+    return actions;
+  }
 
+  /**
+   * Send a tool call on, after checking (S-026) that the tool the server
+   * offers right now is still the one that was pinned. The call waits for the
+   * Shield's own tools/list; nothing reaches the server's tool before that.
+   */
+  private sendCall(call: JsonRpcMessage, id: JsonRpcId, tool: string): Action[] {
+    if (!this.o.policy.verifyCalls || !this.enforcing()) {
+      boundedSet(this.pending, id, { method: 'tools/call', tool });
+      return [{ type: 'forward', to: 'server', message: call }];
+    }
+    const verifyId = `${VERIFY_PREFIX}${++this.verifySeq}`;
+    boundedSet(this.verifying, verifyId, { call, id, tool, pages: 1, seen: false });
+    return [{ type: 'forward', to: 'server', message: { jsonrpc: '2.0', id: verifyId, method: 'tools/list', params: {} } }];
+  }
+
+  /** The server's answer to the Shield's own tools/list: release or refuse the waiting call. */
+  private onVerifyList(msg: JsonRpcMessage, verifyId: string): Action[] {
+    const v = this.verifying.get(verifyId);
+    this.verifying.delete(verifyId);
+    if (!v) return [];
+    const result = msg.result as { tools?: unknown; nextCursor?: unknown } | undefined;
+    if (!result || !Array.isArray(result.tools)) {
+      // Fail closed: the tool cannot be checked, so it is not called.
+      const why = msg.error && typeof msg.error === 'object' && typeof (msg.error as { message?: unknown }).message === 'string'
+        ? ` (${cleanText((msg.error as { message: string }).message, 200)})` : '';
+      return [
+        this.alert({ ruleId: 'SHIELD', severity: 'high', tool: v.tool, message: `Could not check "${cleanText(v.tool, 80)}" before calling it: the server did not return its tool list.` }),
+        { type: 'forward', to: 'client', message: toolErrorResult(v.id, `Exorcist 98 did not call "${cleanText(v.tool, 80)}": the server did not return its tool list, so the tool could not be checked${why}.`) },
+      ];
+    }
+    const before = this.withheld.has(v.tool);
+    const { actions } = this.reviewTools(result.tools);
+    const seen = v.seen || result.tools.some((t) => (t as ToolDef | null)?.name === v.tool);
+    // The tool may be on a later page.
+    if (!seen && typeof result.nextCursor === 'string' && v.pages < MAX_VERIFY_PAGES) {
+      const next = `${VERIFY_PREFIX}${++this.verifySeq}`;
+      boundedSet(this.verifying, next, { ...v, pages: v.pages + 1 });
+      return [...actions, { type: 'forward', to: 'server', message: { jsonrpc: '2.0', id: next, method: 'tools/list', params: { cursor: result.nextCursor } } }];
+    }
+    const held = this.withheld.get(v.tool);
+    if (held) {
+      const refuse: Action[] = [
+        ...actions,
+        { type: 'forward', to: 'client', message: toolErrorResult(v.id, `Exorcist 98 blocked "${cleanText(v.tool, 80)}": ${held.reason} Nothing was sent to the tool.`) },
+      ];
+      // Tell the client its cached list is stale, so it re-lists and the tool disappears.
+      if (!before) refuse.push({ type: 'forward', to: 'client', message: { jsonrpc: '2.0', method: 'notifications/tools/list_changed' } });
+      return refuse;
+    }
+    boundedSet(this.pending, v.id, { method: 'tools/call', tool: v.tool });
+    return [...actions, { type: 'forward', to: 'server', message: v.call }];
+  }
+
+  /** Check every tool against its pin. Shared by the client's tools/list and the Shield's own (S-026). */
+  private reviewTools(tools: unknown[]): { actions: Action[]; kept: unknown[] } {
     const actions: Action[] = [];
     const state = this.o.io.load();
     const ss = serverState(state, this.o.server);
@@ -406,7 +471,7 @@ export class ShieldEngine {
     let changed = false;
     let quarantine = false;
 
-    for (const raw of result.tools) {
+    for (const raw of tools) {
       const tool = raw as ToolDef;
       if (!tool || typeof tool.name !== 'string') {
         kept.push(raw);
@@ -489,7 +554,6 @@ export class ShieldEngine {
 
     if (changed) this.o.io.save(state);
     if (quarantine) actions.push({ type: 'quarantine', reason: 'A tool changed after approval (rug pull).' });
-    actions.push({ type: 'forward', to: 'client', message: { ...msg, result: { ...result, tools: kept } } });
-    return actions;
+    return { actions, kept };
   }
 }
