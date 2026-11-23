@@ -50,6 +50,10 @@ export function isIgnored(rel: string, prefixes: readonly string[]): boolean {
   });
 }
 
+/** Severity ranking shared with other commands. */
+export const SEVERITY_RANK: Record<string, number> = RANK;
+export { readIgnoreFile };
+
 function renderText(findings: Finding[], stats: ScanStats): string {
   if (findings.length === 0) return `No threats found in ${stats.filesScanned} files.\n`;
   const sorted = [...findings].sort(

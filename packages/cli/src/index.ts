@@ -8,6 +8,7 @@ import { initCommand } from './commands/init.js';
 import { lockCommand } from './commands/lock.js';
 import { mapCommand } from './commands/map.js';
 import { onAccessCommand, allowReadCommand } from './commands/on-access.js';
+import { originCommand, ORIGIN_HELP } from './commands/origin.js';
 import { scanCommand } from './commands/scan.js';
 import { shieldCommand } from './commands/shield.js';
 import { updateCommand } from './commands/update.js';
@@ -38,6 +39,7 @@ Commands:
   canary <command>   Plant, list (--list) or remove (--remove) canary traps (EX-022)
   on-access          Hook helper: block a read of a file that hides instructions for the AI
   allow-read <file>  Let one file be read once (by its content hash)
+  origin [dir]       Scan, then trace each threat to the commit that added it
   guard-commit       Hook helper: block git commit while secrets are staged
   hook-scan          Hook helper: scan the file named in a Kiro "file saved" event
   check-staged       Git pre-commit helper: exit 1 if staged files contain secrets or canary tokens
@@ -76,6 +78,7 @@ export async function main(argv: string[]): Promise<number> {
     case 'approve': return await approveCommand(rest, stdio);
     case 'alerts': return await alertsCommand(rest, stdio);
     case 'init':   return await initCommand(rest, stdio);
+    case 'origin': return await originCommand(rest, stdio);
     case 'hook-scan': return await hookScanCommand(await readStdin(), stdio);
     case 'on-access': return await onAccessCommand(await readStdin(), stdio);
     case 'allow-read': return await allowReadCommand(rest, stdio);

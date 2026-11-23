@@ -25,6 +25,12 @@ export type { TarLimits, TarEntry, ExtractResult, FetchLike } from './remote/tar
 export { decodeHidden, displayMessage, truncateMessage, encodeAsTags, encodeAsVariationSelectors, decodeVsBytes, MAX_HIDDEN_RUNS, MAX_DECODED_CHARS, MAX_VS_BYTES } from './ouija.js';
 export type { HiddenMessage, HiddenMessageKind } from './ouija.js';
 export { plainFor, hasPlainEntry } from './plain.js';
+export {
+  sanitizeGitText, isBotAuthor, findOriginCommit, gitRepoRoot, isShallowClone,
+  ORIGIN_TIMEOUT_MS, shortSha, sortCommitsByDate,
+  TimelineThreatSchema, TimelineCommitSchema, OriginReportSchema,
+} from './origin.js';
+export type { OriginCommit, OriginHit, TimelineThreat, TimelineCommit, OriginReport } from './origin.js';
 export { decide as decideCommitGuard, isGitCommit } from './hook-guard.js';
 export type { HookDecision } from './hook-guard.js';
 export { extractReadPaths, decideRead, isReadTool, shownName, mustCheckFully, limitFor } from './on-access.js';
