@@ -320,6 +320,19 @@ await step('Possession Lab: every attack ends with the shielded side protected',
   return seen.join(', ');
 });
 
+await step('Field Report window shows the two-round results and passes axe', async () => {
+  await page.locator('main').getByRole('button', { name: 'Field Report' }).click();
+  const w = page.getByRole('dialog', { name: /Field Report/ });
+  await w.waitFor();
+  await w.getByText('Measured honestly').waitFor();
+  const text = await w.innerText();
+  if (!/serious false alarms per repository/.test(text)) throw new Error('stats missing');
+  if (!/withheld until the maintainer has revoked it/.test(text)) throw new Error('the leaked-token repository must stay withheld');
+  await page.screenshot({ path: `${SHOTS}/13-field-report.png` });
+  const r = await axe('field-report'); axeReports.push(r);
+  return `${r.violations.length} axe violation types`;
+});
+
 await step('product page loads, links back to the desktop, and passes axe', async () => {
   await page.goto(`${BASE}/product`, { waitUntil: 'networkidle' });
   const h1 = await page.locator('h1').innerText();

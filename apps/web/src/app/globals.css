@@ -550,3 +550,32 @@ main[data-possessed="true"]::after {
   .lab-verdict p { padding-right: 0; }
   .lab-verdict { padding-top: 2.2rem; }
 }
+
+/* ── Field Report ──────────────────────────────────────────────────────── */
+.field-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+@media (max-width: 899px) {
+  .field-stats { grid-template-columns: 1fr; }
+}
+.field-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.5rem;
+  background: #000000;
+  color: #b6ffd5;
+  font-size: 0.8rem;
+  box-shadow:
+    inset 2px 2px 0 #6b6180,
+    inset -2px -2px 0 #f4f0fa,
+    0 0 0 1px #120b22;
+}
+.field-num {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #39ff88;
+}

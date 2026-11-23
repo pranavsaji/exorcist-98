@@ -14,23 +14,26 @@ import { Taskbar } from './Taskbar';
 import { Window } from './Window';
 import { PossessionLab } from './PossessionLab';
 import { Welcome } from './Welcome';
+import { FieldReport } from './FieldReport';
 import { useScan } from '@/hooks/useScan';
 
-type WinId = 'welcome' | 'scan' | 'results' | 'detail' | 'lab' | 'about';
+type WinId = 'welcome' | 'scan' | 'results' | 'detail' | 'lab' | 'field' | 'about';
 type WinState = { open: boolean; minimized: boolean; z: number; x: number; y: number };
 
 const TITLES: Record<WinId, string> = {
   welcome: 'Welcome to Exorcist 98',
   lab:     'Possession Lab - Real-Time Shield',
+  field:   'Field Report - Exorcist 98 in the Wild',
   scan:    'Exorcist 98 - Full System Scan',
   results: 'Threats Found',
   detail:  'Threat Details',
   about:   'About Exorcist 98',
 };
-const WIDTHS: Record<WinId, number> = { welcome: 520, scan: 600, results: 480, detail: 620, lab: 980, about: 420 };
+const WIDTHS: Record<WinId, number> = { welcome: 520, scan: 600, results: 480, detail: 620, lab: 980, field: 640, about: 420 };
 const ICONS: Record<WinId, ReactNode> = {
   welcome: <GhostIcon size={18} />,
   lab:     <ShieldIcon size={18} />,
+  field:   <BookIcon size={18} />,
   scan:    <ShieldIcon size={18} />,
   results: <SkullIcon size={18} />,
   detail:  <InfoIcon size={18} />,
@@ -40,12 +43,13 @@ const ICONS: Record<WinId, ReactNode> = {
 const INITIAL: Record<WinId, WinState> = {
   welcome: { open: true,  minimized: false, z: 11, x: 760, y: 40 },
   lab:     { open: false, minimized: false, z: 1,  x: 110, y: 10 },
+  field:   { open: false, minimized: false, z: 1,  x: 240, y: 30 },
   scan:    { open: true,  minimized: false, z: 10, x: 130, y: 16 },
   results: { open: false, minimized: false, z: 1,  x: 750, y: 16 },
   detail:  { open: false, minimized: false, z: 1,  x: 260, y: 150 },
   about:   { open: false, minimized: false, z: 1,  x: 400, y: 90 },
 };
-const ORDER: WinId[] = ['scan', 'results', 'detail', 'lab', 'about', 'welcome'];
+const ORDER: WinId[] = ['scan', 'results', 'detail', 'lab', 'field', 'about', 'welcome'];
 const WELCOME_KEY = 'exorcist-98-welcome';
 
 export function Desktop() {
@@ -186,6 +190,7 @@ export function Desktop() {
         <DesktopIcon label="Full System Scan" icon={<ShieldIcon />} onOpen={() => open('scan')} />
         <DesktopIcon label="Scan the Haunted Repo" icon={<SkullIcon />} onOpen={scanHaunted} />
         <DesktopIcon label="Possession Lab" icon={<ShieldIcon />} onOpen={openLab} />
+        <DesktopIcon label="Field Report" icon={<BookIcon />} onOpen={() => open('field')} />
         <DesktopIcon label="Virus Definitions" icon={<BookIcon />} href="/encyclopedia" />
         <DesktopIcon label="About" icon={<GhostIcon />} onOpen={() => open('about')} />
       </div>
@@ -231,10 +236,12 @@ export function Desktop() {
             )}
             {id === 'detail' && <FindingDetail entry={selected} />}
             {id === 'lab' && <PossessionLab />}
+            {id === 'field' && <FieldReport />}
             {id === 'welcome' && (
               <Welcome
                 onScanHaunted={() => { scanHaunted(); }}
                 onOpenLab={openLab}
+                onOpenField={() => open('field')}
                 onDismiss={dismissWelcome}
               />
             )}
@@ -278,6 +285,7 @@ export function Desktop() {
           { label: 'Full System Scan', icon: <ShieldIcon size={18} />, onSelect: () => open('scan') },
           { label: 'Scan the Haunted Repo', icon: <SkullIcon size={18} />, onSelect: scanHaunted },
           { label: 'Possession Lab (Real-Time Shield)', icon: <ShieldIcon size={18} />, onSelect: openLab },
+          { label: 'Field Report (real repos)', icon: <BookIcon size={18} />, onSelect: () => open('field') },
           { label: 'Start here (tour)', icon: <GhostIcon size={18} />, onSelect: () => open('welcome') },
           { label: 'Virus Definitions', icon: <BookIcon size={18} />, href: '/encyclopedia' },
           { label: 'About Exorcist 98', icon: <GhostIcon size={18} />, onSelect: () => open('about') },
