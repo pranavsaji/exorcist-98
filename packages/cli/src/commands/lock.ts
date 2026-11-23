@@ -38,8 +38,9 @@ export const LOCK_HELP = `Usage: exorcist lock [options]
 
 Write ${LOCK_FILE}, the list of MCP tools your team approved, like a package
 lockfile for tool descriptions. Commit it: every teammate's Shield then treats
-the locked tools as approved, and a changed tool as a rug pull, even on a
-machine that never saw the tool before.
+a tool that differs from the lock as a rug pull, even on a machine that never
+saw the tool before. The lock never approves a tool by itself: one that
+matches still gets the Shield's first-use checks.
 
 Every local server in the MCP config is started and its tools are listed.
 Servers marked "disabled" are never started (their entry in an existing lock

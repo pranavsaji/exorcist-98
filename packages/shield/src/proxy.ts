@@ -10,10 +10,12 @@ import { loadCanariesFile } from '@exorcist-98/core';
 import { canariesFileFor } from './canary.js';
 import { dirname } from 'node:path';
 import { findLockFile, parseLock, seedFromLock } from './lockfile.js';
+import type { LockExpectations } from './lockfile.js';
 import { alertsPath, appendAlert, loadState, policyPath, saveState, serverState, statePath, vaultPath } from './state.js';
-import type { Alert, State } from './state.js';
+import type { Alert, ServerState, State } from './state.js';
 import { quarantineServer } from './vault.js';
 import { checkLaunch, launchFingerprint, packageSpec, specIsPinned } from './launch.js';
+import type { LaunchCheck, LaunchPin } from './launch.js';
 import { AiReview } from './ai-review.js';
 import type { AiJudge } from './ai-review.js';
 import { throttle } from './notify.js';
@@ -119,9 +121,14 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
   const canaries = canariesFile.canaries.map((r) => ({ token: r.token, file: r.file }));
   if (canaries.length > 0) log(`Watching for ${canaries.length} canary token${canaries.length === 1 ? '' : 's'} (EX-022).`);
 
-  // exorcist.lock (m5): the team's committed list of approved tools. On a
-  // machine that never pinned a tool, the locked fingerprints count as
-  // approved, so a rug pull that hit a teammate first is caught here too.
+  // exorcist.lock (m5): the team's record of the tools it approved. It is a
+  // file from the project folder (untrusted), so it never approves anything
+  // here: it is not written into the pins. Its fingerprints only make drift
+  // visible on a machine that never pinned the tool: a tool or program that
+  // differs from the lock is treated as a rug pull. A tool that matches goes
+  // through the normal first-use checks (signatures, AI review, review hold).
+  let lockExpected: LockExpectations | undefined;
+  let lockLaunch: string | undefined;
   const lockFile = o.lockPath === undefined
     ? findLockFile([...(o.configPath ? [dirname(o.configPath)] : []), process.cwd()])
     : o.lockPath;
@@ -132,12 +139,11 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
     if (parsed && !parsed.ok) log(`Not using ${lockFile}: ${parsed.error} Running with the local pins only.`);
     const ls = parsed?.ok && Object.hasOwn(parsed.lock.servers, o.server) ? parsed.lock.servers[o.server] : undefined;
     if (ls) {
-      const s = serverState(first.state, o.server);
-      const r = seedFromLock(s, ls, log, { server: o.server, withLaunch: o.launch !== undefined && policy.policy.launchPin !== 'off' });
-      if (r.seeded > 0) {
-        try { saveState(statePath(o.dir), first.state); } catch (err) { log(`Could not save the pin file: ${String(err)}`); return FAIL_CLOSED_EXIT; }
-        log(`Seeded ${r.seeded} pin${r.seeded === 1 ? '' : 's'} for "${o.server}" from ${lockFile}.`);
-      }
+      const r = seedFromLock(serverState(first.state, o.server), ls, log, { server: o.server, withLaunch: o.launch !== undefined && policy.policy.launchPin !== 'off' });
+      lockExpected = r.expected;
+      lockLaunch = r.launch;
+      const n = Object.keys(r.expected).length;
+      log(`Checking "${o.server}" against ${lockFile} (${n} locked tool${n === 1 ? '' : 's'}${lockLaunch ? ' and the program' : ''}).`);
     }
   }
 
@@ -145,7 +151,12 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
   if (o.launch && policy.policy.launchPin !== 'off') {
     const { command, args, cwd } = o.launch;
     const s = serverState(first.state, o.server);
-    const check = checkLaunch(s, launchFingerprint(command, args, cwd));
+    const live = launchFingerprint(command, args, cwd);
+    // Never pinned here, and not the program recorded in exorcist.lock: hold
+    // it as a changed program, so `exorcist approve server` is the way in.
+    const check = !s.launch && lockLaunch !== undefined && live.hash !== lockLaunch
+      ? holdAgainstLock(s, live, lockLaunch)
+      : checkLaunch(s, live);
     if (check.result !== 'same') {
       try { saveState(statePath(o.dir), first.state); } catch (err) { log(`Could not save the pin file: ${String(err)}`); return FAIL_CLOSED_EXIT; }
     }
@@ -154,7 +165,7 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
       const blocking = policy.policy.launchPin === 'block' && policy.policy.mode === 'enforce';
       launchAlerts.push({
         time: new Date().toISOString(), server: o.server, ruleId: 'EX-010', severity: 'high',
-        message: `The program behind "${o.server}" changed since it was pinned. ${blocking ? 'It was not started.' : 'It was started anyway (policy).'} ` +
+        message: `The program behind "${o.server}" changed since it was ${s.launch ? 'pinned' : 'recorded in exorcist.lock'}. ${blocking ? 'It was not started.' : 'It was started anyway (policy).'} ` +
           `Check the change, then run: exorcist approve server ${o.server}`,
         detail: [...check.removed.map((l) => `- ${l}`), ...check.added.map((l) => `+ ${l}`)].join('\n'),
       });
@@ -210,6 +221,7 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
   const engine = new ShieldEngine({
     server: o.server, io, policy: policy.policy, defs,
     ...(canaries.length > 0 ? { canaries } : {}),
+    ...(lockExpected ? { expected: lockExpected } : {}),
     ...(review ? { aiFindings: (fp: string) => (review as AiReview).findings(fp) } : {}),
   });
   const notifier = policy.policy.notify ? o.notify : undefined;
@@ -259,6 +271,12 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
     ? (line: string): Promise<void> => (review as AiReview).prepare(line, (name) => Boolean(io.load().servers[o.server]?.tools[name]))
     : undefined;
   return { engine, log, handle, watch, ...(prepareServerLine ? { prepareServerLine } : {}) };
+}
+
+/** A program never pinned here that differs from exorcist.lock: held like a changed program (m5). */
+function holdAgainstLock(s: ServerState, live: LaunchPin, locked: string): LaunchCheck {
+  s.pendingLaunch = { hash: live.hash, parts: live.parts, seenAt: new Date().toISOString() };
+  return { result: 'changed', removed: [`recorded in exorcist.lock: launch ${locked.slice(0, 12)}`], added: live.parts };
 }
 
 /** The AI judge on Amazon Bedrock, or the reason it cannot run. */

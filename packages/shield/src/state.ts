@@ -8,12 +8,6 @@ const PinSchema = z.object({
   hash:        Sha256,
   description: z.string(),
   pinnedAt:    z.string(),
-  /**
-   * `lock`: seeded from exorcist.lock (m5) and not yet seen by this Shield.
-   * The first time the tool is seen with this fingerprint it is still
-   * inspected by the signature checks, then the mark is dropped.
-   */
-  source:      z.literal('lock').optional(),
 });
 
 const PendingSchema = z.object({

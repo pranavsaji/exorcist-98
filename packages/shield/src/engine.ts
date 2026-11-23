@@ -43,6 +43,13 @@ export type EngineOptions = {
   aiFindings?: (fingerprint: string) => { block: Reason[]; warn: Reason[] };
   /** Canary tokens loaded at start (EX-022); absent when the project has none. */
   canaries?: Canary[];
+  /**
+   * Tool fingerprints recorded in exorcist.lock (m5), by tool name. Used only
+   * to detect drift on a tool this machine has not pinned: a different
+   * fingerprint is a rug pull (EX-006). A match is never an approval; the
+   * tool goes through the normal first-use checks. A local pin always wins.
+   */
+  expected?: Record<string, { hash: string; description: string }>;
 };
 
 /** A tool hidden from the agent. `fingerprint` is the version that was hidden (rug pulls only). */
@@ -571,8 +578,12 @@ export class ShieldEngine {
       }
       const fp = toolFingerprint(tool);
       const pin = ss.tools[tool.name];
+      const expected = this.o.expected;
+      const locked = !pin && expected && Object.hasOwn(expected, tool.name) ? expected[tool.name] : undefined;
+      // The version this tool is compared with: the local pin, else the lock's record if it differs.
+      const reference = pin ?? (locked && locked.hash !== fp ? locked : undefined);
 
-      if (!pin) {
+      if (!reference) {
         const ai = this.o.aiFindings?.(fp);
         const reasons = [...inspectTool(tool, this.o.defs), ...(ai?.block ?? [])];
         if (ai && ai.warn.length > 0 && reasons.length === 0 && this.firstTime(`ai:${tool.name}`, fp)) {
@@ -620,47 +631,28 @@ export class ShieldEngine {
         changed = true;
         this.withheld.delete(tool.name);
         kept.push(raw);
-      } else if (pin.hash === fp) {
-        if (pin.source === 'lock') {
-          // m5: the fingerprint was approved in exorcist.lock, a file from the
-          // project folder. Run the first-use signature checks anyway, so a
-          // lock cannot pre-approve a tool that hides instructions.
-          const reasons = inspectTool(tool, this.o.defs);
-          if (reasons.length > 0) {
-            if (this.firstTime(tool.name, fp)) {
-              actions.push(this.alert({
-                ruleId: 'EX-005',
-                severity: 'critical',
-                tool: tool.name,
-                message: `The tool "${tool.name}" is approved in exorcist.lock, but it was withheld: ${joinReasons(reasons)}`,
-              }));
-            }
-            if (this.enforcing()) {
-              this.withheld.set(tool.name, { ruleId: 'EX-005', reason: 'its description contains hidden instructions for your AI.' });
-              continue;
-            }
-          } else {
-            ss.tools[tool.name] = { hash: pin.hash, description: pin.description, pinnedAt: pin.pinnedAt };
-            changed = true;
-          }
-        }
+      } else if (reference.hash === fp) {
         this.withheld.delete(tool.name);
         kept.push(raw);
       } else {
-        // Rug pull: the tool is not what you approved.
+        // Rug pull: the tool is not what you approved, or (never pinned here)
+        // not the version recorded in the project's exorcist.lock.
+        const fromLock = !pin;
         const newDescription = tool.description ?? '';
-        ss.pending[tool.name] = { hash: fp, oldHash: pin.hash, oldDescription: pin.description, newDescription, seenAt: this.now().toISOString() };
+        ss.pending[tool.name] = { hash: fp, oldHash: reference.hash, oldDescription: reference.description, newDescription, seenAt: this.now().toISOString() };
         changed = true;
         const first = this.firstTime(tool.name, fp);
         if (first) {
-          const patch = createTwoFilesPatch('approved', 'now', pin.description, newDescription, '', '', { context: 2 });
+          const patch = createTwoFilesPatch(fromLock ? 'exorcist.lock' : 'approved', 'now', reference.description, newDescription, '', '', { context: 2 });
           actions.push(
             this.alert({
               ruleId: 'EX-006',
               severity: 'critical',
               tool: tool.name,
               message:
-                `The tool "${tool.name}" changed after you approved it (hash ${pin.hash.slice(0, 8)} became ${fp.slice(0, 8)}). ` +
+                (fromLock
+                  ? `The tool "${tool.name}" is not the version recorded in exorcist.lock (hash ${reference.hash.slice(0, 8)} became ${fp.slice(0, 8)}); it may have been changed after your team approved it. `
+                  : `The tool "${tool.name}" changed after you approved it (hash ${reference.hash.slice(0, 8)} became ${fp.slice(0, 8)}). `) +
                 `${this.enforcing() ? 'It is hidden from your AI.' : 'Monitor mode: it was not hidden.'} ` +
                 `If you trust the new version, run: exorcist approve tool ${this.o.server} ${tool.name}`,
               detail: patch.slice(0, MAX_DIFF_CHARS),

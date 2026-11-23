@@ -251,32 +251,47 @@ describe('pinsToLock (--from-shield) and seedFromLock (the Shield)', () => {
     expect(parseLock(serializeLock(lock)).ok).toBe(true);
   });
 
-  it('seeds a machine with no pins, and reports (but keeps) a local pin that disagrees', () => {
+  it('seedFromLock only reads the state: it never pins, never removes an unreviewed entry, and reports a disagreeing local pin', () => {
     const lock = buildLock([{ name: 'notes', launch: 'e'.repeat(64), tools: [readNote] }]);
     const ls = lock.servers['notes']!;
 
     const fresh = serverState(emptyState(), 'notes');
     fresh.unreviewed['read_note'] = { hash: toolFingerprint(readNote), description: 'Read a note.', seenAt: at };
+    const snapshot = structuredClone(fresh);
     const reports: string[] = [];
-    expect(seedFromLock(fresh, ls, (l) => reports.push(l), { server: 'notes', withLaunch: true })).toEqual({ seeded: 2, disagreements: 0 });
-    expect(fresh.tools['read_note']).toMatchObject({ hash: toolFingerprint(readNote), source: 'lock' });
-    expect(fresh.unreviewed['read_note']).toBeUndefined();
-    expect(fresh.launch?.hash).toBe('e'.repeat(64));
+    const r = seedFromLock(fresh, ls, (l) => reports.push(l), { server: 'notes', withLaunch: true });
+    expect(r).toEqual({ expected: { read_note: { hash: toolFingerprint(readNote), description: 'Read a note.' } }, launch: 'e'.repeat(64), disagreements: 0 });
+    expect(fresh).toEqual(snapshot); // nothing written: no pin, no launch, unreviewed kept
+    expect(fresh.unreviewed['read_note']).toBeDefined();
     expect(reports).toEqual([]);
 
-    const remote = serverState(emptyState(), 'notes');
-    seedFromLock(remote, ls, () => undefined, { server: 'notes', withLaunch: false });
-    expect(remote.launch).toBeUndefined();
+    expect(seedFromLock(fresh, ls, () => undefined, { server: 'notes', withLaunch: false }).launch).toBeUndefined();
 
     const other = serverState(emptyState(), 'notes');
     other.tools['read_note'] = { hash: 'f'.repeat(64), description: 'other', pinnedAt: at };
     other.launch = { hash: HASH_A, parts: ['command node'], pinnedAt: at };
+    const otherSnapshot = structuredClone(other);
     const reports2: string[] = [];
-    expect(seedFromLock(other, ls, (l) => reports2.push(l), { server: 'notes', withLaunch: true })).toEqual({ seeded: 0, disagreements: 2 });
+    expect(seedFromLock(other, ls, (l) => reports2.push(l), { server: 'notes', withLaunch: true }).disagreements).toBe(2);
     expect(reports2.join('\n')).toContain('disagrees with exorcist.lock');
     expect(reports2.join('\n')).toContain('exorcist approve tool notes read_note');
-    expect(other.tools['read_note']?.hash).toBe('f'.repeat(64));
-    expect(other.launch.hash).toBe(HASH_A);
+    expect(other).toEqual(otherSnapshot);
+  });
+
+  it('PBT: seedFromLock never changes the server state, whatever the lock and the local state hold', () => {
+    const stateArb = fc.record({
+      tools: fc.dictionary(nameArb, fc.record({ hash: hashArb, description: fc.string({ maxLength: 20 }), pinnedAt: fc.constant(at) }), { maxKeys: 4 }),
+      unreviewed: fc.dictionary(nameArb, fc.record({ hash: hashArb, description: fc.string({ maxLength: 20 }), seenAt: fc.constant(at) }), { maxKeys: 4 }),
+    });
+    fc.assert(
+      fc.property(listingArb, stateArb, fc.boolean(), (listing, st, withLaunch) => {
+        const s = { ...serverState(emptyState(), 'x'), ...st };
+        const snapshot = structuredClone(s);
+        seedFromLock(s, buildLock([listing]).servers[listing.name]!, () => undefined, { server: 'x', withLaunch });
+        expect(s).toEqual(snapshot);
+      }),
+      { numRuns: 100 },
+    );
   });
 });
 

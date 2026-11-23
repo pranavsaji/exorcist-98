@@ -43,9 +43,10 @@ npx -y @exorcist-98/cli@0.1.0 lock --check   # exit 1 if any tool or program cha
 ```
 
 `exorcist.lock` records the fingerprint of every tool your MCP servers list,
-like a package lockfile for tool descriptions. Each teammate's Shield treats
-the locked tools as approved, so a rug pull is caught even on a machine that
-never saw the tool before. `--from-shield` writes the lock from your local
+like a package lockfile for tool descriptions. Each teammate's Shield treats a
+tool that differs from the lock as a rug pull, even on a machine that never
+saw the tool before. The lock never approves anything by itself: a tool that
+matches it still gets the Shield's first-use checks. `--from-shield` writes the lock from your local
 pins without starting any server. In GitHub Actions, set `lock-check: true`.
 
 ## Licence

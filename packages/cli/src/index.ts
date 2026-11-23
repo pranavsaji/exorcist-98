@@ -22,7 +22,7 @@ Commands:
   shield             Run an MCP server behind the Real-Time Shield
   wrap <mcp.json>    Run every local MCP server in a config through the shield
   unwrap <mcp.json>  Undo wrap
-  lock               Write exorcist.lock, the team's approved MCP tools; with
+  lock               Write exorcist.lock, the team's record of its MCP tools; with
                      --check, exit 1 if a tool changed (see: exorcist lock --help)
   vault <command>    Quarantine and restore MCP servers, hooks and steering files
   approve <kind>     Approve a changed tool or a host (see: exorcist approve --help)

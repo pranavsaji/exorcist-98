@@ -18,11 +18,28 @@ Decisions made while finishing the spec, where it left room or was silent.
   points) are stored, so a change after that point is still reported by its
   fingerprint, but the message says the visible part is unchanged instead of
   showing an empty diff.
-- **A lock cannot pre-approve a poisoned tool.** `exorcist.lock` comes from
-  the project folder (untrusted). Pins seeded from it are marked
-  `source: "lock"`; the first time the Shield sees the tool with that
-  fingerprint it still runs the first-use signature checks (EX-005) before
-  confirming the pin.
+- **The lock records expected fingerprints, never approvals (REQ-03.2).**
+  `exorcist.lock` comes with the repository, which is untrusted input, so the
+  Shield never treats it as an approval. It is read into a separate, in-memory
+  map of expected fingerprints per server (`EngineOptions.expected`), used
+  only to detect drift:
+  - A tool this machine has not pinned whose fingerprint differs from the
+    lock is a rug pull: EX-006, withheld, with a diff against the locked
+    description, and held in `pending` for `exorcist approve tool`.
+  - A tool that matches the lock goes through exactly the same first-use path
+    as a never-seen tool: signature checks (EX-005), the AI judge when
+    `aiReview` is on, and the review hold when `firstUse` is `review`.
+  - The lock is never written into `tools`, and `unreviewed` entries are
+    never removed (`seedFromLock` only reads the state).
+  - A program never pinned here that differs from the lock's `launch` is
+    held like a changed program (EX-010, blocked under `launchPin: block`)
+    until `exorcist approve server`; a matching one is pinned by the normal
+    trust-on-first-use, not by the lock.
+  - A local pin always wins over the lock; one that disagrees is reported.
+  An earlier version of this branch seeded lock fingerprints into the pins
+  (marked `source: "lock"`), which let a committed lock skip the AI judge
+  and the `firstUse: review` hold. Security review caught it; it was replaced
+  by the design above.
 - **Exit codes.** `--check` exits 0 when identical, 1 on any difference, 2 when
   it could not check (no lock, a server that would not list its tools within
   the timeout, a bad config).

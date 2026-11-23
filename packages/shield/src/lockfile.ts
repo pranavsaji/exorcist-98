@@ -5,10 +5,9 @@
  * in code review means a real change, never formatting or ordering.
  *
  * The lock is untrusted input: it comes from the project folder, so it is
- * validated with zod and every field is treated as data only. Pins seeded
- * from it are still inspected by the signature checks the first time the
- * Shield sees the tool (see engine.ts), so a lock cannot pre-approve a tool
- * whose description hides instructions.
+ * validated with zod and every field is treated as data only. The Shield
+ * uses it only to detect drift (a fingerprint that differs from the lock is
+ * a rug pull); it never approves a tool or a program.
  */
 import { existsSync } from 'node:fs';
 import { dirname, join, parse as parsePath, resolve } from 'node:path';
@@ -232,52 +231,53 @@ export function diffLock(oldLock: Lock, newLock: Lock): LockChange[] {
 
 // ── Shield seeding ───────────────────────────────────────────────────────────
 
-/** The tool pins a lock grants one server, in Shield state form, marked as coming from the lock. */
-export function lockToPins(ls: LockServer, now: Date = new Date()): ServerState['tools'] {
-  const at = now.toISOString();
-  return record(Object.entries(ls.tools).map(([name, t]) => [name, { hash: t.sha256, description: t.description, pinnedAt: at, source: 'lock' as const }]));
+/** What the lock expects of one server's tools, by name: fingerprints to detect drift, never approvals. */
+export type LockExpectations = Record<string, { hash: string; description: string }>;
+
+/** The lock's record of one server's tools, as the Shield engine takes it (`EngineOptions.expected`). */
+export function lockExpectations(ls: LockServer): LockExpectations {
+  return record(Object.entries(ls.tools).map(([name, t]) => [name, { hash: t.sha256, description: t.description }]));
 }
 
-export type SeedResult = { seeded: number; disagreements: number };
+export type SeedResult = {
+  /** Locked tool fingerprints, for the engine: a different live fingerprint is a rug pull. */
+  expected: LockExpectations;
+  /** The locked program fingerprint, when the caller checks a local server's program. */
+  launch?: string;
+  disagreements: number;
+};
 
 /**
- * Seed a server's state from the lock (REQ-03.2): a machine that never pinned
- * a tool treats the locked fingerprint as approved, so anything else is a rug
- * pull (EX-006). The lock wins over a missing local pin; a local pin that
- * disagrees with the lock is kept and reported. The program pin is seeded
- * only for a local server (`withLaunch`).
+ * Read what exorcist.lock expects of one server (REQ-03.2). The lock comes
+ * from the project folder, which is untrusted, so it never approves anything:
+ * it is NOT written into the pins, and `unreviewed` is left alone. Its
+ * fingerprints only make drift visible on a machine that never pinned the
+ * tool (the Shield treats a different fingerprint as a rug pull); a tool
+ * that matches still goes through every first-use check. A local pin wins
+ * over the lock; one that disagrees is reported. `s` is only read.
  */
 export function seedFromLock(
-  s: ServerState,
+  s: Readonly<ServerState>,
   ls: LockServer,
   report: (line: string) => void,
-  o: { withLaunch: boolean; server: string; now?: Date },
+  o: { withLaunch: boolean; server: string },
 ): SeedResult {
-  const now = o.now ?? new Date();
-  let seeded = 0;
   let disagreements = 0;
-  for (const [name, pin] of Object.entries(lockToPins(ls, now))) {
+  const expected = lockExpectations(ls);
+  for (const [name, t] of Object.entries(expected)) {
     const local = Object.hasOwn(s.tools, name) ? s.tools[name] : undefined;
-    if (!local) {
-      s.tools[name] = pin;
-      delete s.unreviewed[name]; // the team reviewed it: that is what the lock records
-      seeded += 1;
-    } else if (local.hash !== pin.hash) {
+    if (local && local.hash !== t.hash) {
       disagreements += 1;
-      report(`The local pin for "${name}" on "${o.server}" (${short(local.hash)}) disagrees with ${LOCK_FILE} (${short(pin.hash)}). ` +
-        `The local pin is kept. If the lock is right, run: exorcist approve tool ${o.server} ${name}`);
+      report(`The local pin for "${name}" on "${o.server}" (${short(local.hash)}) disagrees with ${LOCK_FILE} (${short(t.hash)}). ` +
+        `The local pin is kept. If the lock is right, check the tool, then refresh the pin with: exorcist approve tool ${o.server} ${name}`);
     }
   }
-  if (o.withLaunch && ls.launch) {
-    if (!s.launch) {
-      s.launch = { hash: ls.launch, parts: [`approved in ${LOCK_FILE} (launch ${short(ls.launch)})`], pinnedAt: now.toISOString() };
-      seeded += 1;
-    } else if (s.launch.hash !== ls.launch) {
-      disagreements += 1;
-      report(`The local program pin for "${o.server}" (${short(s.launch.hash)}) disagrees with ${LOCK_FILE} (${short(ls.launch)}). The local pin is kept.`);
-    }
+  const launch = o.withLaunch ? ls.launch : undefined;
+  if (launch && s.launch && s.launch.hash !== launch) {
+    disagreements += 1;
+    report(`The local program pin for "${o.server}" (${short(s.launch.hash)}) disagrees with ${LOCK_FILE} (${short(launch)}). The local pin is kept.`);
   }
-  return { seeded, disagreements };
+  return { expected, ...(launch ? { launch } : {}), disagreements };
 }
 
 const PROJECT_MARKERS = ['.git', '.kiro', '.exorcist'];

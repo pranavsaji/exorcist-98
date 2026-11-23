@@ -34,6 +34,6 @@ export { newToken, canariesPath, canariesFileFor, plantCanaries, loadCanaries, r
 export type { Canary, CanaryRecord, CanaryShape, PlantOptions, PlantResult, RemoveResult as CanaryRemoveResult } from './canary.js';
 export {
   LockSchema, LockToolSchema, LockServerSchema, buildLock, serializeLock, parseLock, diffLock, descriptionPatch, pinsToLock,
-  lockToPins, seedFromLock, findLockFile, lockDescription, lockUrl, LOCK_FILE, DESCRIPTION_CHARS,
+  lockExpectations, seedFromLock, findLockFile, lockDescription, lockUrl, LOCK_FILE, DESCRIPTION_CHARS,
 } from './lockfile.js';
-export type { Lock, LockServer, LockTool, ServerListing, LockChange, LockChangeKind, ParseLockResult, SeedResult } from './lockfile.js';
+export type { Lock, LockServer, LockTool, ServerListing, LockChange, LockChangeKind, ParseLockResult, SeedResult, LockExpectations } from './lockfile.js';

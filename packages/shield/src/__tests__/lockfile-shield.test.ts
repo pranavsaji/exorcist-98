@@ -1,7 +1,9 @@
 /**
  * m5-lockfile REQ-03.2 with a real Shield and a real MCP server process: a
  * committed exorcist.lock makes a rug pull visible on a machine that never
- * pinned the tool, and the lock cannot pre-approve a poisoned tool.
+ * pinned the tool. The lock is untrusted (it comes with the repository), so
+ * it never approves anything: a tool that matches it still goes through
+ * every first-use check (signatures, the AI judge, the review hold).
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -12,8 +14,9 @@ import { fileURLToPath } from 'node:url';
 import { runProxy } from '../proxy.js';
 import { buildLock, serializeLock, LOCK_FILE } from '../lockfile.js';
 import { launchFingerprint } from '../launch.js';
-import { alertsPath, loadState, statePath } from '../state.js';
+import { alertsPath, loadState, saveState, statePath } from '../state.js';
 import type { ToolDef } from '../hash.js';
+import type { AiJudge } from '../ai-review.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FAKE = join(__dirname, 'fake-mcp-server.mjs');
@@ -37,7 +40,7 @@ afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, f
 type Rpc = Record<string, any>;
 
 /** A teammate's machine: an empty Shield state folder and the project's committed lock. */
-function machine(lockTools: ToolDef[], o: { launch?: string } = {}) {
+function machine(lockTools: ToolDef[], o: { launch?: string; policy?: object; aiJudge?: AiJudge } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'exorcist-lock-shield-'));
   dirs.push(root);
   const dir = join(root, '.exorcist');
@@ -45,6 +48,7 @@ function machine(lockTools: ToolDef[], o: { launch?: string } = {}) {
   const lockPath = join(root, LOCK_FILE);
   const launch = o.launch ?? launchFingerprint(process.execPath, [FAKE], process.cwd()).hash;
   writeFileSync(lockPath, serializeLock(buildLock([{ name: 'notes', launch, tools: lockTools }])));
+  if (o.policy) { saveState(statePath(dir), { version: 1, servers: {} }); writeFileSync(join(dir, 'policy.json'), JSON.stringify(o.policy)); }
 
   const stdin = new PassThrough();
   const stdout = new PassThrough();
@@ -66,6 +70,7 @@ function machine(lockTools: ToolDef[], o: { launch?: string } = {}) {
   });
   const done = runProxy({
     server: 'notes', command: process.execPath, args: [FAKE], dir, definitionsDir: DEFS, pollMs: 50, lockPath,
+    ...(o.aiJudge ? { aiJudge: o.aiJudge } : {}),
     env: { ...process.env, FAKE_MCP_CONTROL: control },
     stdin, stdout, stderr,
   });
@@ -102,24 +107,57 @@ describe('REQ-03.2: the Shield seeds its pins from exorcist.lock', () => {
     const ex006 = m.alerts().filter((a) => a['ruleId'] === 'EX-006');
     expect(ex006).toHaveLength(1);
     expect(ex006[0]?.['tool']).toBe('read_note');
+    expect(ex006[0]?.['message']).toContain('not the version recorded in exorcist.lock');
+    expect(ex006[0]?.['detail']).toContain('--- exorcist.lock');
     expect(ex006[0]?.['detail']).toContain('-Read a note by name.');
-    expect(m.stderr()).toContain('Seeded 3 pins for "notes"');
+    expect(m.stderr()).toContain('Checking "notes" against');
 
     // The call is refused too, and the change waits for approval like any rug pull.
     const call = await m.rpc('tools/call', { name: 'read_note', arguments: { name: 'x' } });
     expect(JSON.stringify(call)).toMatch(/changed after you approved it|rug pull/);
     const st = loadState(statePath(m.dir));
     expect(st.ok && st.state.servers['notes']?.pending['read_note']).toBeTruthy();
+    // The lock approved nothing: the changed tool is not pinned.
+    expect(st.ok && st.state.servers['notes']?.tools['read_note']).toBeUndefined();
     expect(await m.close()).toBe(0);
   }, 60_000);
 
-  it('serves the locked tools unchanged, and confirms the seeded pins after inspection', async () => {
+  it('serves tools that match the lock through the normal first-use path, and never writes the lock into the pins', async () => {
     const m = machine([READ_NOTE, SEND_REPORT]);
+    const before = loadState(statePath(m.dir));
     await m.init();
+    expect(before.ok && before.state.servers['notes']).toBeUndefined();
     expect(await m.toolNames()).toEqual(['read_note', 'send_report']);
     expect(m.alerts()).toEqual([]);
+    // Pinned by the default trust-on-first-use, exactly as without a lock.
     const st = loadState(statePath(m.dir));
-    expect(st.ok && st.state.servers['notes']?.tools['read_note']?.source).toBeUndefined();
+    expect(Object.keys(st.ok ? st.state.servers['notes']?.tools ?? {} : {}).sort()).toEqual(['read_note', 'send_report']);
+    expect(await m.close()).toBe(0);
+  }, 60_000);
+
+  it('with firstUse "review", a tool that matches the lock is still held for review', async () => {
+    const m = machine([READ_NOTE, SEND_REPORT], { policy: { firstUse: 'review' } });
+    await m.init();
+    expect(await m.toolNames()).toEqual([]);
+    const held = m.alerts().filter((a) => a['ruleId'] === 'SHIELD');
+    expect(held.map((a) => a['tool']).sort()).toEqual(['read_note', 'send_report']);
+    const st = loadState(statePath(m.dir));
+    expect(st.ok && Object.keys(st.state.servers['notes']?.unreviewed ?? {}).sort()).toEqual(['read_note', 'send_report']);
+    expect(st.ok && st.state.servers['notes']?.tools).toEqual({});
+    expect(await m.close()).toBe(0);
+  }, 60_000);
+
+  it('with AI review on, a tool that matches the lock still goes to the judge (and its verdict counts)', async () => {
+    const judged: string[] = [];
+    const judge: AiJudge = async (text) => {
+      judged.push(text);
+      return text.includes('Read a note by name.') ? { verdict: 'malicious', threatClass: 'tool-poisoning', span: 'Read a note by name.' } : null;
+    };
+    const m = machine([READ_NOTE, SEND_REPORT], { policy: { aiReview: true }, aiJudge: judge });
+    await m.init();
+    expect(await m.toolNames()).toEqual(['send_report']);
+    expect(judged.some((t) => t.includes('Read a note by name.'))).toBe(true);
+    expect(judged.some((t) => t.includes('Send a short report'))).toBe(true);
     expect(await m.close()).toBe(0);
   }, 60_000);
 
@@ -129,13 +167,17 @@ describe('REQ-03.2: the Shield seeds its pins from exorcist.lock', () => {
     m.setControl({ description: poisoned });
     await m.init();
     expect(await m.toolNames()).toEqual(['send_report']);
-    expect(m.alerts().some((a) => a['ruleId'] === 'EX-005' && a['tool'] === 'read_note' && String(a['message']).includes('exorcist.lock'))).toBe(true);
+    expect(m.alerts().some((a) => a['ruleId'] === 'EX-005' && a['tool'] === 'read_note')).toBe(true);
     expect(await m.close()).toBe(0);
   }, 60_000);
 
   it('does not start a server whose program differs from the locked one', async () => {
     const m = machine([READ_NOTE, SEND_REPORT], { launch: 'b'.repeat(64) });
     expect(await m.done).toBe(78);
-    expect(m.alerts().some((a) => a['ruleId'] === 'EX-010')).toBe(true);
+    expect(m.alerts().some((a) => a['ruleId'] === 'EX-010' && String(a['message']).includes('recorded in exorcist.lock'))).toBe(true);
+    // Held for `exorcist approve server`, not pinned from the lock.
+    const st = loadState(statePath(m.dir));
+    expect(st.ok && st.state.servers['notes']?.launch).toBeUndefined();
+    expect(st.ok && st.state.servers['notes']?.pendingLaunch).toBeDefined();
   }, 60_000);
 });
