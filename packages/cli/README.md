@@ -53,6 +53,7 @@ instruct your agent. `unwrap` restores the file exactly. See
 ```sh
 npx -y @exorcist-98/cli@0.1.0 lock           # write exorcist.lock, then commit it
 npx -y @exorcist-98/cli@0.1.0 lock --check   # exit 1 if any tool or program changed
+npx -y @exorcist-98/cli@0.1.0 lock --check --static   # starts nothing: names, programs, URLs only
 ```
 
 `exorcist.lock` records the fingerprint of every tool your MCP servers list,
@@ -61,6 +62,18 @@ tool that differs from the lock as a rug pull, even on a machine that never
 saw the tool before. The lock never approves anything by itself: a tool that
 matches it still gets the Shield's first-use checks. `--from-shield` writes the lock from your local
 pins without starting any server. In GitHub Actions, set `lock-check: true`.
+
+`exorcist lock` and `lock --check` **start every server in the MCP config**
+to list its tools. Only run them on a config you trust. On a pull request the
+config is the author's: a changed `command` would run inside your CI with its
+secrets and token. So the GitHub Action's `lock-check: true` always runs
+`lock --check --static`, which starts nothing and compares the server names,
+each server's program (command, arguments and argument files) and remote URLs
+with the lock. `lock-check: live` also compares tool descriptions, and the
+Action refuses it on `pull_request` and `pull_request_target` events and when
+the head repository is a fork. Servers that `exorcist lock` does start get a
+minimal environment (PATH, HOME, LANG, LC_*, TMPDIR) plus their own `env`
+from the config, so tokens and keys in your shell are not passed on.
 
 ## Licence
 

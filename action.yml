@@ -23,9 +23,13 @@ inputs:
     default: "false"
   lock-check:
     description: >-
-      Also run "exorcist lock --check": start the MCP servers in the config, and fail the job if
-      any tool or program differs from the committed exorcist.lock. With "comment", the differences
-      (with a diff of each changed description) are posted on the pull request.
+      Check the MCP config against the committed exorcist.lock and fail the job on any difference.
+      "true" runs "exorcist lock --check --static": it starts nothing and compares the server names,
+      each server's program (command, arguments, argument files) and remote URLs. "live" also starts
+      every server to compare tool descriptions; that runs the commands in the config, which a pull
+      request can change to run anything with this job's secrets and token, so the action refuses
+      "live" on pull_request and pull_request_target events and when the head repository is not this
+      one. With "comment", the report is posted on the pull request. "false" (default) skips it.
     default: "false"
   lock-config:
     description: MCP config for lock-check, relative to the workspace (default .kiro/settings/mcp.json).
@@ -100,18 +104,37 @@ runs:
             await github.rest.issues.createComment({ owner, repo, issue_number, body });
           }
 
-    # m5: exorcist.lock. Only when lock-check is "true"; otherwise none of these steps run.
+    # m5: exorcist.lock. Only when lock-check is "true" (static) or "live"; with "false" none of these steps run.
     - name: Check exorcist.lock
       id: lock
-      if: ${{ inputs.lock-check == 'true' }}
+      if: ${{ inputs.lock-check != 'false' && inputs.lock-check != '' }}
       shell: bash
       env:
         EXORCIST_CLI: ${{ github.action_path }}/packages/cli/dist/index.mjs
         LOCK_CONFIG: ${{ inputs.lock-config }}
+        LOCK_MODE: ${{ inputs.lock-check }}
+        EVENT_NAME: ${{ github.event_name }}
+        HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        BASE_REPO: ${{ github.repository }}
       run: |
         out="$RUNNER_TEMP/exorcist"
         mkdir -p "$out"
         args=()
+        case "$LOCK_MODE" in
+          true|static)
+            args+=(--static) ;;
+          live)
+            # A live check starts the servers named in the config. On a pull
+            # request that config is the author's, so it could run anything
+            # here with this job's secrets and token.
+            if [ "$EVENT_NAME" = "pull_request" ] || [ "$EVENT_NAME" = "pull_request_target" ] || { [ -n "$HEAD_REPO" ] && [ "$HEAD_REPO" != "$BASE_REPO" ]; }; then
+              echo "::error title=Exorcist 98::lock-check: live starts the MCP servers in the config, which this pull request controls. Refusing to run it on '$EVENT_NAME' (head repository: ${HEAD_REPO:-this one}). Use lock-check: true (static, starts nothing) on pull requests."
+              exit 2
+            fi ;;
+          *)
+            echo "::error title=Exorcist 98::lock-check must be false, true or live (got '$LOCK_MODE')."
+            exit 2 ;;
+        esac
         [ -n "$LOCK_CONFIG" ] && args+=(--config "$LOCK_CONFIG")
         set +e
         node "$EXORCIST_CLI" lock --check "${args[@]}" > "$out/lock.txt" 2>&1
@@ -136,7 +159,7 @@ runs:
         echo "markdown=$out/lock.md" >> "$GITHUB_OUTPUT"
 
     - name: Comment the exorcist.lock differences on the pull request
-      if: ${{ inputs.lock-check == 'true' && inputs.comment == 'true' && github.event_name == 'pull_request' }}
+      if: ${{ inputs.lock-check != 'false' && inputs.lock-check != '' && inputs.comment == 'true' && github.event_name == 'pull_request' }}
       uses: actions/github-script@v9
       env:
         REPORT_FILE: ${{ steps.lock.outputs.markdown }}
@@ -158,7 +181,7 @@ runs:
           }
 
     - name: Fail on exorcist.lock differences
-      if: ${{ inputs.lock-check == 'true' }}
+      if: ${{ inputs.lock-check != 'false' && inputs.lock-check != '' }}
       shell: bash
       env:
         LOCK_CODE: ${{ steps.lock.outputs.code }}

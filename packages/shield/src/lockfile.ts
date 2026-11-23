@@ -194,7 +194,7 @@ export function diffLock(oldLock: Lock, newLock: Lock): LockChange[] {
     const b = Object.hasOwn(newLock.servers, name) ? newLock.servers[name] : undefined;
     if (!a) {
       const tools = Object.keys(b?.tools ?? {}).sort();
-      out.push({ server: name, kind: 'server-added', message: `The server "${name}" is not in the lock. Its tools: ${tools.join(', ') || '(none)'}.` });
+      out.push({ server: name, kind: 'server-added', message: `The server "${name}" is not in the lock.${tools.length > 0 ? ` Its tools: ${tools.join(', ')}.` : ''}` });
       continue;
     }
     if (!b) {

@@ -51,12 +51,21 @@ Options:
   --check           Do not write: compare the servers with the lock and exit 1
                     on any difference (added, removed or changed tool, changed
                     program), with a diff of each changed description
+  --static          With --check: start nothing. Compare only the server names,
+                    each server's program (command, arguments, argument files)
+                    and remote URLs with the lock. Use this in CI on pull
+                    requests: the full check starts every server in the config,
+                    which a pull request can change to run any command
   --from-shield     Use the local Shield pin file instead of starting servers
   --lock <file>     Lock file to write or check (default: ./${LOCK_FILE})
   --dir <folder>    Shield state folder for --from-shield (default: the
                     project's .exorcist folder, or EXORCIST_DIR)
   --timeout <ms>    Time allowed for each server to list its tools
                     (default: ${DEFAULT_LOCK_TIMEOUT_MS})
+
+Servers that are started get a minimal environment (PATH, HOME, LANG, LC_*,
+TMPDIR) plus their own "env" from the config; tokens and keys in your shell
+are not passed on.
 
 Exit codes: 0 written or up to date, 1 the lock does not match, 2 error.
 `;
@@ -149,16 +158,38 @@ export type CollectResult =
   | { ok: true; listings: ServerListing[]; kept: Array<[string, LockServer]>; notes: string[] }
   | { ok: false; errors: string[] };
 
-const processEnv = (): Record<string, string> =>
-  Object.fromEntries(Object.entries(process.env).filter((e): e is [string, string] => typeof e[1] === 'string'));
+/** What a started server may inherit from this process: enough to run, nothing that grants access. */
+const INHERITED_ENV = /^(PATH|HOME|LANG|LC_[A-Z0-9_]+|TMPDIR|TEMP|TMP|SYSTEMROOT|WINDIR|USERPROFILE|APPDATA|LOCALAPPDATA|PATHEXT|COMSPEC)$/i;
+/** Never inherited, even if a pattern above matched: CI credentials, tokens, keys, loader hooks. */
+const NEVER_INHERITED_ENV = /^(GITHUB_|ACTIONS_|RUNNER_|AWS_|LD_|DYLD_)|^(NPM_TOKEN|NODE_OPTIONS)$|_(TOKEN|KEY|SECRET)$/i;
+
+/**
+ * The environment for a server that `exorcist lock` starts: a minimal set
+ * inherited from this process (PATH, HOME, LANG/LC_*, TMPDIR and the Windows
+ * equivalents) plus the entry's own `env`, which is the only way to pass
+ * anything else. Secrets in this shell or CI (GITHUB_TOKEN, AWS_*, *_TOKEN,
+ * *_KEY, *_SECRET, NODE_OPTIONS, LD_ and DYLD_ variables) never reach it
+ * unless the entry sets them itself.
+ */
+export function serverEnv(base: NodeJS.ProcessEnv, entryEnv: Record<string, string> = {}): Record<string, string> {
+  const inherited = Object.entries(base).filter((e): e is [string, string] =>
+    typeof e[1] === 'string' && INHERITED_ENV.test(e[0]) && !NEVER_INHERITED_ENV.test(e[0]));
+  return { ...Object.fromEntries(inherited), ...entryEnv };
+}
 
 /**
  * Start every enabled local server and list its tools. Disabled servers are
  * never started: their entry in `previous` (the existing lock) is kept as is.
+ *
+ * With `static`, nothing is started at all: each local server's program
+ * fingerprint is computed from the config (command, arguments, and the
+ * contents of argument files, read but never run), and its tools are taken
+ * from `previous`. That is the only safe mode for a config someone else
+ * controls, such as a pull request in CI.
  */
 export async function collectListings(
   config: Config,
-  o: { timeoutMs: number; cwd: string; previous?: Lock; list?: typeof listTools },
+  o: { timeoutMs: number; cwd: string; previous?: Lock; list?: typeof listTools; static?: boolean },
 ): Promise<CollectResult> {
   const list = o.list ?? listTools;
   const listings: ServerListing[] = [];
@@ -186,8 +217,13 @@ export async function collectListings(
     if (entry.command === undefined) { errors.push(`"${name}" has neither a "command" nor a "url".`); continue; }
     const command = entry.command;
     const cwd = entry.cwd === undefined ? o.cwd : isAbsolute(entry.cwd) ? entry.cwd : resolve(o.cwd, entry.cwd);
+    if (o.static) {
+      const old = o.previous && Object.hasOwn(o.previous.servers, name) ? o.previous.servers[name] : undefined;
+      kept.push([name, { launch: launchFingerprint(command, entry.args, cwd).hash, tools: old?.tools ?? {} }]);
+      continue;
+    }
     jobs.push((async () => {
-      const r = await list({ command, args: entry.args, env: { ...processEnv(), ...(entry.env ?? {}) }, cwd, timeoutMs: o.timeoutMs });
+      const r = await list({ command, args: entry.args, env: serverEnv(process.env, entry.env), cwd, timeoutMs: o.timeoutMs });
       if (!r.ok) { errors.push(`Could not list the tools of "${name}": ${r.error}`); return; }
       // The same fingerprint the Shield pins before it starts the server (S-006).
       listings.push({ name, launch: launchFingerprint(command, entry.args, cwd).hash, tools: r.tools });
@@ -226,7 +262,7 @@ const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' 
 export async function lockCommand(argv: string[], io: Io): Promise<number> {
   const p = parse(argv, {
     config: { type: 'string' }, check: { type: 'boolean' }, 'from-shield': { type: 'boolean' },
-    lock: { type: 'string' }, dir: { type: 'string' }, timeout: { type: 'string' },
+    lock: { type: 'string' }, dir: { type: 'string' }, timeout: { type: 'string' }, static: { type: 'boolean' },
     help: { type: 'boolean', short: 'h' },
   });
   if (!p.ok) { io.err(`${p.error}\n\n${LOCK_HELP}`); return 2; }
@@ -239,6 +275,9 @@ export async function lockCommand(argv: string[], io: Io): Promise<number> {
   const lockPath = resolve(str(p.values['lock']) ?? LOCK_FILE);
   const checking = p.values['check'] === true;
   const fromShield = p.values['from-shield'] === true;
+  const isStatic = p.values['static'] === true;
+  if (isStatic && !checking) { io.err('--static only works with --check: a lock is written from the tools the servers list.'); return 2; }
+  if (isStatic && fromShield) { io.err('--static and --from-shield cannot be combined.'); return 2; }
 
   let previous: Lock | undefined;
   if (existsSync(lockPath)) {
@@ -264,7 +303,7 @@ export async function lockCommand(argv: string[], io: Io): Promise<number> {
     if (!existsSync(configPath)) { io.err(`MCP config not found: ${configPath}. Pass --config <file>, or --from-shield.`); return 2; }
     const cfg = readConfig(configPath);
     if (!cfg.ok) { io.err(cfg.error); return 2; }
-    const r = await collectListings(cfg.config, { timeoutMs, cwd: process.cwd(), ...(previous ? { previous } : {}) });
+    const r = await collectListings(cfg.config, { timeoutMs, cwd: process.cwd(), static: isStatic, ...(previous ? { previous } : {}) });
     if (!r.ok) {
       for (const e of r.errors) io.err(printable(e));
       io.err(checking ? `Could not check ${lockPath}.` : `${lockPath} was not written.`);
@@ -272,13 +311,16 @@ export async function lockCommand(argv: string[], io: Io): Promise<number> {
     }
     current = lockFrom(r.listings, r.kept);
     notes.push(...r.notes);
+    if (isStatic) notes.push('static check: no server was started, so tool descriptions were not compared; server names, programs and URLs were.');
   }
   for (const n of notes) io.out(`  ${printable(n)}`);
 
   if (checking) {
     const changes = diffLock(previous as Lock, current);
     if (changes.length === 0) {
-      io.out(`${LOCK_FILE} is up to date: every MCP tool matches its locked fingerprint.`);
+      io.out(isStatic
+        ? `${LOCK_FILE} is up to date: every server and program matches the lock (tools not listed: --static).`
+        : `${LOCK_FILE} is up to date: every MCP tool matches its locked fingerprint.`);
       return 0;
     }
     io.out(`${LOCK_FILE} does not match the MCP servers (${plural(changes.length, 'difference')}):`);

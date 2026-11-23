@@ -200,7 +200,7 @@ describe('GitHub Action and workflows', () => {
   });
 
   // m5-lockfile REQ-03.3
-  it('lock-check is off by default, and every lock step runs only when it is "true"', () => {
+  it('lock-check is off by default, and every lock step runs only when it is turned on', () => {
     expect(action.inputs['lock-check']?.default).toBe('false');
     expect(action.inputs['lock-config']).toBeDefined();
     const lockSteps = action.runs.steps.filter((s) => /exorcist\.lock/.test(s.name ?? ''));
@@ -209,11 +209,13 @@ describe('GitHub Action and workflows', () => {
       'Comment the exorcist.lock differences on the pull request',
       'Fail on exorcist.lock differences',
     ]);
-    for (const s of lockSteps) expect(s.if, s.name).toMatch(/inputs\.lock-check == 'true'/);
+    for (const s of lockSteps) expect(s.if, s.name).toMatch(/inputs\.lock-check != 'false' && inputs\.lock-check != ''/);
     // The steps that existed before lock-check are unchanged in order and condition.
     const others = action.runs.steps.filter((s) => !lockSteps.includes(s)).map((s) => s.name ?? s.uses);
     expect(others).toEqual(['actions/setup-node@v7', 'Build Exorcist 98', 'Scan', 'Upload SARIF to code scanning', 'Comment on the pull request', 'Fail on findings']);
     expect(lockSteps[0]?.run).toContain('lock --check');
+    // The risk of a live check is spelled out where the input is chosen.
+    expect(read('action.yml')).toMatch(/refuses\s+"live" on pull_request and pull_request_target/);
   });
 
   it('the lock-check step records the exit code and fences the report so a description cannot break out', () => {
@@ -228,11 +230,12 @@ describe('GitHub Action and workflows', () => {
       writeFileSync(out, '');
       const r = spawnSync('bash', ['-eo', 'pipefail', '-c', step?.run ?? 'exit 99'], {
         cwd: d, encoding: 'utf8',
-        env: { ...process.env, RUNNER_TEMP: d, GITHUB_OUTPUT: out, GITHUB_STEP_SUMMARY: summary, EXORCIST_CLI: fakeCli, LOCK_CONFIG: 'tools/mcp.json' },
+        env: { ...process.env, RUNNER_TEMP: d, GITHUB_OUTPUT: out, GITHUB_STEP_SUMMARY: summary, EXORCIST_CLI: fakeCli, LOCK_CONFIG: 'tools/mcp.json', LOCK_MODE: 'true', EVENT_NAME: 'pull_request', HEAD_REPO: 'someone/fork', BASE_REPO: 'owner/repo' },
       });
       expect(r.status, r.stderr).toBe(0); // the gate is a later step, after the comment
       expect(readFileSync(out, 'utf8')).toContain('code=1');
-      expect(r.stdout).toContain('args: lock --check --config tools/mcp.json');
+      // lock-check: true is always static: nothing from the config is started.
+      expect(r.stdout).toContain('args: lock --check --static --config tools/mcp.json');
       const md = readFileSync(join(d, 'exorcist', 'lock.md'), 'utf8');
       expect(md).toContain('does not match');
       expect(md).toMatch(/^````text$/m); // longer than the ``` inside the report
@@ -241,6 +244,51 @@ describe('GitHub Action and workflows', () => {
     } finally {
       rmSync(d, { recursive: true, force: true });
     }
+  });
+
+  describe('lock-check: live never starts pull-request-controlled servers', () => {
+    const step = action.runs.steps.find((s) => s.name === 'Check exorcist.lock');
+    function runStep(env: Record<string, string>) {
+      const d = mkdtempSync(join(tmpdir(), 'exorcist-action-live-'));
+      try {
+        const ran = join(d, 'cli-ran');
+        const fakeCli = join(d, 'cli.mjs');
+        writeFileSync(fakeCli, `import { writeFileSync } from 'node:fs';\nwriteFileSync(${JSON.stringify(ran)}, process.argv.slice(2).join(' '));\n`);
+        const out = join(d, 'out.txt');
+        writeFileSync(out, '');
+        const r = spawnSync('bash', ['-eo', 'pipefail', '-c', step?.run ?? 'exit 99'], {
+          cwd: d, encoding: 'utf8',
+          env: { ...process.env, RUNNER_TEMP: d, GITHUB_OUTPUT: out, GITHUB_STEP_SUMMARY: join(d, 's.md'), EXORCIST_CLI: fakeCli, LOCK_CONFIG: '', BASE_REPO: 'owner/repo', HEAD_REPO: '', ...env },
+        });
+        return { code: r.status, out: r.stdout + r.stderr, cliArgs: existsSync(ran) ? readFileSync(ran, 'utf8') : null };
+      } finally {
+        rmSync(d, { recursive: true, force: true });
+      }
+    }
+
+    for (const event of ['pull_request', 'pull_request_target']) {
+      it(`refuses live mode on a ${event} event, before anything runs`, () => {
+        const r = runStep({ LOCK_MODE: 'live', EVENT_NAME: event, HEAD_REPO: 'owner/repo' });
+        expect(r.code).toBe(2);
+        expect(r.out).toContain('::error');
+        expect(r.out).toContain('Refusing to run it');
+        expect(r.cliArgs).toBeNull();
+      });
+    }
+
+    it('refuses live mode when the head repository is not this one', () => {
+      const r = runStep({ LOCK_MODE: 'live', EVENT_NAME: 'workflow_run', HEAD_REPO: 'someone/fork' });
+      expect(r.code).toBe(2);
+      expect(r.cliArgs).toBeNull();
+    });
+
+    it('allows live mode on a push to this repository, and rejects unknown modes', () => {
+      expect(runStep({ LOCK_MODE: 'live', EVENT_NAME: 'push' }).cliArgs).toBe('lock --check');
+      expect(runStep({ LOCK_MODE: 'true', EVENT_NAME: 'push' }).cliArgs).toBe('lock --check --static');
+      const bad = runStep({ LOCK_MODE: 'yes please', EVENT_NAME: 'push' });
+      expect(bad.code).toBe(2);
+      expect(bad.cliArgs).toBeNull();
+    });
   });
 
   it('the action installs pnpm from packageManager, not from a hard-coded version', () => {

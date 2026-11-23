@@ -9,10 +9,12 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { PassThrough } from 'node:stream';
 import { fileURLToPath } from 'node:url';
+import { pathToFileURL } from 'node:url';
 import {
-  alertsPath, emptyState, parseLock, runProxy, saveState, serverState, statePath, toolFingerprint, wrapConfig,
+  alertsPath, buildLock, emptyState, launchFingerprint, parseLock, runProxy, saveState, serializeLock, serverState, statePath,
+  toolFingerprint, wrapConfig,
 } from '@exorcist-98/shield';
-import { lockCommand, printable } from '../commands/lock.js';
+import { lockCommand, printable, serverEnv } from '../commands/lock.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '../../../..');
@@ -221,5 +223,86 @@ describe('exorcist lock and the Shield agree', () => {
     expect(list?.result?.tools?.map((t) => t.name)).toEqual(['read_note', 'send_report']);
     // Same tool and program fingerprints: no rug pull, no changed program.
     expect(existsSync(alertsPath(dir)) ? readFileSync(alertsPath(dir), 'utf8') : '').toBe('');
+  }, SLOW);
+});
+
+describe('exorcist lock --check --static: starts nothing (safe for pull requests in CI)', () => {
+  it('detects a changed command, an added server and a changed URL without starting any process', async () => {
+    const p = project({});
+    const ranOld = join(p.root, 'old-ran');
+    const ranNew = join(p.root, 'new-ran');
+    const ranAdded = join(p.root, 'added-ran');
+    // Each "server" would leave a marker file behind if it were ever started.
+    const marker = (f: string) => ['-e', `require('fs').writeFileSync(${JSON.stringify(f)}, 'ran')`];
+    const locked = buildLock([
+      { name: 'notes', launch: launchFingerprint(process.execPath, marker(ranOld), process.cwd()).hash, tools: [{ name: 'read_note', description: 'Read a note by name.' }] },
+      { name: 'docs', url: 'https://mcp.example.invalid/v1/mcp', note: 'remote', tools: [] },
+    ]);
+    writeFileSync(p.lock, serializeLock(locked));
+
+    p.writeConfig({ notes: { command: process.execPath, args: marker(ranOld) }, docs: { url: 'https://mcp.example.invalid/v1/mcp' } });
+    const same = await p.run('--check', '--static');
+    expect(same.err).toBe('');
+    expect(same.code).toBe(0);
+    expect(same.out).toContain('tools not listed: --static');
+
+    p.writeConfig({
+      notes: { command: process.execPath, args: marker(ranNew) },
+      docs: { url: 'https://mcp.example.invalid/v2/mcp' },
+      added: { command: process.execPath, args: marker(ranAdded) },
+    });
+    const changed = await p.run('--check', '--static');
+    expect(changed.code).toBe(1);
+    expect(changed.out).toContain('The program behind "notes" changed');
+    expect(changed.out).toContain('The address of "docs" changed');
+    expect(changed.out).toContain('The server "added" is not in the lock.');
+    expect(changed.out).not.toContain('read_note'); // the locked tools are carried over, not re-listed
+
+    await new Promise((r) => setTimeout(r, 300)); // a started process would have written its marker by now
+    for (const f of [ranOld, ranNew, ranAdded]) expect(existsSync(f), f).toBe(false);
+  }, SLOW);
+
+  it('only works with --check, and not with --from-shield', async () => {
+    const p = project({});
+    expect((await p.run('--static')).code).toBe(2);
+    expect((await p.run('--check', '--static', '--from-shield')).code).toBe(2);
+  });
+});
+
+describe('servers started by exorcist lock get a minimal environment', () => {
+  it('serverEnv keeps PATH, HOME, LANG and LC_*, and drops CI credentials, tokens, keys and loader hooks', () => {
+    const env = serverEnv({
+      PATH: '/usr/bin', HOME: '/home/u', LANG: 'en_US.UTF-8', LC_ALL: 'C', TMPDIR: '/tmp',
+      GITHUB_TOKEN: 'EXAMPLE_TOKEN_DO_NOT_USE', ACTIONS_RUNTIME_TOKEN: 'x', RUNNER_TEMP: '/r', AWS_SECRET_ACCESS_KEY: 'x',
+      NPM_TOKEN: 'x', MY_API_KEY: 'x', SOME_SECRET: 'x', LD_PRELOAD: '/x.so', DYLD_INSERT_LIBRARIES: '/x', NODE_OPTIONS: '--require /x.js',
+      LC_EVIL_TOKEN: 'x', EDITOR: 'vim',
+    }, { NODE_OPTIONS: '--max-old-space-size=512', SERVICE_TOKEN: 'set-by-the-entry' });
+    expect(env).toEqual({
+      PATH: '/usr/bin', HOME: '/home/u', LANG: 'en_US.UTF-8', LC_ALL: 'C', TMPDIR: '/tmp',
+      NODE_OPTIONS: '--max-old-space-size=512', SERVICE_TOKEN: 'set-by-the-entry',
+    });
+  });
+
+  it('a spawned server does not see a GITHUB_TOKEN planted in the environment', async () => {
+    const p = project({});
+    const dump = join(p.root, 'server-env.json');
+    // A real MCP server (the fake one), started through a wrapper that records its environment first.
+    const wrapper = `require('fs').writeFileSync(${JSON.stringify(dump)}, JSON.stringify(process.env)); import(${JSON.stringify(pathToFileURL(FAKE).href)});`;
+    p.writeConfig({ notes: { command: process.execPath, args: ['-e', wrapper], env: { EXPLICIT_TOKEN: 'from-the-entry' } } });
+    const planted = ['GITHUB_TOKEN', 'AWS_SECRET_ACCESS_KEY', 'MY_API_KEY'] as const;
+    const saved = planted.map((k) => [k, process.env[k]] as const);
+    for (const k of planted) process.env[k] = 'EXAMPLE_TOKEN_DO_NOT_USE';
+    try {
+      const r = await p.run();
+      expect(r.err).toBe('');
+      expect(r.code).toBe(0);
+    } finally {
+      for (const [k, v] of saved) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
+    }
+    const seen = JSON.parse(readFileSync(dump, 'utf8')) as Record<string, string>;
+    for (const k of planted) expect(seen[k], k).toBeUndefined();
+    expect(JSON.stringify(seen)).not.toContain('EXAMPLE_TOKEN_DO_NOT_USE');
+    expect(seen['EXPLICIT_TOKEN']).toBe('from-the-entry');
+    expect(seen['PATH']).toBeDefined();
   }, SLOW);
 });

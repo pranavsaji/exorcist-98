@@ -40,6 +40,24 @@ Decisions made while finishing the spec, where it left room or was silent.
   (marked `source: "lock"`), which let a committed lock skip the AI judge
   and the `firstUse: review` hold. Security review caught it; it was replaced
   by the design above.
+- **CI never starts pull-request-controlled servers (REQ-03.3).** A live
+  `lock --check` starts every server in the config, and on a pull request the
+  config belongs to its author, so a PR could run any command in CI with the
+  job's secrets and token (security review finding). `lock --check --static`
+  starts nothing: it compares the set of server names, each local server's
+  launch fingerprint (command, arguments, and the contents of argument files,
+  read but never run), remote URLs and the lock's validity; tools are carried
+  over from the lock. The Action's `lock-check: true` always uses `--static`.
+  `lock-check: live` compares tool descriptions too, and the Action refuses
+  it (exit 2) on `pull_request` and `pull_request_target` events and when the
+  head repository differs from the base repository.
+- **Minimal environment for started servers.** `exorcist lock` passes only
+  PATH, HOME, LANG, LC_*, TMPDIR (and the Windows equivalents: SYSTEMROOT,
+  WINDIR, USERPROFILE, APPDATA, LOCALAPPDATA, PATHEXT, COMSPEC, TEMP, TMP)
+  plus the entry's own `env`. GITHUB_*, ACTIONS_*, RUNNER_*, AWS_*,
+  NPM_TOKEN, *_TOKEN, *_KEY, *_SECRET, LD_*, DYLD_* and NODE_OPTIONS are
+  never inherited; only the entry's `env` can set them. The MCP SDK adds its
+  own safe defaults (HOME, LOGNAME, PATH, SHELL, TERM, USER).
 - **Exit codes.** `--check` exits 0 when identical, 1 on any difference, 2 when
   it could not check (no lock, a server that would not list its tools within
   the timeout, a bad config).
