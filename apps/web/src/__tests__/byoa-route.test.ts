@@ -89,3 +89,16 @@ describe('POST /api/byoa: rate limit', () => {
     expect((await post({ placement: 'tool-result', text: 'Paris: sunny.' }, '203.0.113.100')).status).toBe(200);
   });
 });
+
+describe('POST /api/byoa body cap (security review)', () => {
+  it('a streamed body past the cap with no content-length is cut off with 413, never fully read', async () => {
+    let pulled = 0;
+    const chunk = new TextEncoder().encode('a'.repeat(64 * 1024));
+    const stream = new ReadableStream<Uint8Array>({
+      pull(c) { pulled += 1; if (pulled > 200) { c.close(); return; } c.enqueue(chunk); },
+    });
+    const res = await POST(new Request('http://localhost/api/byoa', { method: 'POST', body: stream, duplex: 'half' } as RequestInit & { duplex: 'half' }));
+    expect(res.status).toBe(413);
+    expect(pulled).toBeLessThan(10); // stopped soon after the cap, not after ~12 MB
+  });
+});

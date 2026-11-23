@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { readCapped } from '@/lib/read-capped';
 import { loadDefinitions } from '@exorcist-98/core';
 import type { VirusDefinition } from '@exorcist-98/core';
 import { BYOA_MAX_CHARS, BYOA_PLACEMENTS, judgeText } from '@exorcist-98/shield/byoa';
@@ -37,11 +38,23 @@ export async function POST(request: Request): Promise<Response> {
   const declared = Number(request.headers.get('content-length') ?? '0');
   if (declared > MAX_BODY_BYTES) return jsonError(413, `Paste at most ${BYOA_MAX_CHARS.toLocaleString('en-US')} characters.`);
 
+  // W-003: a per-visitor rate limit and a cap on checks running at once,
+  // taken before the body is read so an oversized body costs nothing.
+  const slot = limiter.acquire('byoa', clientKey(request.headers));
+  if (!slot.ok) return jsonError(slot.status, slot.error, { 'Retry-After': String(slot.retryAfterSeconds) });
+  try {
+    return await judge(request);
+  } finally {
+    slot.release();
+  }
+}
+
+async function judge(request: Request): Promise<Response> {
   let body: unknown;
   try {
-    const raw = await request.text();
-    if (raw.length > MAX_BODY_BYTES) return jsonError(413, `Paste at most ${BYOA_MAX_CHARS.toLocaleString('en-US')} characters.`);
-    body = JSON.parse(raw) as unknown;
+    const bytes = await readCapped(request, MAX_BODY_BYTES);
+    if (bytes === null) return jsonError(413, `Paste at most ${BYOA_MAX_CHARS.toLocaleString('en-US')} characters.`);
+    body = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) as unknown;
   } catch {
     return jsonError(400, 'The request body must be JSON.');
   }
@@ -59,10 +72,6 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  // W-003: a per-visitor rate limit and a cap on checks running at once.
-  const slot = limiter.acquire('byoa', clientKey(request.headers));
-  if (!slot.ok) return jsonError(slot.status, slot.error, { 'Retry-After': String(slot.retryAfterSeconds) });
-
   try {
     defsPromise ??= loadDefinitions(definitionsDir());
     const result = judgeText(parsed.data.placement, parsed.data.text, await defsPromise);
@@ -74,7 +83,5 @@ export async function POST(request: Request): Promise<Response> {
     // Only the kind of error: a message could carry part of the pasted text.
     console.error('byoa failed:', e instanceof Error ? e.name : 'unknown error');
     return jsonError(500, 'The attack could not be checked. Try again.');
-  } finally {
-    slot.release();
   }
 }

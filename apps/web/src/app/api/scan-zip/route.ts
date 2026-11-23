@@ -1,4 +1,5 @@
 import { DEFAULT_ZIP_LIMITS } from '@exorcist-98/core';
+import { readCapped } from '@/lib/read-capped';
 import { clientKey, limiter } from '@/lib/limits';
 import { jsonError, scanResponse } from '@/lib/scan-response';
 
@@ -18,21 +19,6 @@ function displayName(raw: string | null): string {
   return /^[A-Za-z0-9 ._()-]{1,80}\.zip$/i.test(name) ? name : 'your ZIP file';
 }
 
-/** Read the body, stopping as soon as it passes `max` bytes. */
-async function readCapped(request: Request, max: number): Promise<Buffer | null> {
-  if (!request.body) return Buffer.alloc(0);
-  const reader = request.body.getReader();
-  const parts: Uint8Array[] = [];
-  let size = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.length;
-    if (size > max) { await reader.cancel().catch(() => undefined); return null; }
-    parts.push(value);
-  }
-  return Buffer.concat(parts);
-}
 
 /**
  * POST a ZIP of a project as the raw body (Content-Type application/zip).
