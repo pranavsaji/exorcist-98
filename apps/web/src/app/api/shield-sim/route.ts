@@ -38,8 +38,9 @@ export async function GET(request: Request): Promise<Response> {
       cache.set(parsed.data, result);
     }
     return new Response(JSON.stringify(result), { headers });
-  } catch {
+  } catch (e) {
     defsPromise = null;
+    console.error('shield-sim failed:', e instanceof Error ? e.message : String(e));
     return jsonError(500, 'The simulation could not be run.');
   }
 }
