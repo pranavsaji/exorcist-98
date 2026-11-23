@@ -11,8 +11,8 @@
  * without a fixed version is reported: the next release would run unreviewed.
  */
 import { createHash } from 'node:crypto';
-import { readFileSync, statSync } from 'node:fs';
-import { isAbsolute, resolve } from 'node:path';
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { dirname, isAbsolute, join, parse as parsePath, relative, resolve, sep } from 'node:path';
 import type { ServerState } from './state.js';
 
 const sha256 = (b: string | Buffer): string => createHash('sha256').update(b).digest('hex');
@@ -76,35 +76,77 @@ export function specIsPinned(spec: string): boolean {
 
 /**
  * What the MCP config says about how the server runs besides its command and
- * arguments. A changed `env` can change the program as much as a changed file
- * (`NODE_OPTIONS=--require ./x.js`, `LD_PRELOAD`), so it is part of the pin.
+ * arguments, and what the program really inherits. A changed `env` can change
+ * the program as much as a changed file (`NODE_OPTIONS=--require ./x.js`,
+ * `LD_PRELOAD`), so it is part of the pin.
  */
 export type LaunchEntry = {
   /** The entry's own `env`, as written in the config. */
   env?: Readonly<Record<string, string>>;
   /** The entry's `cwd`, as written in the config (not resolved: the same text on every machine). */
   cwd?: string;
+  /** The MCP config the entry was read from, as `configLabel` gives it. */
+  config?: string;
+  /** Loader variables (LOADER_ENV) the program inherits from the Shield's own environment. */
+  inherited?: Readonly<Record<string, string>>;
 };
 
 /** Environment variables that change how a program is loaded or what code runs first. */
 export const LOADER_ENV = /^(NODE_OPTIONS|LD_PRELOAD|LD_LIBRARY_PATH|LD_AUDIT|DYLD_[A-Z_]+|PYTHONPATH|PYTHONSTARTUP|PYTHONHOME|RUBYOPT|RUBYLIB|PERL5OPT|PERL5LIB|JAVA_TOOL_OPTIONS|_JAVA_OPTIONS|JDK_JAVA_OPTIONS|BASH_ENV|ENV)$/i;
 
-/** The keys of an entry's env that change how its program loads (EX-025), sorted. */
+/** The keys of an env that change how a program loads (EX-025), sorted. */
 export function loaderEnvKeys(env: Readonly<Record<string, unknown>> | undefined): string[] {
   return Object.keys(env ?? {}).filter((k) => LOADER_ENV.test(k)).sort();
 }
 
-/** The `env` and `cwd` of a server entry in an MCP config, as the launch pin reads them. Anything else is ignored. */
-export function launchEntryOf(entry: unknown): LaunchEntry {
-  if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) return {};
+export type LaunchEntryResult = { ok: true; entry: LaunchEntry } | { ok: false; error: string };
+
+/**
+ * The `env` and `cwd` of a server entry in an MCP config, as the launch pin
+ * reads them. Fail closed: an entry that is missing, or whose `env` or `cwd`
+ * is not plain text, is an error, never a guess. (A client passes a number or
+ * an object in `env` to the program as text, so dropping it would leave that
+ * variable out of the pin.)
+ */
+export function launchEntryOf(entry: unknown): LaunchEntryResult {
+  if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) return { ok: false, error: 'the server is not in the MCP config' };
   const e = entry as Record<string, unknown>;
   const out: LaunchEntry = {};
   const env = e['env'];
-  if (env !== null && typeof env === 'object' && !Array.isArray(env)) {
-    out.env = Object.fromEntries(Object.entries(env as Record<string, unknown>).filter((kv): kv is [string, string] => typeof kv[1] === 'string'));
+  if (env !== undefined) {
+    if (env === null || typeof env !== 'object' || Array.isArray(env)) return { ok: false, error: 'its "env" is not an object of text values' };
+    const bad = Object.entries(env as Record<string, unknown>).find(([, v]) => typeof v !== 'string');
+    if (bad) return { ok: false, error: `its env value for ${JSON.stringify(bad[0])} is not text (${bad[1] === null ? 'null' : typeof bad[1]})` };
+    out.env = env as Record<string, string>;
   }
-  if (typeof e['cwd'] === 'string') out.cwd = e['cwd'];
-  return out;
+  const cwd = e['cwd'];
+  if (cwd !== undefined) {
+    if (typeof cwd !== 'string') return { ok: false, error: 'its "cwd" is not text' };
+    out.cwd = cwd;
+  }
+  return { ok: true, entry: out };
+}
+
+/**
+ * Folders that mark a project root for `configLabel`. Not `.exorcist`: the
+ * Shield creates that folder itself, so the label would change after the
+ * first run.
+ */
+const PROJECT_MARKERS = ['.git', '.kiro'];
+
+/**
+ * How the launch pin names an MCP config: its path from the project root (the
+ * nearest folder above it with .git or .kiro), so the same config
+ * gives the same pin on every machine and from any working folder; the
+ * absolute path when it is in no project.
+ */
+export function configLabel(configPath: string): string {
+  const abs = resolve(configPath);
+  const { root } = parsePath(abs);
+  for (let dir = dirname(abs); ; dir = dirname(dir)) {
+    if (PROJECT_MARKERS.some((m) => existsSync(join(dir, m)))) return relative(dir, abs).split(sep).join('/');
+    if (dir === root || dirname(dir) === dir) return abs;
+  }
 }
 
 export function launchFingerprint(command: string, args: readonly string[], cwd: string, reader: FileReader = fsReader, entry: LaunchEntry = {}): LaunchPin {
@@ -132,10 +174,15 @@ export function launchFingerprint(command: string, args: readonly string[], cwd:
   // Values are hashed (they often hold tokens); keys are sorted, so the order
   // they were written in does not matter. An entry with neither gives the
   // same parts as before they were pinned.
+  const key = (k: string): string => JSON.stringify(k).slice(1, -1);
+  if (entry.config !== undefined) parts.push(`config ${entry.config}`);
   if (entry.cwd !== undefined) parts.push(`cwd ${entry.cwd}`);
   for (const k of Object.keys(entry.env ?? {}).sort()) {
     const v = (entry.env as Record<string, string>)[k] as string;
-    parts.push(`env ${JSON.stringify(k).slice(1, -1)} sha256:${sha256(v).slice(0, 16)}${LOADER_ENV.test(k) ? ' (changes how the program loads)' : ''}`);
+    parts.push(`env ${key(k)} sha256:${sha256(v).slice(0, 16)}${LOADER_ENV.test(k) ? ' (changes how the program loads)' : ''}`);
+  }
+  for (const k of Object.keys(entry.inherited ?? {}).sort()) {
+    parts.push(`inherited env ${key(k)} sha256:${sha256((entry.inherited as Record<string, string>)[k] as string).slice(0, 16)} (changes how the program loads)`);
   }
   return { hash: sha256(parts.join('\n')), parts };
 }

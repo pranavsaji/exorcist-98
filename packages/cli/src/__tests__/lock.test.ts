@@ -11,7 +11,7 @@ import { PassThrough } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 import { pathToFileURL } from 'node:url';
 import {
-  alertsPath, buildLock, emptyState, launchFingerprint, parseLock, runProxy, saveState, serializeLock, serverState, statePath,
+  alertsPath, buildLock, configLabel, emptyState, launchFingerprint, parseLock, runProxy, saveState, serializeLock, serverState, statePath,
   toolFingerprint, wrapConfig,
 } from '@exorcist-98/shield';
 import { lockCommand, printable, serverEnv } from '../commands/lock.js';
@@ -208,7 +208,9 @@ describe('exorcist lock and the Shield agree', () => {
     const stdout = new PassThrough();
     const stderr = new PassThrough();
     let out = '';
+    let errText = '';
     stdout.on('data', (c: Buffer) => { out += c.toString(); });
+    stderr.on('data', (c: Buffer) => { errText += c.toString(); });
     const done = runProxy({
       // The config tells the Shield the entry's env, which is part of the program pin (as in the lock).
       server: 'notes', command: process.execPath, args: [FAKE], dir, definitionsDir: DEFS, lockPath: p.lock, configPath: p.config,
@@ -219,7 +221,7 @@ describe('exorcist lock and the Shield agree', () => {
     const deadline = Date.now() + 30_000;
     while (!out.includes('"id":2') && Date.now() < deadline) await new Promise((r) => setTimeout(r, 25));
     stdin.end();
-    expect(await done).toBe(0);
+    expect(await done, errText).toBe(0);
     const list = out.split('\n').filter(Boolean).map((l) => JSON.parse(l) as { id?: number; result?: { tools?: Array<{ name: string }> } }).find((m) => m.id === 2);
     expect(list?.result?.tools?.map((t) => t.name)).toEqual(['read_note', 'send_report']);
     // Same tool and program fingerprints: no rug pull, no changed program.
@@ -236,7 +238,7 @@ describe('exorcist lock --check --static: starts nothing (safe for pull requests
     // Each "server" would leave a marker file behind if it were ever started.
     const marker = (f: string) => ['-e', `require('fs').writeFileSync(${JSON.stringify(f)}, 'ran')`];
     const locked = buildLock([
-      { name: 'notes', launch: launchFingerprint(process.execPath, marker(ranOld), process.cwd()).hash, tools: [{ name: 'read_note', description: 'Read a note by name.' }] },
+      { name: 'notes', launch: launchFingerprint(process.execPath, marker(ranOld), process.cwd(), undefined, { config: configLabel(p.config) }).hash, tools: [{ name: 'read_note', description: 'Read a note by name.' }] },
       { name: 'docs', url: 'https://mcp.example.invalid/v1/mcp', note: 'remote', tools: [] },
     ]);
     writeFileSync(p.lock, serializeLock(locked));
@@ -268,7 +270,7 @@ describe('exorcist lock --check --static: starts nothing (safe for pull requests
     const ran = join(p.root, 'ran');
     const args = ['-e', `require('fs').writeFileSync(${JSON.stringify(ran)}, 'ran')`];
     const entry = { command: process.execPath, args, env: { NOTES_DIR: '/tmp/notes' } };
-    writeFileSync(p.lock, serializeLock(buildLock([{ name: 'notes', launch: launchFingerprint(process.execPath, args, process.cwd(), undefined, { env: entry.env }).hash, tools: [] }])));
+    writeFileSync(p.lock, serializeLock(buildLock([{ name: 'notes', launch: launchFingerprint(process.execPath, args, process.cwd(), undefined, { env: entry.env, config: configLabel(p.config) }).hash, tools: [] }])));
     p.writeConfig({ notes: entry });
     const same = await p.run('--check', '--static');
     expect(same.code).toBe(0);
@@ -281,6 +283,14 @@ describe('exorcist lock --check --static: starts nothing (safe for pull requests
     expect(evil.out).toContain('HIGH EX-025: "notes" sets NODE_OPTIONS');
     expect(existsSync(ran)).toBe(false);
   }, SLOW);
+
+  it('an env value that is not text makes the entry invalid (exit 2), instead of being left out of the pin', async () => {
+    const p = project({ notes: { command: process.execPath, args: [FAKE], env: { RETRIES: 3 } } });
+    writeFileSync(p.lock, serializeLock(buildLock([])));
+    const r = await p.run('--check', '--static');
+    expect(r.code).toBe(2);
+    expect(r.err).toContain('"notes"');
+  });
 
   it('only works with --check, and not with --from-shield', async () => {
     const p = project({});

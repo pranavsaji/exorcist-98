@@ -20,7 +20,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { z } from 'zod';
 import {
-  buildLock, diffLock, launchEntryOf, launchFingerprint, loadState, loaderEnvKeys, lockUrl, parseLock, pinsToLock, serializeLock, statePath, unwrapConfig,
+  buildLock, configLabel, diffLock, launchEntryOf, launchFingerprint, loadState, loaderEnvKeys, lockUrl, parseLock, pinsToLock, serializeLock, statePath, unwrapConfig,
   LOCK_FILE,
 } from '@exorcist-98/shield';
 import type { Lock, LockChange, LockServer, ServerListing, ToolDef } from '@exorcist-98/shield';
@@ -189,7 +189,7 @@ export function serverEnv(base: NodeJS.ProcessEnv, entryEnv: Record<string, stri
  */
 export async function collectListings(
   config: Config,
-  o: { timeoutMs: number; cwd: string; previous?: Lock; list?: typeof listTools; static?: boolean },
+  o: { timeoutMs: number; cwd: string; previous?: Lock; list?: typeof listTools; static?: boolean; configPath?: string },
 ): Promise<CollectResult> {
   const list = o.list ?? listTools;
   const listings: ServerListing[] = [];
@@ -217,6 +217,10 @@ export async function collectListings(
     }
     if (entry.command === undefined) { errors.push(`"${name}" has neither a "command" nor a "url".`); continue; }
     const command = entry.command;
+    // The same view of the entry the Shield pins (env, cwd and which config it is in).
+    const launchEntry = launchEntryOf(entry);
+    if (!launchEntry.ok) { errors.push(`"${name}": ${launchEntry.error}.`); continue; }
+    const pinEntry = { ...launchEntry.entry, ...(o.configPath ? { config: configLabel(o.configPath) } : {}) };
     const loaders = loaderEnvKeys(entry.env);
     if (loaders.length > 0) {
       warnings.push(`HIGH EX-025: "${name}" sets ${loaders.join(', ')} in its env, which changes how its program loads ` +
@@ -225,14 +229,14 @@ export async function collectListings(
     const cwd = entry.cwd === undefined ? o.cwd : isAbsolute(entry.cwd) ? entry.cwd : resolve(o.cwd, entry.cwd);
     if (o.static) {
       const old = o.previous && Object.hasOwn(o.previous.servers, name) ? o.previous.servers[name] : undefined;
-      kept.push([name, { launch: launchFingerprint(command, entry.args, cwd, undefined, launchEntryOf(entry)).hash, tools: old?.tools ?? {} }]);
+      kept.push([name, { launch: launchFingerprint(command, entry.args, cwd, undefined, pinEntry).hash, tools: old?.tools ?? {} }]);
       continue;
     }
     jobs.push((async () => {
       const r = await list({ command, args: entry.args, env: serverEnv(process.env, entry.env), cwd, timeoutMs: o.timeoutMs });
       if (!r.ok) { errors.push(`Could not list the tools of "${name}": ${r.error}`); return; }
       // The same fingerprint the Shield pins before it starts the server (S-006).
-      listings.push({ name, launch: launchFingerprint(command, entry.args, cwd, undefined, launchEntryOf(entry)).hash, tools: r.tools });
+      listings.push({ name, launch: launchFingerprint(command, entry.args, cwd, undefined, pinEntry).hash, tools: r.tools });
     })());
   }
   await Promise.all(jobs);
@@ -309,7 +313,7 @@ export async function lockCommand(argv: string[], io: Io): Promise<number> {
     if (!existsSync(configPath)) { io.err(`MCP config not found: ${configPath}. Pass --config <file>, or --from-shield.`); return 2; }
     const cfg = readConfig(configPath);
     if (!cfg.ok) { io.err(cfg.error); return 2; }
-    const r = await collectListings(cfg.config, { timeoutMs, cwd: process.cwd(), static: isStatic, ...(previous ? { previous } : {}) });
+    const r = await collectListings(cfg.config, { timeoutMs, cwd: process.cwd(), static: isStatic, configPath, ...(previous ? { previous } : {}) });
     if (!r.ok) {
       for (const e of r.errors) io.err(printable(e));
       io.err(checking ? `Could not check ${lockPath}.` : `${lockPath} was not written.`);

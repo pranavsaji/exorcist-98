@@ -14,8 +14,8 @@ import type { LockExpectations } from './lockfile.js';
 import { alertsPath, appendAlert, loadState, policyPath, saveState, serverState, statePath, vaultPath } from './state.js';
 import type { Alert, ServerState, State } from './state.js';
 import { quarantineServer } from './vault.js';
-import { checkLaunch, launchEntryOf, launchFingerprint, packageSpec, specIsPinned } from './launch.js';
-import type { LaunchCheck, LaunchEntry, LaunchPin } from './launch.js';
+import { checkLaunch, configLabel, launchEntryOf, launchFingerprint, loaderEnvKeys, packageSpec, specIsPinned } from './launch.js';
+import type { LaunchCheck, LaunchEntry, LaunchEntryResult, LaunchPin } from './launch.js';
 import { AiReview } from './ai-review.js';
 import type { AiJudge } from './ai-review.js';
 import { throttle } from './notify.js';
@@ -61,7 +61,7 @@ export type ShieldSetupOptions = {
   pollMs?: number;
   notify?: Notifier;
   /** The local server's program, pinned before it starts (S-006). Remote servers have none. */
-  launch?: { command: string; args: string[]; cwd: string };
+  launch?: { command: string; args: string[]; cwd: string; env?: NodeJS.ProcessEnv };
   /** The AI judge for `aiReview: true`; defaults to Amazon Bedrock. Tests pass a fake. */
   aiJudge?: AiJudge;
   /**
@@ -151,7 +151,48 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
   if (o.launch && policy.policy.launchPin !== 'off') {
     const { command, args, cwd } = o.launch;
     const s = serverState(first.state, o.server);
-    const live = launchFingerprint(command, args, cwd, undefined, configEntry(o.configPath, o.server, log));
+    const blocking = policy.policy.launchPin === 'block' && policy.policy.mode === 'enforce';
+    /** Raise EX-010; returns the exit code when the policy holds the server. */
+    const hold = (problem: string, advice: string, detail?: string): number | undefined => {
+      launchAlerts.push({
+        time: new Date().toISOString(), server: o.server, ruleId: 'EX-010', severity: 'high',
+        message: `${problem} ${blocking ? 'It was not started.' : 'It was started anyway (policy).'} ${advice}`,
+        ...(detail ? { detail } : {}),
+      });
+      if (!blocking) return undefined;
+      for (const a of launchAlerts) recordLaunchAlert(a);
+      return FAIL_CLOSED_EXIT;
+    };
+
+    // The entry's env and cwd, from the MCP config this Shield was given.
+    // Fail closed: a config that cannot be read, or that does not hold this
+    // server, means the pin cannot cover what the program really gets.
+    const entry: LaunchEntry = {};
+    if (o.configPath) {
+      const r = readConfigEntry(o.configPath, o.server);
+      if (!r.ok) {
+        const code = hold(`Could not check the program behind "${o.server}": ${r.error} (${o.configPath}).`, 'Fix the MCP config, then restart the server.');
+        if (code !== undefined) return code;
+      } else {
+        Object.assign(entry, r.entry, { config: configLabel(o.configPath) });
+      }
+    }
+    // What the program really inherits, by whatever route it got there: a
+    // loader variable in this process's environment (NODE_OPTIONS would also
+    // change how this Node-based Shield runs) or in the child's.
+    const childEnv = o.launch.env ?? process.env;
+    const loaders = [...new Set([...loaderEnvKeys(process.env), ...loaderEnvKeys(childEnv)])].sort();
+    if (loaders.length > 0) {
+      const code = hold(
+        `The environment of "${o.server}" sets ${loaders.join(', ')}, which changes how programs load (EX-025): it can run code of its choosing ` +
+        `before the server${loaders.some((k) => /^NODE_OPTIONS$/i.test(k)) ? ', and before this Shield,' : ''} starts.`,
+        `Remove ${loaders.length === 1 ? 'it' : 'them'} from the environment and from the server's "env" in the MCP config, or set "launchPin": "warn" in the policy to start anyway.`,
+      );
+      if (code !== undefined) return code;
+      entry.inherited = Object.fromEntries(loaders.map((k) => [k, childEnv[k] ?? process.env[k] ?? '']));
+    }
+
+    const live = launchFingerprint(command, args, cwd, undefined, entry);
     // Never pinned here, and not the program recorded in exorcist.lock: hold
     // it as a changed program, so `exorcist approve server` is the way in.
     const check = !s.launch && lockLaunch !== undefined && live.hash !== lockLaunch
@@ -162,17 +203,12 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
     }
     if (check.result === 'pinned') log(`Pinned the program behind "${o.server}".`);
     if (check.result === 'changed') {
-      const blocking = policy.policy.launchPin === 'block' && policy.policy.mode === 'enforce';
-      launchAlerts.push({
-        time: new Date().toISOString(), server: o.server, ruleId: 'EX-010', severity: 'high',
-        message: `The program behind "${o.server}" changed since it was ${s.launch ? 'pinned' : 'recorded in exorcist.lock'}. ${blocking ? 'It was not started.' : 'It was started anyway (policy).'} ` +
-          `Check the change, then run: exorcist approve server ${o.server}`,
-        detail: [...check.removed.map((l) => `- ${l}`), ...check.added.map((l) => `+ ${l}`)].join('\n'),
-      });
-      if (blocking) {
-        for (const a of launchAlerts) recordLaunchAlert(a);
-        return FAIL_CLOSED_EXIT;
-      }
+      const code = hold(
+        `The program behind "${o.server}" changed since it was ${s.launch ? 'pinned' : 'recorded in exorcist.lock'}.`,
+        `Check the change, then run: exorcist approve server ${o.server}`,
+        [...check.removed.map((l) => `- ${l}`), ...check.added.map((l) => `+ ${l}`)].join('\n'),
+      );
+      if (code !== undefined) return code;
     }
     const spec = packageSpec(command, args);
     if (spec && !specIsPinned(spec)) {
@@ -276,20 +312,20 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
 /**
  * The `env` and `cwd` this server's entry sets in the MCP config, for the
  * launch pin. The MCP client applies them to this process, so only the config
- * says which variables are the entry's own. Without a config (a hand-written
- * `exorcist shield -- ...`) there is nothing to read.
+ * says which variables are the entry's own. Fail closed: unreadable JSON, a
+ * config without this server, or an env value that is not text is an error.
  */
-function configEntry(configPath: string | undefined, server: string, log: (s: string) => void): LaunchEntry {
-  if (!configPath) return {};
+function readConfigEntry(configPath: string, server: string): LaunchEntryResult {
+  let json: unknown;
   try {
-    const json = JSON.parse(readFileSync(configPath, 'utf8')) as { mcpServers?: Record<string, unknown> } | null;
-    const servers = json && typeof json === 'object' ? json.mcpServers : undefined;
-    const entry = servers && typeof servers === 'object' && Object.hasOwn(servers, server) ? servers[server] : undefined;
-    return launchEntryOf(entry);
+    json = JSON.parse(readFileSync(configPath, 'utf8'));
   } catch {
-    log(`Could not read ${configPath} for the env and cwd of "${server}"; the program pin covers the command and arguments only.`);
-    return {};
+    return { ok: false, error: 'the MCP config could not be read as JSON' };
   }
+  const servers = json !== null && typeof json === 'object' ? (json as { mcpServers?: unknown }).mcpServers : undefined;
+  if (servers === null || typeof servers !== 'object' || !Object.hasOwn(servers, server)) return { ok: false, error: 'the server is not in the MCP config' };
+  const r = launchEntryOf((servers as Record<string, unknown>)[server]);
+  return r.ok ? r : { ok: false, error: `its entry in the MCP config is not valid: ${r.error}` };
 }
 
 /** A program never pinned here that differs from exorcist.lock: held like a changed program (m5). */
@@ -331,7 +367,7 @@ export async function runProxy(o: ProxyOptions): Promise<number> {
   const stdin = o.stdin ?? process.stdin;
   const stdout = o.stdout ?? process.stdout;
   const stderr = o.stderr ?? process.stderr;
-  const prepared = await prepareShield({ ...o, stderr, launch: { command: o.command, args: o.args, cwd: o.cwd ?? process.cwd() } });
+  const prepared = await prepareShield({ ...o, stderr, launch: { command: o.command, args: o.args, cwd: o.cwd ?? process.cwd(), env: o.env ?? process.env } });
   if (typeof prepared === 'number') return prepared;
   const { engine, log, handle } = prepared;
 

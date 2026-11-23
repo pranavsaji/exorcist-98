@@ -68,6 +68,31 @@ Decisions made while finishing the spec, where it left room or was silent.
   `launchPin: block` the server is not started until
   `exorcist approve server <name>`). That is accepted: the old pin did not
   cover what it now covers.
+- **The launch env pin fails closed.** (Security review on 9d8afad.)
+  - When the Shield is given `--config` and the file cannot be read, does
+    not list the server, or the entry's `env` holds a value that is not text
+    (a client passes numbers and objects to the program as text, so dropping
+    them would leave them out of the pin), the server is held (EX-010) instead
+    of being pinned on command and arguments alone. `exorcist lock` treats
+    such an entry as invalid (exit 2).
+  - The pin also covers what the program really inherits: any loader
+    variable (the EX-025 list) in the Shield's own environment or in the
+    child's is hashed into the pin, whatever route it came by.
+  - A loader variable present at all refuses the start, naming it
+    (NODE_OPTIONS would also change how the Node-based Shield runs). Like a
+    changed program, the hold follows the launch policy: `launchPin: block`
+    (the default) in enforce mode holds the server; `launchPin: warn` or
+    monitor mode starts it with the alert, and then a new value of that
+    variable is a changed program. That is the way out for a machine where,
+    say, PYTHONPATH is set for everything.
+  - The config the entry was read from is part of the pin, named by its path
+    from the project root (the nearest folder with `.git` or `.kiro`; not
+    `.exorcist`, which the Shield creates itself), so the pin is the same on
+    every machine and `exorcist lock` computes the same label. Pointing
+    `--config` at another file changes the pin.
+  - One-time cost, accepted: every server started with `--config` (all
+    servers `exorcist wrap` set up) gets a new program fingerprint and is held
+    once ("program changed", EX-010) until `exorcist approve server <name>`.
 - **EX-025: env that changes how a program loads.** `exorcist scan` reports
   (high) any MCP server `env` key among NODE_OPTIONS, LD_PRELOAD,
   LD_LIBRARY_PATH, LD_AUDIT, DYLD_*, PYTHONPATH, PYTHONSTARTUP, PYTHONHOME,

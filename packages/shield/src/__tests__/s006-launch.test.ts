@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { PassThrough } from 'node:stream';
 import { fileURLToPath } from 'node:url';
-import { checkLaunch, launchFingerprint, packageSpec, specIsPinned } from '../launch.js';
+import { checkLaunch, configLabel, launchEntryOf, launchFingerprint, packageSpec, specIsPinned } from '../launch.js';
 import type { FileReader } from '../launch.js';
 import { runProxy, FAIL_CLOSED_EXIT } from '../proxy.js';
 import { alertsPath, approveServer, emptyState, loadState, saveState, serverState, statePath } from '../state.js';
@@ -108,6 +108,31 @@ describe('launch fingerprint: the entry\'s env and cwd (m5-lockfile)', () => {
   });
 });
 
+describe('launch entry and config label (fail closed)', () => {
+  it('an env value that is not text, or a cwd that is not text, makes the entry invalid', () => {
+    expect(launchEntryOf({ command: 'node', env: { A: 'x' }, cwd: 'sub' })).toEqual({ ok: true, entry: { env: { A: 'x' }, cwd: 'sub' } });
+    expect(launchEntryOf({ command: 'node' })).toEqual({ ok: true, entry: {} });
+    for (const bad of [{ env: { RETRIES: 3 } }, { env: { FLAG: true } }, { env: { O: { a: 1 } } }, { env: { N: null } }, { env: ['A=1'] }, { env: 'A=1' }, { cwd: 7 }]) {
+      expect(launchEntryOf({ command: 'node', ...bad }).ok, JSON.stringify(bad)).toBe(false);
+    }
+    expect(launchEntryOf(undefined).ok).toBe(false);
+  });
+  it('names a config by its path in the project, so every machine gives the same pin', () => {
+    const a = tmp();
+    const b = tmp();
+    for (const root of [a, b]) mkdirSync(join(root, 'proj', '.kiro', 'settings'), { recursive: true });
+    expect(configLabel(join(a, 'proj', '.kiro', 'settings', 'mcp.json'))).toBe('.kiro/settings/mcp.json');
+    expect(configLabel(join(b, 'proj', '.kiro', 'settings', 'mcp.json'))).toBe('.kiro/settings/mcp.json');
+    // A .exorcist folder (created by the Shield on its first run) does not move the label.
+    const c = tmp();
+    const before = configLabel(join(c, 'mcp.json'));
+    mkdirSync(join(c, '.exorcist'));
+    expect(configLabel(join(c, 'mcp.json'))).toBe(before);
+    expect(launchFingerprint('node', [], '/w', memReader({}), { config: '.kiro/settings/mcp.json' }).hash)
+      .not.toBe(launchFingerprint('node', [], '/w', memReader({}), { config: 'other/mcp.json' }).hash);
+  });
+});
+
 describe('checkLaunch and approve server', () => {
   it('pins on first start, passes the same program, holds a changed one until approved', () => {
     const state = emptyState();
@@ -132,7 +157,7 @@ describe('checkLaunch and approve server', () => {
 });
 
 /** Start the real proxy on a copy of the fake server, send initialize and tools/list, then close. */
-async function startOnce(root: string, policy?: object, configPath?: string): Promise<{ code: number; err: string; listed: boolean }> {
+async function startOnce(root: string, policy?: object, configPath?: string, extraEnv: Record<string, string> = {}): Promise<{ code: number; err: string; listed: boolean }> {
   const dir = join(root, '.exorcist');
   if (policy) { mkdirSync(dir, { recursive: true }); writeFileSync(join(dir, 'policy.json'), JSON.stringify(policy)); }
   const stdin = new PassThrough();
@@ -145,7 +170,7 @@ async function startOnce(root: string, policy?: object, configPath?: string): Pr
   const done = runProxy({
     server: 'notes', command: process.execPath, args: ['server.mjs'], cwd: root, dir, definitionsDir: DEFS, pollMs: 50,
     ...(configPath ? { configPath } : {}),
-    env: { ...process.env, FAKE_MCP_CONTROL: join(root, 'control.json'), FAKE_MCP_LOG: join(root, 'calls.log') },
+    env: { ...process.env, FAKE_MCP_CONTROL: join(root, 'control.json'), FAKE_MCP_LOG: join(root, 'calls.log'), ...extraEnv },
     stdin, stdout, stderr,
   });
   stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' })}\n`);
@@ -206,6 +231,80 @@ describe('the proxy with a launch pin', () => {
     expect(alerts).toContain('+ env NODE_OPTIONS sha256:');
     expect(alerts).not.toContain('evil.js');
   }, 30_000);
+
+  describe('fail closed on what the program really gets (m5-lockfile)', () => {
+    const entryConfig = (root: string, entry: object, name = 'notes'): string => {
+      const config = join(root, 'mcp.json');
+      writeFileSync(config, JSON.stringify({ mcpServers: { [name]: { command: 'exorcist', args: ['shield', '--server', name, '--config', config, '--', 'node', 'server.mjs'], ...entry } } }));
+      return config;
+    };
+    const alertsOf = (root: string): string => (existsSync(alertsPath(join(root, '.exorcist'))) ? readFileSync(alertsPath(join(root, '.exorcist')), 'utf8') : '');
+
+    it('holds the server when --config cannot be read, does not list it, or has an env value that is not text', async () => {
+      for (const [label, write] of [
+        ['unreadable', (root: string) => { const c = join(root, 'mcp.json'); writeFileSync(c, '{ not json'); return c; }],
+        ['missing file', (root: string) => join(root, 'no-such-mcp.json')],
+        ['server not listed', (root: string) => entryConfig(root, {}, 'someone-else')],
+        ['env value is a number', (root: string) => entryConfig(root, { env: { RETRIES: 3 } })],
+      ] as const) {
+        const root = tmp();
+        copyFileSync(FAKE, join(root, 'server.mjs'));
+        const r = await startOnce(root, undefined, write(root));
+        expect(r.code, label).toBe(FAIL_CLOSED_EXIT);
+        expect(r.listed, label).toBe(false);
+        expect(alertsOf(root), label).toContain('Could not check the program behind');
+        expect(existsSync(join(root, 'calls.log')) ? readFileSync(join(root, 'calls.log'), 'utf8') : '', label).toBe('');
+      }
+    }, 60_000);
+
+    it('refuses to start when a loader variable reaches the program by any route, naming it', async () => {
+      // In the environment the child gets (for example applied by the MCP client from the entry's env).
+      const root = tmp();
+      copyFileSync(FAKE, join(root, 'server.mjs'));
+      const viaChild = await startOnce(root, undefined, entryConfig(root, {}), { NODE_OPTIONS: '--require ./evil.js' });
+      expect(viaChild.code).toBe(FAIL_CLOSED_EXIT);
+      expect(viaChild.listed).toBe(false);
+      expect(alertsOf(root)).toContain('sets NODE_OPTIONS');
+      expect(alertsOf(root)).toContain('and before this Shield');
+
+      // In the Shield's own environment.
+      const other = tmp();
+      copyFileSync(FAKE, join(other, 'server.mjs'));
+      const saved = process.env['PYTHONSTARTUP'];
+      process.env['PYTHONSTARTUP'] = join(other, 'start.py');
+      try {
+        const own = await startOnce(other, undefined, entryConfig(other, {}));
+        expect(own.code).toBe(FAIL_CLOSED_EXIT);
+        expect(alertsOf(other)).toContain('sets PYTHONSTARTUP');
+      } finally {
+        if (saved === undefined) delete process.env['PYTHONSTARTUP']; else process.env['PYTHONSTARTUP'] = saved;
+      }
+    }, 60_000);
+
+    it('with launchPin "warn" it starts, but the inherited loader variable is pinned: a new value is a changed program', async () => {
+      const root = tmp();
+      copyFileSync(FAKE, join(root, 'server.mjs'));
+      const config = entryConfig(root, {});
+      const first = await startOnce(root, { launchPin: 'warn' }, config, { RUBYOPT: '-r./one' });
+      expect(first.listed).toBe(true);
+      const pin = loadState(statePath(join(root, '.exorcist')));
+      expect(pin.ok && pin.state.servers['notes']?.launch?.parts).toContainEqual(expect.stringMatching(/^inherited env RUBYOPT sha256:/));
+      const again = await startOnce(root, { launchPin: 'warn' }, config, { RUBYOPT: '-r./two' });
+      expect(again.err).toContain('changed since it was pinned');
+    }, 60_000);
+
+    it('the resolved --config path is part of the pin: the same entry in another config is a changed program', async () => {
+      const root = tmp();
+      copyFileSync(FAKE, join(root, 'server.mjs'));
+      mkdirSync(join(root, 'elsewhere'));
+      expect((await startOnce(root, undefined, entryConfig(root, {}))).listed).toBe(true);
+      const moved = join(root, 'elsewhere', 'mcp.json');
+      copyFileSync(join(root, 'mcp.json'), moved);
+      const r = await startOnce(root, undefined, moved);
+      expect(r.code).toBe(FAIL_CLOSED_EXIT);
+      expect(alertsOf(root)).toMatch(/\+ config \S*elsewhere\/mcp\.json/);
+    }, 60_000);
+  });
 
   it('policy launchPin "warn" starts a changed server with an alert; "off" pins nothing', async () => {
     const root = tmp();
