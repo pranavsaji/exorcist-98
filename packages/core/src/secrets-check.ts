@@ -71,7 +71,25 @@ export function lineOf(text: string, offset: number): number {
   return line;
 }
 
-export type StagedHit = { file: string; line: number; pattern: SecretPattern; redacted: string };
+/**
+ * A PEM private key with real key material after its header: base64 of at
+ * least 40 characters (an Ed25519 PKCS#8 key is 64). Defanged samples whose
+ * body was removed ("(key body removed)") do not match. Newlines may be real
+ * or escaped (`\n`, as in .env files and JSON). Used by the staged-file
+ * check only, so a LiveUpdate signing key cannot be committed (m5-liveupdate).
+ */
+const PRIVATE_KEY_BLOCK_RE = /-{5}BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-{5}(?:\r?\n|(?:\\r)?\\n)(?:[A-Za-z-]+:[^\n]*(?:\r?\n|\\n))*(?:\r?\n|\\n)?[A-Za-z0-9+/=]{40,}/g;
+
+/** Offsets of PEM private keys with key material in `text`. */
+export function findPrivateKeyBlocks(text: string): number[] {
+  PRIVATE_KEY_BLOCK_RE.lastIndex = 0;
+  const out: number[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = PRIVATE_KEY_BLOCK_RE.exec(text)) !== null) out.push(m.index);
+  return out;
+}
+
+export type StagedHit = { file: string; line: number; pattern: SecretPattern | 'private-key'; redacted: string };
 export type StagedResult =
   | { ok: true; hits: StagedHit[]; filesChecked: number }
   | { ok: false; error: string };
@@ -113,6 +131,9 @@ export function findStagedSecrets(cwd: string = process.cwd()): StagedResult {
     filesChecked++;
     for (const h of findSecrets(text)) {
       hits.push({ file: name, line: lineOf(text, h.offset), pattern: h.pattern, redacted: redact(h.match) });
+    }
+    for (const offset of findPrivateKeyBlocks(text)) {
+      hits.push({ file: name, line: lineOf(text, offset), pattern: 'private-key', redacted: 'PEM private key (key material not shown)' });
     }
   }
   return { ok: true, hits, filesChecked };

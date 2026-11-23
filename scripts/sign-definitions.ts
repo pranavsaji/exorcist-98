@@ -1,95 +1,123 @@
 /**
  * Build and sign a LiveUpdate definitions bundle (m5-liveupdate).
  *
- *   EXORCIST_SIGNING_KEY="<pkcs8 PEM>" pnpm exec tsx scripts/sign-definitions.ts \
- *       --version 20261201.1 --out dist/exorcist-definitions.tar
+ *   tsx scripts/sign-definitions.ts --version 20261201.1 --key ~/.exorcist-98/liveupdate-signing-key.pem
+ *       [--definitions definitions] [--out dist/exorcist-definitions-20261201.1.tar]
  *
- * The private key is read from the environment (EXORCIST_SIGNING_KEY) and is
- * never written to the repository. To create a key pair once:
+ * The Ed25519 private key (PKCS#8 PEM) comes from, in order: --key <path>,
+ * EXORCIST_SIGNING_KEY_FILE (a path), or EXORCIST_SIGNING_KEY (the PEM itself,
+ * `\n` escapes allowed). A key file inside this repository is refused, and the
+ * key is never printed or written anywhere by this script.
  *
- *   pnpm exec tsx scripts/sign-definitions.ts --generate-key
+ * To make a new key pair (only when rotating the key embedded in
+ * packages/core/src/liveupdate.ts):
  *
- * which prints a fresh private key (for the environment) and the public key
- * to embed in DEFAULT_PUBLIC_KEY (packages/core/src/liveupdate.ts) — or to set
- * in EXORCIST_DEFINITIONS_PUBLIC_KEY for clients.
+ *   tsx scripts/sign-definitions.ts --generate-key --key-out ~/.exorcist-98/liveupdate-signing-key.pem
  *
- * The bundle is an uncompressed tar of definitions/*.yaml, manifest.json and
- * manifest.sig (Ed25519 over the manifest bytes).
+ * which writes the private key to that path (mode 600, never overwriting) and
+ * prints only the public key and its fingerprint.
  */
-import { readdirSync, readFileSync, statSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { chmodSync, existsSync, mkdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
+import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { makeKeyPair, buildManifest, signManifest, buildTar, sha256, isValidVersion, DEFAULT_PUBLIC_KEY, trustedPublicKey } from '../packages/core/src/liveupdate.js';
-import type { BundleFile } from '../packages/core/src/liveupdate.js';
+import { parseArgs } from 'node:util';
+import {
+  DEFINITIONS_PUBLIC_KEY, buildSignedBundle, collectDefinitionFiles, isValidVersion, makeKeyPair, publicKeyFingerprint, sha256,
+} from '../packages/core/src/liveupdate.js';
 
-const here = dirname(fileURLToPath(import.meta.url));
-const ROOT = resolve(here, '..');
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-function arg(name: string): string | undefined {
-  const i = process.argv.indexOf(`--${name}`);
-  return i === -1 ? undefined : process.argv[i + 1];
+function die(msg: string, code = 2): never {
+  process.stderr.write(`${msg}\n`);
+  process.exit(code);
 }
 
-if (process.argv.includes('--generate-key')) {
+/** True when `p` (or the folder it would be created in) is inside this repository. */
+function insideRepo(p: string): boolean {
+  let real = resolve(p);
+  for (let d = real; ; d = dirname(d)) {
+    if (existsSync(d)) { real = resolve(realpathSync(d), relative(d, real)); break; }
+    if (dirname(d) === d) break;
+  }
+  const rel = relative(realpathSync(ROOT), real);
+  return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
+}
+
+const OPTIONS = {
+  'generate-key': { type: 'boolean' },
+  'key-out': { type: 'string' },
+  version: { type: 'string' },
+  key: { type: 'string' },
+  definitions: { type: 'string' },
+  out: { type: 'string' },
+} as const;
+
+function readArgs(): ReturnType<typeof parseArgs<{ options: typeof OPTIONS; strict: true }>>['values'] {
+  try {
+    return parseArgs({ options: OPTIONS, strict: true }).values;
+  } catch (e) {
+    return die((e as Error).message);
+  }
+}
+const args = readArgs();
+
+if (args['generate-key']) {
+  const out = args['key-out'];
+  if (!out) die('--generate-key needs --key-out <path> (outside this repository). The private key is never printed.');
+  const path = resolve(out);
+  if (insideRepo(path)) die(`Refusing to write a private key inside the repository (${path}).`);
+  if (existsSync(path)) die(`${path} already exists. Refusing to overwrite a key.`);
   const { privateKeyPem, publicKeyPem } = makeKeyPair();
-  console.log('Private key — keep this in your password manager / CI secret, set as EXORCIST_SIGNING_KEY:');
-  console.log(privateKeyPem);
-  console.log('Public key — embed as DEFAULT_PUBLIC_KEY (packages/core/src/liveupdate.ts) or set EXORCIST_DEFINITIONS_PUBLIC_KEY:');
-  console.log(publicKeyPem);
+  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+  writeFileSync(path, privateKeyPem, { mode: 0o600, flag: 'wx' });
+  chmodSync(path, 0o600);
+  process.stdout.write(`Private key written to ${path} (mode 600). Keep it there; never commit it.\n`);
+  process.stdout.write(`Public key (embed as DEFINITIONS_PUBLIC_KEY in packages/core/src/liveupdate.ts):\n${publicKeyPem}`);
+  process.stdout.write(`Fingerprint sha256(SPKI DER): ${publicKeyFingerprint(publicKeyPem) ?? '?'}\n`);
   process.exit(0);
 }
 
-const version = arg('version');
-const outArg = arg('out');
-const date = arg('date') ?? new Date().toISOString().slice(0, 10);
-const defsDir = resolve(ROOT, arg('definitions') ?? 'definitions');
+const version = args.version;
+if (!version) die('Usage: tsx scripts/sign-definitions.ts --version <YYYYMMDD.N> [--key <path>] [--definitions <dir>] [--out <file.tar>]');
+if (!isValidVersion(version)) die(`--version must look like 20261201.1, not "${version}".`);
 
-if (!version || !outArg) {
-  console.error('Usage: EXORCIST_SIGNING_KEY=<PEM> tsx scripts/sign-definitions.ts --version <YYYYMMDD.N> [--date <YYYY-MM-DD>] [--definitions <dir>] --out <file.tar>');
-  process.exit(2);
-}
-if (!isValidVersion(version)) {
-  console.error(`--version must look like 20261201.1, got "${version}".`);
-  process.exit(2);
-}
-
-// Accept the key either as real PEM (multiline in the environment) or as a
-// single-line value with \n escapes, so it fits .env files.
-const rawKey = process.env['EXORCIST_SIGNING_KEY'] ?? '';
-const privateKeyPem = rawKey.includes('\\n') ? rawKey.replace(/\\n/g, '\n') : rawKey;
-if (!privateKeyPem || !privateKeyPem.includes('PRIVATE KEY')) {
-  console.error('Set EXORCIST_SIGNING_KEY to the PKCS#8 private key (see --generate-key). It is never committed.');
-  process.exit(2);
-}
-
-if (!existsSync(defsDir) || !statSync(defsDir).isDirectory()) {
-  console.error(`No definitions folder at ${defsDir}.`);
-  process.exit(2);
+function readKey(): string {
+  const keyPath = args.key ?? process.env['EXORCIST_SIGNING_KEY_FILE'];
+  if (keyPath) {
+    const path = resolve(keyPath);
+    if (insideRepo(path)) die(`Refusing to use a private key stored inside the repository (${path}). Move it outside, for example ~/.exorcist-98/.`);
+    try {
+      const st = statSync(path);
+      if (process.platform !== 'win32' && (st.mode & 0o077) !== 0) {
+        process.stderr.write(`Warning: ${path} is readable by other users. Run: chmod 600 ${path}\n`);
+      }
+      return readFileSync(path, 'utf8');
+    } catch (e) {
+      die(`Could not read the signing key at ${path} (${(e as NodeJS.ErrnoException).code ?? 'error'}).`);
+    }
+  }
+  const raw = process.env['EXORCIST_SIGNING_KEY'];
+  if (raw) return raw.includes('\\n') ? raw.replace(/\\n/g, '\n') : raw;
+  return die('No signing key. Pass --key <path>, or set EXORCIST_SIGNING_KEY_FILE or EXORCIST_SIGNING_KEY.');
 }
 
-const names = readdirSync(defsDir).filter((f) => /^EX-\d{3}.*\.yaml$/.test(f)).sort();
-if (names.length === 0) {
-  console.error(`No definition YAML files in ${defsDir}.`);
-  process.exit(2);
-}
+const defsDir = resolve(ROOT, args.definitions ?? 'definitions');
+if (!existsSync(defsDir) || !statSync(defsDir).isDirectory()) die(`No definitions folder at ${defsDir}.`);
+const files = collectDefinitionFiles(defsDir);
+if (files.length === 0) die(`No EX-NNN-*.yaml definitions in ${defsDir}.`);
 
-const entries: BundleFile[] = names.map((name) => ({
-  path: `definitions/${name}`,
-  data: readFileSync(join(defsDir, name)),
-}));
+const built = buildSignedBundle({ files, version, privateKeyPem: readKey() });
+if (!built.ok) die(`Not signed: ${built.error}`, 1);
 
-const manifestJson = buildManifest(entries, version, date);
-const sig = signManifest(manifestJson, privateKeyPem);
-const tar = buildTar([
-  ...entries,
-  { path: 'manifest.json', data: Buffer.from(manifestJson, 'utf8') },
-  { path: 'manifest.sig', data: sig },
-]);
-
-const out = resolve(ROOT, outArg);
+const out = resolve(ROOT, args.out ?? `dist/exorcist-definitions-${version}.tar`);
 mkdirSync(dirname(out), { recursive: true });
-writeFileSync(out, tar);
+writeFileSync(out, built.tar);
 
-console.log(`Signed ${names.length} definitions as version ${version} (${date}) -> ${out}`);
-console.log(`Bundle: ${sha256(tar)}  ${tar.length} bytes`);
-console.log(`Trusted public key (default embedded):\n${trustedPublicKey({ EXORCIST_DEFINITIONS_PUBLIC_KEY: process.env['EXORCIST_DEFINITIONS_PUBLIC_KEY'] } as NodeJS.ProcessEnv) === DEFAULT_PUBLIC_KEY ? 'embedded key' : 'environment override'}`);
+const signer = publicKeyFingerprint(built.publicKeyPem) ?? '?';
+const trusted = publicKeyFingerprint(DEFINITIONS_PUBLIC_KEY) ?? '?';
+process.stdout.write(`Signed ${files.length} definitions as version ${version} (${built.manifest.date})\n`);
+process.stdout.write(`  ${out}\n  ${built.tar.length} bytes, sha256 ${sha256(built.tar)}\n`);
+process.stdout.write(`  Signing key sha256: ${signer}\n`);
+if (signer !== trusted) {
+  process.stderr.write(`Warning: this key is not the one built into Exorcist 98 (sha256 ${trusted}), so stock installs will refuse the bundle.\n`);
+}

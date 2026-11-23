@@ -14,7 +14,7 @@ export { toMarkdown } from './reporters/markdown-reporter.js';
 export { toBadgeSvg, badgeStatus } from './reporters/badge.js';
 export { loadDefinitions } from './definitions/loader.js';
 export { DefinitionLoadError } from './definitions/schema.js';
-export { findSecrets, findStagedSecrets, redact } from './secrets-check.js';
+export { findSecrets, findStagedSecrets, findPrivateKeyBlocks, redact } from './secrets-check.js';
 export {
   newToken, isCanaryToken, canariesPath, loadCanariesFile, findCanaryInText, base64Needles, lineColOf, maskToken, isCanaryHome,
   findStagedCanaries, CanariesFileSchema, CanaryRecordSchema, CANARY_PREFIX, CANARY_TOKEN_RE_SOURCE, CANARY_TRAP_DIR, CANARY_RECORDS_FILE,
@@ -44,12 +44,16 @@ export { SCANNER_VERSION } from './version.js';
 export { walkRepo, classifyFile } from './walker.js';
 export { readZip, DEFAULT_ZIP_LIMITS } from './remote/zip.js';
 export type { ZipLimits, ZipResult } from './remote/zip.js';
+export { BUNDLED_DEFINITIONS_VERSION, BUNDLED_DEFINITIONS_DATE } from './definitions/version.js';
 export {
-  DEFAULT_PUBLIC_KEY, BUNDLED_DEFINITIONS_VERSION, BUNDLED_DEFINITIONS_DATE,
-  DOWNLOAD_LIMIT_BYTES, DOWNLOAD_TIMEOUT_MS,
-  ManifestSchema, buildManifest, signManifest, buildTar, parseBundle, verifyBundle,
-  validateBundleDefinitions, installBundle, downloadBundle, makeKeyPair,
-  compareVersions, isValidVersion, sha256,
-  installedDefinitionsRoot, listInstalledSets, findNewestInstalledSet, verifyInstalledSet, activeVersion,
+  DEFINITIONS_PUBLIC_KEY, DOWNLOAD_LIMIT_BYTES, DOWNLOAD_TIMEOUT_MS, MANIFEST_NAME, SIGNATURE_NAME,
+  ManifestSchema, buildManifest, signManifest, buildTar, readBundleTar, checkBundle, validateDefinitionFiles,
+  buildSignedBundle, collectDefinitionFiles, makeKeyPair, loadPrivateKey, publicKeyFingerprint,
+  compareVersions, isValidVersion, versionDate, sha256,
+  installedDefinitionsRoot, verifyInstalledSet, inspectInstalledSets, listInstalledSets, findActiveInstalledSet,
+  activeDefinitions, installBundle, downloadBundle, readBundleFile, loadBundleSource, runLiveUpdate,
 } from './liveupdate.js';
-export type { Manifest, BundleFile, ParsedBundle, InstalledSet, LiveUpdateResult, FetchLike as UpdateFetchLike } from './liveupdate.js';
+export type {
+  Manifest, BundleFile, VerifiedBundle, InstalledSet, InspectedSet, ActiveDefinitions, LookupOptions,
+  FetchLike as UpdateFetchLike, FetchResponse as UpdateFetchResponse,
+} from './liveupdate.js';

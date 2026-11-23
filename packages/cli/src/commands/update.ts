@@ -1,109 +1,114 @@
-import { isAbsolute, resolve } from 'node:path';
 import {
-  DOWNLOAD_LIMIT_BYTES,
-  activeVersion,
-  downloadBundle,
-  installBundle,
+  BUNDLED_DEFINITIONS_DATE,
+  BUNDLED_DEFINITIONS_VERSION,
+  DEFINITIONS_PUBLIC_KEY,
+  activeDefinitions,
+  compareVersions,
+  inspectInstalledSets,
   installedDefinitionsRoot,
-  listInstalledSets,
-  trustedPublicKey,
-} from '@exorcist-98/core';import { parse, str } from '../util.js';
+  publicKeyFingerprint,
+  runLiveUpdate,
+} from '@exorcist-98/core';
+import type { UpdateFetchLike } from '@exorcist-98/core';
+import { parse, str } from '../util.js';
 import type { Io } from '../util.js';
 
-const UPDATE_HELP = `Usage: exorcist update [--from <url-or-file>] [--status]
+const UPDATE_HELP = `Usage: exorcist update [--from <https-url-or-file>]
+       exorcist update --status
 
-LiveUpdate: download a signed definitions bundle, verify it and install it.
+LiveUpdate: fetch a signed virus definitions bundle, verify it and install it.
 
 Options:
-  --from <url-or-file>   Where the bundle comes from: an https:// URL or a local
-                         .tar file. Default: EXORCIST_UPDATE_URL.
-  --status               Show which definitions set is active and what is
-                         installed; change nothing.
-  --home <dir>           Where installed sets live (default ~/.exorcist/definitions,
-                         or EXORCIST_DEFINITIONS_HOME).
+  --from <src>   An https:// URL or a local .tar file. Default: EXORCIST_UPDATE_URL.
+  --status       Show which definitions are active and what is installed.
 
-A bundle only installs when its Ed25519 signature, every file hash, every YAML
-definition and its version all check out. Any failure leaves the current
+A bundle installs only when its Ed25519 signature (checked against the key
+built into Exorcist 98), every file hash, every YAML definition and its
+version (newer than the definitions in use) all check out. Downloads are
+https only, at most 2 MB and 15 seconds. Sets go to ~/.exorcist/definitions/
+<version>/ (or EXORCIST_DEFINITIONS_HOME). Any failure leaves the current
 definitions untouched.
 `;
 
-export async function updateCommand(argv: string[], io: Io): Promise<number> {
-  const p = parse(argv, {
-    from: { type: 'string' }, status: { type: 'boolean' }, home: { type: 'string' }, help: { type: 'boolean', short: 'h' },
-  });
+/** Injected by tests; the real CLI always uses the embedded key and real fetch. */
+export type UpdateDeps = {
+  publicKeyPem?: string;
+  fetchImpl?: UpdateFetchLike;
+  env?: NodeJS.ProcessEnv;
+  cwd?: string;
+  timeoutMs?: number;
+};
+
+export async function updateCommand(argv: string[], io: Io, deps: UpdateDeps = {}): Promise<number> {
+  const p = parse(argv, { from: { type: 'string' }, status: { type: 'boolean' }, help: { type: 'boolean', short: 'h' } });
   if (!p.ok) { io.err(`${p.error}\n\n${UPDATE_HELP}`); return 2; }
   if (p.values['help']) { io.out(UPDATE_HELP); return 0; }
+  if (p.positionals.length > 0) { io.err(`Unexpected argument: ${p.positionals[0]}\n\n${UPDATE_HELP}`); return 2; }
 
-  const env = process.env;
-  const root = p.values['home'] !== undefined || env['EXORCIST_DEFINITIONS_HOME'] !== undefined
-    ? resolve(str(p.values['home']) ?? env['EXORCIST_DEFINITIONS_HOME']!)
-    : installedDefinitionsRoot(env);
-  const publicKey = trustedPublicKey(env);
+  const env = deps.env ?? process.env;
+  const root = installedDefinitionsRoot(env);
+  const publicKeyPem = deps.publicKeyPem ?? DEFINITIONS_PUBLIC_KEY;
 
   if (p.values['status'] === true) {
-    return status(io, root, publicKey);
+    if (p.values['from'] !== undefined) { io.err('--status and --from cannot be used together.'); return 2; }
+    return status(io, root, publicKeyPem, env);
   }
 
   const from = str(p.values['from']) ?? env['EXORCIST_UPDATE_URL'];
   if (!from) {
-    io.err(`No update source. Pass --from <url-or-file> or set EXORCIST_UPDATE_URL.\n\n${UPDATE_HELP}`);
+    io.err(`No update source. Pass --from <https-url-or-file> or set EXORCIST_UPDATE_URL.\n\n${UPDATE_HELP}`);
     return 2;
   }
 
-  const current = activeVersion({ env, root, publicKeyPem: publicKey });
-  const source = describeSource(from);
-  io.out(`Exorcist 98 LiveUpdate`);
-  io.out(`Current definitions: ${current.version} (${current.date}, ${current.source === 'installed' ? 'updated' : 'bundled'})`);
-
-  const tar = await fetchOrRead(from, env);
-  if (!tar.ok) { io.err(tar.error); return 1; }
-
-  const r = installBundle(tar.tar, { root, currentVersion: current.version, publicKeyPem: publicKey });
-  if (!r.ok) { io.err(r.error); return 1; }
-  io.out(`Installed definitions ${r.set.version} (${r.set.date}, ${r.set.files} rules) from ${source}.`);
-  io.out(`The next scan uses the updated definitions.`);
+  io.out('Exorcist 98 LiveUpdate');
+  const r = await runLiveUpdate({
+    from,
+    root,
+    publicKeyPem,
+    ...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}),
+    ...(deps.timeoutMs ? { timeoutMs: deps.timeoutMs } : {}),
+    ...(deps.cwd ? { cwd: deps.cwd } : {}),
+  });
+  io.out(`Definitions in use: ${describe(r.previous.version, r.previous.date, r.previous.source)}`);
+  if (!r.ok) {
+    io.err(`LiveUpdate refused the bundle: ${r.error}`);
+    io.err(`Nothing was installed. The definitions in use are unchanged (version ${r.previous.version}).`);
+    return 1;
+  }
+  io.out(`Signature, hashes and all ${r.set.files} definitions verified (key sha256:${(publicKeyFingerprint(publicKeyPem) ?? '?').slice(0, 16)}...).`);
+  io.out(`Installed definitions ${r.set.version} (${r.set.date}) into ${r.set.dir}`);
+  io.out('The next scan and the next Shield start use them.');
   return 0;
 }
 
-function status(io: Io, root: string, publicKey: string): number {
-  const current = activeVersion({ root, publicKeyPem: publicKey });
-  const sets = listInstalledSets(root, publicKey);
-  io.out('Definitions status');
-  io.out(`  Active:   version ${current.version} (${current.date}) — ${current.source === 'installed' ? 'LiveUpdate set' : 'bundled with this build'}`);
+function describe(version: string, date: string, source: 'installed' | 'bundled'): string {
+  return `${version} (${date}, ${source === 'installed' ? 'installed by LiveUpdate' : 'bundled with this build'})`;
+}
+
+function status(io: Io, root: string, publicKeyPem: string, env: NodeJS.ProcessEnv): number {
+  const active = activeDefinitions({ root, publicKeyPem });
+  const sets = inspectInstalledSets(root, publicKeyPem);
+  io.out('Exorcist 98 LiveUpdate status');
+  io.out(`  Active definitions: ${describe(active.version, active.date, active.source)}`);
+  if (active.set) io.out(`                      ${active.set.definitionsDir}`);
+  const override = env['EXORCIST_DEFINITIONS'];
+  if (override) io.out(`  Note: EXORCIST_DEFINITIONS is set, so scans use ${override} instead.`);
+  io.out(`  Bundled with this build: ${BUNDLED_DEFINITIONS_VERSION} (${BUNDLED_DEFINITIONS_DATE})`);
+  io.out(`  Install folder: ${root}`);
   if (sets.length === 0) {
-    io.out('  Installed updates: none. Run "exorcist update --from <url-or-file>".');
+    io.out('  Installed sets: none. Run "exorcist update --from <https-url-or-file>".');
   } else {
-    io.out('  Installed updates (newest first):');
+    io.out('  Installed sets (newest first):');
     for (const s of sets) {
-      io.out(`    ${s.version}  ${s.date}  ${s.files} rules  ${s.dir}`);
+      if (!s.ok) io.out(`    ${s.name}  REJECTED, not used: ${s.error}`);
+      else {
+        const note = active.source === 'installed' && s.set.version === active.version ? 'active'
+          : compareVersions(s.set.version, BUNDLED_DEFINITIONS_VERSION) <= 0 ? 'verified, unused: not newer than the bundled set'
+            : 'verified, superseded by a newer set';
+        io.out(`    ${s.name}  ${s.set.date}  ${s.set.files} definitions  ${note}`);
+      }
     }
   }
-  io.out(`  Install root: ${root}`);
-  io.out(`  Trusted key: ${publicKey.includes('BEGIN PUBLIC KEY') ? 'Ed25519 (' + (publicKey === trustedPublicKey() ? 'embedded' : 'from EXORCIST_DEFINITIONS_PUBLIC_KEY') + ')' : 'custom'}`);
+  io.out(`  Trusted key: Ed25519 sha256:${publicKeyFingerprint(publicKeyPem) ?? 'unusable'}`);
   return 0;
-}
-
-function describeSource(from: string): string {
-  return isAbsolute(from) || !/^https?:\/\//i.test(from) ? `local file ${resolve(from)}` : from;
-}
-
-async function fetchOrRead(from: string, env: NodeJS.ProcessEnv): Promise<{ ok: true; tar: Buffer } | { ok: false; error: string }> {
-  if (/^https:\/\//i.test(from)) {
-    return downloadBundle(from, { limitBytes: DOWNLOAD_LIMIT_BYTES });
-  }
-  if (/^http:\/\//i.test(from)) {
-    return { ok: false, error: 'The update source must be an https:// URL or a local file.' };
-  }
-  const { readFile, stat } = await import('node:fs/promises');
-  const path = resolve(from);
-  try {
-    const st = await stat(path);
-    if (st.size > DOWNLOAD_LIMIT_BYTES) {
-      return { ok: false, error: `The bundle is larger than the ${Math.round(DOWNLOAD_LIMIT_BYTES / 1024)} KB limit.` };
-    }
-    if (st.size === 0) return { ok: false, error: 'The bundle is empty.' };
-    return { ok: true, tar: await readFile(path) };
-  } catch (e) {
-    return { ok: false, error: `Could not read the update source: ${(e as Error).message}` };
-  }
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { BUNDLED_DEFINITIONS_DATE, BUNDLED_DEFINITIONS_VERSION } from '@exorcist-98/core';
 import { RetroFrame } from '@/components/RetroFrame';
 import { SeverityBadge } from '@/components/SeverityBadge';
 import { listDefinitions } from '@/lib/encyclopedia';
@@ -14,6 +15,12 @@ export default async function EncyclopediaIndex() {
       <p className="mt-0">
         Every threat Exorcist 98 knows about, in plain words first. Each page shows what the attack
         does, a defanged example and how to fix it.
+      </p>
+      {/* The site always uses the definitions it was built with, never a LiveUpdate set. */}
+      <p className="bevel-in m-0 mb-2 px-2 py-1 font-mono text-xs">
+        Definitions version {BUNDLED_DEFINITIONS_VERSION}, dated{' '}
+        <time dateTime={BUNDLED_DEFINITIONS_DATE}>{BUNDLED_DEFINITIONS_DATE}</time> &middot; {defs.length} threats
+        &middot; the CLI installs newer signed sets with <code>exorcist update</code>
       </p>
       <ul className="bevel-in m-0 list-none p-1" aria-label="Virus definitions">
         {defs.map((d) => (

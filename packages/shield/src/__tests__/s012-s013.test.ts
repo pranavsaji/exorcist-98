@@ -131,10 +131,12 @@ describe('S-019 one definitions lookup', () => {
     mkdirSync(join(d, 'definitions'));
     writeFileSync(join(d, 'definitions', 'EX-001-x.yaml'), 'id: EX-001');
     const callerUrl = new URL(`file://${join(d, 'dist', 'index.mjs')}`).href;
-    expect(findDefinitionsDir({ callerUrl, env: {}, cwd: '/' })).toBe(join(d, 'definitions'));
-    expect(findDefinitionsDir({ callerUrl, env: { EXORCIST_DEFINITIONS: '/x' }, cwd: '/' })).toBe('/x');
-    expect(findDefinitionsDir({ callerUrl, env: {}, cwd: '/', explicit: '/y' })).toBe('/y');
-    expect(findDefinitionsDir({ callerUrl: 'file:///nowhere/dist/index.mjs', env: {}, cwd: d })).toBe(join(d, 'definitions'));
-    expect(findDefinitionsDir({ callerUrl: 'file:///nowhere/dist/index.mjs', env: {}, cwd: '/nowhere' })).toBeNull();
+    // No LiveUpdate sets: point the install folder somewhere empty, never at the real home.
+    const env = { EXORCIST_DEFINITIONS_HOME: join(d, 'no-updates') };
+    expect(findDefinitionsDir({ callerUrl, env, cwd: '/' })).toBe(join(d, 'definitions'));
+    expect(findDefinitionsDir({ callerUrl, env: { ...env, EXORCIST_DEFINITIONS: '/x' }, cwd: '/' })).toBe('/x');
+    expect(findDefinitionsDir({ callerUrl, env, cwd: '/', explicit: '/y' })).toBe('/y');
+    expect(findDefinitionsDir({ callerUrl: 'file:///nowhere/dist/index.mjs', env, cwd: d })).toBe(join(d, 'definitions'));
+    expect(findDefinitionsDir({ callerUrl: 'file:///nowhere/dist/index.mjs', env, cwd: '/nowhere' })).toBeNull();
   });
 });

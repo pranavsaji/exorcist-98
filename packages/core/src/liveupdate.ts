@@ -1,51 +1,85 @@
 /**
  * LiveUpdate (m5-liveupdate): signed definition update bundles.
  *
- * A bundle is an uncompressed tar of `definitions/*.yaml`, `manifest.json`
- * (version, date, sha256 per file) and `manifest.sig`, an Ed25519 signature
- * of the exact `manifest.json` bytes. Nothing is installed unless the
- * signature, every hash, every YAML file and the version all check out, and
- * the install itself is atomic, so a failed update never disturbs the
- * definitions in use.
+ * A bundle is an uncompressed tar holding exactly `manifest.json`,
+ * `manifest.sig` and `definitions/EX-NNN*.yaml`. The manifest lists the
+ * version, the date and the sha256 of every definition file; `manifest.sig` is
+ * an Ed25519 signature of the exact manifest bytes. A definitions feed is
+ * itself a perfect attack channel, so everything fails closed:
+ *
+ * - the tar reader accepts only plain files with those names: no links, no
+ *   directories, no `..`, no absolute paths, no duplicates, no extras;
+ * - the signature is checked before the manifest is even parsed;
+ * - every hash, every YAML file (definitions schema) and the version must pass;
+ * - the install writes to a staging folder, re-verifies it from disk, then
+ *   renames it into `<root>/<version>/`, so a failure never touches the sets
+ *   already there;
+ * - an installed set is re-verified (signature, hashes, exact file list, no
+ *   symlinks) every time it is chosen, so a tampered install folder is skipped.
  *
  * Node's `crypto` does all the cryptography: no new dependencies.
  */
-import { createHash, createPublicKey, generateKeyPairSync, sign as edSign, verify as edVerify } from 'node:crypto';
+import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, randomBytes, sign as edSign, verify as edVerify } from 'node:crypto';
 import type { KeyObject } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync, renameSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { closeSync, fstatSync, lstatSync, mkdirSync, openSync, readFileSync, readSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { z } from 'zod';
 import yaml from 'js-yaml';
-import { readTar } from './remote/tarball.js';
 import { VirusDefinitionSchema } from './definitions/schema.js';
 import type { VirusDefinition } from './definitions/schema.js';
+import { BUNDLED_DEFINITIONS_DATE, BUNDLED_DEFINITIONS_VERSION } from './definitions/version.js';
 
-/** The public key this build trusts for definition bundles (Ed25519, SPKI PEM). */
-export const DEFAULT_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
-MCowBQYDK2VwAyEAui4+vxWUEpFiNqLN/uWfgazdJycpAtXhLW+bwH3OW+Y=
------END PUBLIC KEY-----`;
+export { BUNDLED_DEFINITIONS_DATE, BUNDLED_DEFINITIONS_VERSION };
 
-/** Version and date of the definitions folder shipped with this build. */
-export const BUNDLED_DEFINITIONS_VERSION = '20261123.0';
-export const BUNDLED_DEFINITIONS_DATE = '2026-11-23';
+/**
+ * The only key this build trusts for definition bundles (Ed25519, SPKI PEM).
+ * There is deliberately no environment override: the trust anchor ships with
+ * the code. Its private half is kept outside the repository by the
+ * maintainer; tests make their own throwaway key pairs in memory.
+ */
+export const DEFINITIONS_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAn4o+dmOJXIzsygT2CF/3go/1E/bk9Ub16r4hGtJJjhM=
+-----END PUBLIC KEY-----
+`;
 
 export const DOWNLOAD_LIMIT_BYTES = 2 * 1024 * 1024;
 export const DOWNLOAD_TIMEOUT_MS = 15_000;
+const MAX_REDIRECTS = 3;
+const MAX_ENTRIES = 256;
+const MAX_FILE_BYTES = 512 * 1024;
 
-export type LiveUpdateResult = { ok: true } | { ok: false; error: string };
+export const MANIFEST_NAME = 'manifest.json';
+export const SIGNATURE_NAME = 'manifest.sig';
+/** `definitions/` plus a file name the loader and the lookup both accept. */
+const DEFINITION_PATH_RE = /^definitions\/EX-\d{3}[A-Za-z0-9._-]*\.yaml$/;
+
+export type Fail = { ok: false; error: string };
+const fail = (error: string): Fail => ({ ok: false, error });
+
+/** Untrusted text (tar names, YAML errors) made safe to print on a terminal. */
+function printable(s: string, max = 120): string {
+  const clean = s.replace(/[^\x20-\x7e]/g, (c) => `\\u{${(c.codePointAt(0) ?? 0).toString(16)}}`);
+  return JSON.stringify(clean.length > max ? `${clean.slice(0, max)}...` : clean);
+}
 
 // ── Versions ─────────────────────────────────────────────────────────────
 
-const VERSION_RE = /^\d{8}\.\d{1,4}$/;
+const VERSION_RE = /^(\d{4})(\d{2})(\d{2})\.(\d{1,4})$/;
 
 /** A version is a release date and a same-day sequence: 20261123.4. */
 export function isValidVersion(v: string): boolean {
-  if (!VERSION_RE.test(v)) return false;
-  const y = Number(v.slice(0, 4));
-  const m = Number(v.slice(4, 6));
-  const d = Number(v.slice(6, 8));
-  return y >= 2020 && m >= 1 && m <= 12 && d >= 1 && d <= 31;
+  const m = VERSION_RE.exec(v);
+  if (!m) return false;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  if (y < 2020) return false;
+  const t = new Date(Date.UTC(y, mo - 1, d));
+  return t.getUTCFullYear() === y && t.getUTCMonth() === mo - 1 && t.getUTCDate() === d;
+}
+
+/** The YYYY-MM-DD date a version was released on. Assumes a valid version. */
+export function versionDate(v: string): string {
+  return `${v.slice(0, 4)}-${v.slice(4, 6)}-${v.slice(6, 8)}`;
 }
 
 /** -1 when a < b, 0 when equal, 1 when a > b. Assumes valid versions. */
@@ -60,6 +94,7 @@ export function compareVersions(a: string, b: string): number {
 
 // ── Keys ──────────────────────────────────────────────────────────────────
 
+/** A fresh Ed25519 key pair as PEM strings (for --generate-key and tests). */
 export function makeKeyPair(): { privateKeyPem: string; publicKeyPem: string } {
   const { publicKey, privateKey } = generateKeyPairSync('ed25519');
   return {
@@ -70,32 +105,46 @@ export function makeKeyPair(): { privateKeyPem: string; publicKeyPem: string } {
 
 function loadPublicKey(pem: string): KeyObject | null {
   try {
-    return createPublicKey(pem);
+    const key = createPublicKey(pem);
+    return key.asymmetricKeyType === 'ed25519' ? key : null;
   } catch {
     return null;
   }
 }
 
-/** The trust anchor: EXORCIST_DEFINITIONS_PUBLIC_KEY (PEM), else the embedded key. */
-export function trustedPublicKey(env: NodeJS.ProcessEnv = process.env): string {
-  return env['EXORCIST_DEFINITIONS_PUBLIC_KEY']?.trim() || DEFAULT_PUBLIC_KEY;
+/** sha256 (hex) of the key's SPKI DER encoding, or null when it is not an Ed25519 public key. */
+export function publicKeyFingerprint(publicKeyPem: string): string | null {
+  const key = loadPublicKey(publicKeyPem);
+  return key ? sha256(key.export({ type: 'spki', format: 'der' })) : null;
 }
 
-// ── Manifest and signing ─────────────────────────────────────────────────
+/** Parse an Ed25519 private key (PKCS#8 PEM) and derive its public key. */
+export function loadPrivateKey(pem: string): { ok: true; key: KeyObject; publicKeyPem: string } | Fail {
+  try {
+    const key = createPrivateKey(pem);
+    if (key.asymmetricKeyType !== 'ed25519') return fail('The signing key is not an Ed25519 private key.');
+    const publicKeyPem = createPublicKey(key).export({ type: 'spki', format: 'pem' }).toString();
+    return { ok: true, key, publicKeyPem };
+  } catch {
+    return fail('The signing key is not a readable PKCS#8 PEM private key.');
+  }
+}
+
+// ── Manifest ─────────────────────────────────────────────────────────────
 
 export const ManifestSchema = z
   .object({
+    format: z.literal(1),
     version: z.string().refine(isValidVersion, 'version must look like 20261123.4'),
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD'),
     files: z
-      .record(z.string(), z.string().regex(/^[0-9a-f]{64}$/, 'each file hash must be a lowercase sha256 hex string'))
+      .record(z.string().regex(DEFINITION_PATH_RE, 'every file must be definitions/EX-NNN-name.yaml'),
+        z.string().regex(/^[0-9a-f]{64}$/, 'each file hash must be a lowercase sha256 hex string'))
       .refine((m) => Object.keys(m).length > 0, 'files must list at least one definition')
-      .refine(
-        (m) => Object.keys(m).every((k) => /^definitions\/[A-Za-z0-9][A-Za-z0-9._-]*\.yaml$/.test(k)),
-        'every file key must be definitions/<name>.yaml',
-      ),
+      .refine((m) => Object.keys(m).length <= MAX_ENTRIES, `files must list at most ${MAX_ENTRIES} definitions`),
   })
-  .strict();
+  .strict()
+  .refine((m) => !isValidVersion(m.version) || m.date === versionDate(m.version), 'date must be the date in the version');
 export type Manifest = z.infer<typeof ManifestSchema>;
 
 export type BundleFile = { path: string; data: Buffer };
@@ -104,306 +153,532 @@ export function sha256(data: Buffer): string {
   return createHash('sha256').update(data).digest('hex');
 }
 
-/** The manifest JSON for a set of files: keys sorted, stable formatting. */
-export function buildManifest(files: BundleFile[], version: string, date: string): string {
-  const sorted = [...files].sort((a, b) => a.path.localeCompare(b.path));
-  return `${JSON.stringify({ version, date, files: Object.fromEntries(sorted.map((f) => [f.path, sha256(f.data)])) }, null, 2)}\n`;
+const byPath = (a: BundleFile, b: BundleFile): number => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
+
+/** The manifest bytes for a set of definition files: keys sorted, stable formatting. */
+export function buildManifest(files: BundleFile[], version: string, date: string = versionDate(version)): Buffer {
+  const sorted = [...files].sort(byPath);
+  const manifest = { format: 1, version, date, files: Object.fromEntries(sorted.map((f) => [f.path, sha256(f.data)])) };
+  return Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 }
 
-/** Sign the exact manifest.json bytes with an Ed25519 private key (PEM). */
-export function signManifest(manifestJson: string, privateKeyPem: string): Buffer {
-  return edSign(null, Buffer.from(manifestJson, 'utf8'), privateKeyPem);
+/** Sign the exact manifest bytes with an Ed25519 private key (PEM or KeyObject). */
+export function signManifest(manifest: Buffer, privateKey: string | KeyObject): Buffer {
+  return edSign(null, manifest, privateKey);
 }
 
-// ── Tar writing (ustar, plain files only) ─────────────────────────────────
+// ── Tar (ustar, plain files only) ───────────────────────────────────────────
 
-function tarHeader(name: string, size: number): Buffer {
-  const h = Buffer.alloc(512);
+const BLOCK = 512;
+
+function tarHeader(name: string, size: number, mtime: number, type = '0'): Buffer {
+  const h = Buffer.alloc(BLOCK);
   h.write(name, 0, 100, 'utf8');
-  h.write('000644\0', 100, 'utf8');
-  h.write('000000\0', 108, 'utf8');
-  h.write('000000\0', 116, 'utf8');
-  h.write(`${size.toString(8).padStart(11, '0')}\0`, 124, 'utf8');
-  h.write(`${Math.floor(Date.now() / 1000).toString(8).padStart(11, '0')}\0`, 136, 'utf8');
-  h.write('        ', 148, 'utf8');
-  h.write('0', 156, 'utf8');
-  h.write('ustar\0', 257, 'utf8');
-  h.write('00', 263, 'utf8');
+  h.write('0000644\0', 100, 'ascii');
+  h.write('0000000\0', 108, 'ascii');
+  h.write('0000000\0', 116, 'ascii');
+  h.write(`${size.toString(8).padStart(11, '0')}\0`, 124, 'ascii');
+  h.write(`${Math.max(0, Math.floor(mtime)).toString(8).padStart(11, '0')}\0`, 136, 'ascii');
+  h.write('        ', 148, 'ascii');
+  h.write(type, 156, 'ascii');
+  h.write('ustar\0', 257, 'ascii');
+  h.write('00', 263, 'ascii');
   const sum = h.reduce((a, b) => a + b, 0);
-  h.write(`${sum.toString(8).padStart(6, '0')}\0 `, 148, 'utf8');
+  h.write(`${sum.toString(8).padStart(6, '0')}\0 `, 148, 'ascii');
   return h;
 }
 
-/** Build an uncompressed ustar tarball of plain files. Paths must be short and relative. */
-export function buildTar(entries: BundleFile[]): Buffer {
+/**
+ * An uncompressed ustar archive. `type` defaults to '0' (plain file); tests
+ * use other types to build hostile archives. Deterministic for a given mtime.
+ */
+export function buildTar(entries: Array<BundleFile & { type?: string }>, mtime = 0): Buffer {
   const parts: Buffer[] = [];
   for (const e of entries) {
-    if (e.path.length > 99) throw new Error(`tar path too long: ${e.path}`);
-    const pad = (512 - (e.data.length % 512)) % 512;
-    parts.push(tarHeader(e.path, e.data.length), e.data, Buffer.alloc(pad));
+    if (Buffer.byteLength(e.path) > 99) throw new Error(`tar path too long: ${e.path}`);
+    const pad = (BLOCK - (e.data.length % BLOCK)) % BLOCK;
+    parts.push(tarHeader(e.path, e.data.length, mtime, e.type), e.data, Buffer.alloc(pad));
   }
-  parts.push(Buffer.alloc(1024)); // end of archive
+  parts.push(Buffer.alloc(BLOCK * 2)); // end of archive
   return Buffer.concat(parts);
 }
 
-// ── Parsing and verifying a bundle ─────────────────────────────────────────
+function cstr(b: Buffer): string {
+  const z0 = b.indexOf(0);
+  return (z0 === -1 ? b : b.subarray(0, z0)).toString('utf8');
+}
 
-export type ParsedBundle = {
-  manifest: Manifest;
-  manifestJson: string;
-  sig: Buffer;
-  /** Definition files keyed by their manifest path (`definitions/...`). */
-  files: Map<string, Buffer>;
-};
-
-const BUNDLE_TAR_LIMITS = { maxFiles: 500, maxFileBytes: 512 * 1024, maxStoredBytes: DOWNLOAD_LIMIT_BYTES };
-
-/** Read a bundle tarball into its manifest, signature and definition files. */
-export function parseBundle(tar: Buffer): { ok: true; bundle: ParsedBundle } | { ok: false; error: string } {
-  const r = readTar(tar, BUNDLE_TAR_LIMITS, false);
-  if (!r.ok) return { ok: false, error: `The bundle is not a readable tar: ${r.error}` };
-  const byPath = new Map(r.entries.filter((e) => e.path.startsWith('definitions/')).map((e) => [e.path, e.data]));
-  const manifestEntry = r.entries.find((e) => e.path === 'manifest.json');
-  const sigEntry = r.entries.find((e) => e.path === 'manifest.sig');
-  if (!manifestEntry) return { ok: false, error: 'The bundle has no manifest.json.' };
-  if (!sigEntry) return { ok: false, error: 'The bundle has no manifest.sig.' };
-  const manifestJson = manifestEntry.data.toString('utf8');
-  const parsed = ManifestSchema.safeParse(JSON.parse(manifestJson) as unknown);
-  if (!parsed.success) {
-    return { ok: false, error: `Invalid manifest: ${parsed.error.issues.map((i) => i.message).join('; ')}` };
-  }
-  if (sigEntry.data.length !== 64) return { ok: false, error: 'manifest.sig is not a 64-byte Ed25519 signature.' };
-  return { ok: true, bundle: { manifest: parsed.data, manifestJson, sig: sigEntry.data, files: byPath } };
+function octal(b: Buffer): number | null {
+  const s = cstr(b).trim();
+  if (!/^[0-7]{1,12}$/.test(s)) return null;
+  return parseInt(s, 8);
 }
 
 /**
- * Full verification: signature over the manifest bytes, every hash, and no
- * definition files hiding outside the manifest.
+ * Read a bundle tar, strictly. Every entry must be a plain file named
+ * `manifest.json`, `manifest.sig` or `definitions/EX-NNN*.yaml`; anything
+ * else fails the whole bundle rather than being skipped.
  */
-export function verifyBundle(bundle: ParsedBundle, publicKeyPem: string): LiveUpdateResult {
-  const key = loadPublicKey(publicKeyPem);
-  if (!key) return { ok: false, error: 'The trusted public key is not a usable key.' };
-  if (!edVerify(null, Buffer.from(bundle.manifestJson, 'utf8'), key, bundle.sig)) {
-    return { ok: false, error: 'The manifest signature does not match: the bundle was not signed by the trusted key, or was tampered with.' };
-  }
-  for (const [path, hash] of Object.entries(bundle.manifest.files)) {
-    const data = bundle.files.get(path);
-    if (!data) return { ok: false, error: `The bundle is missing the listed file ${path}.` };
-    if (sha256(data) !== hash) {
-      return { ok: false, error: `${path} does not match its hash in the manifest: the file was changed after signing.` };
+export function readBundleTar(tar: Buffer): { ok: true; entries: BundleFile[] } | Fail {
+  if (tar.length > DOWNLOAD_LIMIT_BYTES) return fail(`The bundle is larger than the ${DOWNLOAD_LIMIT_BYTES / 1048576} MB limit.`);
+  if (tar.length === 0) return fail('The bundle is empty.');
+  if (tar.length % BLOCK !== 0) return fail('The bundle is not a tar archive (its size is not a whole number of 512-byte blocks).');
+  const entries: BundleFile[] = [];
+  const seen = new Set<string>();
+  for (let off = 0; ;) {
+    if (off + BLOCK > tar.length) return fail('The bundle is truncated (no end-of-archive marker).');
+    const h = tar.subarray(off, off + BLOCK);
+    if (h.every((b) => b === 0)) {
+      if (!tar.subarray(off).every((b) => b === 0)) return fail('The bundle has data after its end-of-archive marker.');
+      break;
     }
+    const stored = octal(h.subarray(148, 156));
+    let sum = 0;
+    for (let i = 0; i < BLOCK; i++) sum += i >= 148 && i < 156 ? 0x20 : (h[i] ?? 0);
+    if (stored === null || stored !== sum) return fail('The bundle has a tar header with a bad checksum.');
+    const prefix = cstr(h.subarray(345, 500));
+    const name = cstr(h.subarray(0, 100));
+    const path = prefix ? `${prefix}/${name}` : name;
+    const type = String.fromCharCode(h[156] ?? 0);
+    if (type === '1' || type === '2') return fail(`The bundle entry ${printable(path)} is a link. Bundles hold plain files only.`);
+    if (type !== '0' && type !== '\0') return fail(`The bundle entry ${printable(path)} is not a plain file (tar type ${printable(type)}).`);
+    if (path.startsWith('/') || /^[A-Za-z]:/.test(path) || path.includes('\\') || path.split('/').includes('..')) {
+      return fail(`The bundle entry ${printable(path)} tries to escape the install folder (path traversal).`);
+    }
+    if (path !== MANIFEST_NAME && path !== SIGNATURE_NAME && !DEFINITION_PATH_RE.test(path)) {
+      return fail(`The bundle has an unexpected entry ${printable(path)}. Only manifest.json, manifest.sig and definitions/EX-NNN-*.yaml are allowed.`);
+    }
+    if (seen.has(path)) return fail(`The bundle has ${printable(path)} twice.`);
+    seen.add(path);
+    const size = octal(h.subarray(124, 136));
+    if (size === null) return fail(`The bundle entry ${printable(path)} has an unreadable size.`);
+    if (size > MAX_FILE_BYTES) return fail(`The bundle entry ${printable(path)} is larger than ${MAX_FILE_BYTES / 1024} KB.`);
+    const start = off + BLOCK;
+    if (start + size > tar.length) return fail('The bundle is truncated.');
+    entries.push({ path, data: Buffer.from(tar.subarray(start, start + size)) });
+    if (entries.length > MAX_ENTRIES + 2) return fail(`The bundle has more than ${MAX_ENTRIES} definitions.`);
+    off = start + Math.ceil(size / BLOCK) * BLOCK;
   }
-  const extra = [...bundle.files.keys()].filter((p) => bundle.manifest.files[p] === undefined);
-  if (extra.length > 0) {
-    return { ok: false, error: `The bundle hides files outside the manifest: ${extra.join(', ')}.` };
-  }
-  return { ok: true };
+  return { ok: true, entries };
 }
 
-/** Every definition file must be valid YAML for the definitions schema. */
-export function validateBundleDefinitions(
-  bundle: ParsedBundle,
-): { ok: true; definitions: VirusDefinition[] } | { ok: false; error: string } {
+// ── Verifying a bundle ─────────────────────────────────────────────────────
+
+export type VerifiedBundle = {
+  manifest: Manifest;
+  manifestBytes: Buffer;
+  sig: Buffer;
+  /** Definition files, sorted by path (`definitions/...`). */
+  files: BundleFile[];
+  definitions: VirusDefinition[];
+};
+
+function verifySignature(manifestBytes: Buffer, sig: Buffer, publicKeyPem: string): Fail | null {
+  const key = loadPublicKey(publicKeyPem);
+  if (!key) return fail('The trusted public key is not a usable Ed25519 key.');
+  if (sig.length !== 64) return fail('manifest.sig is not a 64-byte Ed25519 signature.');
+  if (!edVerify(null, manifestBytes, key, sig)) {
+    return fail('The manifest signature does not match: the bundle was not signed by the Exorcist 98 definitions key, or it was changed after signing.');
+  }
+  return null;
+}
+
+function parseManifest(manifestBytes: Buffer): { ok: true; manifest: Manifest } | Fail {
+  let json: unknown;
+  try {
+    json = JSON.parse(manifestBytes.toString('utf8'));
+  } catch {
+    return fail('manifest.json is not valid JSON.');
+  }
+  const parsed = ManifestSchema.safeParse(json);
+  if (!parsed.success) return fail(`Invalid manifest: ${parsed.error.issues.map((i) => i.message).join('; ')}`);
+  return { ok: true, manifest: parsed.data };
+}
+
+/** Every definition file must be valid YAML for the definitions schema, with its id matching its file name. */
+export function validateDefinitionFiles(files: BundleFile[]): { ok: true; definitions: VirusDefinition[] } | Fail {
   const out: VirusDefinition[] = [];
-  const sorted = [...bundle.files.keys()].sort();
-  for (const path of sorted) {
-    const raw = bundle.files.get(path)!.toString('utf8');
+  const ids = new Set<string>();
+  for (const f of [...files].sort(byPath)) {
     let doc: unknown;
     try {
-      doc = yaml.load(raw);
+      doc = yaml.load(f.data.toString('utf8'));
     } catch (e) {
-      return { ok: false, error: `${path} is not valid YAML: ${(e as Error).message.split('\n')[0]}` };
+      return fail(`${f.path} is not valid YAML: ${printable((e as Error).message.split('\n')[0] ?? '')}`);
     }
     const parsed = VirusDefinitionSchema.safeParse(doc);
     if (!parsed.success) {
-      return { ok: false, error: `Invalid definition in ${path}: ${parsed.error.issues[0]?.message ?? 'schema error'}` };
+      const issue = parsed.error.issues[0];
+      return fail(`${f.path} is not a valid definition: ${issue ? `${issue.path.join('.') || '(root)'}: ${issue.message}` : 'schema error'}`);
     }
+    const fileId = basename(f.path).slice(0, 6);
+    if (parsed.data.id !== fileId) return fail(`${f.path} defines ${printable(parsed.data.id)}, not ${fileId}.`);
+    if (ids.has(parsed.data.id)) return fail(`${parsed.data.id} is defined twice.`);
+    ids.add(parsed.data.id);
     out.push(parsed.data);
   }
   return { ok: true, definitions: out };
 }
 
+/**
+ * Full check of a bundle tarball: strict tar, signature (before the manifest
+ * is parsed), manifest schema, every hash, no files outside the manifest,
+ * every YAML file. Pure: touches no disk.
+ */
+export function checkBundle(tar: Buffer, o: { publicKeyPem?: string } = {}): { ok: true; bundle: VerifiedBundle } | Fail {
+  const read = readBundleTar(tar);
+  if (!read.ok) return read;
+  const manifestBytes = read.entries.find((e) => e.path === MANIFEST_NAME)?.data;
+  const sig = read.entries.find((e) => e.path === SIGNATURE_NAME)?.data;
+  if (!manifestBytes) return fail('The bundle has no manifest.json.');
+  if (!sig) return fail('The bundle has no manifest.sig.');
+  const bad = verifySignature(manifestBytes, sig, o.publicKeyPem ?? DEFINITIONS_PUBLIC_KEY);
+  if (bad) return bad;
+  const m = parseManifest(manifestBytes);
+  if (!m.ok) return m;
+  const files = read.entries.filter((e) => DEFINITION_PATH_RE.test(e.path)).sort(byPath);
+  const listed = m.manifest.files;
+  for (const [path, hash] of Object.entries(listed)) {
+    const f = files.find((x) => x.path === path);
+    if (!f) return fail(`The bundle is missing ${path}, which its manifest lists.`);
+    if (sha256(f.data) !== hash) return fail(`${path} does not match its hash in the manifest: the file was changed after signing.`);
+  }
+  const extra = files.filter((f) => listed[f.path] === undefined).map((f) => f.path);
+  if (extra.length > 0) return fail(`The bundle hides files its manifest does not list: ${extra.join(', ')}.`);
+  const valid = validateDefinitionFiles(files);
+  if (!valid.ok) return valid;
+  return { ok: true, bundle: { manifest: m.manifest, manifestBytes, sig, files, definitions: valid.definitions } };
+}
+
+/** Build and sign a bundle tarball. Fails when the files would not pass `checkBundle`. */
+export function buildSignedBundle(o: {
+  files: BundleFile[];
+  version: string;
+  privateKeyPem: string;
+}): { ok: true; tar: Buffer; manifest: Manifest; publicKeyPem: string } | Fail {
+  if (!isValidVersion(o.version)) return fail(`The version must look like 20261201.1, not ${printable(o.version)}.`);
+  const key = loadPrivateKey(o.privateKeyPem);
+  if (!key.ok) return key;
+  const manifestBytes = buildManifest(o.files, o.version);
+  const sig = signManifest(manifestBytes, key.key);
+  const mtime = Date.parse(`${versionDate(o.version)}T00:00:00Z`) / 1000;
+  const tar = buildTar([...[...o.files].sort(byPath), { path: MANIFEST_NAME, data: manifestBytes }, { path: SIGNATURE_NAME, data: sig }], mtime);
+  const check = checkBundle(tar, { publicKeyPem: key.publicKeyPem });
+  if (!check.ok) return check;
+  return { ok: true, tar, manifest: check.bundle.manifest, publicKeyPem: key.publicKeyPem };
+}
+
+/** The definition files of a definitions folder, as bundle entries. */
+export function collectDefinitionFiles(dir: string): BundleFile[] {
+  return readdirSync(dir)
+    .filter((f) => DEFINITION_PATH_RE.test(`definitions/${f}`) && lstatSync(join(dir, f)).isFile())
+    .sort()
+    .map((f) => ({ path: `definitions/${f}`, data: readFileSync(join(dir, f)) }));
+}
+
 // ── Installed sets ────────────────────────────────────────────────────────
 
-export type InstalledSet = { dir: string; version: string; date: string; files: number };
-
-/** Where installed definition sets live: EXORCIST_DEFINITIONS_HOME, else ~/.exorcist/definitions. */
-export function installedDefinitionsRoot(env: NodeJS.ProcessEnv = process.env, home: string = homedir()): string {
-  const fromEnv = env['EXORCIST_DEFINITIONS_HOME'];
-  if (fromEnv) return resolve(fromEnv);
-  return join(home, '.exorcist', 'definitions');
-}
-
-/**
- * Verify a version folder on disk (the layout `installBundle` writes):
- * `definitions/*.yaml`, `manifest.json`, `manifest.sig`.
- */
-export function verifyInstalledSet(dir: string, publicKeyPem: string): { ok: true; set: InstalledSet } | { ok: false; error: string } {
-  try {
-    const manifestJson = readFileSync(join(dir, 'manifest.json'), 'utf8');
-    const sig = readFileSync(join(dir, 'manifest.sig'));
-    const parsed = ManifestSchema.safeParse(JSON.parse(manifestJson) as unknown);
-    if (!parsed.success) return { ok: false, error: 'manifest.json does not match the manifest schema.' };
-    const key = loadPublicKey(publicKeyPem);
-    if (!key) return { ok: false, error: 'unusable public key' };
-    if (!edVerify(null, Buffer.from(manifestJson, 'utf8'), key, sig)) return { ok: false, error: 'bad signature' };
-    const names = readdirSync(join(dir, 'definitions')).filter((f) => f.endsWith('.yaml'));
-    for (const [path, hash] of Object.entries(parsed.data.files)) {
-      if (!names.includes(path.replace(/^definitions\//, ''))) return { ok: false, error: `missing ${path}` };
-      if (sha256(readFileSync(join(dir, path))) !== hash) return { ok: false, error: `hash mismatch for ${path}` };
-    }
-    if (names.length !== Object.keys(parsed.data.files).length) return { ok: false, error: 'files on disk outside the manifest' };
-    return { ok: true, set: { dir, version: parsed.data.version, date: parsed.data.date, files: names.length } };
-  } catch (e) {
-    return { ok: false, error: (e as Error).message };
-  }
-}
-
-/** Every installed set that still verifies, newest first. */
-export function listInstalledSets(
-  root: string = installedDefinitionsRoot(),
-  publicKeyPem: string = trustedPublicKey(),
-): InstalledSet[] {
-  const out: InstalledSet[] = [];
-  try {
-    for (const name of readdirSync(root)) {
-      const dir = join(root, name);
-      if (!/^\d{8}\.\d{1,4}$/.test(name)) continue;
-      const r = verifyInstalledSet(dir, publicKeyPem);
-      if (r.ok) out.push(r.set);
-    }
-  } catch {
-    /* no root, or unreadable: no installed sets */
-  }
-  return out.sort((a, b) => compareVersions(b.version, a.version));
-}
-
-/** The newest installed set that verifies, or null. */
-export function findNewestInstalledSet(o: { env?: NodeJS.ProcessEnv; root?: string; publicKeyPem?: string } = {}): InstalledSet | null {
-  const root = o.root ?? installedDefinitionsRoot(o.env);
-  const pem = o.publicKeyPem ?? trustedPublicKey(o.env);
-  return listInstalledSets(root, pem)[0] ?? null;
-}
-
-/**
- * The definitions version currently in use: the newest verified installed
- * set, else the set bundled with the build.
- */
-export function activeVersion(o: { env?: NodeJS.ProcessEnv; root?: string; publicKeyPem?: string } = {}): {
+export type InstalledSet = {
+  /** `<root>/<version>` */
+  dir: string;
+  /** `<root>/<version>/definitions`, what the scanner loads. */
+  definitionsDir: string;
   version: string;
   date: string;
-  source: 'installed' | 'bundled';
-} {
-  const installed = findNewestInstalledSet(o);
-  if (installed && compareVersions(installed.version, BUNDLED_DEFINITIONS_VERSION) > 0) {
-    return { version: installed.version, date: installed.date, source: 'installed' };
+  files: number;
+};
+
+/** Where installed sets live: EXORCIST_DEFINITIONS_HOME, else ~/.exorcist/definitions. */
+export function installedDefinitionsRoot(env: NodeJS.ProcessEnv = process.env): string {
+  const fromEnv = env['EXORCIST_DEFINITIONS_HOME'];
+  if (fromEnv) return resolve(fromEnv);
+  return join(env['HOME'] || env['USERPROFILE'] || homedir(), '.exorcist', 'definitions');
+}
+
+/**
+ * Verify a set folder as `installBundle` writes it, from disk: no symlinks,
+ * the signature over manifest.json, the version equal to `expectedVersion`,
+ * exactly the listed files in definitions/ and every hash.
+ */
+function verifySetFolder(dir: string, expectedVersion: string, publicKeyPem: string): { ok: true; set: InstalledSet } | Fail {
+  try {
+    if (!lstatSync(dir).isDirectory()) return fail('not a real folder (a symlink or a file)');
+    const defsDir = join(dir, 'definitions');
+    for (const [p, kind] of [[join(dir, MANIFEST_NAME), 'file'], [join(dir, SIGNATURE_NAME), 'file'], [defsDir, 'dir']] as const) {
+      const st = lstatSync(p);
+      if (kind === 'file' ? !st.isFile() : !st.isDirectory()) return fail(`${basename(p)} is not a plain ${kind === 'file' ? 'file' : 'folder'}`);
+    }
+    const manifestBytes = readFileSync(join(dir, MANIFEST_NAME));
+    const bad = verifySignature(manifestBytes, readFileSync(join(dir, SIGNATURE_NAME)), publicKeyPem);
+    if (bad) return fail('the manifest signature does not verify');
+    const m = parseManifest(manifestBytes);
+    if (!m.ok) return m;
+    if (m.manifest.version !== expectedVersion) return fail(`the folder is named ${expectedVersion} but holds version ${m.manifest.version}`);
+    const listed = Object.keys(m.manifest.files).map((p) => p.slice('definitions/'.length)).sort();
+    const onDisk = readdirSync(defsDir).sort();
+    const extra = onDisk.filter((n) => !listed.includes(n));
+    if (extra.length > 0) return fail(`definitions/ holds files the manifest does not list: ${extra.map((n) => printable(n)).join(', ')}`);
+    for (const name of listed) {
+      const p = join(defsDir, name);
+      let st;
+      try { st = lstatSync(p); } catch { return fail(`definitions/${name} is missing`); }
+      if (!st.isFile()) return fail(`definitions/${name} is not a plain file`);
+      if (sha256(readFileSync(p)) !== m.manifest.files[`definitions/${name}`]) return fail(`definitions/${name} was changed after it was installed`);
+    }
+    return { ok: true, set: { dir, definitionsDir: defsDir, version: m.manifest.version, date: m.manifest.date, files: listed.length } };
+  } catch (e) {
+    return fail(`unreadable (${(e as NodeJS.ErrnoException).code ?? 'error'})`);
   }
+}
+
+/** Verify one installed set folder `<root>/<version>`. */
+export function verifyInstalledSet(dir: string, publicKeyPem: string = DEFINITIONS_PUBLIC_KEY): { ok: true; set: InstalledSet } | Fail {
+  const name = basename(dir);
+  if (!isValidVersion(name)) return fail(`${printable(name)} is not a version folder`);
+  return verifySetFolder(dir, name, publicKeyPem);
+}
+
+export type InspectedSet = { name: string; dir: string } & ({ ok: true; set: InstalledSet } | Fail);
+
+/** Every version folder under `root`, verified or with the reason it was rejected, newest first. */
+export function inspectInstalledSets(root: string, publicKeyPem: string = DEFINITIONS_PUBLIC_KEY): InspectedSet[] {
+  let names: string[];
+  try {
+    names = readdirSync(root);
+  } catch {
+    return []; // no root yet: nothing installed
+  }
+  return names
+    .filter(isValidVersion)
+    .sort((a, b) => compareVersions(b, a))
+    .map((name) => ({ name, dir: join(root, name), ...verifyInstalledSet(join(root, name), publicKeyPem) }));
+}
+
+/** Every installed set that verifies, newest first. */
+export function listInstalledSets(root: string, publicKeyPem: string = DEFINITIONS_PUBLIC_KEY): InstalledSet[] {
+  return inspectInstalledSets(root, publicKeyPem).flatMap((s) => (s.ok ? [s.set] : []));
+}
+
+export type LookupOptions = { env?: NodeJS.ProcessEnv; root?: string; publicKeyPem?: string };
+
+/**
+ * The installed set to use instead of the bundled definitions: the newest one
+ * that verifies right now, and only if it is newer than the bundled set.
+ * Verifying one set reads a few dozen small files, so the folders are
+ * checked newest first and the walk stops at the first good one.
+ */
+export function findActiveInstalledSet(o: LookupOptions = {}): InstalledSet | null {
+  const root = o.root ?? installedDefinitionsRoot(o.env);
+  const pem = o.publicKeyPem ?? DEFINITIONS_PUBLIC_KEY;
+  let names: string[];
+  try {
+    names = readdirSync(root);
+  } catch {
+    return null;
+  }
+  const newer = names.filter((n) => isValidVersion(n) && compareVersions(n, BUNDLED_DEFINITIONS_VERSION) > 0).sort((a, b) => compareVersions(b, a));
+  for (const name of newer) {
+    const r = verifyInstalledSet(join(root, name), pem);
+    if (r.ok) return r.set;
+  }
+  return null;
+}
+
+export type ActiveDefinitions = { version: string; date: string; source: 'installed' | 'bundled'; set?: InstalledSet };
+
+/** The definitions version in use: the active installed set, else the bundled one. */
+export function activeDefinitions(o: LookupOptions = {}): ActiveDefinitions {
+  const set = findActiveInstalledSet(o);
+  if (set) return { version: set.version, date: set.date, source: 'installed', set };
   return { version: BUNDLED_DEFINITIONS_VERSION, date: BUNDLED_DEFINITIONS_DATE, source: 'bundled' };
 }
 
 // ── Installing ────────────────────────────────────────────────────────────
 
 /**
- * Verify and install a bundle tarball into `<root>/<version>/`, atomically:
- * everything is written to a staging folder first and renamed into place
- * only when the whole set is on disk. Any failure leaves everything as it
- * was. Refuses a version that is not newer than the current one.
+ * Verify a bundle and install it into `<root>/<version>/` atomically: it is
+ * written to a staging folder, verified again from disk, then renamed into
+ * place. Any failure removes the staging folder and leaves every existing set
+ * as it was. Refuses a version that is not newer than `currentVersion`.
  */
 export function installBundle(
   tar: Buffer,
-  o: { root: string; currentVersion: string; publicKeyPem: string },
-): { ok: true; set: InstalledSet } | { ok: false; error: string } {
-  const parsed = parseBundle(tar);
-  if (!parsed.ok) return parsed;
-  const bundle = parsed.bundle;
-  const verified = verifyBundle(bundle, o.publicKeyPem);
-  if (!verified.ok) return verified;
-  const valid = validateBundleDefinitions(bundle);
-  if (!valid.ok) return valid;
-  const cmp = compareVersions(bundle.manifest.version, o.currentVersion);
-  if (cmp <= 0) {
-    return {
-      ok: false,
-      error: `The bundle is version ${bundle.manifest.version}, which is not newer than the definitions in use (${o.currentVersion}). Nothing was installed.`,
-    };
+  o: { root: string; currentVersion: string; publicKeyPem?: string },
+): { ok: true; set: InstalledSet } | Fail {
+  const pem = o.publicKeyPem ?? DEFINITIONS_PUBLIC_KEY;
+  const checked = checkBundle(tar, { publicKeyPem: pem });
+  if (!checked.ok) return checked;
+  const b = checked.bundle;
+  const version = b.manifest.version;
+  if (compareVersions(version, o.currentVersion) <= 0) {
+    return fail(`The bundle is version ${version}, which is not newer than the definitions in use (${o.currentVersion}).`);
   }
-  const final = join(o.root, bundle.manifest.version);
-  if (existsSync(final)) {
-    return { ok: false, error: `Version ${bundle.manifest.version} is already installed. Nothing was installed.` };
-  }
-  mkdirSync(o.root, { recursive: true });
-  const staging = join(o.root, `.staging-${process.pid.toString(36)}-${Math.random().toString(36).slice(2, 8)}`);
-  rmSync(staging, { recursive: true, force: true });
+  const final = join(o.root, version);
+  let exists = true;
+  try { lstatSync(final); } catch { exists = false; }
+  if (exists) return fail(`${final} already exists. Remove it to install version ${version} again.`);
+
+  const staging = join(o.root, `.staging-${randomBytes(6).toString('hex')}`);
   try {
-    mkdirSync(join(staging, 'definitions'), { recursive: true });
-    for (const [path, data] of bundle.files) {
-      writeFileSync(join(staging, path), data, { flag: 'wx' });
-    }
-    writeFileSync(join(staging, 'manifest.json'), bundle.manifestJson, 'utf8');
-    writeFileSync(join(staging, 'manifest.sig'), bundle.sig);
+    mkdirSync(o.root, { recursive: true, mode: 0o700 });
+    mkdirSync(staging, { mode: 0o700 });
+    mkdirSync(join(staging, 'definitions'));
+    for (const f of b.files) writeFileSync(join(staging, f.path), f.data, { flag: 'wx', mode: 0o644 });
+    writeFileSync(join(staging, MANIFEST_NAME), b.manifestBytes, { flag: 'wx', mode: 0o644 });
+    writeFileSync(join(staging, SIGNATURE_NAME), b.sig, { flag: 'wx', mode: 0o644 });
+    const check = verifySetFolder(staging, version, pem);
+    if (!check.ok) return fail(`The staged copy did not verify (${check.error}).`);
     renameSync(staging, final);
   } catch (e) {
+    return fail(`The install failed (${(e as NodeJS.ErrnoException).code ?? (e as Error).message}).`);
+  } finally {
     rmSync(staging, { recursive: true, force: true });
-    return { ok: false, error: `The install failed and was rolled back: ${(e as Error).message}` };
   }
-  const check = verifyInstalledSet(final, o.publicKeyPem);
-  if (!check.ok) {
-    rmSync(final, { recursive: true, force: true });
-    return { ok: false, error: `The installed set did not verify after install: ${check.error}. It was removed.` };
-  }
-  return { ok: true, set: check.set };
+  const installed = verifyInstalledSet(final, pem);
+  return installed.ok ? installed : fail(`The installed set did not verify (${installed.error}).`);
 }
 
-// ── Downloading ───────────────────────────────────────────────────────────
+// ── Getting a bundle ─────────────────────────────────────────────────────
 
+export type FetchResponse = {
+  status: number;
+  headers: { get(name: string): string | null };
+  body: AsyncIterable<Uint8Array> | ReadableStream<Uint8Array> | null;
+};
 export type FetchLike = (
   url: string,
-  init: { signal: AbortSignal; redirect: 'follow' },
-) => Promise<{ ok: boolean; status: number; body: AsyncIterable<Uint8Array> | ReadableStream<Uint8Array> | null }>;
+  init: { signal: AbortSignal; redirect: 'manual'; headers: Record<string, string> },
+) => Promise<FetchResponse>;
 
-/** Download a bundle over HTTPS only, capped and on a timer. */
+function chunksOf(body: AsyncIterable<Uint8Array> | ReadableStream<Uint8Array>): AsyncIterator<Uint8Array> {
+  if (Symbol.asyncIterator in body) return (body as AsyncIterable<Uint8Array>)[Symbol.asyncIterator]();
+  const reader = (body as ReadableStream<Uint8Array>).getReader();
+  return {
+    next: async () => {
+      const r = await reader.read();
+      return r.done ? { done: true, value: undefined } : { done: false, value: r.value };
+    },
+    return: async () => {
+      await reader.cancel().catch(() => undefined);
+      return { done: true, value: undefined };
+    },
+  };
+}
+
+/**
+ * Download a bundle: HTTPS only (redirects included, followed by hand so none
+ * can drop to http), at most `limitBytes`, and the whole thing, redirects and
+ * body, within `timeoutMs`.
+ */
 export async function downloadBundle(
   url: string,
   o: { limitBytes?: number; timeoutMs?: number; fetchImpl?: FetchLike } = {},
-): Promise<{ ok: true; tar: Buffer } | { ok: false; error: string }> {
-  if (!/^https:\/\//i.test(url)) {
-    return { ok: false, error: 'Update URLs must be https:// addresses or local file paths.' };
-  }
+): Promise<{ ok: true; tar: Buffer } | Fail> {
   const limit = o.limitBytes ?? DOWNLOAD_LIMIT_BYTES;
   const timeout = o.timeoutMs ?? DOWNLOAD_TIMEOUT_MS;
   const doFetch: FetchLike = o.fetchImpl ?? ((u, init) => fetch(u, init));
   const ctrl = new AbortController();
+  const aborted = new Promise<never>((_, rej) => {
+    ctrl.signal.addEventListener('abort', () => rej(new Error('timeout')), { once: true });
+  });
+  aborted.catch(() => undefined);
   const timer = setTimeout(() => ctrl.abort(), timeout);
+  let it: AsyncIterator<Uint8Array> | null = null;
   try {
-    const res = await doFetch(url, { signal: ctrl.signal, redirect: 'follow' });
-    if (!res.ok) return { ok: false, error: `The update server answered ${res.status}.` };
-    if (!res.body) return { ok: false, error: 'The update server sent no bundle.' };
-    const chunks: Buffer[] = [];
-    let total = 0;
-    // The read races the abort timer: a stalled (or hostile) server cannot
-    // hold the download open past the timeout, signal or no signal.
-    const aborted = new Promise<never>((_, rej) => {
-      ctrl.signal.addEventListener('abort', () => rej(new Error('aborted')), { once: true });
-    });
-    const it = (res.body as AsyncIterable<Uint8Array>)[Symbol.asyncIterator]();
-    for (;;) {
-      const next = await Promise.race([it.next(), aborted]);
-      if (next.done) break;
-      total += next.value.length;
-      if (total > limit) {
-        return { ok: false, error: `The bundle is larger than the ${Math.round(limit / 1024)} KB limit.` };
+    let current: URL;
+    try { current = new URL(url); } catch { return fail('The update source is not a valid URL.'); }
+    for (let hop = 0; ; hop++) {
+      if (current.protocol !== 'https:') return fail(`Update downloads must use https://, not ${printable(current.protocol)}.`);
+      const res = await Promise.race([doFetch(current.href, { signal: ctrl.signal, redirect: 'manual', headers: { 'user-agent': 'exorcist-98-liveupdate' } }), aborted]);
+      if (res.status >= 300 && res.status < 400) {
+        const loc = res.headers.get('location');
+        if (!loc) return fail(`The update server answered ${res.status} without a location.`);
+        if (hop >= MAX_REDIRECTS) return fail('The update server redirected too many times.');
+        try { current = new URL(loc, current); } catch { return fail('The update server redirected to an invalid URL.'); }
+        continue;
       }
-      chunks.push(Buffer.from(next.value));
+      if (res.status !== 200) return fail(`The update server answered ${res.status}.`);
+      const declared = Number(res.headers.get('content-length') ?? NaN);
+      if (Number.isFinite(declared) && declared > limit) return fail(`The bundle is larger than the ${limit / 1048576} MB limit.`);
+      if (!res.body) return fail('The update server sent no bundle.');
+      it = chunksOf(res.body);
+      const chunks: Buffer[] = [];
+      let total = 0;
+      for (;;) {
+        const next = await Promise.race([it.next(), aborted]);
+        if (next.done) break;
+        total += next.value.length;
+        if (total > limit) return fail(`The bundle is larger than the ${limit / 1048576} MB limit.`);
+        chunks.push(Buffer.from(next.value));
+      }
+      it = null;
+      if (total === 0) return fail('The update server sent an empty bundle.');
+      return { ok: true, tar: Buffer.concat(chunks) };
     }
-    if (total === 0) return { ok: false, error: 'The update server sent an empty bundle.' };
-    return { ok: true, tar: Buffer.concat(chunks) };
   } catch (e) {
-    const err = e as Error;
-    const msg = err.name === 'AbortError' || err.message === 'aborted'
-      ? `The download did not finish within ${timeout / 1000} s.`
-      : err.message;
-    return { ok: false, error: `The download failed: ${msg}` };
+    if (ctrl.signal.aborted) return fail(`The download did not finish within ${timeout / 1000} s.`);
+    return fail(`The download failed: ${printable((e as Error).message)}`);
   } finally {
     clearTimeout(timer);
+    if (it?.return) void it.return().catch(() => undefined);
+    ctrl.abort();
   }
+}
+
+/** Read a local bundle file: a regular file of at most `limitBytes`. */
+export function readBundleFile(path: string, limitBytes = DOWNLOAD_LIMIT_BYTES): { ok: true; tar: Buffer } | Fail {
+  let fd: number | null = null;
+  try {
+    if (!statSync(path).isFile()) return fail(`${path} is not a regular file.`);
+    fd = openSync(path, 'r');
+    const st = fstatSync(fd);
+    if (!st.isFile()) return fail(`${path} is not a regular file.`);
+    if (st.size > limitBytes) return fail(`The bundle is larger than the ${limitBytes / 1048576} MB limit.`);
+    const buf = Buffer.alloc(limitBytes + 1);
+    let n = 0;
+    for (;;) {
+      const r = readSync(fd, buf, n, buf.length - n, null);
+      if (r === 0) break;
+      n += r;
+      if (n > limitBytes) return fail(`The bundle is larger than the ${limitBytes / 1048576} MB limit.`);
+    }
+    if (n === 0) return fail('The bundle is empty.');
+    return { ok: true, tar: Buffer.from(buf.subarray(0, n)) };
+  } catch (e) {
+    return fail(`Could not read ${path} (${(e as NodeJS.ErrnoException).code ?? 'error'}).`);
+  } finally {
+    if (fd !== null) closeSync(fd);
+  }
+}
+
+/** A bundle from an https:// URL or a local file path. Any other URL scheme is refused. */
+export async function loadBundleSource(
+  from: string,
+  o: { fetchImpl?: FetchLike; timeoutMs?: number; cwd?: string } = {},
+): Promise<{ ok: true; tar: Buffer } | Fail> {
+  if (/^[A-Za-z][A-Za-z0-9+.-]*:\/\//.test(from)) {
+    if (!/^https:\/\//i.test(from)) return fail('The update source must be an https:// URL or a local file.');
+    return downloadBundle(from, { ...(o.fetchImpl ? { fetchImpl: o.fetchImpl } : {}), ...(o.timeoutMs ? { timeoutMs: o.timeoutMs } : {}) });
+  }
+  return readBundleFile(resolve(o.cwd ?? process.cwd(), from));
+}
+
+/**
+ * One LiveUpdate run: fetch or read the bundle, verify it and install it if
+ * it is newer than the definitions in use.
+ */
+export async function runLiveUpdate(o: {
+  from: string;
+  root: string;
+  publicKeyPem?: string;
+  fetchImpl?: FetchLike;
+  timeoutMs?: number;
+  cwd?: string;
+}): Promise<{ ok: true; previous: ActiveDefinitions; set: InstalledSet } | (Fail & { previous: ActiveDefinitions })> {
+  const lookup = { root: o.root, ...(o.publicKeyPem ? { publicKeyPem: o.publicKeyPem } : {}) };
+  const previous = activeDefinitions(lookup);
+  const src = await loadBundleSource(o.from, o);
+  if (!src.ok) return { ...src, previous };
+  const r = installBundle(src.tar, { ...lookup, currentVersion: previous.version });
+  return r.ok ? { ok: true, previous, set: r.set } : { ...r, previous };
 }

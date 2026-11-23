@@ -25,7 +25,7 @@ Commands:
   map [dir]          Draw the Haunted House Map: which MCP servers read secrets,
                      take in untrusted text, or can send data out (EX-023)
   update             LiveUpdate: verify and install signed definitions
-                     (exorcist update --from <url-or-file>, or --status)
+                     (exorcist update --from <https-url-or-file>, or --status)
   shield             Run an MCP server behind the Real-Time Shield
   wrap <mcp.json>    Run every local MCP server in a config through the shield
   unwrap <mcp.json>  Undo wrap
