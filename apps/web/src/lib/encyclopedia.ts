@@ -45,5 +45,6 @@ export function describeMatch(def: VirusDefinition): string {
   if (def.match.unicode_class?.length) parts.push(`hidden Unicode (${def.match.unicode_class.join(', ')})`);
   if (def.match.json_path) parts.push('a structure check on JSON files');
   if (def.match.analysis === 'trifecta') parts.push('a check of all the MCP servers in one config together (capabilities.yaml)');
+  if (def.match.analysis === 'detonation') parts.push('a sandboxed AI run with fake tools and fake secrets (the Detonation Chamber, only with --detonate)');
   return parts.join(' and ');
 }

@@ -133,6 +133,11 @@ const ENTRIES: Record<string, PlainEntry> = {
     attack:
       'The settings for a tool server include a variable such as NODE_OPTIONS or LD_PRELOAD. These make the program load code of the attacker\'s choosing before it starts, without changing the command you see, so the server looks the same but does more.',
   },
+  'EX-024': {
+    headline: 'This text made an AI try something harmful',
+    attack:
+      'Exorcist gave this text to a test AI that had only pretend tools and pretend passwords, and watched what it did. The text talked it into trying to send a secret away, read a password file, download and run a program, or delete things. The wording may be new, but the effect is a prompt injection. Nothing was actually run.',
+  },
 };
 
 export function plainFor(ruleId: string, fallbackTitle: string): PlainEntry {

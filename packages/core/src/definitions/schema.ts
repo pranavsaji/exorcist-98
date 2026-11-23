@@ -62,7 +62,9 @@ const MatchSchema = z
     // A check across a whole config instead of a text match: `trifecta` is the
     // lethal-trifecta analysis of the MCP servers in one config (EX-023,
     // capabilities.yaml). The signature engine skips such rules.
-    analysis: z.enum(['trifecta']).optional(),
+    // `detonation` is the Detonation Chamber (EX-024, m5-detonation): a
+    // sandboxed model run, only with `--detonate`.
+    analysis: z.enum(['trifecta', 'detonation']).optional(),
     minor_run: z.object({
       max_length: z.number().int().min(1),
       classes:    z.array(z.string()).min(1),

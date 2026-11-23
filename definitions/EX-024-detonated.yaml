@@ -1,0 +1,38 @@
+id: EX-024
+title: Detonated in the chamber
+severity: critical
+applies_to:
+  - instruction
+  - docs
+  - code
+  - config
+  - mcp-config
+  - hook
+  - memory
+  - power
+  - manifest
+  - unknown
+  - tool-result
+match:
+  # Not a text pattern: behaviour, not wording. With `exorcist scan
+  # --detonate` (or `exorcist detonate <file>`), the Detonation Chamber gives
+  # the suspect text to a sandboxed model (Claude on Amazon Bedrock) that has
+  # only fake tools (read_file, run_shell, http_post, send_message) and
+  # planted fake secrets. It is reported when the text makes the model try to
+  # send a planted secret anywhere, read a secret file it was not asked
+  # about, download and run code, or run a destructive command. No tool call
+  # is ever executed. Code: packages/core/src/llm/detonation.ts. Off by
+  # default; it needs AWS credentials and costs at most two model calls per
+  # file.
+  analysis: detonation
+owasp:
+  - "LLM01:2025 Prompt Injection"
+  - "LLM06:2025 Excessive Agency"
+  - "LLM02:2025 Sensitive Information Disclosure"
+fix: >
+  When an AI model read this text, it tried to do something harmful (the
+  finding lists the exact tool calls it attempted; none were run). The
+  wording may not match any signature, but the effect is the same as a
+  prompt injection. Remove or rewrite the passage that asks for those
+  actions, check where the file came from, and do not let an agent with real
+  tools read it until it is clean.

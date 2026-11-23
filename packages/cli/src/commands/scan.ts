@@ -3,7 +3,8 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { displayMessage, loadDefinitions, plainFor, scanRepo, toBadgeSvg, toJson, toMarkdown, toSarif } from '@exorcist-98/core';
 import type { Finding, ScanStats } from '@exorcist-98/core';
 import { MAX_SPANS_PER_FILE } from '@exorcist-98/core/llm';
-import type { BedrockClient } from '@exorcist-98/core/llm';
+import type { BedrockClient, ChamberClient } from '@exorcist-98/core/llm';
+import { DEFAULT_DETONATE_MAX, EX024, makeChamberClient, parseDetonateMax, runDetonations } from './detonate.js';
 import { findDefinitionsDir, parse, str, strs } from '../util.js';
 import type { Io } from '../util.js';
 
@@ -34,6 +35,12 @@ Options:
                                         suspicious spans. Needs AWS credentials and AWS_REGION.
                                         Each flagged file costs up to ${MAX_AI_CALLS_PER_FILE} model calls.
   --ai-max-calls <n>                    Stop asking the AI after n model calls (default ${DEFAULT_AI_CALLS})
+  --detonate                            Detonation Chamber (EX-024): give each file with a medium-or-worse
+                                        or AI finding to a sandboxed model with fake tools and fake
+                                        secrets, and report the files whose text makes it try something
+                                        harmful. Nothing is executed. Needs AWS credentials and AWS_REGION;
+                                        at most 2 model calls per file. Off by default.
+  --detonate-max <n>                    Detonate at most n files (default ${DEFAULT_DETONATE_MAX})
 `;
 
 export function readIgnoreFile(root: string): string[] {
@@ -65,6 +72,8 @@ function renderText(findings: Finding[], stats: ScanStats): string {
     // and invisible characters are shown as [U+XXXX] markers and cannot act
     // on the terminal (a smuggled escape sequence stays inert).
     if (f.decoded) lines.push(`         hidden message: "${displayMessage(f.decoded)}"`);
+    // EX-024: the tool calls the sandboxed model attempted. Model-written, so made safe to show.
+    if (f.source === 'heuristic' && f.ruleId === EX024) lines.push(`         chamber: ${displayMessage(f.rationale)}`);
     lines.push(`         fix:   ${f.fix.replace(/\s+/g, ' ').trim()}`);
   }
   const counts = (['critical', 'high', 'medium', 'low'] as const)
@@ -128,11 +137,12 @@ export async function makeAiClient(rawMax: string | undefined, io: Io, real?: Be
   };
 }
 
-export async function scanCommand(argv: string[], io: Io): Promise<number> {
+export async function scanCommand(argv: string[], io: Io, deps: { chamber?: ChamberClient } = {}): Promise<number> {
   const p = parse(argv, {
     format: { type: 'string' }, 'fail-on': { type: 'string' }, ignore: { type: 'string', multiple: true },
     definitions: { type: 'string' }, output: { type: 'string' }, help: { type: 'boolean', short: 'h' },
     ai: { type: 'boolean' }, 'ai-max-calls': { type: 'string' },
+    detonate: { type: 'boolean' }, 'detonate-max': { type: 'string' },
   });
   if (!p.ok) { io.err(`${p.error}\n\n${SCAN_HELP}`); return 2; }
   if (p.values['help']) { io.out(SCAN_HELP); return 0; }
@@ -165,6 +175,11 @@ export async function scanCommand(argv: string[], io: Io): Promise<number> {
     return 2;
   }
 
+  const detonateMax = parseDetonateMax(str(p.values['detonate-max']));
+  if (detonateMax === null) { io.err('--detonate-max must be a whole number from 1 to 1000.'); return 2; }
+  const chamber = p.values['detonate'] === true ? await makeChamberClient(io, '--detonate', deps.chamber) : null;
+  if (chamber === false) return 2;
+
   const ignore = [...strs(p.values['ignore']), ...readIgnoreFile(root)];
   const findings: Finding[] = [];
   let stats: ScanStats = { filesScanned: 0, filesSkipped: 0, findingsTotal: 0, durationMs: 0 };
@@ -187,8 +202,16 @@ export async function scanCommand(argv: string[], io: Io): Promise<number> {
     io.err(`The scan failed: ${String(err).split('\n')[0]}`);
     return 2;
   }
-  stats = { ...stats, filesScanned: counted, findingsTotal: findings.length };
   if (ai) io.err(ai.summary());
+  if (chamber) {
+    const def = (await loadDefinitions(defsDir)).find((d) => d.id === EX024);
+    const run = await runDetonations(root, findings, chamber, detonateMax, def ?? {
+      title: 'Detonated in the chamber', owasp: ['LLM01:2025 Prompt Injection'], fix: 'Remove the passage that makes an AI try these actions.',
+    });
+    findings.push(...run.findings);
+    io.err(run.summary);
+  }
+  stats = { ...stats, filesScanned: counted, findingsTotal: findings.length };
 
   const body =
     format === 'json' ? `${JSON.stringify(toJson(findings, stats, { target }), null, 2)}\n`

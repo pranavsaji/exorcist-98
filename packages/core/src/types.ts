@@ -129,6 +129,37 @@ export interface BedrockClient {
   call(params: BedrockParams): Promise<BedrockResult>;
 }
 
+// ── Detonation Chamber client (m5-detonation) ────────────────────────────────
+
+/** One content block of a sandbox conversation (Anthropic Messages format). */
+export type ChamberBlock =
+  | { type: 'text'; text: string }
+  | { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> }
+  | { type: 'tool_result'; tool_use_id: string; content: string };
+
+export type ChamberMessage = { role: 'user' | 'assistant'; content: ChamberBlock[] };
+
+/** A fake tool offered to the sandboxed model. It is never executed. */
+export type ChamberTool = { name: string; description: string; input_schema: Record<string, unknown> };
+
+export type ChamberRequest = {
+  system:      string;
+  messages:    ChamberMessage[];
+  tools:       ChamberTool[];
+  maxTokens:   number;
+  temperature: number;
+};
+
+/** The model's raw response body, unvalidated: the chamber checks it with zod. */
+export type ChamberResult =
+  | { ok: true;  body: unknown }
+  | { ok: false; error: string };
+
+/** A model that can be offered tools (Bedrock, or a fake in tests). */
+export interface ChamberClient {
+  converse(request: ChamberRequest): Promise<ChamberResult>;
+}
+
 // ── Scan options ──────────────────────────────────────────────────────────────
 
 export type ScanOptions = {

@@ -1,5 +1,5 @@
 import type { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime';
-import type { BedrockClient, BedrockParams, BedrockResult } from '../types.js';
+import type { BedrockClient, BedrockParams, BedrockResult, ChamberClient, ChamberRequest, ChamberResult } from '../types.js';
 
 /**
  * Default models (L-020). The original ids (Claude 3 Haiku, Claude 3.5
@@ -48,7 +48,7 @@ export type CallCounts = { haiku: number; sonnet: number; failed: number };
  * so programs that bundle this module (the CLI) start and work without it
  * installed until AI analysis is actually asked for.
  */
-export class BedrockClientImpl implements BedrockClient {
+export class BedrockClientImpl implements BedrockClient, ChamberClient {
   private client: BedrockRuntimeClient | null = null;
   private sdk: typeof import('@aws-sdk/client-bedrock-runtime') | null = null;
   readonly counts: CallCounts = { haiku: 0, sonnet: 0, failed: 0 };
@@ -93,9 +93,47 @@ export class BedrockClientImpl implements BedrockClient {
       return { ok: false, error: String(err) };
     }
   }
+
+  /**
+   * One turn of a Detonation Chamber conversation (m5-detonation): the fast
+   * model with fake tools offered. The response body is returned unparsed;
+   * the chamber validates it. Nothing here runs a tool.
+   */
+  async converse(request: ChamberRequest): Promise<ChamberResult> {
+    try {
+      const client  = await this.getClient();
+      const sdk     = this.sdk as typeof import('@aws-sdk/client-bedrock-runtime');
+      const body = JSON.stringify({
+        anthropic_version: 'bedrock-2023-05-31',
+        max_tokens:        request.maxTokens,
+        temperature:       request.temperature,
+        system:            request.system,
+        messages:          request.messages,
+        tools:             request.tools,
+      });
+      const cmd = new sdk.InvokeModelCommand({
+        modelId:     modelIdFor('haiku'),
+        contentType: 'application/json',
+        accept:      'application/json',
+        body:        new TextEncoder().encode(body),
+      });
+      const response = await client.send(cmd);
+      const parsed: unknown = JSON.parse(new TextDecoder().decode(response.body));
+      this.counts.haiku++;
+      return { ok: true, body: parsed };
+    } catch (err) {
+      this.counts.failed++;
+      return { ok: false, error: String(err) };
+    }
+  }
 }
 
 // What the CLI's --ai needs, through `@exorcist-98/core/llm` only.
-export type { BedrockClient, BedrockParams, BedrockResult } from '../types.js';
+export type { BedrockClient, BedrockParams, BedrockResult, ChamberClient, ChamberRequest, ChamberResult, ChamberMessage, ChamberTool, ChamberBlock } from '../types.js';
+export {
+  detonate, buildChamber, decideVerdict, classifyCall, fakeToolResult, parseTurn, makeEnvironment, maskSecrets, isSecretPath,
+  PLACEMENTS, MAX_TURNS, MAX_OUTPUT_TOKENS, MAX_DETONATED_CHARS, CHAMBER_TOOLS,
+} from './detonation.js';
+export type { Placement, FakeEnvironment, AttemptedCall, DetonationReport, DetonationVerdict, DetonateOptions, Chamber, ParsedTurn, HarmKind } from './detonation.js';
 export { MAX_SPANS_PER_FILE, judgeText, MAX_JUDGED_CHARS } from '../scanner/heuristic-engine.js';
 export type { TextVerdict } from '../scanner/heuristic-engine.js';

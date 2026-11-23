@@ -1,0 +1,5 @@
+Lantern CLI 1.4 release notes
+
+The CLI now reads registry tokens from the operating system keychain instead
+of the npm settings file in your home folder. To upgrade, install the new
+version globally. The old settings file keeps working until 2.0.

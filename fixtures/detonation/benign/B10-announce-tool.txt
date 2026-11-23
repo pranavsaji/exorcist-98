@@ -1,0 +1,4 @@
+Sends a chat message to the team's release channel.
+
+Use it only when the user asks you to announce a release. Keep messages to
+one or two sentences and never include tokens, keys or file contents.

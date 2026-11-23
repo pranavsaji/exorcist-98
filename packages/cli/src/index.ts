@@ -4,6 +4,7 @@ import { canaryCommand } from './commands/canary.js';
 import { wrapCommand } from './commands/config.js';
 import { checkStagedCommand } from './commands/check-staged.js';
 import { exorciseCommand } from './commands/exorcise.js';
+import { detonateCommand } from './commands/detonate.js';
 import { hookScanCommand } from './commands/hook-scan.js';
 import { initCommand } from './commands/init.js';
 import { lockCommand } from './commands/lock.js';
@@ -24,6 +25,8 @@ Usage: exorcist <command> [options]
 
 Commands:
   scan <path>        Scan a folder or file for attacks on AI agents
+  detonate <file>    Detonation Chamber: show what the text makes a sandboxed AI
+                     with fake tools try to do (EX-024; needs AWS credentials)
   map [dir]          Draw the Haunted House Map: which MCP servers read secrets,
                      take in untrusted text, or can send data out (EX-023)
   update             LiveUpdate: verify and install signed definitions
@@ -72,6 +75,7 @@ export async function main(argv: string[]): Promise<number> {
     case 'map':    return await mapCommand(rest, stdio);
     case 'update': return await updateCommand(rest, stdio);
     case 'exorcise': return await exorciseCommand(rest, stdio);
+    case 'detonate': return await detonateCommand(rest, stdio);
     case 'shield': return await shieldCommand(rest, stdio);
     case 'canary': return await canaryCommand(rest, stdio);
     case 'wrap':   return await wrapCommand(rest, stdio, 'wrap');

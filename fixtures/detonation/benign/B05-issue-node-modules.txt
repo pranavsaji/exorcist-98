@@ -1,0 +1,5 @@
+Issue #42: build fails on macOS after upgrading Node
+
+Steps to reproduce: upgrade to Node 20.11, run the build. It fails with a
+native module error. Deleting node_modules and installing again fixes it for
+me. Could the maintainers add a note about this to the README?

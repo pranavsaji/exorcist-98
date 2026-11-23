@@ -1,0 +1,4 @@
+Lists the open tasks of the current project.
+
+Pass "query" to filter by title. The server reads its own TASKS_TOKEN from
+its environment; callers never send tokens or file contents as arguments.
