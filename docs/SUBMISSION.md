@@ -52,6 +52,11 @@ a quarantine vault) and pointed it at the files and tools an agent trusts.
 - **Protect a repo in one step:** a GitHub Action that scans every pull
   request and comments on new threats; the web app shows the workflow file to
   copy after each scan.
+- **Possession Lab** (in the web app): five attacks (rug pull, poisoned tool,
+  secret leak, unknown host, poisoned tool result), each replayed twice from
+  the same script, once through the real Shield engine and once with nothing
+  in between, side by side and step by step. It is the Shield code itself
+  running in the browser's backend, not an animation.
 - **Real-Time Shield:** an MCP firewall that sits between the agent and each
   MCP server. It pins every tool's fingerprint; if a tool changes, it is hidden
   from the agent and calls to it are refused, with a diff of what changed. It
@@ -91,7 +96,7 @@ page.
   uses MCP servers.
 
 Tested inside Crew 0.12.2 and 0.13.0 (install, enable, page, patrol,
-notification, agent chat, cron, quarantine and restore), plus 140 unit and
+notification, agent chat, cron, quarantine and restore), plus 143 unit and
 property tests and a 20-step Chrome run with 0 axe violations. Every place
 where Crew behaved differently from its docs is listed in
 `docs/KNOWN_LIMITATIONS.md` of that repo.
@@ -107,12 +112,24 @@ where Crew behaved differently from its docs is listed in
 | MCP | Built the `exorcist` MCP server on the official SDK (4 tools), tested with the SDK client. | `packages/mcp-server/` |
 | Powers | Built the `exorcist` Power (MCP config plus 3 skills). | `power/` |
 | Measurement | We ran our own scanner on five real repos and found it raised 4,457 alarms, none real. Kiro then worked through a precision spec: rule-level controls in the YAML format, a labelled attack corpus, and a re-run: 2 alarms, 19 of 19 attacks caught. The same run found a CLI bug that cut reports at 64 KB. | `docs/BENCHMARK.md`, `fixtures/benchmark/` |
-| Crew | A separate Crew app repo: Sentry agent, agent-hygiene skill, a nightly patrol that sends Crew notifications, a backend and a dashboard page. Run inside Crew 0.12.2 and 0.13.0, including the Sentry agent reading results through its own read-only MCP tool; installing and running it found places where Crew behaves differently from its docs (each recorded in that repo's `docs/KNOWN_LIMITATIONS.md`, C-0xx and N-0xx) and fixed. | `pranavsaji/exorcist-98-crew` |
+| Crew | A separate Crew app repo: Sentry agent, agent-hygiene skill, a nightly patrol that sends Crew notifications, a backend and a dashboard page. Run inside Crew 0.12.2 and 0.13.0, including the Sentry agent reading results through its own read-only MCP tool; installing and running it found places where Crew behaves differently from its docs (each recorded in that repo's `docs/KNOWN_LIMITATIONS.md`) and fixed. | `pranavsaji/exorcist-98-crew` |
 
 Stack: TypeScript (strict) in a pnpm monorepo; Next.js for the web app;
 Vitest and fast-check; playwright-core and axe-core for a real-browser,
 accessibility-checked test that runs in CI; esbuild for the CLI and MCP server
-bundles; Amazon Bedrock wiring for an AI judge (see "What's next").
+bundles; an optional AI judge on Amazon Bedrock (Claude Haiku for triage, Sonnet as the
+judge), run against the real service.
+
+## How it compares to existing MCP scanners
+
+Open-source tools such as Invariant Labs' mcp-scan, mcp-security-guard,
+mcp-audit-scanner and trustmcp already detect tool poisoning, and several pin
+tool descriptions by hash to catch rug pulls. Exorcist 98 adds: a check of
+every tool against its pin before every call (needed because Kiro caches the
+tool list, which we found by running the Shield inside Kiro); scanning of the
+whole repository across the files seven coding agents read, not just MCP
+config; a measured false-positive rate on repos it was never tuned on; Kiro
+hooks, a Power, an MCP server and a Crew app; and an exact-restore quarantine.
 
 ## Challenges
 
@@ -166,10 +183,12 @@ running it, and every gap written down (`docs/KNOWN_LIMITATIONS.md`).
 
 ## What's next
 
-- Run the Shield and Power inside Kiro end to end (not yet done).
-- Turn on the Bedrock AI judge (wired and unit tested with a fake client, never
-  run against the real service).
-- Publish `@exorcist-98/cli` and `@exorcist-98/mcp-server` to npm.
+- Re-run the Shield's check-before-every-call fix inside Kiro (tested with real
+  processes and the MCP SDK; the first Kiro run is what found the gap), and
+  install the Power through Kiro's Powers panel.
+- Make the AI judge cheaper to leave on: it already runs on Amazon Bedrock and
+  catches reworded attacks that patterns miss (on real Bedrock it hid a French
+  exfiltration instruction no signature caught), but it costs money per call.
 - A bigger benchmark corpus and more well-known MCP packages for the
   typosquat check.
 
