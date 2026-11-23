@@ -113,8 +113,28 @@ function isJoiningScriptText(text: string): boolean {
  */
 export const MIN_VARIATION_SELECTOR_RUN = 4;
 
+/**
+ * The only standard emoji built from tag characters are three flags: England,
+ * Scotland and Wales (U+1F3F4, the tag letters gbeng / gbsct / gbwls, then
+ * U+E007F). Their tag characters are spelling, not hidden text. Any other tag
+ * sequence, including a made-up "flag", is still reported.
+ */
+const FLAG_TAG_SEQUENCE = /\u{1F3F4}(?:\u{E0067}\u{E0062}(?:\u{E0065}\u{E006E}\u{E0067}|\u{E0073}\u{E0063}\u{E0074}|\u{E0077}\u{E006C}\u{E0073}))\u{E007F}/gu;
+
+/** UTF-16 offsets of tag characters that belong to a standard flag emoji. */
+function flagTagOffsets(text: string): Set<number> {
+  const out = new Set<number>();
+  if (!text.includes('\u{1F3F4}')) return out;
+  for (const m of text.matchAll(FLAG_TAG_SEQUENCE)) {
+    let o = (m.index ?? 0) + 2; // skip the 2-unit black flag
+    for (const ch of m[0].slice(2)) { out.add(o); o += ch.length; }
+  }
+  return out;
+}
+
 function findHiddenUnicode(text: string): UnicodeHit[] {
   const hits: UnicodeHit[] = [];
+  const flagTags = flagTagOffsets(text);
   let joiningText: boolean | null = null;
   let vsRun: UnicodeHit[] = [];
   const endVsRun = (): void => {
@@ -131,7 +151,7 @@ function findHiddenUnicode(text: string): UnicodeHit[] {
       } else {
         endVsRun();
         if (cls !== undefined) joiningText ??= (cp === 0x200C || cp === 0x200D) ? isJoiningScriptText(text) : null;
-        if (cls !== undefined && !isBenign(text, cp, offset, char.length, joiningText === true)) {
+        if (cls !== undefined && !flagTags.has(offset) && !isBenign(text, cp, offset, char.length, joiningText === true)) {
           hits.push({ char, codePoint: cp, offset, class: cls });
         }
       }

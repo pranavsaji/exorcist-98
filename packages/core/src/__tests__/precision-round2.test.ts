@@ -367,3 +367,21 @@ describe('security review: zero-width bypasses stay closed', () => {
     expect(ex001(`A stray${ZWSP} space in a sentence.`).map((x) => x.severity)).toEqual(['medium']);
   });
 });
+
+describe('EX-001: the three standard flag emoji built from tag characters', () => {
+  let d: VirusDefinition[] = [];
+  beforeAll(async () => { d = await loadDefinitions(new URL('../../../../definitions', import.meta.url).pathname); });
+  const tagSeq = (letters: string) => String.fromCodePoint(0x1f3f4, ...Array.from(letters).map((c) => 0xe0000 + c.charCodeAt(0)), 0xe007f);
+  const ex001 = (text: string) => scanText(text, 'docs', d).filter((x) => x.ruleId === 'EX-001');
+
+  it('England, Scotland and Wales flags are not hidden text', () => {
+    expect(ex001(`Languages: ${tagSeq('gbeng')} English, ${tagSeq('gbsct')} Scots, ${tagSeq('gbwls')} Welsh.`)).toEqual([]);
+  });
+  it('a made-up flag that spells a word is still reported', () => {
+    expect(ex001(`Hello ${tagSeq('ignore')} world`).length).toBeGreaterThan(0);
+  });
+  it('tag text after a real flag is still reported', () => {
+    const extra = Array.from('run this').map((c) => String.fromCodePoint(0xe0000 + c.charCodeAt(0))).join('');
+    expect(ex001(`Hi ${tagSeq('gbeng')}${extra} there`).length).toBeGreaterThan(0);
+  });
+});
