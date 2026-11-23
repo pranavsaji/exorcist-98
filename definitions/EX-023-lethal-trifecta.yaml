@@ -1,0 +1,25 @@
+id: EX-023
+title: Lethal trifecta across MCP servers
+severity: high
+applies_to:
+  - mcp-config
+  - config
+match:
+  # Not a text pattern: the scanner labels every enabled MCP server (and every
+  # built-in ability a Claude Code settings file allows) in one config with the
+  # capabilities in definitions/capabilities.yaml. When together they can read
+  # private data, take in untrusted text and send data out, one prompt
+  # injection can steal anything the agent can read. Reported once per config,
+  # naming the servers on each leg; critical when a server on a leg has
+  # auto-approved tools.
+  analysis: trifecta
+owasp:
+  - "LLM01:2025 Prompt Injection"
+  - "LLM06:2025 Excessive Agency"
+  - "ASI02 Inadequate Human-in-the-Loop Controls"
+fix: >
+  Break one leg. Run servers that read untrusted text (web pages, issues,
+  chat, email) in a separate agent profile from servers that read private
+  data, or remove the way out (open web requests, sending messages, creating
+  issues or gists). Limit filesystem servers to the project folder, and never
+  auto-approve tools on a server that sits on one of the three legs.

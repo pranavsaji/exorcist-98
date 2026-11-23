@@ -1,7 +1,12 @@
+'use client';
+
+import { useState } from 'react';
+import { HauntedHouseMap } from './HauntedHouseMap';
 import { SeverityBadge } from './SeverityBadge';
 import { plainFor } from '@/lib/plain';
 import { SEVERITY_ORDER, sortFindings } from '@/lib/severity';
 import type { FindingEntry } from '@/lib/scan-state';
+import type { HauntedMapMsg } from '@/lib/protocol';
 
 type Props = {
   findings:   FindingEntry[];
@@ -9,9 +14,39 @@ type Props = {
   scanDone?:  boolean;
   selectedId: number | null;
   onSelect:   (id: number) => void;
+  /** The Haunted House Map, when the scan found MCP configs (m5-trifecta). */
+  map?:       HauntedMapMsg | null;
 };
 
-export function ResultsWindow({ findings, selectedId, onSelect, scanDone = false }: Props) {
+type View = 'list' | 'map';
+
+/**
+ * The threats found, worst first. When the scan found MCP configs, a second
+ * view shows the Haunted House Map of them.
+ */
+export function ResultsWindow({ findings, selectedId, onSelect, scanDone = false, map = null, initialView = 'list' }: Props & { initialView?: View }) {
+  const [view, setView] = useState<View>(initialView);
+  const hasMap = map !== null && map.configs.length > 0;
+  if (!hasMap) return <ThreatList findings={findings} selectedId={selectedId} onSelect={onSelect} scanDone={scanDone} />;
+  const lethal = map.configs.filter((c) => c.trifecta).length;
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Results view">
+        <button type="button" className="btn" aria-pressed={view === 'list'} onClick={() => setView('list')}>
+          Threat list
+        </button>
+        <button type="button" className="btn" aria-pressed={view === 'map'} onClick={() => setView('map')}>
+          Haunted House Map{lethal > 0 ? ` (${lethal} trifecta${lethal === 1 ? '' : 's'})` : ''}
+        </button>
+      </div>
+      {view === 'map'
+        ? <HauntedHouseMap map={map} />
+        : <ThreatList findings={findings} selectedId={selectedId} onSelect={onSelect} scanDone={scanDone} />}
+    </div>
+  );
+}
+
+function ThreatList({ findings, selectedId, onSelect, scanDone = false }: Props) {
   if (findings.length === 0) {
     return (
       <p className="m-0 p-2 text-sm">

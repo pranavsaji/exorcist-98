@@ -7,7 +7,11 @@ import { walkRepo } from '../walker.js';
 import { normalize } from '../normalizer.js';
 import { runSignatures } from './signature-engine.js';
 import { runHeuristics } from './heuristic-engine.js';
-import type { RepoFile, Finding, ScanEvent, ScanOptions } from '../types.js';
+import { loadCapabilityRules } from '../capabilities.js';
+import type { CapabilityRule } from '../capabilities.js';
+import { analyzeConfig, parseMcpConfig, readPins, trifectaFinding } from '../trifecta.js';
+import type { ParsedMcpConfig } from '../trifecta.js';
+import type { Finding, HauntedMap, ScanEvent, ScanOptions, SignatureFinding } from '../types.js';
 
 export type { ScanOptions } from '../types.js';
 
@@ -66,6 +70,53 @@ export function canaryFindings(text: string, rel: string, canaries: readonly Can
   });
 }
 
+/**
+ * The Haunted House Map of the MCP configs found in a scan, and one EX-023
+ * finding per config whose servers form the lethal trifecta. Configs are
+ * sorted by file so the result does not depend on the walk order.
+ */
+export async function trifectaReport(
+  root: string,
+  configs: readonly ParsedMcpConfig[],
+  rules: readonly CapabilityRule[],
+  defs: readonly VirusDefinition[],
+): Promise<{ map: HauntedMap; findings: SignatureFinding[] }> {
+  const pins = await readPins(root);
+  const sorted = [...configs].sort((a, b) => (a.file < b.file ? -1 : a.file > b.file ? 1 : 0));
+  const findings: SignatureFinding[] = [];
+  const maps = sorted.map((c) => {
+    const m = analyzeConfig(c, rules, pins);
+    const f = trifectaFinding(c, m, defs);
+    if (f) findings.push(f);
+    return m;
+  });
+  return { map: { configs: maps }, findings };
+}
+
+export type MapRepoResult =
+  | { ok: true; map: HauntedMap; findings: SignatureFinding[] }
+  | { ok: false; error: string };
+
+/** Only the trifecta check, for `exorcist map`: reads MCP configs, not every file. */
+export async function mapRepo(root: string, options: Pick<ScanOptions, 'definitionsDir' | 'maxFileSizeBytes'>): Promise<MapRepoResult> {
+  const rules = await loadCapabilityRules(options.definitionsDir);
+  if (!rules.ok) return { ok: false, error: rules.error };
+  let defs: VirusDefinition[];
+  try {
+    defs = await loadDefinitions(options.definitionsDir);
+  } catch (err) {
+    return { ok: false, error: String(err).split('\n')[0] ?? 'The virus definitions could not be loaded.' };
+  }
+  const configs: ParsedMcpConfig[] = [];
+  for await (const file of walkRepo(root, options.maxFileSizeBytes)) {
+    if (file.role !== 'mcp-config' && file.role !== 'config') continue;
+    const text = await readFile(file.path, 'utf8').catch(() => null);
+    const cfg = text === null ? null : parseMcpConfig(file.rel, file.role, text);
+    if (cfg) configs.push(cfg);
+  }
+  return { ok: true, ...(await trifectaReport(root, configs, rules.rules, defs)) };
+}
+
 export async function* scanRepo(
   root:    string,
   options: ScanOptions,
@@ -77,6 +128,8 @@ export async function* scanRepo(
   }
   const records: Canary[] = canaries.ok ? canaries.canaries : [];
   const ex022 = defs.find((d) => d.id === 'EX-022');
+  const capabilities = await loadCapabilityRules(options.definitionsDir);
+  const configs: ParsedMcpConfig[] = [];
   const start = Date.now();
   let filesScanned = 0;
   let filesSkipped = 0;
@@ -87,6 +140,8 @@ export async function* scanRepo(
 
     try {
       const text = await readFile(file.path, 'utf8');
+      const cfg = parseMcpConfig(file.rel, file.role, text);
+      if (cfg) configs.push(cfg);
       const norm = normalize(text, file.role);
       const sigs = runSignatures(file, norm, defs);
       const heurs = options.bedrockClient
@@ -104,6 +159,20 @@ export async function* scanRepo(
     } catch (err) {
       filesSkipped++;
       yield { type: 'error', file: file.rel, message: String(err) };
+    }
+  }
+
+  // EX-023 looks at whole configs, so it runs after the walk (REQ-02).
+  if (configs.length > 0) {
+    if (capabilities.ok) {
+      const { map, findings } = await trifectaReport(root, configs, capabilities.rules, defs);
+      for (const finding of findings) {
+        findingsTotal++;
+        yield { type: 'finding', finding };
+      }
+      yield { type: 'map', map };
+    } else if (!capabilities.missing) {
+      yield { type: 'error', file: 'capabilities.yaml', message: capabilities.error };
     }
   }
 

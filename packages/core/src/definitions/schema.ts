@@ -59,6 +59,10 @@ const MatchSchema = z
     min_run:      z.number().int().min(1).optional(),
     // unicode_class only: a run of at most `max_length` characters, all of the
     // listed classes, is reported at `severity` instead of the rule's own.
+    // A check across a whole config instead of a text match: `trifecta` is the
+    // lethal-trifecta analysis of the MCP servers in one config (EX-023,
+    // capabilities.yaml). The signature engine skips such rules.
+    analysis: z.enum(['trifecta']).optional(),
     minor_run: z.object({
       max_length: z.number().int().min(1),
       classes:    z.array(z.string()).min(1),
@@ -69,12 +73,13 @@ const MatchSchema = z
     const hasAny =
       val.regex !== undefined ||
       (val.unicode_class !== undefined && val.unicode_class.length > 0) ||
-      val.json_path !== undefined;
+      val.json_path !== undefined ||
+      val.analysis !== undefined;
     if (!hasAny) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message:
-          'match must contain at least one of: regex, unicode_class, json_path',
+          'match must contain at least one of: regex, unicode_class, json_path, analysis',
       });
     }
     if (val.value_regex !== undefined && val.json_path === undefined) {

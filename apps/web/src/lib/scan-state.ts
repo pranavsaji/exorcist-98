@@ -1,6 +1,6 @@
 import { plainFor } from './plain';
 import { SEVERITY_INFO } from './severity';
-import type { ScanEventMsg, Snippet, WebFinding, WebScanStats } from './protocol';
+import type { HauntedMapMsg, ScanEventMsg, Snippet, WebFinding, WebScanStats } from './protocol';
 
 export type LogKind = 'info' | 'file' | 'threat' | 'error';
 export type LogLine = { id: number; kind: LogKind; text: string };
@@ -16,6 +16,8 @@ export type ScanState = {
   /** Files the scan will look at, once the server has counted them. */
   totalFiles:    number | null;
   stats:         WebScanStats | null;
+  /** The Haunted House Map, when the scan found MCP configs (EX-023). */
+  map:           HauntedMapMsg | null;
   /** Increments once per finding so the UI can retrigger the glitch effect. */
   threatSeq:     number;
   notice:        string | null;
@@ -32,6 +34,7 @@ export const initialScanState: ScanState = {
   filesSeen: 0,
   totalFiles: null,
   stats: null,
+  map: null,
   threatSeq: 0,
   notice: null,
   nextId: 1,
@@ -107,6 +110,15 @@ export function scanReducer(state: ScanState, action: ScanAction): ScanState {
             notice: ev.file === '' ? ev.message : state.notice,
             ...addLog(state, 'error', ev.file === '' ? ev.message : `could not read ${ev.file}`),
           };
+        case 'map': {
+          const n = ev.map.configs.length;
+          const lethal = ev.map.configs.filter((c) => c.trifecta).length;
+          return {
+            ...state,
+            map: ev.map,
+            ...addLog(state, 'info', `Haunted House Map: ${n} MCP config${n === 1 ? '' : 's'} mapped, ${lethal} with the lethal trifecta.`),
+          };
+        }
         case 'done':
           return {
             ...state,

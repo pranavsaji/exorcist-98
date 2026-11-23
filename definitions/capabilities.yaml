@@ -1,0 +1,311 @@
+# Capability rules for the lethal-trifecta check (EX-023, The Haunted House Map).
+#
+# An agent session is dangerous when it combines three powers:
+#   private-data     the Vault of Secrets: files outside the project, email,
+#                    databases, password managers, cloud consoles
+#   untrusted-input  the Open Door: web pages, search results, issues and pull
+#                    requests, an email inbox, chat
+#   exfiltration     the Escape Tunnel: HTTP requests to any host, sending
+#                    email or messages, creating gists, issues or comments,
+#                    uploads
+#
+# Each rule labels an MCP server (by its package, image, script or URL), a
+# tool (by name or description, from the Shield's pin file or an auto-approve
+# list) or a built-in agent ability (a Claude Code `permissions.allow` entry)
+# with one capability. Matching is case-insensitive.
+#
+#   match.package      regex tested against each name the server is known by:
+#                      the package a runner (npx, uvx, bunx, pnpm dlx...) runs,
+#                      a docker image, a script path, a command, or a remote
+#                      URL's host and path. Versions are removed first.
+#   match.exclude      regex: a name that also matches this is skipped
+#                      (documentation servers, validators).
+#   match.path_scope   outside-project: the package match counts only when one
+#                      of the server's path arguments is outside the project
+#                      (/, ~, a home folder, ~/.ssh, /etc, ../...). A server
+#                      limited to "." or ${workspaceFolder} is not private data.
+#   match.tool         regex tested against tool names
+#   match.description  regex tested against tool descriptions
+#   match.ability      regex tested against a built-in ability. With
+#                      path_scope, group 1 is the path to check.
+#
+# Every rule has examples; a test runs each one (expect: true must match,
+# expect: false must not). Tokens are delimited with (?<![a-z0-9]) and
+# (?![a-z0-9]) so that "gmail" matches "server-gmail-autoauth-mcp" but
+# "mail" does not match "mailchimp".
+version: 1
+rules:
+  # ── Vault of Secrets (private-data) ───────────────────────────────────────
+  - id: CAP-001
+    capability: private-data
+    label: reads files outside the project
+    match:
+      package: '^(?:@modelcontextprotocol/server-filesystem|mcp-server-filesystem|mcp/filesystem|@agent-infra/mcp-server-filesystem|@cyanheads/filesystem-mcp-server|filesystem-mcp|mcp-filesystem-server|@shtse8/filesystem-mcp)$'
+      path_scope: outside-project
+    examples:
+      - { command: npx, args: ["-y", "@modelcontextprotocol/server-filesystem@2025.1.14", "/"], expect: true }
+      - { command: npx, args: ["-y", "@modelcontextprotocol/server-filesystem", "~/.ssh"], expect: true }
+      - { command: npx, args: ["-y", "@modelcontextprotocol/server-filesystem", "/Users/alice"], expect: true }
+      - { command: npx, args: ["-y", "@modelcontextprotocol/server-filesystem", "../.."], expect: true }
+      - { command: npx, args: ["-y", "@modelcontextprotocol/server-filesystem", "."], expect: false, note: "limited to the project" }
+      - { command: npx, args: ["-y", "@modelcontextprotocol/server-filesystem", "${workspaceFolder}"], expect: false }
+      - { command: npx, args: ["-y", "@modelcontextprotocol/server-filesystem", "./src", "./docs"], expect: false }
+
+  - id: CAP-002
+    capability: private-data
+    label: reads your email
+    match:
+      package: '(?<![a-z0-9])(?:gmail|googlemail|outlook|imap|e-?mail|inbox|mailbox|protonmail|fastmail|icloud-mail)(?![a-z0-9])'
+      exclude: '(?<![a-z0-9])(?:valid(?:ate|ator|ation)?|verif(?:y|ier)|template|templates|marketing|newsletter|campaigns?)(?![a-z0-9])'
+      tool: '^(?:read_email|read_emails|search_emails|list_emails|get_email|get_emails|read_inbox|list_inbox|get_thread|gmail_read|gmail_search)$'
+    examples:
+      - { command: npx, args: ["@gongrzhe/server-gmail-autoauth-mcp@1.1.1"], expect: true }
+      - { command: uvx, args: ["mcp-email-server"], expect: true }
+      - { command: node, args: ["server.js"], tools: [{ name: search_emails }], expect: true }
+      - { command: npx, args: ["email-validator-mcp"], expect: false, note: "checks addresses, reads no mail" }
+      - { command: npx, args: ["@mailchimp/mcp"], expect: false }
+
+  - id: CAP-003
+    capability: private-data
+    label: reads a database
+    match:
+      package: '(?<![a-z0-9])(?:postgres|postgresql|pg|mysql|mariadb|sqlite|mongodb|mongo|redis|supabase|neon|planetscale|bigquery|snowflake|clickhouse|dynamodb|mssql|sqlserver|duckdb|cockroachdb|firestore|airtable)(?![a-z0-9])'
+      exclude: '(?<![a-z0-9])(?:docs?|documentation)(?![a-z0-9])'
+      tool: '^(?:query|sql|execute_sql|run_sql|sql_query|execute_query|run_query|read_query|write_query|list_tables|describe_table|find_documents|mongo_find)$'
+    examples:
+      - { command: npx, args: ["-y", "@modelcontextprotocol/server-postgres", "postgresql://localhost/app"], expect: true }
+      - { command: uvx, args: ["mcp-server-sqlite", "--db-path", "data.db"], expect: true }
+      - { command: docker, args: ["run", "-i", "--rm", "mcp/postgres", "postgresql://db/app"], expect: true }
+      - { url: "https://mcp.supabase.com/mcp", expect: true }
+      - { command: node, args: ["dist/index.js"], tools: [{ name: execute_sql }], expect: true }
+      - { command: npx, args: ["@upstash/context7-mcp"], expect: false }
+
+  - id: CAP-004
+    capability: private-data
+    label: opens a password manager or secret store
+    match:
+      package: '(?<![a-z0-9])(?:1password|onepassword|op-mcp|bitwarden|lastpass|keepass|keepassxc|dashlane|keeper|hashicorp-vault|vault-mcp|mcp-vault|infisical|doppler|secrets?-manager|keychain)(?![a-z0-9])'
+      tool: '^(?:get|read|list|reveal|fetch|retrieve)_(?:secrets?|passwords?|credentials?|logins?|vault_items?)$'
+    examples:
+      - { command: npx, args: ["-y", "@bitwarden/mcp-server"], expect: true }
+      - { command: uvx, args: ["awslabs.secrets-manager-mcp-server"], expect: true }
+      - { command: node, args: ["index.js"], tools: [{ name: get_secret }], expect: true }
+      - { command: npx, args: ["@modelcontextprotocol/server-memory"], expect: false }
+
+  - id: CAP-005
+    capability: private-data
+    label: controls a cloud account
+    match:
+      package: '(?<![a-z0-9])(?:aws|awslabs|gcloud|google-cloud|gcp|azure|kubernetes|k8s|kubectl|cloudflare|terraform)(?![a-z0-9])'
+      exclude: '(?<![a-z0-9])(?:docs?|documentation|knowledge|pricing|diagrams?|learn)(?![a-z0-9])'
+    examples:
+      - { command: uvx, args: ["awslabs.ccapi-mcp-server@latest"], expect: true }
+      - { command: npx, args: ["-y", "@azure/mcp@latest", "server", "start"], expect: true }
+      - { command: npx, args: ["mcp-server-kubernetes"], expect: true }
+      - { command: uvx, args: ["awslabs.aws-documentation-mcp-server@latest"], expect: false, note: "reads public docs only" }
+      - { url: "https://docs.mcp.cloudflare.com/sse", expect: false }
+
+  - id: CAP-006
+    capability: private-data
+    label: reads your documents, notes or calendar
+    match:
+      package: '(?<![a-z0-9])(?:gdrive|google-?drive|google-?docs|google-?calendar|gcal|notion|dropbox|onedrive|sharepoint|box-mcp|obsidian|evernote|confluence)(?![a-z0-9])'
+    examples:
+      - { command: npx, args: ["-y", "@modelcontextprotocol/server-gdrive"], expect: true }
+      - { url: "https://mcp.notion.com/mcp", expect: true }
+      - { command: npx, args: ["-y", "@modelcontextprotocol/server-everything"], expect: false }
+
+  - id: CAP-007
+    capability: private-data
+    label: runs shell commands, so it can read any file
+    match:
+      package: '(?<![a-z0-9])(?:desktop-commander|mcp-server-commands|server-commands|mcp-shell|shell-mcp|mcp-shell-server|shell-server|terminal-mcp|mcp-terminal|iterm-mcp|cli-mcp-server|tmux-mcp|ssh-mcp|mcp-ssh|mcp-server-ssh|win-cli-mcp-server)(?![a-z0-9])'
+      tool: '^(?:run_command|execute_command|exec_command|shell|bash|run_shell|shell_exec|run_terminal_cmd|terminal_execute|execute_shell_command|start_process)$'
+    examples:
+      - { command: npx, args: ["-y", "@wonderwhy-er/desktop-commander"], expect: true }
+      - { command: uvx, args: ["mcp-shell-server"], expect: true }
+      - { command: node, args: ["build/index.js"], tools: [{ name: run_command }], expect: true }
+      - { command: npx, args: ["-y", "@modelcontextprotocol/server-sequential-thinking"], expect: false }
+
+  # ── Open Door (untrusted-input) ───────────────────────────────────────────
+  - id: CAP-010
+    capability: untrusted-input
+    label: reads web pages
+    match:
+      package: '(?<![a-z0-9])(?:fetch|mcp-server-fetch|web-?fetch|puppeteer|playwright|browser|browserbase|browser-use|browser-tools|firecrawl|crawl4ai|crawler|scraper|jina-reader|url-reader|webpage-reader|hyperbrowser|chrome-devtools|stagehand)(?![a-z0-9])'
+      tool: '^(?:fetch|fetch_url|fetch_html|fetch_markdown|fetch_txt|web_fetch|browse|navigate|browser_navigate|puppeteer_navigate|playwright_navigate|scrape|scrape_url|firecrawl_scrape|crawl|read_url|get_webpage|open_url)$'
+      description: '\b(?:fetch(?:es)?|retriev(?:e|es)|download(?:s)?|read(?:s)?|load(?:s)?)\s+(?:the\s+)?(?:contents?\s+of\s+)?(?:a|any|the)\s+(?:url|web\s?page|website)\b'
+    examples:
+      - { command: uvx, args: ["mcp-server-fetch"], expect: true }
+      - { command: npx, args: ["@playwright/mcp@latest"], expect: true }
+      - { command: npx, args: ["-y", "firecrawl-mcp"], expect: true }
+      - { command: node, args: ["s.js"], tools: [{ name: get, description: "Fetches the contents of a URL and returns it as markdown." }], expect: true }
+      - { command: npx, args: ["-y", "@modelcontextprotocol/server-memory"], expect: false }
+
+  - id: CAP-011
+    capability: untrusted-input
+    label: reads web search results
+    match:
+      package: '(?<![a-z0-9])(?:brave-search|tavily|tavily-mcp|exa|exa-mcp-server|perplexity|serper|serpapi|google-search|bing-search|duckduckgo|duckduckgo-mcp-server|kagi|searxng|web-search|websearch|search1api)(?![a-z0-9])'
+      tool: '^(?:web_search|search_web|brave_web_search|tavily_search|google_search|search_internet|internet_search|duckduckgo_search|perplexity_ask)$'
+    examples:
+      - { command: npx, args: ["-y", "@modelcontextprotocol/server-brave-search"], expect: true }
+      - { command: npx, args: ["-y", "tavily-mcp@0.1.4"], expect: true }
+      - { command: node, args: ["index.js"], tools: [{ name: web_search }], expect: true }
+      - { command: npx, args: ["-y", "@modelcontextprotocol/server-sequential-thinking"], expect: false }
+
+  - id: CAP-012
+    capability: untrusted-input
+    label: reads issues and pull requests written by anyone
+    match:
+      package: '(?<![a-z0-9])(?:github|githubcopilot|gitlab|bitbucket|gitea|forgejo|linear|jira|atlassian|youtrack)(?![a-z0-9])'
+      exclude: '(?<![a-z0-9])(?:docs?|documentation)(?![a-z0-9])'
+      tool: '^(?:get_issue|list_issues|search_issues|get_issue_comments|get_pull_request|list_pull_requests|get_pull_request_comments|get_pull_request_reviews|search_code|get_discussion|list_discussions)$'
+    examples:
+      - { command: npx, args: ["-y", "@modelcontextprotocol/server-github"], expect: true }
+      - { command: docker, args: ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "ghcr.io/github/github-mcp-server"], expect: true }
+      - { url: "https://api.githubcopilot.com/mcp/", expect: true }
+      - { command: uvx, args: ["mcp-server-git", "--repository", "."], expect: false, note: "a local git repository" }
+
+  - id: CAP-013
+    capability: untrusted-input
+    label: reads chat messages or an email inbox
+    match:
+      package: '(?<![a-z0-9])(?:slack|discord|telegram|whatsapp|ms-teams|microsoft-teams|teams-mcp|mattermost|rocketchat|zulip|intercom|gmail|googlemail|outlook|imap|e-?mail|inbox|mailbox|protonmail|fastmail)(?![a-z0-9])'
+      exclude: '(?<![a-z0-9])(?:valid(?:ate|ator|ation)?|verif(?:y|ier)|template|templates|marketing|newsletter|campaigns?)(?![a-z0-9])'
+      tool: '^(?:read_email|read_emails|search_emails|list_emails|get_email|read_inbox|get_messages|read_messages|list_messages|get_channel_history|slack_get_channel_history|slack_get_thread_replies|conversations_history|read_channel)$'
+    examples:
+      - { command: npx, args: ["-y", "@modelcontextprotocol/server-slack"], expect: true }
+      - { command: npx, args: ["@gongrzhe/server-gmail-autoauth-mcp"], expect: true }
+      - { command: node, args: ["bot.js"], tools: [{ name: read_messages }], expect: true }
+      - { command: npx, args: ["email-validator-mcp"], expect: false }
+
+  - id: CAP-014
+    capability: untrusted-input
+    label: reads social media, feeds or videos
+    match:
+      package: '(?<![a-z0-9])(?:reddit|twitter|bluesky|mastodon|youtube|youtube-transcript|rss|hackernews|hacker-news|hn-mcp)(?![a-z0-9])'
+    examples:
+      - { command: npx, args: ["-y", "@kimtaeyoon83/mcp-server-youtube-transcript"], expect: true }
+      - { command: uvx, args: ["mcp-server-reddit"], expect: true }
+      - { command: npx, args: ["-y", "@modelcontextprotocol/server-everything"], expect: false }
+
+  # ── Escape Tunnel (exfiltration) ──────────────────────────────────────────
+  - id: CAP-020
+    capability: exfiltration
+    label: makes web requests to any address
+    match:
+      package: '(?<![a-z0-9])(?:fetch|mcp-server-fetch|web-?fetch|puppeteer|playwright|browser|browserbase|browser-use|firecrawl|crawl4ai|crawler|scraper|jina-reader|url-reader|hyperbrowser|chrome-devtools|stagehand|http-request|http-client|curl|webhook|webhooks|postman|n8n|zapier)(?![a-z0-9])'
+      tool: '^(?:fetch|fetch_url|http_request|http_get|http_post|post_request|send_request|make_request|webhook|call_webhook|trigger_webhook|curl|browser_navigate|navigate|puppeteer_navigate|playwright_navigate|open_url|scrape_url|firecrawl_scrape)$'
+      description: '\b(?:sends?|makes?|performs?)\s+(?:an?\s+)?(?:arbitrary\s+)?(?:http|https|web|post)\s+requests?\b'
+    examples:
+      - { command: uvx, args: ["mcp-server-fetch"], expect: true }
+      - { command: npx, args: ["-y", "@modelcontextprotocol/server-puppeteer"], expect: true }
+      - { command: node, args: ["x.js"], tools: [{ name: http_post }], expect: true }
+      - { command: npx, args: ["-y", "@modelcontextprotocol/server-brave-search"], expect: false, note: "searches one engine, cannot reach any address" }
+
+  - id: CAP-021
+    capability: exfiltration
+    label: sends email or messages
+    match:
+      package: '(?<![a-z0-9])(?:slack|discord|telegram|whatsapp|ms-teams|microsoft-teams|teams-mcp|mattermost|rocketchat|zulip|twilio|sms|gmail|googlemail|outlook|smtp|e-?mail|protonmail|fastmail|resend|sendgrid|mailgun|postmark|amazon-ses|aws-ses)(?![a-z0-9])'
+      exclude: '(?<![a-z0-9])(?:valid(?:ate|ator|ation)?|verif(?:y|ier)|template|templates)(?![a-z0-9])'
+      tool: '^(?:send_email|send_mail|send_message|post_message|reply_email|reply_to_email|forward_email|slack_post_message|slack_reply_to_thread|chat_post_message|send_sms|send_dm|send_direct_message|send_telegram_message|discord_send)$'
+    examples:
+      - { command: npx, args: ["-y", "@modelcontextprotocol/server-slack"], expect: true }
+      - { command: npx, args: ["-y", "resend-mcp"], expect: true }
+      - { command: node, args: ["mail.js"], tools: [{ name: send_email }], expect: true }
+      - { command: npx, args: ["email-validator-mcp"], expect: false }
+
+  - id: CAP-022
+    capability: exfiltration
+    label: posts issues, comments, gists or pull requests
+    match:
+      package: '(?<![a-z0-9])(?:github|githubcopilot|gitlab|bitbucket|gitea|forgejo|linear|jira|atlassian|youtrack)(?![a-z0-9])'
+      exclude: '(?<![a-z0-9])(?:docs?|documentation)(?![a-z0-9])'
+      tool: '^(?:create_issue|update_issue|create_gist|create_pull_request|add_issue_comment|create_comment|add_comment|create_or_update_file|push_files|create_repository|create_pull_request_review|create_release)$'
+    examples:
+      - { command: npx, args: ["-y", "@modelcontextprotocol/server-github"], expect: true }
+      - { url: "https://mcp.linear.app/sse", expect: true }
+      - { command: node, args: ["gh.js"], tools: [{ name: create_gist }], expect: true }
+      - { command: uvx, args: ["mcp-server-git", "--repository", "."], expect: false }
+
+  - id: CAP-023
+    capability: exfiltration
+    label: uploads files or opens remote connections
+    match:
+      package: '(?<![a-z0-9])(?:s3-upload|upload|uploader|pastebin|imgur|transfer-sh|ftp|sftp|scp|rsync|ssh-mcp|mcp-ssh|mcp-server-ssh)(?![a-z0-9])'
+      tool: '^(?:upload|upload_file|upload_files|put_object|share_file|create_share_link|create_public_link|ftp_put|sftp_upload|scp_upload|paste)$'
+    examples:
+      - { command: npx, args: ["-y", "mcp-server-ssh"], expect: true }
+      - { command: node, args: ["s3.js"], tools: [{ name: put_object }], expect: true }
+      - { command: npx, args: ["-y", "@modelcontextprotocol/server-memory"], expect: false }
+
+  - id: CAP-024
+    capability: exfiltration
+    label: runs shell commands, so it can send data anywhere
+    match:
+      package: '(?<![a-z0-9])(?:desktop-commander|mcp-server-commands|server-commands|mcp-shell|shell-mcp|mcp-shell-server|shell-server|terminal-mcp|mcp-terminal|iterm-mcp|cli-mcp-server|tmux-mcp|win-cli-mcp-server)(?![a-z0-9])'
+      tool: '^(?:run_command|execute_command|exec_command|shell|bash|run_shell|shell_exec|run_terminal_cmd|terminal_execute|execute_shell_command|start_process)$'
+    examples:
+      - { command: npx, args: ["-y", "@wonderwhy-er/desktop-commander"], expect: true }
+      - { command: node, args: ["build/index.js"], tools: [{ name: execute_command }], expect: true }
+      - { command: npx, args: ["-y", "@modelcontextprotocol/server-sequential-thinking"], expect: false }
+
+  # ── Built-in agent abilities (Claude Code permissions.allow) ──────────────
+  - id: CAP-030
+    capability: untrusted-input
+    label: built-in web fetch or search, allowed without asking
+    match:
+      ability: '^(?:WebFetch|WebSearch)(?:\(.*\))?$'
+    examples:
+      - { ability: "WebFetch", expect: true }
+      - { ability: "WebSearch", expect: true }
+      - { ability: "WebFetch(domain:docs.example.invalid)", expect: true }
+      - { ability: "Bash(npm test:*)", expect: false }
+
+  - id: CAP-031
+    capability: exfiltration
+    label: built-in web fetch to any address, allowed without asking
+    match:
+      ability: '^WebFetch(?:\((?:domain:\*)?\))?$'
+    examples:
+      - { ability: "WebFetch", expect: true }
+      - { ability: "WebFetch(domain:*)", expect: true }
+      - { ability: "WebFetch(domain:docs.example.invalid)", expect: false, note: "one fixed site" }
+
+  - id: CAP-032
+    capability: exfiltration
+    label: built-in shell that can reach the network, allowed without asking
+    match:
+      ability: '^Bash(?:\((?:\*|(?:curl|wget|nc|ncat|netcat|ssh|scp|sftp|rsync|ftp|telnet|http|https|xh|gh|git push)(?:[: ].*)?)\))?$'
+    examples:
+      - { ability: "Bash", expect: true }
+      - { ability: "Bash(curl:*)", expect: true }
+      - { ability: "Bash(git push:*)", expect: true }
+      - { ability: "Bash(npm run test:*)", expect: false }
+      - { ability: "Bash(git status)", expect: false }
+
+  - id: CAP-033
+    capability: private-data
+    label: built-in shell with no limits, allowed without asking
+    match:
+      ability: '^Bash(?:\(\*\))?$'
+    examples:
+      - { ability: "Bash", expect: true }
+      - { ability: "Bash(*)", expect: true }
+      - { ability: "Bash(curl:*)", expect: false }
+
+  - id: CAP-034
+    capability: private-data
+    label: built-in file reading outside the project, allowed without asking
+    match:
+      # Claude Code paths: //abs is absolute, ~/ is home, /x and ./x are in the project.
+      ability: '^Read\((.+)\)$'
+      path_scope: outside-project
+    examples:
+      - { ability: "Read(~/**)", expect: true }
+      - { ability: "Read(//**)", expect: true }
+      - { ability: "Read(~/.ssh/**)", expect: true }
+      - { ability: "Read(./src/**)", expect: false }
+      - { ability: "Read(/docs/**)", expect: false, note: "project-relative in Claude Code" }

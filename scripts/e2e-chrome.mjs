@@ -202,6 +202,60 @@ await step('every finding row opens a detail with a quoted span and a snippet li
   return `${n} rows opened; all ${n} have a highlighted quoted span`;
 });
 
+await step('Haunted House Map: the trifecta config shows three haunted rooms, a text list and passes axe', async () => {
+  const results = page.getByRole('dialog', { name: 'Threats Found' });
+  // Bring the results window to the front (the detail window may overlap it).
+  await results.locator('.titlebar h2').click();
+  await results.getByRole('button', { name: /^Haunted House Map/ }).click();
+  const svg = results.locator('svg.map-svg[role="img"]');
+  await svg.waitFor({ timeout: 5000 });
+  const title = await svg.locator('title').textContent();
+  if (title !== 'Haunted House Map of EX-023-lethal-trifecta.json') throw new Error('first config shown: ' + title);
+  if ((await svg.getAttribute('data-trifecta')) !== 'true') throw new Error('trifecta not drawn');
+  const haunted = await svg.locator('[data-room][data-haunted="true"]').count();
+  if (haunted !== 3) throw new Error(`${haunted} haunted rooms drawn, expected 3`);
+  const list = results.getByRole('list', { name: 'Rooms of the Haunted House Map, EX-023-lethal-trifecta.json' });
+  const text = await list.innerText();
+  for (const need of ['Vault of Secrets', 'Open Door', 'Escape Tunnel', 'home-files', 'web-reader', 'team-chat', 'AUTO-APPROVED', 'Quiet ghosts', 'scratchpad']) {
+    if (!text.includes(need)) throw new Error('text list is missing ' + need);
+  }
+  const status = await results.getByTestId('map-status').innerText();
+  if (!/CRITICAL/.test(status) || !/Lethal trifecta/.test(status)) throw new Error('status: ' + status);
+  const options = await results.getByLabel('Config file').locator('option').count();
+  await page.waitForSelector('main[data-possessed="false"]', { timeout: 5000 });
+  await page.screenshot({ path: `${SHOTS}/11-haunted-house-map.png` });
+  const r = await axe('haunted-house-map'); axeReports.push(r);
+  // Narrow screen: the map fits a 390 px wide phone with no horizontal scroll.
+  const m = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const p = await m.newPage();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  await p.locator('nav[aria-label="Taskbar"]').getByRole('button', { name: /Start/ }).click();
+  await p.getByRole('menuitem', { name: 'Scan the Haunted Repo' }).click();
+  await p.getByText('Scan complete.').first().waitFor({ timeout: 30000 });
+  const res = p.getByRole('dialog', { name: 'Threats Found' });
+  // On a phone the windows are stacked; the taskbar brings the results to the front.
+  await p.locator('nav[aria-label="Taskbar"]').getByRole('button', { name: /Threats Found/ }).click();
+  await res.getByRole('button', { name: /^Haunted House Map/ }).click();
+  await res.locator('svg.map-svg').waitFor();
+  // A critical finding "possesses" the desktop (a short shake); measure after it.
+  await p.waitForSelector('main[data-possessed="false"]', { timeout: 5000 });
+  await res.locator('svg.map-svg').scrollIntoViewIfNeeded();
+  const fit = await p.evaluate(() => {
+    const s = document.querySelector('svg.map-svg').getBoundingClientRect();
+    const w = document.querySelector('section[role=dialog] svg.map-svg')?.closest('section').getBoundingClientRect();
+    return { svg: [Math.round(s.left), Math.round(s.right)], win: [Math.round(w.left), Math.round(w.right)], vw: innerWidth, scroll: document.documentElement.scrollWidth };
+  });
+  await p.screenshot({ path: `${SHOTS}/11b-haunted-house-map-mobile.png` });
+  const rm = await (async () => {
+    await p.addScriptTag({ content: axeSource });
+    return p.evaluate(async () => (await window.axe.run(document, { resultTypes: ['violations'] })).violations.map((v) => ({ id: v.id, impact: v.impact, nodes: v.nodes.length, sample: v.nodes[0]?.target?.join(' ').slice(0, 120) })));
+  })();
+  axeReports.push({ label: 'haunted-house-map-390px', violations: rm });
+  await m.close();
+  if (fit.svg[0] < 0 || fit.svg[1] > fit.vw || fit.scroll > fit.vw) throw new Error('map does not fit at 390 px: ' + JSON.stringify(fit));
+  return `3 haunted rooms, ${options} configs to pick from, ${r.violations.length} axe violation types; 390px: ${JSON.stringify(fit)}, ${rm.length} axe violation types`;
+});
+
 await step('axe scan: home after scan (results + detail open)', async () => {
   const r = await axe('home-after-scan');
   axeReports.push(r);

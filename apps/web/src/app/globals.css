@@ -868,3 +868,60 @@ main[data-possessed="true"]::after {
     animation: none;
   }
 }
+
+/* ── Haunted House Map (m5-trifecta) ───────────────────────────────────── */
+.map-frame {
+  background: #1a1030;
+  padding: 3px;
+  box-shadow:
+    inset 2px 2px 0 #6b6180,
+    inset -2px -2px 0 #f4f0fa,
+    0 0 0 1px #120b22;
+}
+.map-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+}
+.map-svg text {
+  font-family: ui-sans-serif, system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+.map-ghost {
+  animation: map-float 2.8s ease-in-out infinite;
+}
+[data-room="untrusted-input"] .map-ghost { animation-delay: -0.9s; }
+[data-room="exfiltration"] .map-ghost { animation-delay: -1.8s; }
+@keyframes map-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1.5px); }
+}
+.map-svg[data-trifecta="true"] [data-trifecta-path] path {
+  animation: map-march 1.2s linear infinite;
+}
+@keyframes map-march {
+  to { stroke-dashoffset: -20; }
+}
+.map-auto {
+  display: inline-block;
+  padding: 0 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  background: #6a1030;
+  border: 1px solid #120b22;
+}
+.map-list > li + li {
+  margin-top: 0.35rem;
+}
+.map-list li {
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-ghost,
+  .map-svg[data-trifecta="true"] [data-trifecta-path] path {
+    animation: none;
+  }
+}

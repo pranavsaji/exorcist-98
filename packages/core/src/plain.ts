@@ -118,6 +118,11 @@ const ENTRIES: Record<string, PlainEntry> = {
     attack:
       'Exorcist plants harmless, unique tokens in files only an attacker would want to read. No honest workflow ever sends one anywhere, so a canary token turning up in a tool call, a file or a commit is proof that something talked your AI into leaking.',
   },
+  'EX-023': {
+    headline: 'Together, these tool servers can leak your secrets',
+    attack:
+      'Each tool server looks harmless alone. But one agent session that can read private data, read text anyone can write (a web page, an issue, an email) and send data somewhere can be told by that text to copy your secrets out. This is the "lethal trifecta".',
+  },
 };
 
 export function plainFor(ruleId: string, fallbackTitle: string): PlainEntry {

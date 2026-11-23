@@ -12,12 +12,13 @@ const fixtureFiles = readdirSync(fixtureDir)
   .filter(f => /^EX-\d{3}-/.test(f))
   .map(f => join(fixtureDir, f));
 
-// All 20 expected IDs
+// All expected IDs (EX-022, canary traps, has no planted sample: its tokens are made per install)
 const EXPECTED_IDS = [
   'EX-001', 'EX-002', 'EX-003', 'EX-004', 'EX-005',
   'EX-006', 'EX-007', 'EX-008', 'EX-009', 'EX-010',
   'EX-011', 'EX-012', 'EX-013', 'EX-014', 'EX-015',
   'EX-016', 'EX-017', 'EX-018', 'EX-019', 'EX-020', 'EX-021',
+  'EX-023',
 ];
 
 // A URL starting with http(s):// whose host is NOT one of the allowed safe values.

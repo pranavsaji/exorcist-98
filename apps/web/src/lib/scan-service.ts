@@ -4,10 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { mkdir } from "node:fs/promises";
 import { fetchGithubRepo, readZip, scanRepo, walkRepo, writeEntries } from "@exorcist-98/core";
-import type { Finding } from "@exorcist-98/core";
+import type { Finding, HauntedMap } from "@exorcist-98/core";
 import { definitionsDir, hauntedRepoDir } from "./paths";
 import { buildSnippet } from "./snippet";
-import type { ScanEventMsg, WebFinding } from "./protocol";
+import type { HauntedMapMsg, ScanEventMsg, WebFinding } from "./protocol";
 
 export type ScanTarget =
   | { kind: "haunted-repo"; display: string }
@@ -56,6 +56,20 @@ function toWebFinding(f: Finding): WebFinding {
     return { ...base, rationale: f.rationale, confidence: f.confidence };
   }
   return { ...base, ...(f.decoded !== undefined ? { decoded: f.decoded } : {}) };
+}
+
+const MAX_MAP_CONFIGS = 50;
+
+/**
+ * The map as sent to the page: only configs the scan shows, trifectas first,
+ * at most MAX_MAP_CONFIGS of them. Null when nothing is left.
+ */
+export function toWebMap(map: HauntedMap, include: (rel: string) => boolean): HauntedMapMsg | null {
+  const configs = map.configs
+    .filter((c) => include(c.file))
+    .sort((a, b) => Number(b.trifecta) - Number(a.trifecta) || (a.file < b.file ? -1 : a.file > b.file ? 1 : 0))
+    .slice(0, MAX_MAP_CONFIGS);
+  return configs.length > 0 ? { configs } : null;
 }
 
 /**
@@ -145,6 +159,9 @@ export async function* scanTarget(
       } else if (ev.type === "error") {
         if (!include(ev.file)) continue;
         yield { type: "error", file: ev.file, message: GENERIC_FILE_ERROR };
+      } else if (ev.type === "map") {
+        const map = toWebMap(ev.map, include);
+        if (map) yield { type: "map", map };
       } else {
         const stats =
           target.kind === "haunted-repo"

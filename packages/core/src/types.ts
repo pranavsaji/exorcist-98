@@ -58,6 +58,42 @@ export type HeuristicFinding = Omit<SignatureFinding, 'source'> & {
 
 export type Finding = SignatureFinding | HeuristicFinding;
 
+// ── Capabilities and the Haunted House Map (EX-023) ───────────────────────────
+
+/** The three legs of the lethal trifecta. */
+export type Capability = 'private-data' | 'untrusted-input' | 'exfiltration';
+
+/** Why a server or ability sits on a leg: which capability rule matched, on what. */
+export type CapabilityReason = {
+  capability: Capability;
+  ruleId:     string;   // CAP-NNN in definitions/capabilities.yaml
+  label:      string;   // plain language, e.g. "reads web pages"
+  evidence:   string;   // the package, tool or ability that matched
+};
+
+/** One enabled MCP server (or built-in agent ability) in a config: a ghost on the map. */
+export type MapGhost = {
+  name:         string;
+  kind:         'server' | 'ability';
+  capabilities: Capability[];
+  reasons:      CapabilityReason[];
+  /** Some of its tools run without asking the user (autoApprove, alwaysAllow, trust, permissions.allow). */
+  autoApproved: boolean;
+};
+
+/** The Haunted House Map of one MCP config file. */
+export type ConfigMap = {
+  file:      string;   // rel path
+  ghosts:    MapGhost[];
+  /** Names of the ghosts on each leg, sorted. */
+  legs:      Record<Capability, string[]>;
+  trifecta:  boolean;
+  /** EX-023 severity when `trifecta`, else null. */
+  severity:  'critical' | 'high' | null;
+};
+
+export type HauntedMap = { configs: ConfigMap[] };
+
 // ── Scan events ───────────────────────────────────────────────────────────────
 
 export type ScanStats = {
@@ -71,6 +107,8 @@ export type ScanEvent =
   | { type: 'file';    file: RepoFile }
   | { type: 'finding'; finding: Finding }
   | { type: 'error';   file: string; message: string }
+  /** Sent once before `done` when the scan found at least one MCP config. */
+  | { type: 'map';     map: HauntedMap }
   | { type: 'done';    stats: ScanStats };
 
 // ── Bedrock client interface ──────────────────────────────────────────────────

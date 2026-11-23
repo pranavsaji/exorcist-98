@@ -23,6 +23,19 @@ Add `--ai` to also ask an AI judge (Claude on Amazon Bedrock) about suspicious
 text. It needs AWS credentials, `AWS_REGION` and
 `npm install @aws-sdk/client-bedrock-runtime`; `--ai-max-calls` caps the cost.
 
+## Map the haunted house
+
+```sh
+npx -y @exorcist-98/cli@0.1.0 map .
+```
+
+For every MCP config in the folder, lists which servers sit in the three rooms
+of the "lethal trifecta": the Vault of Secrets (private data), the Open Door
+(untrusted input) and the Escape Tunnel (a way out). A config that fills all
+three is reported as EX-023 (critical when a tool on one of those servers is
+auto-approved) and the command exits 1. `--format json` gives the same map as
+data. The rules are in `definitions/capabilities.yaml`.
+
 ## Protect your MCP servers
 
 ```sh

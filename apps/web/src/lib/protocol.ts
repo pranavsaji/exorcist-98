@@ -51,6 +51,38 @@ export const ScanStatsSchema = z.object({
 });
 export type WebScanStats = z.infer<typeof ScanStatsSchema>;
 
+// ── The Haunted House Map (EX-023, m5-trifecta) ───────────────────────────────
+
+export const CapabilitySchema = z.enum(['private-data', 'untrusted-input', 'exfiltration']);
+export type Capability = z.infer<typeof CapabilitySchema>;
+
+export const MapGhostSchema = z.object({
+  name:         z.string().max(200),
+  kind:         z.enum(['server', 'ability']),
+  capabilities: z.array(CapabilitySchema).max(3),
+  reasons:      z.array(z.object({
+    capability: CapabilitySchema,
+    ruleId:     z.string().max(20),
+    label:      z.string().max(200),
+    evidence:   z.string().max(300),
+  })).max(40),
+  autoApproved: z.boolean(),
+});
+export type MapGhostMsg = z.infer<typeof MapGhostSchema>;
+
+const LegNames = z.array(z.string().max(200)).max(100);
+export const ConfigMapSchema = z.object({
+  file:     z.string().max(1000),
+  ghosts:   z.array(MapGhostSchema).max(100),
+  legs:     z.object({ 'private-data': LegNames, 'untrusted-input': LegNames, exfiltration: LegNames }),
+  trifecta: z.boolean(),
+  severity: z.enum(['critical', 'high']).nullable(),
+});
+export type ConfigMapMsg = z.infer<typeof ConfigMapSchema>;
+
+export const HauntedMapSchema = z.object({ configs: z.array(ConfigMapSchema).max(50) });
+export type HauntedMapMsg = z.infer<typeof HauntedMapSchema>;
+
 export const ScanEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('start'),   target: z.string() }),
   // How many files the scan will look at, sent once before the first file (W-010).
@@ -58,6 +90,9 @@ export const ScanEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('file'),    rel: z.string(), role: z.string() }),
   z.object({ type: z.literal('finding'), finding: WebFindingSchema, snippet: SnippetSchema }),
   z.object({ type: z.literal('error'),   file: z.string(), message: z.string() }),
+  // Sent once, just before `done`, when the scan found MCP configs. Optional:
+  // a stream without it (an older server) is still valid.
+  z.object({ type: z.literal('map'),     map: HauntedMapSchema }),
   z.object({ type: z.literal('done'),    stats: ScanStatsSchema }),
   z.object({ type: z.literal('fatal'),   message: z.string() }),
 ]);

@@ -191,6 +191,8 @@ export function runSignatures(
     if (!def.applies_to.includes(file.role)) continue;
     if (def.skip_paths?.some((p) => getRegex(p, 'i').test(file.rel))) continue;
     const { match } = def;
+    // A whole-config analysis (EX-023) is run by the orchestrator, not here.
+    if (match.analysis) continue;
     // file_regex narrows generic config files only; MCP configs and tool
     // descriptions (the Shield scans those) always qualify.
     if (match.file_regex && file.role === 'config' && !getRegex(match.file_regex, 'i').test(norm.plain)) continue;

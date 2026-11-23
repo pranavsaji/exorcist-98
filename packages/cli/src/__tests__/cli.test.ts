@@ -48,7 +48,7 @@ describe('the built bundle', () => {
     expect(run(['--version']).out.trim()).toBe('0.1.0');
     const help = run(['--help']);
     expect(help.code).toBe(0);
-    for (const c of ['scan', 'shield', 'wrap', 'vault', 'approve', 'init', 'lock']) expect(help.out).toContain(c);
+    for (const c of ['scan', 'shield', 'wrap', 'vault', 'approve', 'init', 'lock', 'map']) expect(help.out).toContain(c);
     expect(run([]).code).toBe(2);
     expect(run(['nonsense']).code).toBe(2);
   });
@@ -68,6 +68,44 @@ describe('exorcist lock in the bundle (m5)', () => {
     expect(readFileSync(join(d, 'exorcist.lock'), 'utf8')).toContain('"read_note"');
     expect(run(['lock', '--config', config, '--check'], { cwd: d }).code).toBe(0);
   }, 60_000);
+});
+
+describe('exorcist map (REQ-03.1)', () => {
+  it('prints the three rooms and the servers in each for the Haunted Repo, and exits 1 on a trifecta', () => {
+    const r = run(['map', FIXTURES]);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain('The Haunted House Map');
+    expect(r.out).toMatch(/EX-023-lethal-trifecta\.json\n  Vault of Secrets \(private data\) +home-files\n  Open Door \(untrusted input\) +team-chat, web-reader\n  Escape Tunnel \(a way out\) +team-chat, web-reader/);
+    expect(r.out).toContain('CRITICAL  LETHAL TRIFECTA (EX-023)');
+    expect(r.out).toContain('web-reader [auto-approved]');
+    expect(r.out).toContain('1 of 4 MCP configs forms the lethal trifecta.');
+  });
+
+  it('exits 0 with "no trifecta" on a project-scoped config, and says so when there is no config', () => {
+    const d = tmp();
+    mkdirSync(join(d, '.kiro/settings'), { recursive: true });
+    writeFileSync(join(d, '.kiro/settings/mcp.json'), JSON.stringify({ mcpServers: {
+      files: { command: 'npx', args: ['-y', '@modelcontextprotocol/server-filesystem@2025.1.14', '.'] },
+      web: { command: 'uvx', args: ['mcp-server-fetch@2025.4.7'] },
+    } }));
+    const r = run(['map', d]);
+    expect(r.code).toBe(0);
+    expect(r.out).toContain('No trifecta: the Vault of Secrets room is empty.');
+    const empty = tmp();
+    const e = run(['map', empty]);
+    expect(e.code).toBe(0);
+    expect(e.out).toContain('No MCP configs found');
+  });
+
+  it('--format json gives the map and the EX-023 findings; bad usage exits 2', () => {
+    const r = run(['map', FIXTURES, '--format', 'json']);
+    const j = JSON.parse(r.out) as { map: { configs: Array<{ file: string; trifecta: boolean }> }; findings: Array<{ ruleId: string }> };
+    expect(j.map.configs.filter((c) => c.trifecta).map((c) => c.file)).toEqual(['EX-023-lethal-trifecta.json']);
+    expect(j.findings.map((f) => f.ruleId)).toEqual(['EX-023']);
+    expect(run(['map', FIXTURES, '--format', 'xml']).code).toBe(2);
+    expect(run(['map', join(FIXTURES, 'nope')]).code).toBe(2);
+    expect(run(['map', '--help']).out).toContain('Escape Tunnel');
+  });
 });
 
 describe('exorcist scan', () => {

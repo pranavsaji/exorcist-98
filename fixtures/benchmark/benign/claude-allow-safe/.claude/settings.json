@@ -1,0 +1,5 @@
+{
+  "permissions": {
+    "allow": ["WebFetch(domain:docs.example.invalid)", "WebSearch", "Read(./src/**)", "Bash(npm run test:*)", "Bash(git status)"]
+  }
+}

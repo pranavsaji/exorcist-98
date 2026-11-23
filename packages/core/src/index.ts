@@ -1,7 +1,12 @@
 // Public surface of @exorcist-98/core
 // Internal modules (walker, normalizer, llm internals) are not re-exported.
 
-export { scanRepo } from './scanner/orchestrator.js';
+export { scanRepo, mapRepo, trifectaReport } from './scanner/orchestrator.js';
+export type { MapRepoResult } from './scanner/orchestrator.js';
+export { CAPABILITIES, classifyCapabilities, loadCapabilityRules, parseCapabilityRules, isOutsideProject, serverIdentities } from './capabilities.js';
+export type { CapabilityRule, CapabilityRulesResult, ServerSpec, Classification } from './capabilities.js';
+export { analyzeConfig, detectTrifecta, parseMcpConfig, parsePins, trifectaFinding, TRIFECTA_RULE_ID } from './trifecta.js';
+export type { ConfigEntry, ParsedMcpConfig, TrifectaResult, ToolPins } from './trifecta.js';
 export { scanText } from './scanner/scan-text.js';
 export { toJson, ScanReportSchema } from './reporters/json-reporter.js';
 export { toSarif } from './reporters/sarif-reporter.js';
@@ -24,7 +29,7 @@ export { decide as decideCommitGuard, isGitCommit } from './hook-guard.js';
 export type { HookDecision } from './hook-guard.js';
 
 export type { ScanOptions, ScanEvent, ScanStats } from './types.js';
-export type { Finding, SignatureFinding, HeuristicFinding, FileRole, Severity, RepoFile } from './types.js';
+export type { Finding, SignatureFinding, HeuristicFinding, FileRole, Severity, RepoFile, Capability, CapabilityReason, MapGhost, ConfigMap, HauntedMap } from './types.js';
 export type { VirusDefinition } from './definitions/schema.js';
 export type { ScanReport } from './reporters/json-reporter.js';
 export type { SarifLog } from './reporters/sarif-reporter.js';

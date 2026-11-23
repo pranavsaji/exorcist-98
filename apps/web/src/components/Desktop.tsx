@@ -227,7 +227,7 @@ export function Desktop() {
             )}
             {id === 'results' && (
               <div className="flex flex-col gap-2">
-                <ResultsWindow findings={state.findings} selectedId={selectedId} onSelect={select} scanDone={state.status === 'done'} />
+                <ResultsWindow findings={state.findings} selectedId={selectedId} onSelect={select} scanDone={state.status === 'done'} map={state.map} />
                 {state.status === 'done' && (
                   <ReportButtons findings={state.findings.map((f) => f.finding)} stats={state.stats} target={state.target} />
                 )}

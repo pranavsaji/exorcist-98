@@ -58,6 +58,12 @@
     ],
     "escaped-hex-docs": [
       "EX-003"
+    ],
+    "lethal-trifecta-cursor": [
+      "EX-023"
+    ],
+    "lethal-trifecta-claude": [
+      "EX-023"
     ]
   },
   "benign": [
@@ -79,6 +85,8 @@
     "persian-zwnj",
     "stat-card-images",
     "shell-env-setup",
-    "defensive-rules"
+    "defensive-rules",
+    "project-scoped-mcp",
+    "claude-allow-safe"
   ]
 }

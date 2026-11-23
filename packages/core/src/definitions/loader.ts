@@ -4,9 +4,12 @@ import yaml from 'js-yaml';
 import { VirusDefinitionSchema, DefinitionLoadError } from './schema.js';
 import type { VirusDefinition } from './schema.js';
 
+/** YAML files in the definitions folder that are not virus definitions. */
+export const NON_DEFINITION_FILES = new Set(['capabilities.yaml']);
+
 export async function loadDefinitions(dir: string): Promise<VirusDefinition[]> {
   const entries = await readdir(dir);
-  const yamlFiles = entries.filter((f) => f.endsWith('.yaml'));
+  const yamlFiles = entries.filter((f) => f.endsWith('.yaml') && !NON_DEFINITION_FILES.has(f));
 
   const results: VirusDefinition[] = [];
 

