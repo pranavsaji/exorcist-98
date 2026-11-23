@@ -36,7 +36,8 @@ describe('POST /api/scan-zip (L-032)', () => {
     const ev = await events(res);
     expect(ev[0]).toEqual({ type: 'start', target: 'proj.zip' });
     expect(ev).toContainEqual(expect.objectContaining({ type: 'finding', finding: expect.objectContaining({ ruleId: 'EX-002', file: 'AGENTS.md' }) }));
-    expect(ev.at(-1)?.type).toBe('done');
+    expect(ev.at(-2)?.type).toBe('done');
+    expect(ev.at(-1)?.type).toBe('patch');
   });
   it('refuses other content types and oversized uploads before reading them', async () => {
     expect((await post('{}', 'application/json')).status).toBe(415);

@@ -6,5 +6,6 @@ export default defineConfig({
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
-  test: { globals: false, environment: 'node' },
+  // No registry lookups for the exorcism patch's EX-010 pins in tests.
+  test: { globals: false, environment: 'node', env: { EXORCIST_OFFLINE: '1' } },
 });

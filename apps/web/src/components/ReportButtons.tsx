@@ -14,7 +14,7 @@ const KINDS: Array<{ kind: ReportKind; label: string }> = [
   { kind: 'badge', label: 'README badge (SVG)' },
 ];
 
-function download(filename: string, mime: string, body: string): void {
+export function download(filename: string, mime: string, body: string): void {
   const url = URL.createObjectURL(new Blob([body], { type: mime }));
   const a = document.createElement('a');
   a.href = url;

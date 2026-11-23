@@ -132,7 +132,18 @@ function flagTagOffsets(text: string): Set<number> {
   return out;
 }
 
-function findHiddenUnicode(text: string): UnicodeHit[] {
+/** True for every code point the hidden-character rules look for (EX-001 and EX-021), benign or not. */
+export function isHiddenCodePoint(cp: number): boolean {
+  return CP_TO_CLASS.has(cp);
+}
+
+/**
+ * Every hidden character that is not one of the benign uses (isBenign, the
+ * flag emoji, variation-selector runs shorter than MIN_VARIATION_SELECTOR_RUN).
+ * These are exactly the characters EX-001 and EX-021 report, and the ones
+ * `exorcist exorcise` removes.
+ */
+export function findHiddenUnicode(text: string): UnicodeHit[] {
   const hits: UnicodeHit[] = [];
   const flagTags = flagTagOffsets(text);
   let joiningText: boolean | null = null;

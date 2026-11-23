@@ -85,6 +85,28 @@ export type ConfigMapMsg = z.infer<typeof ConfigMapSchema>;
 export const HauntedMapSchema = z.object({ configs: z.array(ConfigMapSchema).max(50) });
 export type HauntedMapMsg = z.infer<typeof HauntedMapSchema>;
 
+/** Largest exorcism patch the server sends (bytes of UTF-8). */
+export const PATCH_MAX_BYTES = 1_048_576;
+
+/**
+ * The exorcism patch: a unified diff of the safe, mechanical fixes for this
+ * scan's findings, built on the server by the same code as `exorcist exorcise`.
+ * Sent once, as the last event of a successful scan.
+ */
+export const PatchEventSchema = z.object({
+  type:    z.literal('patch'),
+  patch:   z.string().max(PATCH_MAX_BYTES),
+  /** Files in the patch. */
+  files:   z.number().int().nonnegative(),
+  /** Fixes in the patch. */
+  fixes:   z.number().int().nonnegative(),
+  /** Changed files left out because the patch reached PATCH_MAX_BYTES. */
+  omitted: z.number().int().nonnegative(),
+  /** Fixable findings that were left for a human (e.g. a version that could not be looked up). */
+  skipped: z.number().int().nonnegative(),
+});
+export type PatchEvent = z.infer<typeof PatchEventSchema>;
+
 export const ScanEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('start'),   target: z.string() }),
   // How many files the scan will look at, sent once before the first file (W-010).
@@ -97,5 +119,6 @@ export const ScanEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('map'),     map: HauntedMapSchema }),
   z.object({ type: z.literal('done'),    stats: ScanStatsSchema }),
   z.object({ type: z.literal('fatal'),   message: z.string() }),
+  PatchEventSchema,
 ]);
 export type ScanEventMsg = z.infer<typeof ScanEventSchema>;

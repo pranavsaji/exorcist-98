@@ -364,6 +364,35 @@ await step('reports: SARIF, Markdown, JSON and badge download from the results w
   return got.join(', ');
 });
 
+await step('Disinfect: scan the Haunted Repo and download the exorcism patch (removes hidden characters)', async () => {
+  await page.getByRole('button', { name: 'Scan the Haunted Repo' }).first().click();
+  await page.getByText('Scan complete.').first().waitFor({ timeout: 20000 });
+  // The patch is the last event of the stream; it may take a moment longer (version lookups).
+  const btn = page.getByRole('button', { name: 'Download exorcism patch', exact: true });
+  await btn.waitFor({ timeout: 20000 });
+  const [dl] = await Promise.all([page.waitForEvent('download'), btn.click()]);
+  const name = dl.suggestedFilename();
+  if (!/^exorcist-.+\.patch$/.test(name)) throw new Error('unexpected file name ' + name);
+  const path = join(OUT, name);
+  await dl.saveAs(path);
+  const body = readFileSync(path, 'utf8');
+  if (!/^diff --git a\/EX-001-hidden-unicode\.md b\/EX-001-hidden-unicode\.md$/m.test(body)) throw new Error('no diff for the EX-001 sample');
+  const HIDDEN = /[\u200B-\u200D\u2060-\u2064\uFEFF\u202A-\u202E\u2066-\u2069\u{E0000}-\u{E007F}]/u;
+  const HIDDEN_ALL = new RegExp(HIDDEN.source, 'gu');
+  const lines = body.split('\n');
+  const removed = lines.filter((l) => l.startsWith('-') && !l.startsWith('---') && HIDDEN.test(l));
+  if (removed.length < 3) throw new Error(`only ${removed.length} removed lines carry hidden characters`);
+  for (const l of removed) {
+    const clean = '+' + l.slice(1).replace(HIDDEN_ALL, '');
+    if (!lines.includes(clean)) throw new Error('no clean replacement for a line with hidden characters: ' + JSON.stringify(clean.slice(0, 60)));
+  }
+  if (lines.some((l) => l.startsWith('+') && HIDDEN.test(l))) throw new Error('an added line still has hidden characters');
+  const files = (body.match(/^diff --git /gm) || []).length;
+  await page.screenshot({ path: `${SHOTS}/11-exorcism-patch.png` });
+  const r = await axe('results-with-exorcism-patch'); axeReports.push(r);
+  return `${name}: ${files} files, ${removed.length} lines with hidden characters cleaned; ${r.violations.length} axe violation types`;
+});
+
 await step('Possession Lab: the rug pull plays to the end, protected vs compromised', async () => {
   await page.locator('main').getByRole('button', { name: 'Possession Lab' }).click();
   const lab = page.getByRole('dialog', { name: /Possession Lab/ });

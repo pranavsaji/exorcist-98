@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { play, setSoundEnabled, soundEnabled } from '@/lib/sound';
+import { ExorcismPatch } from './ExorcismPatch';
 import { ReportButtons } from './ReportButtons';
 import { BookIcon, GhostIcon, InfoIcon, ShieldIcon, SkullIcon } from './Icons';
 import { DesktopIcon } from './DesktopIcon';
@@ -228,6 +229,9 @@ export function Desktop() {
             {id === 'results' && (
               <div className="flex flex-col gap-2">
                 <ResultsWindow findings={state.findings} selectedId={selectedId} onSelect={select} scanDone={state.status === 'done'} map={state.map} />
+                {state.status === 'done' && state.patch && state.findings.length > 0 && (
+                  <ExorcismPatch patch={state.patch} target={state.target} />
+                )}
                 {state.status === 'done' && (
                   <ReportButtons findings={state.findings.map((f) => f.finding)} stats={state.stats} target={state.target} />
                 )}

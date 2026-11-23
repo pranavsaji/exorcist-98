@@ -1,6 +1,6 @@
 import { plainFor } from './plain';
 import { SEVERITY_INFO } from './severity';
-import type { HauntedMapMsg, ScanEventMsg, Snippet, WebFinding, WebScanStats } from './protocol';
+import type { HauntedMapMsg, PatchEvent, ScanEventMsg, Snippet, WebFinding, WebScanStats } from './protocol';
 
 export type LogKind = 'info' | 'file' | 'threat' | 'error';
 export type LogLine = { id: number; kind: LogKind; text: string };
@@ -21,6 +21,8 @@ export type ScanState = {
   /** Increments once per finding so the UI can retrigger the glitch effect. */
   threatSeq:     number;
   notice:        string | null;
+  /** The exorcism patch, once the server has sent it (after `done`). */
+  patch:         Omit<PatchEvent, 'type'> | null;
   nextId:        number;
 };
 
@@ -37,6 +39,7 @@ export const initialScanState: ScanState = {
   map: null,
   threatSeq: 0,
   notice: null,
+  patch: null,
   nextId: 1,
 };
 
@@ -130,6 +133,17 @@ export function scanReducer(state: ScanState, action: ScanAction): ScanState {
               `Scan complete: ${ev.stats.filesScanned} files, ${ev.stats.findingsTotal} threats, ${Math.round(ev.stats.durationMs)} ms.`,
             ),
           };
+        case 'patch': {
+          const { type: _type, ...patch } = ev;
+          void _type;
+          return {
+            ...state,
+            patch,
+            ...(patch.fixes > 0
+              ? addLog(state, 'info', `Exorcism patch ready: ${patch.fixes} safe fix${patch.fixes === 1 ? '' : 'es'} in ${patch.files} file${patch.files === 1 ? '' : 's'}.`)
+              : {}),
+          };
+        }
         case 'fatal':
           return {
             ...state,

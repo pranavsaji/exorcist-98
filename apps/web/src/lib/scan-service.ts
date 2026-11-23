@@ -3,11 +3,12 @@ import { readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { mkdir } from "node:fs/promises";
-import { fetchGithubRepo, readZip, scanRepo, walkRepo, writeEntries } from "@exorcist-98/core";
-import type { ConfigMap, Finding, HauntedMap } from "@exorcist-98/core";
+import { exorciseRepo, fetchGithubRepo, readZip, registryLookup, scanRepo, toUnifiedDiff, walkRepo, writeEntries } from "@exorcist-98/core";
+import type { ConfigMap, Finding, HauntedMap, VersionAnswer, VersionLookup } from "@exorcist-98/core";
 import { definitionsDir, hauntedRepoDir } from "./paths";
 import { buildSnippet } from "./snippet";
-import type { ConfigMapMsg, HauntedMapMsg, ScanEventMsg, WebFinding } from "./protocol";
+import { PATCH_MAX_BYTES } from "./protocol";
+import type { ConfigMapMsg, HauntedMapMsg, PatchEvent, ScanEventMsg, WebFinding } from "./protocol";
 
 export type ScanTarget =
   | { kind: "haunted-repo"; display: string }
@@ -21,7 +22,34 @@ export type CloneFn = (target: { owner: string; repo: string; ref?: string }, di
 export type ScanServiceOptions = {
   clone?: CloneFn;
   maxFindings?: number;
+  /**
+   * Version lookups for the EX-010 fix in the exorcism patch. Default: the
+   * public npm and PyPI registries (3 s each, answers cached for 10 minutes),
+   * or none when EXORCIST_OFFLINE=1. Null: none.
+   */
+  lookup?: VersionLookup | null;
 };
+
+/** Findings kept for the exorcism patch (only the first ones count beyond this). */
+const MAX_PATCH_FINDINGS = 20_000;
+const versionCache = new Map<string, { at: number; answer: VersionAnswer }>();
+const sharedLookup = registryLookup({ timeoutMs: 3000, cache: versionCache });
+
+function defaultLookup(): VersionLookup | null {
+  return process.env["EXORCIST_OFFLINE"] === "1" ? null : sharedLookup;
+}
+
+/** The exorcism patch for a scanned folder, capped at PATCH_MAX_BYTES. */
+export async function buildPatchEvent(
+  root: string,
+  findings: readonly Finding[],
+  lookup: VersionLookup | null,
+): Promise<PatchEvent> {
+  const results = await exorciseRepo(root, findings, { lookup, maxLookups: 20 });
+  const p = toUnifiedDiff(results, { maxBytes: PATCH_MAX_BYTES });
+  const skipped = results.reduce((n, r) => n + r.notes.length, 0);
+  return { type: "patch", patch: p.patch, files: p.files, fixes: p.fixes, omitted: p.omitted, skipped };
+}
 
 const DEFAULT_MAX_FINDINGS = 500;
 const GENERIC_FATAL = "The scan could not be completed.";
@@ -146,6 +174,8 @@ export async function* scanTarget(
     let capNoticeSent = false;
     let cachedFile = "";
     let cachedText = "";
+    let completed = false;
+    const forPatch: Finding[] = [];
 
     for await (const ev of scanRepo(root, {
       definitionsDir: definitionsDir(),
@@ -157,6 +187,7 @@ export async function* scanTarget(
       } else if (ev.type === "finding") {
         if (!include(ev.finding.file)) continue;
         found++;
+        if (forPatch.length < MAX_PATCH_FINDINGS) forPatch.push(ev.finding);
         if (emitted >= maxFindings) {
           if (!capNoticeSent) {
             capNoticeSent = true;
@@ -206,8 +237,21 @@ export async function* scanTarget(
             durationMs: stats.durationMs,
           }),
         );
+        completed = true;
         yield { type: "done", stats };
       }
+    }
+
+    // The exorcism patch, built before any downloaded or uploaded copy is
+    // removed. A failure here never turns a finished scan into a failed one.
+    if (completed) {
+      let patch: PatchEvent | null = null;
+      try {
+        patch = await buildPatchEvent(root, forPatch, options.lookup !== undefined ? options.lookup : defaultLookup());
+      } catch {
+        console.log(JSON.stringify({ scan: target.display, patch: "failed" }));
+      }
+      if (patch) yield patch;
     }
   } catch (err) {
     yield { type: "fatal", message: err instanceof UserFacingError ? err.message : GENERIC_FATAL };

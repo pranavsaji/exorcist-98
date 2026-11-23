@@ -56,14 +56,15 @@ describe('POST /api/scan: validation', () => {
 });
 
 describe('POST /api/scan: golden path (Haunted Repo)', () => {
-  it('streams start, findings with snippets from many rules, then done', async () => {
+  it('streams start, findings with snippets from many rules, then done and the exorcism patch', async () => {
     const res = await post({ target: 'haunted-repo' });
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('application/x-ndjson');
 
     const events = await readEvents(res);
     expect(events[0]).toEqual({ type: 'start', target: 'Haunted Repo' });
-    expect(events.at(-1)?.type).toBe('done');
+    expect(events.at(-2)?.type).toBe('done');
+    expect(events.at(-1)?.type).toBe('patch');
     expect(events.some((e) => e.type === 'fatal')).toBe(false);
 
     const findings = events.flatMap((e) => (e.type === 'finding' ? [e] : []));
@@ -112,7 +113,7 @@ describe('POST /api/scan: golden path (Haunted Repo)', () => {
 
   it('the done event reports the same finding count that was streamed', async () => {
     const events = await readEvents(await post({ target: 'haunted-repo' }));
-    const done = events.at(-1);
+    const done = events.find((e) => e.type === 'done');
     const n = events.filter((e) => e.type === 'finding').length;
     expect(done?.type === 'done' ? done.stats.findingsTotal : -1).toBe(n);
   });
@@ -134,7 +135,8 @@ describe('scanTarget: cloned repositories', () => {
       events.push(ev);
     }
     expect(events.some((e) => e.type === 'finding' && e.finding.ruleId === 'EX-002')).toBe(true);
-    expect(events.at(-1)?.type).toBe('done');
+    expect(events.at(-2)?.type).toBe('done');
+    expect(events.at(-1)?.type).toBe('patch');
     expect(cloned).not.toBe('');
     expect(existsSync(cloned)).toBe(false);
   });

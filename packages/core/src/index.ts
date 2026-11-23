@@ -69,3 +69,13 @@ export type {
   Manifest, BundleFile, VerifiedBundle, InstalledSet, InspectedSet, ActiveDefinitions, LookupOptions,
   FetchLike as UpdateFetchLike, FetchResponse as UpdateFetchResponse,
 } from './liveupdate.js';
+export {
+  FIXABLE_RULES, IMAGE_COMMENT, isFixableRule, exorciseFile, exorciseTexts, exorciseRepo, pinRequests, pinKey,
+  positionToOffset, removeHiddenUnicode, rescanTexts, toUnifiedDiff,
+} from './exorcise.js';
+export type {
+  FixableRule, ExorciseChange, ExorciseNote, FileExorcism, Ecosystem, PinRequest, VersionAnswer, VersionTable,
+  VersionLookup, ExorciseOptions, ExorciseInput, ExorciseFileInput, ExorcismPatch, HiddenRemoval,
+} from './exorcise.js';
+export { registryLookup, registryUrl } from './exorcise-registry.js';
+export type { RegistryOptions, FetchFn } from './exorcise-registry.js';

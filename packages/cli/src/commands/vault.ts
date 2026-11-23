@@ -10,7 +10,7 @@ Commands:
   quarantine-server <mcp.json> <server>  Disable an MCP server (keeps a backup)
   quarantine-file <path>                 Move a hook or steering file into the vault
   diff <id>                              What changed since the backup
-  restore <id> [--force]                 Put the original back
+  restore <id> [--force]                 Put the original back (also undoes exorcise --write)
 
 Options:
   --reason <text>   Why (for quarantine commands)
@@ -34,7 +34,7 @@ export async function vaultCommand(argv: string[], io: Io): Promise<number> {
       const entries = listEntries(vault);
       if (entries.length === 0) { io.out('The vault is empty.'); return 0; }
       for (const e of entries) {
-        io.out(`${e.id}  ${e.status.padEnd(11)}  ${e.kind === 'mcp-server' ? `server ${e.serverName}` : 'file'}  ${e.target}  (${e.reason})`);
+        io.out(`${e.id}  ${e.status.padEnd(11)}  ${e.kind === 'mcp-server' ? `server ${e.serverName}` : e.kind === 'exorcise' ? `exorcism of ${e.files?.length ?? 0} file(s) in` : 'file'}  ${e.target}  (${e.reason})`);
       }
       return 0;
     }
@@ -67,7 +67,7 @@ export async function vaultCommand(argv: string[], io: Io): Promise<number> {
       if (!id) { io.err('Give the vault entry id.'); return 2; }
       const r = restoreEntry(vault, id, { force: p.values['force'] === true });
       if (!r.ok) return fail(r.error);
-      io.out(`Restored ${r.value.kind === 'mcp-server' ? `server "${r.value.serverName}"` : r.value.target}.`);
+      io.out(`Restored ${r.value.kind === 'mcp-server' ? `server "${r.value.serverName}"` : r.value.kind === 'exorcise' ? `${r.value.files?.length ?? 0} file(s) in ${r.value.target} to their original bytes` : r.value.target}.`);
       return 0;
     }
     default:

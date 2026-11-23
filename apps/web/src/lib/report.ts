@@ -45,3 +45,8 @@ export function badgeMarkdown(findings: WebFinding[]): string {
   const b = badgeStatus(findings);
   return `![${b.label}: ${b.message}](./exorcist-badge.svg)`;
 }
+
+/** The exorcism patch as a download. Pure. */
+export function patchFile(target: string, patch: string): ReportFile {
+  return { filename: `exorcist-${slug(target)}.patch`, mime: 'text/x-diff', body: patch };
+}

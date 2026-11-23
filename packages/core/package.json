@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.600",
+    "diff": "^8.0.2",
     "js-yaml": "^4.1",
     "jsonpath-plus": "^9.0",
     "simple-git": "^3.25",

@@ -3,6 +3,7 @@ import { approveCommand, alertsCommand } from './commands/approve.js';
 import { canaryCommand } from './commands/canary.js';
 import { wrapCommand } from './commands/config.js';
 import { checkStagedCommand } from './commands/check-staged.js';
+import { exorciseCommand } from './commands/exorcise.js';
 import { hookScanCommand } from './commands/hook-scan.js';
 import { initCommand } from './commands/init.js';
 import { lockCommand } from './commands/lock.js';
@@ -27,6 +28,7 @@ Commands:
                      take in untrusted text, or can send data out (EX-023)
   update             LiveUpdate: verify and install signed definitions
                      (exorcist update --from <https-url-or-file>, or --status)
+  exorcise [path]    Disinfect: fix what has one safe fix (dry run; --write applies)
   shield             Run an MCP server behind the Real-Time Shield
   wrap <mcp.json>    Run every local MCP server in a config through the shield
   unwrap <mcp.json>  Undo wrap
@@ -69,6 +71,7 @@ export async function main(argv: string[]): Promise<number> {
     case 'scan':   return await scanCommand(rest, stdio);
     case 'map':    return await mapCommand(rest, stdio);
     case 'update': return await updateCommand(rest, stdio);
+    case 'exorcise': return await exorciseCommand(rest, stdio);
     case 'shield': return await shieldCommand(rest, stdio);
     case 'canary': return await canaryCommand(rest, stdio);
     case 'wrap':   return await wrapCommand(rest, stdio, 'wrap');
