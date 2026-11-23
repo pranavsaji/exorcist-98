@@ -95,6 +95,21 @@ describe('POST /api/scan: golden path (Haunted Repo)', () => {
     expect(matches.some((m) => m.includes('[U+E00'))).toBe(true);
   });
 
+  it('M5-REQ-03.2: the Ouija decoder reaches the web protocol (EX-001 and EX-021 carry decoded)', async () => {
+    const events = await readEvents(await post({ target: 'haunted-repo' }));
+    const findings = events.flatMap((e) => (e.type === 'finding' ? [e] : []));
+    const decodedOf = (ruleId: string) => findings.filter((f) => f.finding.ruleId === ruleId && f.finding.decoded !== undefined);
+    expect(decodedOf('EX-001').map((f) => f.finding.decoded)).toEqual(['EXAMPLE_HIDDEN_INSTRUCTION_DO_NOT_USE']);
+    const ex21 = decodedOf('EX-021');
+    expect(ex21.map((f) => f.finding.decoded)).toEqual(['DEFANGED: placeholder message']);
+    // The run of selectors is highlighted, revealed as markers.
+    expect(ex21[0]?.snippet.lines.some((l) => l.match.startsWith('[U+E0134][U+E0135]'))).toBe(true);
+    // Findings that hide no message carry no decoded field at all.
+    for (const f of findings) {
+      if (f.finding.ruleId !== 'EX-001' && f.finding.ruleId !== 'EX-021') expect(f.finding.decoded).toBeUndefined();
+    }
+  });
+
   it('the done event reports the same finding count that was streamed', async () => {
     const events = await readEvents(await post({ target: 'haunted-repo' }));
     const done = events.at(-1);

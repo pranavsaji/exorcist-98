@@ -12,7 +12,7 @@ export { DefinitionLoadError } from './definitions/schema.js';
 export { findSecrets, findStagedSecrets, redact } from './secrets-check.js';
 export { fetchGithubRepo, isSafeRef, readTar, safeRelativePath, writeEntries, DEFAULT_TAR_LIMITS } from './remote/tarball.js';
 export type { TarLimits, TarEntry, ExtractResult, FetchLike } from './remote/tarball.js';
-export { decodeHidden, encodeAsTags, encodeAsVariationSelectors, decodeVsBytes, MAX_HIDDEN_RUNS, MAX_DECODED_CHARS } from './ouija.js';
+export { decodeHidden, displayMessage, truncateMessage, encodeAsTags, encodeAsVariationSelectors, decodeVsBytes, MAX_HIDDEN_RUNS, MAX_DECODED_CHARS, MAX_VS_BYTES } from './ouija.js';
 export type { HiddenMessage, HiddenMessageKind } from './ouija.js';
 export { plainFor, hasPlainEntry } from './plain.js';
 export { decide as decideCommitGuard, isGitCommit } from './hook-guard.js';

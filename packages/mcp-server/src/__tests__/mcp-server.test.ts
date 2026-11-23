@@ -76,6 +76,13 @@ describe('the exorcist MCP server (official SDK client, real stdio)', () => {
     expect(r.text).not.toMatch(/[\u200B-\u200D\uFEFF\u202A-\u202E\u2066-\u2069\u{E0000}-\u{E007F}]/u);
   });
 
+  it('M5-REQ-04.1: a decoded hidden message is never handed to the agent, even with quotes on', async () => {
+    const out = await scanRepoTool({ cwd: ROOT, definitionsDir: DEFS }, { path: 'fixtures/haunted-repo', includeQuotes: true, maxFindings: 100 });
+    expect(out.text).toContain('rule: EX-021');
+    expect(out.text).not.toContain('DEFANGED: placeholder message');
+    expect(out.text).not.toMatch(/[\uFE00-\uFE0F\u{E0100}-\u{E01EF}]/u);
+  });
+
   it('reveal() makes any hidden character visible', () => {
     expect(reveal('a\u200Bb')).toBe('a[U+200B]b');
     expect(reveal(`x${String.fromCodePoint(0xE0041)}`)).toBe('x[U+E0041]');

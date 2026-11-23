@@ -3,7 +3,7 @@ import { JSONPath } from 'jsonpath-plus';
 import type { RepoFile, SignatureFinding, Severity } from '../types.js';
 import type { NormalizedText, UnicodeHit } from '../normalizer.js';
 import type { VirusDefinition } from '../definitions/schema.js';
-import { decodeVsBytes, tagToAscii, variationSelectorByte, MAX_DECODED_CHARS } from '../ouija.js';
+import { decodeHidden, MAX_HIDDEN_RUNS } from '../ouija.js';
 import { typosquatOf } from '../known-packages.js';
 import { decodeBlob, embeddedDocumentKind, fencedRanges, inExecContext, inMarkdownCode, isCredibleSecret, isQuotedExample } from './context.js';
 
@@ -48,27 +48,16 @@ function joinEscapes(run: UnicodeHit[]): string {
 
 /**
  * The message a run of hidden characters carries, when it decodes (Ouija
- * decoder). Tag characters map to ASCII; variation selectors carry bytes.
- * The result is attacker text: it is shown to the user, never prompted,
- * and truncated to 500 characters (REQ-04).
+ * decoder, REQ-03.2): the tag characters of the run spell ASCII (other hidden
+ * characters mixed into the run are skipped), and a run of variation
+ * selectors carries bytes. The result is attacker text: it is shown to the
+ * user, never prompted, and at most 500 characters (REQ-04).
  */
 function decodedForRun(run: UnicodeHit[]): string | undefined {
-  let msg: string | undefined;
-  if (run.every((h) => h.class === 'tag-block')) {
-    msg = run.reduce((acc, h) => {
-      const ascii = tagToAscii(h.codePoint);
-      return ascii === null ? acc : acc + String.fromCharCode(ascii);
-    }, '');
-    if (msg === undefined || msg.length < 2) return undefined;
-  } else if (run.every((h) => h.class === 'variation-selector')) {
-    if (run.length < 4) return undefined;
-    const bytes = run.map((h) => variationSelectorByte(h.codePoint) ?? 0);
-    msg = decodeVsBytes(bytes);
-  } else {
-    return undefined;
-  }
-  const text = msg ?? '';
-  return text.length > 0 ? (text.length <= MAX_DECODED_CHARS ? text : `${text.slice(0, MAX_DECODED_CHARS)}…`) : undefined;
+  const tags = run.filter((h) => h.class === 'tag-block');
+  const carrier = tags.length > 0 ? tags : run.filter((h) => h.class === 'variation-selector');
+  const first = decodeHidden(carrier.map((h) => h.char).join(''))[0];
+  return first && first.message.length > 0 ? first.message : undefined;
 }
 
 function truncateSpan(s: string): string {
@@ -294,11 +283,14 @@ export function runSignatures(
       let run: UnicodeHit[] = [];
       const mineStart = findings.length;
       let minorRuns = 0;
+      // Decoding is bounded too: at most MAX_HIDDEN_RUNS runs per file (REQ-04.2).
+      let decodedRuns = 0;
       const flush = (): void => {
         const first = run[0];
         if (!first) return;
         // A run shorter than the rule's minimum is not this rule's problem
-        // at all (EX-021: one or two variation selectors are emoji skin).
+        // at all (EX-021: one to three variation selectors are ordinary emoji or
+        // CJK presentation; the normalizer already drops such runs).
         if (match.min_run !== undefined && run.length < match.min_run) { run = []; return; }
         const { line, col } = offsetToPosition(norm.original, first.offset);
         // A short run of zero-width characters cannot carry a message; it is
@@ -308,7 +300,8 @@ export function runSignatures(
         const isMinor = Boolean(minor && run.length <= minor.max_length && run.every((h) => minor.classes.includes(h.class)));
         if (isMinor) minorRuns++;
         const severity = isMinor && minor ? minor.severity : base.severity;
-        const decoded = decodedForRun(run);
+        const decoded = decodedRuns < MAX_HIDDEN_RUNS ? decodedForRun(run) : undefined;
+        if (decoded !== undefined) decodedRuns += 1;
         findings.push({ ...base, severity, line, col, span: joinEscapes(run), ...(decoded !== undefined ? { decoded } : {}) });
         run = [];
       };

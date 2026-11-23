@@ -417,6 +417,156 @@ body {
   to { transform: rotate(-9deg) scale(1); opacity: 0.85; }
 }
 
+/* ── Ouija board (m5-ouija): what the invisible text says ─────────────── */
+@layer components {
+  .ouija {
+    --focus: #fff3d6;
+    position: relative;
+    padding: 0.75rem 0.95rem 0.55rem;
+    color: #fbecc8;
+    background:
+      radial-gradient(ellipse at 50% 28%, rgba(255, 214, 140, 0.16), transparent 62%),
+      repeating-linear-gradient(91deg, rgba(0, 0, 0, 0.08) 0 2px, transparent 2px 11px),
+      linear-gradient(180deg, #5b3517, #3d220e);
+    /* Wooden bevel, then a gold pinstripe inset like a printed board edge. */
+    box-shadow:
+      inset 2px 2px 0 #b07a43,
+      inset -2px -2px 0 #1f1008,
+      inset 0 0 0 6px #4a2a12,
+      inset 0 0 0 7px #d9b26f,
+      0 0 0 1px #120b22;
+  }
+  .ouija-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .ouija-title {
+    margin: 0;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.02rem;
+    font-weight: 900;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: #f3cf7a;
+    text-shadow: 0 1px 0 #1f1008;
+  }
+  .ouija-corner,
+  .ouija-goodbye {
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: 800;
+    font-size: 0.82rem;
+    letter-spacing: 0.2em;
+    color: #e9c98a;
+  }
+  .ouija-letters {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.05rem;
+    margin: 0.25rem 0 0.15rem;
+    padding-bottom: 0.55rem;
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: 700;
+    color: #e9c98a;
+    user-select: none;
+  }
+  .ouija-arc,
+  .ouija-digits {
+    display: flex;
+    justify-content: space-between;
+    width: 96%;
+    font-size: 1.08rem;
+    line-height: 1.5;
+  }
+  .ouija-arc + .ouija-arc {
+    width: 80%;
+    margin-top: 0.5rem;
+  }
+  .ouija-digits {
+    width: 56%;
+    margin-top: 0.55rem;
+    font-size: 0.82rem;
+    letter-spacing: 0.05em;
+  }
+  .ouija-arc span,
+  .ouija-digits span {
+    display: inline-block;
+    text-shadow: 0 1px 0 #1f1008;
+  }
+  .ouija-planchette {
+    position: absolute;
+    top: 0.35rem;
+    left: 47%;
+    fill: rgba(251, 236, 200, 0.78);
+    stroke: #1f1008;
+    stroke-width: 2;
+    filter: drop-shadow(2px 3px 0 rgba(0, 0, 0, 0.45));
+    animation: ouija-glide 11s ease-in-out infinite;
+  }
+  .ouija-planchette circle {
+    fill: rgba(61, 34, 14, 0.35);
+  }
+  .ouija-says {
+    margin: 0.2rem 0 0.3rem;
+    font-weight: 800;
+    font-size: 0.86rem;
+    letter-spacing: 0.02em;
+  }
+  .ouija-message {
+    margin: 0;
+    max-height: 10rem;
+    overflow: auto;
+    padding: 0.5rem 0.65rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.4;
+    color: #2a1408;
+    background: #f7ecd2;
+    box-shadow:
+      inset 2px 2px 0 #8a5a2b,
+      inset -2px -2px 0 #fffaf0,
+      0 0 0 1px #1f1008;
+  }
+  .ouija-note {
+    margin: 0.4rem 0 0;
+    font-size: 0.78rem;
+  }
+  .ouija-goodbye {
+    margin: 0.3rem 0 0;
+    text-align: center;
+    letter-spacing: 0.4em;
+  }
+  @media (max-width: 899px) {
+    .ouija-arc {
+      font-size: 0.9rem;
+    }
+    .ouija-title {
+      letter-spacing: 0.16em;
+    }
+  }
+}
+
+@keyframes ouija-glide {
+  0%, 100% { left: 47%; top: 0.35rem; }
+  14% { left: 9%; top: 0.9rem; }
+  30% { left: 33%; top: 1.6rem; }
+  46% { left: 78%; top: 0.75rem; }
+  62% { left: 55%; top: 1.7rem; }
+  80% { left: 22%; top: 0.4rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ouija-planchette {
+    animation: none;
+  }
+}
+
 /* ── Haunted desktop ───────────────────────────────────────────────────── */
 .bg-desk {
   background:

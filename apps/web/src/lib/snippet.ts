@@ -1,8 +1,10 @@
 import type { Snippet, SnippetLine } from './protocol';
 
-// Same classes the engine detects: zero-width, bidi override, tag block.
-const HIDDEN = /[\u200B-\u200D\uFEFF\u202A-\u202E\u2066-\u2069\u{E0000}-\u{E007F}]/gu;
-const HIDDEN_ONE = /^[\u200B-\u200D\uFEFF\u202A-\u202E\u2066-\u2069\u{E0000}-\u{E007F}]$/u;
+// Same classes the engine detects: zero-width, bidi override, tag block, and
+// runs of four or more variation selectors (EX-021). A single U+FE0F after an
+// emoji is ordinary text and stays as it is.
+const HIDDEN = /[\u200B-\u200D\uFEFF\u202A-\u202E\u2066-\u2069\u{E0000}-\u{E007F}]|[\uFE00-\uFE0F\u{E0100}-\u{E01EF}]{4,}/gu;
+const HIDDEN_ONE = /^[\u200B-\u200D\uFEFF\u202A-\u202E\u2066-\u2069\u{E0000}-\u{E007F}\uFE00-\uFE0F\u{E0100}-\u{E01EF}]$/u;
 
 const MAX_SIDE = 120;    // characters kept before and after a match on one line
 const MAX_MATCH = 240;   // characters kept inside a highlight
@@ -10,10 +12,9 @@ const MAX_LINES = 14;
 
 /** Replace each hidden code point with a visible marker such as [U+200B]. */
 export function revealHidden(text: string): string {
-  return text.replace(HIDDEN, (c) => {
-    const hex = (c.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, '0');
-    return `[U+${hex}]`;
-  });
+  return text.replace(HIDDEN, (run) =>
+    Array.from(run, (c) => `[U+${(c.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, '0')}]`).join(''),
+  );
 }
 
 type Range = { start: number; end: number };

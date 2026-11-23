@@ -17,6 +17,22 @@ describe('revealHidden', () => {
     expect(revealHidden('a\u200Bb')).toBe('a[U+200B]b');
   });
 
+  it('reveals a run of four or more variation selectors, but leaves emoji presentation alone', () => {
+    const run = String.fromCodePoint(0xE0134, 0xE0135, 0xFE01, 0xE0136);
+    expect(revealHidden(`⭐${run}!`)).toBe('⭐[U+E0134][U+E0135][U+FE01][U+E0136]!');
+    expect(revealHidden('I ❤️ this ⭐️⭐️')).toBe('I ❤️ this ⭐️⭐️');
+  });
+
+  it('highlights the whole run of an EX-021 finding', () => {
+    const run = String.fromCodePoint(0xE0134, 0xE0135, 0xE0136, 0xE0131);
+    const text = `Thanks.\ncarries: ⭐${run} end`;
+    const snip = buildSnippet(text, 2, 11, '\\u{E0134}\\u{E0135}\\u{E0136}\\u{E0131}');
+    const hit = snip.lines.find((l) => l.n === 2);
+    expect(hit?.match).toBe('[U+E0134][U+E0135][U+E0136][U+E0131]');
+    expect(hit?.before).toBe('carries: ⭐');
+    expect(hit?.after).toBe(' end');
+  });
+
   it('writes tag characters with six hex digits', () => {
     expect(revealHidden(String.fromCodePoint(0xE0041))).toBe('[U+E0041]');
   });

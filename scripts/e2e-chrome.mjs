@@ -153,6 +153,35 @@ await step('click an EX-001 result opens details with hidden characters revealed
   return `heading ok, highlight=${JSON.stringify(marks.slice(0, 2))}`;
 });
 
+await step('Ouija board: the EX-001 and EX-021 findings show the decoded hidden message (m5-ouija)', async () => {
+  const list = page.getByRole('list', { name: 'Threats found, worst first' });
+  const dlg = page.getByRole('dialog', { name: 'Threat Details' });
+  const readBoard = async (ruleId) => {
+    const rows = list.getByRole('button').filter({ hasText: ruleId });
+    const n = await rows.count();
+    for (let i = 0; i < n; i++) {
+      await rows.nth(i).click();
+      const board = dlg.getByRole('region', { name: 'Ouija board' });
+      if (await board.count()) {
+        await board.scrollIntoViewIfNeeded();
+        const msg = await board.getByLabel('The invisible text says:').innerText();
+        const says = await board.getByText('The invisible text says:').isVisible();
+        if (!says) throw new Error(`${ruleId}: the "says" label is not visible`);
+        return msg;
+      }
+    }
+    throw new Error(`no ${ruleId} finding (of ${n}) shows a Ouija board`);
+  };
+  const m1 = await readBoard('EX-001');
+  if (m1 !== 'EXAMPLE_HIDDEN_INSTRUCTION_DO_NOT_USE') throw new Error('EX-001 decoded: ' + JSON.stringify(m1));
+  await page.screenshot({ path: `${SHOTS}/03b-ouija-ex001.png` });
+  const r = await axe('detail-ouija-board'); axeReports.push(r);
+  const m21 = await readBoard('EX-021');
+  if (m21 !== 'DEFANGED: placeholder message') throw new Error('EX-021 decoded: ' + JSON.stringify(m21));
+  await page.screenshot({ path: `${SHOTS}/03c-ouija-ex021.png` });
+  return `EX-001 says ${JSON.stringify(m1)}; EX-021 says ${JSON.stringify(m21)}; ${r.violations.length} axe violation types`;
+});
+
 await step('every finding row opens a detail with a quoted span and a snippet line', async () => {
   const list = page.getByRole('list', { name: 'Threats found, worst first' });
   const n = await list.getByRole('button').count();

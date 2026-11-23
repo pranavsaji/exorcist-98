@@ -111,7 +111,7 @@ describe('FindingDetail', () => {
     expect(html).toContain('Confidence');
   });
 
-  it('shows the Ouija board with the decoded message, escaped as text', () => {
+  it('M5-REQ-03.4: shows the Ouija board with the decoded message, escaped as text', () => {
     const e = entry(2, 'critical', 'EX-021');
     const withDecoded: FindingEntry = {
       ...e,
@@ -123,6 +123,28 @@ describe('FindingDetail', () => {
     // Attacker text is rendered as text, never as HTML.
     expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
     expect(html).not.toContain('<img');
+    expect(html).toContain('variation selectors');
+  });
+
+  it('the Ouija panel is named by its visible heading, and the message box by its visible label', () => {
+    const e = entry(7, 'critical');
+    const html = renderToStaticMarkup(<FindingDetail entry={{ ...e, finding: { ...e.finding, decoded: 'hello' } }} />);
+    expect(html).toMatch(/<section class="ouija" aria-labelledby="ouija-7"/);
+    expect(html).toMatch(/<h4 id="ouija-7" class="ouija-title">Ouija board<\/h4>/);
+    expect(html).toMatch(/<p id="ouija-says-7" class="ouija-says">The invisible text says:<\/p>/);
+    expect(html).toMatch(/<pre class="ouija-message" tabindex="0" aria-labelledby="ouija-says-7">hello<\/pre>/);
+    // Board decoration (letters, YES/NO, GOOD BYE, planchette) is hidden from screen readers.
+    const decor = html.match(/aria-hidden="true"[^>]*>[^<]*(YES|NO|GOOD BYE)/g) ?? [];
+    expect(decor).toHaveLength(3);
+    expect(html).toContain('Spelled in invisible Unicode tag characters.');
+  });
+
+  it('control, bidi and invisible characters in the message are shown as markers, not obeyed', () => {
+    const e = entry(4, 'critical', 'EX-021');
+    const decoded = 'red\u001B[31m \u202Eevil\u200B\nline two';
+    const html = renderToStaticMarkup(<FindingDetail entry={{ ...e, finding: { ...e.finding, decoded } }} />);
+    expect(html).toContain('red[U+001B][31m [U+202E]evil[U+200B]\nline two');
+    expect(html).not.toMatch(/[\u001B\u202E\u200B]/);
   });
 
   it('shows no Ouija board when the finding has no decoded message', () => {

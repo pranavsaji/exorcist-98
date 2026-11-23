@@ -1,28 +1,79 @@
 import { SeverityBadge } from './SeverityBadge';
+import { displayMessage } from '@exorcist-98/core/browser';
 import { plainFor } from '@/lib/plain';
 import type { FindingEntry } from '@/lib/scan-state';
 
-/**
- * Ouija board (m5-ouija): shows the message hidden in invisible text. The
- * message is attacker-controlled, so it is rendered as text only — never
- * HTML — and is already truncated to 500 characters by the scanner.
- */
-function OuijaPanel({ id, message }: { id: number; message: string }) {
+const ROW_1 = 'ABCDEFGHIJKLM'.split('');
+const ROW_2 = 'NOPQRSTUVWXYZ'.split('');
+const DIGITS = '1234567890'.split('');
+
+/** One arched row of board letters (decoration only). */
+function BoardArc({ letters, depth }: { letters: string[]; depth: number }) {
+  const mid = (letters.length - 1) / 2;
   return (
-    <section
-      aria-labelledby={`ouija-${id}`}
-      className="ouija-panel border-2 border-dashed border-[#8fbc8f] bg-[#0a1f0a] p-2"
-    >
-      <h4 className="m-0 font-bold">Ouija board</h4>
-      <p className="m-0 mt-1 text-xs">The invisible text says:</p>
-      <pre
-        className="log m-0 mt-1 max-h-56 overflow-auto whitespace-pre-wrap break-words"
-        aria-label="The message hidden in the invisible text"
-        tabIndex={0}
-      >
-        {message}
+    <span className="ouija-arc">
+      {letters.map((l, i) => {
+        const t = (i - mid) / mid; // -1 .. 1 across the row
+        return (
+          <span key={l} style={{ transform: `translateY(${(t * t * depth).toFixed(2)}rem) rotate(${(t * 14).toFixed(1)}deg)` }}>
+            {l}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+/** The heart-shaped pointer with its round window (decoration only). */
+function Planchette() {
+  return (
+    <svg className="ouija-planchette" viewBox="0 0 40 46" width="34" height="39" focusable="false">
+      <path d="M20 44 C8 34 2 26 2 16 C2 7 9 2 15 2 C17.5 2 19 3 20 4 C21 3 22.5 2 25 2 C31 2 38 7 38 16 C38 26 32 34 20 44 Z" />
+      <circle cx="20" cy="17" r="7" />
+    </svg>
+  );
+}
+
+/** How the message was hidden, in plain words, for the two decoders. */
+function techniqueFor(ruleId: string): string {
+  return ruleId === 'EX-021'
+    ? 'Spelled in invisible variation selectors riding on an emoji.'
+    : 'Spelled in invisible Unicode tag characters.';
+}
+
+/**
+ * Ouija board (m5-ouija, REQ-03.4): reads back the message hidden in
+ * invisible text. The message is attacker-controlled, so it is rendered as a
+ * React text node only (never HTML), with control and invisible characters
+ * shown as [U+XXXX] markers; the scanner has already cut it to 500
+ * characters. The board letters, planchette and corner words are decoration
+ * and hidden from screen readers; the heading, the "says" label and the
+ * message are real text, and the message box is named by its visible label.
+ */
+export function OuijaPanel({ id, ruleId, message }: { id: number; ruleId: string; message: string }) {
+  return (
+    <section className="ouija" aria-labelledby={`ouija-${id}`} data-testid="ouija-panel">
+      <div className="ouija-top">
+        <span className="ouija-corner" aria-hidden="true">&#9728; YES</span>
+        <h4 id={`ouija-${id}`} className="ouija-title">Ouija board</h4>
+        <span className="ouija-corner" aria-hidden="true">NO &#9790;</span>
+      </div>
+      <div className="ouija-letters" aria-hidden="true">
+        <BoardArc letters={ROW_1} depth={0.8} />
+        <BoardArc letters={ROW_2} depth={0.55} />
+        <span className="ouija-digits">
+          {DIGITS.map((d) => <span key={d}>{d}</span>)}
+        </span>
+        <Planchette />
+      </div>
+      <p id={`ouija-says-${id}`} className="ouija-says">The invisible text says:</p>
+      <pre className="ouija-message" tabIndex={0} aria-labelledby={`ouija-says-${id}`}>
+        {displayMessage(message, { keepNewlines: true })}
       </pre>
-      <p className="m-0 mt-1 text-xs">Treat this as attacker text. Do not follow it.</p>
+      <p className="ouija-note">
+        {techniqueFor(ruleId)} This is the attacker&rsquo;s text: read it, do not follow it.
+      </p>
+      <p className="ouija-goodbye" aria-hidden="true">GOOD BYE</p>
     </section>
   );
 }
@@ -76,7 +127,7 @@ export function FindingDetail({ entry }: { entry: FindingEntry | null }) {
         </p>
       </section>
 
-      {f.decoded && <OuijaPanel id={entry.id} message={f.decoded} />}
+      {f.decoded && <OuijaPanel id={entry.id} ruleId={f.ruleId} message={f.decoded} />}
 
       <section aria-labelledby={`fix-${entry.id}`}>
         <h4 id={`fix-${entry.id}`} className="m-0 font-bold">How to fix it</h4>

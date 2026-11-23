@@ -37,7 +37,7 @@ export const WebFindingSchema = z.object({
   fix:        z.string(),
   // Ouija decoder (m5-ouija): the message hidden in an invisible-text run,
   // at most 500 characters. Attacker text, displayed only.
-  decoded:    z.string().optional(),
+  decoded:    z.string().max(500).optional(),
   rationale:  z.string().optional(),
   confidence: z.enum(['high', 'medium', 'low']).optional(),
 });
