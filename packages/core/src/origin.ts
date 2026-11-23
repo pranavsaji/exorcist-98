@@ -10,14 +10,22 @@
  *   (`--literal-pathspecs`), the pickaxe string is passed stuck to its flag
  *   (`-S<span>`) and revisions are checked to be hex object names, so nothing
  *   from the repository can be read as a git option;
+ * - git only ever reads committed objects (log, blame HEAD, cat-file, show),
+ *   never the working tree, so clean/smudge filters, fsmonitor and similar
+ *   repo-defined programs have nothing to trigger; every call also carries
+ *   config overrides that switch them off, and system/global config is
+ *   ignored. Callers check the repository's own config first with
+ *   openRepo() (see repo-config-guard.ts), which refuses a repository whose
+ *   config names a program;
  * - every git call has a time limit, and each finding has a total budget;
  * - commit text is only ever passed through sanitizeGitText and returned as
  *   data. It is never interpreted, and never put into a prompt.
  */
 
 import { execFile } from 'node:child_process';
-import { readFile } from 'node:fs/promises';
-import { isAbsolute, join } from 'node:path';
+import { readFile, realpath, stat } from 'node:fs/promises';
+import { isAbsolute, join, relative, resolve } from 'node:path';
+import { guardRepoConfig } from './repo-config-guard.js';
 import { z } from 'zod';
 
 /** 10 s per finding, as the spec requires (all git calls for one finding together). */
@@ -101,11 +109,20 @@ export function isBotAuthor(name: string, email: string): boolean {
 export type GitError = { kind: 'timeout' | 'missing' | 'failed'; message: string };
 type GitResult = { ok: true; stdout: string } | { ok: false; error: GitError };
 
-/** Options in front of every git call: no pager, literal paths, nothing from repo config that runs commands or changes output. */
-const GIT_PREFIX = [
+/**
+ * Options in front of every git call: no pager, literal paths, and overrides
+ * for every config key that names a program or changes the output format.
+ */
+export const GIT_PREFIX: readonly string[] = [
   '--no-pager',
   '--literal-pathspecs',
   '-c', 'core.fsmonitor=false',
+  '-c', 'core.hooksPath=/dev/null',
+  '-c', 'core.sshCommand=',
+  '-c', 'core.attributesFile=/dev/null',
+  '-c', 'core.pager=cat',
+  '-c', 'protocol.allow=never',
+  '-c', 'diff.external=',
   '-c', 'log.showSignature=false',
   '-c', 'color.ui=never',
 ];
@@ -119,7 +136,12 @@ const GIT_LOCATION_VARS = [
 function gitEnv(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env };
   for (const k of GIT_LOCATION_VARS) delete env[k];
-  return { ...env, GIT_PAGER: 'cat', PAGER: 'cat', GIT_TERMINAL_PROMPT: '0', GIT_OPTIONAL_LOCKS: '0', LC_ALL: 'C' };
+  return {
+    ...env,
+    GIT_PAGER: 'cat', PAGER: 'cat', GIT_TERMINAL_PROMPT: '0', GIT_OPTIONAL_LOCKS: '0', LC_ALL: 'C',
+    // Only the repository's own config (already checked) and our overrides apply.
+    GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null', GIT_ATTR_NOSYSTEM: '1',
+  };
 }
 
 /**
@@ -151,6 +173,27 @@ export async function gitRepoRoot(cwd: string): Promise<string | null> {
   const r = await runGit(cwd, ['rev-parse', '--show-toplevel'], 5_000);
   const root = r.ok ? r.stdout.replace(/\n$/, '') : '';
   return root !== '' && isAbsolute(root) ? root : null;
+}
+
+export type OpenRepo =
+  | { ok: true; root: string; shallow: boolean; boundaries: Set<string> }
+  | { ok: false; kind: 'not-a-repo' | 'unsafe-config' | 'unreadable-config' | 'mismatch' | 'git'; message: string };
+
+/**
+ * Open the repository around `target` for tracing. Its git config is checked
+ * first, without running git (guardRepoConfig); only then does git run, and
+ * the work tree git reports must be the one that was checked.
+ */
+export async function openRepo(target: string): Promise<OpenRepo> {
+  const guard = await guardRepoConfig(target);
+  if (!guard.ok) return { ok: false, kind: guard.kind, message: guard.message };
+  const root = await gitRepoRoot(guard.repo.workTree);
+  if (!root) return { ok: false, kind: 'git', message: 'git could not open the repository' };
+  let same = false;
+  try { same = (await realpath(root)) === guard.repo.workTree; } catch { same = false; }
+  if (!same) return { ok: false, kind: 'mismatch', message: 'git reports a different work tree than the one that was checked (core.worktree?)' };
+  const shallow = await isShallowClone(root);
+  return { ok: true, root, shallow, boundaries: shallow ? await shallowBoundaries(root) : new Set() };
 }
 
 /** True when the repository is a shallow clone (older history is missing). */
@@ -263,13 +306,48 @@ function failure(e: GitError): OriginHit {
 type Pick = { sha: string; time: number };
 
 /**
+ * Where a working-tree line sits in the committed (HEAD) version of the file,
+ * worked out by comparing text here rather than by any git command that
+ * reads the working tree. The same line number when that line is unchanged;
+ * otherwise the nearest identical line; null when the line is not in HEAD.
+ */
+export function mapLineToHead(workText: string, headText: string, line: number): number | null {
+  const work = workText.split('\n');
+  const head = headText.split('\n');
+  const want = work[line - 1];
+  if (want === undefined) return null;
+  if (head[line - 1] === want) return line;
+  let best: number | null = null;
+  for (let i = 0; i < head.length; i++) {
+    if (head[i] === want && (best === null || Math.abs(i + 1 - line) < Math.abs(best - line))) best = i + 1;
+  }
+  return best;
+}
+
+const MAX_FILE_BYTES = 8 * 1024 * 1024;
+
+/** The working-tree text of a file inside the repository (read here, not by git), or null. */
+async function readWorkTree(repoRoot: string, relFile: string): Promise<string | null> {
+  const abs = resolve(repoRoot, relFile);
+  const rel = relative(repoRoot, abs);
+  if (rel === '' || rel.startsWith('..') || isAbsolute(rel)) return null;
+  try {
+    if ((await stat(abs)).size > MAX_FILE_BYTES) return null;
+    return await readFile(abs, 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Find the commit that introduced a finding.
  *
  * 1. `git log -S<span> -- <file>` (pickaxe) lists the commits, newest first,
  *    where the number of occurrences of the exact quoted span in that file
  *    changed.
- * 2. `git blame -L <line>,<line> -- <file>` names the commit that last
- *    touched the finding's line in the working tree.
+ * 2. `git blame HEAD -L <line>,<line> -- <file>` names the commit that last
+ *    touched the finding's line, after mapping the working-tree line to its
+ *    place in HEAD by comparing text (git never reads the working tree).
  *
  * When the blamed commit is also a pickaxe commit it introduced the span.
  * When it is not (the line was edited later without touching the span), the
@@ -308,8 +386,19 @@ export async function findOriginCommit(
     }
   }
 
-  // 2. Blame the line in the working tree.
-  const blame = await runGit(repoRoot, ['blame', '--porcelain', '--no-textconv', '-L', `${line},${line}`, '--', relFile], budget.left());
+  // 2. Find the line in the committed file. `HEAD:<path>` starts with "H",
+  // so it cannot be read as an option; cat-file applies no filters.
+  const head = await runGit(repoRoot, ['cat-file', 'blob', `HEAD:${relFile}`], budget.left());
+  if (!head.ok) {
+    if (head.error.kind !== 'failed') return failure(head.error);
+    return { status: 'not-found', reason: 'the file is not committed (it is not in HEAD)' };
+  }
+  const work = await readWorkTree(repoRoot, relFile);
+  const headLine = work === null ? line : mapLineToHead(work, head.stdout, line);
+  if (headLine === null) return { status: 'uncommitted', reason: 'this line is not committed yet' };
+
+  // 3. Blame that line in HEAD (a committed revision, never the working tree).
+  const blame = await runGit(repoRoot, ['blame', '--porcelain', '--no-textconv', '-L', `${headLine},${headLine}`, 'HEAD', '--', relFile], budget.left());
   let blamed: Pick | null = null;
   if (blame.ok) {
     const lines = blame.stdout.split('\n');

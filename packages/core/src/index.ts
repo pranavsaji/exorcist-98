@@ -26,15 +26,17 @@ export { decodeHidden, displayMessage, truncateMessage, encodeAsTags, encodeAsVa
 export type { HiddenMessage, HiddenMessageKind } from './ouija.js';
 export { plainFor, hasPlainEntry } from './plain.js';
 export {
-  sanitizeGitText, hadHiddenText, isBotAuthor, runGit, gitRepoRoot, isShallowClone, shallowBoundaries,
+  sanitizeGitText, hadHiddenText, isBotAuthor, runGit, gitRepoRoot, isShallowClone, shallowBoundaries, openRepo, mapLineToHead, GIT_PREFIX,
   findOriginCommit, traceOrigins, parseCommitFields, buildTimeline, sortCommitsByDate, shortSha,
   ORIGIN_TIMEOUT_MS, ORIGIN_TOTAL_TIMEOUT_MS, MAX_GIT_TEXT,
   OriginStatusSchema, TimelineThreatSchema, TimelineCommitSchema, OriginReportSchema,
 } from './origin.js';
 export type {
   OriginCommit, OriginHit, OriginMethod, OriginOptions, OriginQuery, TraceOptions, TracedThreat,
-  GitError, TimelineThreat, TimelineCommit, OriginReport,
+  GitError, TimelineThreat, TimelineCommit, OriginReport, OpenRepo,
 } from './origin.js';
+export { guardRepoConfig, parseGitConfig, dangerousKey, locateRepo } from './repo-config-guard.js';
+export type { GuardResult, ConfigEntry as GitConfigEntry, RepoLocation } from './repo-config-guard.js';
 export { decide as decideCommitGuard, isGitCommit } from './hook-guard.js';
 export type { HookDecision } from './hook-guard.js';
 export { extractReadPaths, decideRead, isReadTool, shownName, mustCheckFully, limitFor } from './on-access.js';

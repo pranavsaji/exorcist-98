@@ -11,7 +11,7 @@
 import { existsSync, realpathSync, statSync } from 'node:fs';
 import { posix, relative, resolve, sep } from 'node:path';
 import {
-  displayMessage, gitRepoRoot, isShallowClone, loadDefinitions, plainFor, scanRepo, shallowBoundaries,
+  displayMessage, loadDefinitions, openRepo, plainFor, scanRepo,
   shortSha, traceOrigins, buildTimeline, OriginReportSchema, ORIGIN_TIMEOUT_MS, ORIGIN_TOTAL_TIMEOUT_MS,
 } from '@exorcist-98/core';
 import type { Finding, OriginReport, TimelineThreat } from '@exorcist-98/core';
@@ -39,6 +39,9 @@ repository. On a shallow clone the oldest commit shown may only be where
 the clone was cut; fetch full history (git fetch --unshallow) for the truth.
 Commit subjects and author names are shown with control and hidden
 characters removed: they are written by whoever made the commit.
+git only reads committed history, never the working tree, and a repository
+whose own git config names programs (filters, textconv, fsmonitor, hooks,
+includes) is refused before git runs: clone it fresh instead.
 `;
 
 export const SHALLOW_NOTE =
@@ -123,13 +126,18 @@ export async function originCommand(argv: string[], io: Io): Promise<number> {
   const target = resolve(p.positionals[0] ?? '.');
   if (!existsSync(target) || !statSync(target).isDirectory()) { io.err(`Not a directory: ${target}`); return 2; }
 
-  const repoRoot = await gitRepoRoot(target);
-  if (!repoRoot) {
-    io.err(`Not a git repository (or git could not open it): ${target}. "exorcist origin" needs git history to trace; use "exorcist scan" without it.`);
+  // The repository's own git config is checked before git runs at all: a
+  // downloaded folder can carry a .git/config that names programs.
+  const repo = await openRepo(target);
+  if (!repo.ok) {
+    if (repo.kind === 'not-a-repo' || repo.kind === 'git') {
+      io.err(`Not a git repository (or git could not open it): ${target}. "exorcist origin" needs git history to trace; use "exorcist scan" without it.`);
+    } else {
+      io.err(`Refusing to run git in ${target}: ${repo.message}`);
+    }
     return 2;
   }
-  const shallow = await isShallowClone(repoRoot);
-  const boundaries = shallow ? await shallowBoundaries(repoRoot) : new Set<string>();
+  const { root: repoRoot, shallow, boundaries } = repo;
   // git prints the canonical spelling of the root (/private/var/... on
   // macOS); match the target's spelling before working out the prefix.
   const scanRoot = realpathSync(target);

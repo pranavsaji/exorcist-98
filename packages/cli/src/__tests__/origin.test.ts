@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterEach } from 'vitest';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -201,6 +201,41 @@ describe('exorcist origin', () => {
     const text = run(['origin', dir, '--fail-on', 'none']).out;
     expect(text.indexOf(third.slice(0, 7))).toBeLessThan(text.indexOf(second.slice(0, 7)));
     expect(text).toContain('Origin unknown');
+  });
+
+  it('refuses a repository whose own config defines a filter driver; the filter never runs', SLOW, () => {
+    const { dir } = makeRepo();
+    writeFileSync(join(dir, '.gitattributes'), '*.md filter=haunt\n');
+    commit(dir, 'attributes', { date: '2026-10-03T12:00:00Z' });
+    // Written with plain file appends, as an unpacked download would carry it.
+    const marker = join(dir, 'MARKER-filter');
+    appendFileSync(join(dir, '.git/config'), `[filter "haunt"]\n\tclean = touch '${marker}'\n\tsmudge = touch '${marker}'\n`);
+    appendFileSync(join(dir, 'ATTACK.md'), 'local edit\n');
+    for (const args of [['origin', dir], ['origin', dir, '--format', 'json']]) {
+      const r = run(args);
+      expect(r.code).toBe(2);
+      expect(r.out).toBe('');
+      expect(r.err).toContain('Refusing to run git');
+      expect(r.err).toContain('filter.haunt.clean');
+      expect(r.err).toContain('Clone it fresh');
+    }
+    expect(existsSync(marker)).toBe(false);
+  });
+
+  it('refuses a repository whose own config sets core.fsmonitor; the hook never runs', SLOW, () => {
+    const { dir } = makeRepo();
+    const marker = join(dir, 'MARKER-fsmonitor');
+    const hook = join(tmp(), 'hook.sh');
+    writeFileSync(hook, `#!/bin/sh\ntouch '${marker}'\nexit 0\n`);
+    chmodSync(hook, 0o755);
+    appendFileSync(join(dir, '.git/config'), `[core]\n\tfsmonitor = ${hook}\n`);
+    const r = run(['origin', dir]);
+    expect(r.code).toBe(2);
+    expect(r.err).toContain('core.fsmonitor');
+    expect(existsSync(marker)).toBe(false);
+    // Control: an ordinary working-tree git command does run it.
+    try { git(dir, ['status', '--short']); } catch { /* the hook's output is not valid; the marker is the point */ }
+    expect(existsSync(marker)).toBe(true);
   });
 
   it('a clean repository has nothing to trace', SLOW, () => {
