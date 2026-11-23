@@ -9,6 +9,7 @@ import { lockCommand } from './commands/lock.js';
 import { mapCommand } from './commands/map.js';
 import { onAccessCommand, allowReadCommand } from './commands/on-access.js';
 import { originCommand, ORIGIN_HELP } from './commands/origin.js';
+import { originCommand } from './commands/origin.js';
 import { scanCommand } from './commands/scan.js';
 import { shieldCommand } from './commands/shield.js';
 import { updateCommand } from './commands/update.js';

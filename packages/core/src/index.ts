@@ -26,11 +26,15 @@ export { decodeHidden, displayMessage, truncateMessage, encodeAsTags, encodeAsVa
 export type { HiddenMessage, HiddenMessageKind } from './ouija.js';
 export { plainFor, hasPlainEntry } from './plain.js';
 export {
-  sanitizeGitText, isBotAuthor, findOriginCommit, gitRepoRoot, isShallowClone,
-  ORIGIN_TIMEOUT_MS, shortSha, sortCommitsByDate,
-  TimelineThreatSchema, TimelineCommitSchema, OriginReportSchema,
+  sanitizeGitText, hadHiddenText, isBotAuthor, runGit, gitRepoRoot, isShallowClone, shallowBoundaries,
+  findOriginCommit, traceOrigins, parseCommitFields, buildTimeline, sortCommitsByDate, shortSha,
+  ORIGIN_TIMEOUT_MS, ORIGIN_TOTAL_TIMEOUT_MS, MAX_GIT_TEXT,
+  OriginStatusSchema, TimelineThreatSchema, TimelineCommitSchema, OriginReportSchema,
 } from './origin.js';
-export type { OriginCommit, OriginHit, TimelineThreat, TimelineCommit, OriginReport } from './origin.js';
+export type {
+  OriginCommit, OriginHit, OriginMethod, OriginOptions, OriginQuery, TraceOptions, TracedThreat,
+  GitError, TimelineThreat, TimelineCommit, OriginReport,
+} from './origin.js';
 export { decide as decideCommitGuard, isGitCommit } from './hook-guard.js';
 export type { HookDecision } from './hook-guard.js';
 export { extractReadPaths, decideRead, isReadTool, shownName, mustCheckFully, limitFor } from './on-access.js';

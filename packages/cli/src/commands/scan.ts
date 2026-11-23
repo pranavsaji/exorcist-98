@@ -8,6 +8,8 @@ import { findDefinitionsDir, parse, str, strs } from '../util.js';
 import type { Io } from '../util.js';
 
 const RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+/** Severity ranking shared with other commands (lower is worse). */
+export const SEVERITY_RANK: Readonly<Record<string, number>> = RANK;
 const FORMATS = ['text', 'json', 'sarif', 'markdown', 'badge'] as const;
 type Format = (typeof FORMATS)[number];
 
@@ -34,7 +36,7 @@ Options:
   --ai-max-calls <n>                    Stop asking the AI after n model calls (default ${DEFAULT_AI_CALLS})
 `;
 
-function readIgnoreFile(root: string): string[] {
+export function readIgnoreFile(root: string): string[] {
   const file = join(root, '.exorcistignore');
   if (!existsSync(file)) return [];
   return readFileSync(file, 'utf8')
@@ -49,10 +51,6 @@ export function isIgnored(rel: string, prefixes: readonly string[]): boolean {
     return clean !== '' && (rel === clean || rel.startsWith(`${clean}/`));
   });
 }
-
-/** Severity ranking shared with other commands. */
-export const SEVERITY_RANK: Record<string, number> = RANK;
-export { readIgnoreFile };
 
 function renderText(findings: Finding[], stats: ScanStats): string {
   if (findings.length === 0) return `No threats found in ${stats.filesScanned} files.\n`;

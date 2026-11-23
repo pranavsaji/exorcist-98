@@ -9,12 +9,16 @@ import { join } from 'node:path';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 
-rmSync(join(here, 'dist'), { recursive: true, force: true });
+// Build to a temporary file and rename it into place, so a test file running
+// the bundle while another test file rebuilds it (vitest runs files in
+// parallel) never finds dist/index.mjs missing or half-written.
 mkdirSync(join(here, 'dist'), { recursive: true });
+const outfile = join(here, 'dist/index.mjs');
+const tmpOut = join(here, `dist/index.mjs.tmp-${process.pid}`);
 
 await build({
   entryPoints: [join(here, 'src/index.ts')],
-  outfile: join(here, 'dist/index.mjs'),
+  outfile: tmpOut,
   bundle: true,
   platform: 'node',
   format: 'esm',
@@ -27,6 +31,7 @@ await build({
   // The AI heuristic layer is not part of the CLI.
   external: ['@aws-sdk/*', 'simple-git'],
 });
+renameSync(tmpOut, outfile);
 
 // Update definitions/ in place, one file at a time: each file is written to a
 // temporary name and renamed over the old one (an atomic replace), then files
