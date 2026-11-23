@@ -5,7 +5,8 @@
 // lets a single prompt injection steal whatever the agent can read. This
 // module reads MCP config files, labels each server with the capability
 // rules (capabilities.ts), and reports EX-023 once per config.
-import { readFile } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { lstat, open } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { CAPABILITIES, classifyCapabilities } from './capabilities.js';
@@ -14,8 +15,12 @@ import type { Capability, ConfigMap, FileRole, MapGhost, SignatureFinding } from
 import type { VirusDefinition } from './definitions/schema.js';
 
 export const TRIFECTA_RULE_ID = 'EX-023';
-const MAX_SERVERS = 100;
-const MAX_NAME = 80;
+// No caps on servers, abilities or tools: padding a config with filler
+// entries must never hide the dangerous ones (a truncated config would read
+// as clean). Classifying an entry is a few regex tests, so every entry is
+// analysed; the walker's file-size limit bounds the total.
+/** Largest Shield pin file read, in bytes. */
+export const MAX_PINS_BYTES = 4_000_000;
 
 /** One entry of an MCP config: a server, or a built-in ability the config allows. */
 export type ConfigEntry = ServerSpec & {
@@ -87,7 +92,7 @@ function anchorFor(text: string, keys: string[]): ParsedMcpConfig['anchor'] {
 
 function serverEntries(servers: Record<string, unknown>): ConfigEntry[] {
   const out: ConfigEntry[] = [];
-  for (const [name, raw] of Object.entries(servers).slice(0, MAX_SERVERS)) {
+  for (const [name, raw] of Object.entries(servers)) {
     const e = Obj.safeParse(raw);
     if (!e.success) continue;
     const v = e.data;
@@ -97,7 +102,7 @@ function serverEntries(servers: Record<string, unknown>): ConfigEntry[] {
     const autoApprove = [...strings(v['autoApprove']), ...strings(v['alwaysAllow'])];
     if (v['trust'] === true) autoApprove.push('*');
     out.push({
-      name: name.slice(0, MAX_NAME),
+      name,
       kind: 'server',
       disabled: v['disabled'] === true || v['enabled'] === false,
       autoApprove,
@@ -134,7 +139,7 @@ export function parseMcpConfig(rel: string, role: FileRole, text: string): Parse
   // Claude Code: permissions.allow auto-approves MCP tools (mcp__server__tool)
   // and built-in abilities (WebFetch, Bash(...), Read(...)).
   const perms = Obj.safeParse(doc['permissions']);
-  const allow = role === 'mcp-config' && perms.success ? strings(perms.data['allow']).slice(0, MAX_SERVERS) : [];
+  const allow = role === 'mcp-config' && perms.success ? strings(perms.data['allow']) : [];
   for (const a of allow) {
     const m = /^mcp__([^_](?:[^_]|_(?!_))*)(?:__(.+))?$/.exec(a);
     if (m) {
@@ -143,7 +148,7 @@ export function parseMcpConfig(rel: string, role: FileRole, text: string): Parse
       continue;
     }
     if (entries.some((e) => e.kind === 'ability' && e.name === a)) continue;
-    entries.push({ name: a.slice(0, MAX_NAME), kind: 'ability', ability: a, disabled: false, autoApprove: ['*'] });
+    entries.push({ name: a, kind: 'ability', ability: a, disabled: false, autoApprove: ['*'] });
   }
   if (!hasServersKey && entries.length === 0) return null;
   return { file: rel, entries, anchor: anchorFor(text, ['mcpServers', 'servers', 'allow', 'permissions']) };
@@ -165,19 +170,52 @@ export function parsePins(json: unknown): ToolPins {
   const p = PinsSchema.safeParse(json);
   if (!p.success) return out;
   for (const [server, s] of Object.entries(p.data.servers)) {
-    out.set(server, Object.entries(s.tools).slice(0, 500).map(([name, t]) => ({ name, description: t.description.slice(0, 2000) })));
+    out.set(server, Object.entries(s.tools).map(([name, t]) => ({ name, description: t.description })));
   }
   return out;
 }
 
-/** The pin file at `<root>/.exorcist/pins.json`, if there is a valid one. */
-export async function readPins(root: string): Promise<ToolPins> {
+export type PinsRead = { pins: ToolPins; note: string | null };
+
+/**
+ * The pin file at `<root>/.exorcist/pins.json`. It comes from the scanned
+ * repository, so it is untrusted: only a regular file (never a symlink, which
+ * could point anywhere on the machine) no larger than `maxBytes` is read, and
+ * it is opened with O_NOFOLLOW so it cannot be swapped for a link in between.
+ * Anything else is ignored, with a note saying why. A missing file is no note.
+ */
+export async function readPins(root: string, maxBytes: number = MAX_PINS_BYTES): Promise<PinsRead> {
+  const path = join(root, '.exorcist', 'pins.json');
+  const none = (note: string | null): PinsRead => ({ pins: new Map(), note });
+  let info;
   try {
-    const raw = await readFile(join(root, '.exorcist', 'pins.json'), 'utf8');
-    if (raw.length > 4_000_000) return new Map();
-    return parsePins(JSON.parse(raw));
+    info = await lstat(path);
   } catch {
-    return new Map();
+    return none(null);
+  }
+  if (info.isSymbolicLink()) return none('The Shield pin file .exorcist/pins.json is a symbolic link, so it was ignored.');
+  if (!info.isFile()) return none('.exorcist/pins.json is not a regular file, so it was ignored.');
+  if (info.size > maxBytes) return none(`The Shield pin file .exorcist/pins.json is larger than ${maxBytes} bytes, so it was ignored.`);
+  let fh;
+  try {
+    fh = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  } catch {
+    return none('The Shield pin file .exorcist/pins.json could not be opened, so it was ignored.');
+  }
+  try {
+    const st = await fh.stat();
+    if (!st.isFile() || st.size > maxBytes) return none(`The Shield pin file .exorcist/pins.json changed while it was read, so it was ignored.`);
+    const buf = Buffer.alloc(st.size);
+    const { bytesRead } = await fh.read(buf, 0, st.size, 0);
+    let json: unknown;
+    try {
+      json = JSON.parse(buf.subarray(0, bytesRead).toString('utf8'));
+    } catch {
+      return none('The Shield pin file .exorcist/pins.json is not valid JSON, so it was ignored.');
+    }
+    return { pins: parsePins(json), note: null };
+  } finally {
+    await fh.close();
   }
 }
 

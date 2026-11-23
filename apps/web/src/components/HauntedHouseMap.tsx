@@ -252,6 +252,12 @@ function ConfigView({ config }: { config: ConfigMapMsg }) {
             <span className="font-mono">{quiet.map((g) => g.name).join(', ')}</span>
           </li>
         )}
+        {(config.omitted ?? 0) > 0 && (
+          <li className="bevel-in p-2" data-room="omitted">
+            {config.omitted} more server{config.omitted === 1 ? ' is' : 's are'} not listed here. Every one was checked: the
+            verdict above covers them all.
+          </li>
+        )}
       </ul>
     </div>
   );

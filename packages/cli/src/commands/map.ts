@@ -1,6 +1,6 @@
 import { existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { mapRepo } from '@exorcist-98/core';
+import { displayMessage, mapRepo } from '@exorcist-98/core';
 import type { Capability, ConfigMap, HauntedMap, SignatureFinding } from '@exorcist-98/core';
 import { findDefinitionsDir, parse, str } from '../util.js';
 import type { Io } from '../util.js';
@@ -32,26 +32,48 @@ export const ROOMS: ReadonlyArray<{ cap: Capability; room: string; power: string
   { cap: 'exfiltration',    room: 'Escape Tunnel',    power: 'a way out' },
 ];
 
+/**
+ * Every value printed comes from the scanned files (file names, server names,
+ * packages, abilities). Control characters (C0, C1 such as ESC), zero-width,
+ * bidi and tag characters are shown as [U+XXXX], so nothing in them can move
+ * the cursor, recolour the terminal or reorder the line.
+ */
+const safe = (s: string): string => displayMessage(s);
+const safeList = (names: readonly string[]): string => names.map(safe).join(', ');
+
+/**
+ * JSON text in which every character that a terminal could act on, or that
+ * hides or reorders text, is a \u escape. JSON.stringify already escapes C0;
+ * this adds C1, format characters (bidi, zero-width), separators and anything
+ * outside the BMP (tag and variation-selector planes). The data is unchanged.
+ */
+export function terminalSafeJson(value: unknown): string {
+  return JSON.stringify(value, null, 2).replace(
+    /[\u007F-\u009F\u00AD\u061C\u180E\u200B-\u200F\u2028-\u202E\u2060-\u206F\uFE00-\uFE0F\uFEFF\uFFF9-\uFFFB\uD800-\uDFFF]/g,
+    (c) => `\\u${c.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0')}`,
+  );
+}
+
 function renderConfig(c: ConfigMap, finding: SignatureFinding | undefined): string[] {
-  const lines = [c.file];
+  const lines = [safe(c.file)];
   if (c.ghosts.length === 0) return [...lines, '  (no enabled servers)', ''];
   const width = Math.max(...ROOMS.map((r) => `${r.room} (${r.power})`.length), 'Quiet ghosts (no risky powers)'.length) + 2;
   for (const r of ROOMS) {
     const names = c.legs[r.cap];
-    lines.push(`  ${`${r.room} (${r.power})`.padEnd(width)}${names.length > 0 ? names.join(', ') : '(empty)'}`);
+    lines.push(`  ${`${r.room} (${r.power})`.padEnd(width)}${names.length > 0 ? safeList(names) : '(empty)'}`);
   }
   const quiet = c.ghosts.filter((g) => g.capabilities.length === 0).map((g) => g.name);
-  if (quiet.length > 0) lines.push(`  ${'Quiet ghosts (no risky powers)'.padEnd(width)}${quiet.join(', ')}`);
+  if (quiet.length > 0) lines.push(`  ${'Quiet ghosts (no risky powers)'.padEnd(width)}${safeList(quiet)}`);
   if (c.ghosts.some((g) => g.reasons.length > 0)) lines.push('  Why:');
   for (const g of c.ghosts) {
     if (g.reasons.length === 0) continue;
     const auto = g.autoApproved ? ' [auto-approved]' : '';
     const kind = g.kind === 'ability' ? ' (built-in)' : '';
-    lines.push(`    ${g.name}${kind}${auto}: ${g.reasons.map((r) => `${r.label} (${r.ruleId}: ${r.evidence})`).join('; ')}`);
+    lines.push(`    ${safe(g.name)}${kind}${auto}: ${g.reasons.map((r) => `${safe(r.label)} (${r.ruleId}: ${safe(r.evidence)})`).join('; ')}`);
   }
   if (c.trifecta) {
     const sev = (c.severity ?? 'high').toUpperCase();
-    lines.push(`  ${sev}  LETHAL TRIFECTA (EX-023): all three rooms are haunted${finding ? ` (${finding.file}:${finding.line})` : ''}.`);
+    lines.push(`  ${sev}  LETHAL TRIFECTA (EX-023): all three rooms are haunted${finding ? ` (${safe(finding.file)}:${finding.line})` : ''}.`);
     lines.push('        One poisoned page, issue or message could make the agent read your secrets and send them out.');
   } else {
     const empty = ROOMS.filter((r) => c.legs[r.cap].length === 0).map((r) => r.room);
@@ -89,7 +111,8 @@ export async function mapCommand(argv: string[], io: Io): Promise<number> {
 
   const r = await mapRepo(root, { definitionsDir: defsDir });
   if (!r.ok) { io.err(`Could not map ${target}: ${r.error}`); return 2; }
-  if (format === 'json') io.out(JSON.stringify({ version: '1', map: r.map, findings: r.findings }, null, 2));
+  for (const n of r.notes) io.err(`Note: ${safe(n)}`);
+  if (format === 'json') io.out(terminalSafeJson({ version: '1', map: r.map, findings: r.findings }));
   else io.out(renderMap(r.map, r.findings));
   return r.map.configs.some((c) => c.trifecta) ? 1 : 0;
 }

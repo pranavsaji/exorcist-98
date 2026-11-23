@@ -35,3 +35,13 @@
   without `map` is still valid. The client parser stays strict (unknown event
   types are errors, as its tests require), so a browser tab holding a page
   older than the server would show a stream error for this one event.
+- **Security review fixes.** (1) `.exorcist/pins.json` is untrusted: it is
+  `lstat`ed first and read only when it is a regular file (not a symlink)
+  under 4 MB, opened with O_NOFOLLOW; otherwise it is ignored and the scan
+  reports a note. (2) Nothing is truncated before analysis: every server,
+  `permissions.allow` entry and pinned tool is classified, so filler entries
+  cannot hide a dangerous one. Only the web drawing is bounded (100 ghosts,
+  servers with powers first, an "N more, all checked" line); the verdict is
+  computed on the full config. (3) `exorcist map` shows control, bidi and
+  hidden characters in every printed value as [U+XXXX] (text) or \u escapes
+  (JSON).

@@ -4,10 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { mkdir } from "node:fs/promises";
 import { fetchGithubRepo, readZip, scanRepo, walkRepo, writeEntries } from "@exorcist-98/core";
-import type { Finding, HauntedMap } from "@exorcist-98/core";
+import type { ConfigMap, Finding, HauntedMap } from "@exorcist-98/core";
 import { definitionsDir, hauntedRepoDir } from "./paths";
 import { buildSnippet } from "./snippet";
-import type { HauntedMapMsg, ScanEventMsg, WebFinding } from "./protocol";
+import type { ConfigMapMsg, HauntedMapMsg, ScanEventMsg, WebFinding } from "./protocol";
 
 export type ScanTarget =
   | { kind: "haunted-repo"; display: string }
@@ -59,6 +59,30 @@ function toWebFinding(f: Finding): WebFinding {
 }
 
 const MAX_MAP_CONFIGS = 50;
+const MAX_MAP_GHOSTS = 100;
+const MAX_MAP_NAME = 120;
+const clipName = (s: string): string => (s.length > MAX_MAP_NAME ? `${s.slice(0, MAX_MAP_NAME - 1)}\u2026` : s);
+
+/**
+ * One config as sent to the page. The verdict (trifecta, severity, which legs
+ * are filled) is computed by the engine on every server; only the drawing is
+ * bounded. Ghosts with powers come first, so a config padded with harmless
+ * filler still shows the dangerous ones, and `omitted` says how many quiet
+ * ones were left out.
+ */
+function toWebConfig(c: ConfigMap): ConfigMapMsg {
+  const ranked = [...c.ghosts.filter((g) => g.capabilities.length > 0), ...c.ghosts.filter((g) => g.capabilities.length === 0)];
+  const ghosts = ranked.slice(0, MAX_MAP_GHOSTS).map((g) => ({ ...g, name: clipName(g.name) }));
+  const leg = (names: string[]): string[] => names.slice(0, MAX_MAP_GHOSTS).map(clipName);
+  return {
+    file: c.file.slice(0, 1000),
+    ghosts,
+    legs: { 'private-data': leg(c.legs['private-data']), 'untrusted-input': leg(c.legs['untrusted-input']), exfiltration: leg(c.legs.exfiltration) },
+    trifecta: c.trifecta,
+    severity: c.severity,
+    ...(ranked.length > ghosts.length ? { omitted: ranked.length - ghosts.length } : {}),
+  };
+}
 
 /**
  * The map as sent to the page: only configs the scan shows, trifectas first,
@@ -68,7 +92,8 @@ export function toWebMap(map: HauntedMap, include: (rel: string) => boolean): Ha
   const configs = map.configs
     .filter((c) => include(c.file))
     .sort((a, b) => Number(b.trifecta) - Number(a.trifecta) || (a.file < b.file ? -1 : a.file > b.file ? 1 : 0))
-    .slice(0, MAX_MAP_CONFIGS);
+    .slice(0, MAX_MAP_CONFIGS)
+    .map(toWebConfig);
   return configs.length > 0 ? { configs } : null;
 }
 

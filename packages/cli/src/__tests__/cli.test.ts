@@ -97,6 +97,24 @@ describe('exorcist map (REQ-03.1)', () => {
     expect(e.out).toContain('No MCP configs found');
   });
 
+  it('prints server names and file names inert: ESC, C1 and bidi characters are shown as [U+XXXX]', () => {
+    const d = tmp();
+    mkdirSync(join(d, '.kiro/settings'), { recursive: true });
+    const evil = 'web\u001b[2J\u001b]0;pwned\u0007\u009b31m\u202Eexe.txt';
+    writeFileSync(join(d, '.kiro/settings/mcp.json'), JSON.stringify({ mcpServers: {
+      home: { command: 'npx', args: ['-y', '@modelcontextprotocol/server-filesystem@2025.1.14', '~'] },
+      [evil]: { command: 'uvx', args: ['mcp-server-fetch@2025.4.7'] },
+    } }));
+    const text = run(['map', d]);
+    expect(text.code).toBe(1);
+    expect(text.out).not.toMatch(/[\u0000-\u0009\u000B-\u001F\u007F-\u009F\u202A-\u202E]/);
+    expect(text.out).toContain('web[U+001B][2J[U+001B]]0;pwned[U+0007][U+009B]31m[U+202E]exe.txt');
+    const json = run(['map', d, '--format', 'json']);
+    expect(json.out).not.toMatch(/[\u0000-\u0009\u000B-\u001F\u007F-\u009F\u202A-\u202E]/);
+    const parsed = JSON.parse(json.out) as { map: { configs: Array<{ ghosts: Array<{ name: string }> }> } };
+    expect(parsed.map.configs[0]?.ghosts.map((g) => g.name)).toContain(evil);
+  });
+
   it('--format json gives the map and the EX-023 findings; bad usage exits 2', () => {
     const r = run(['map', FIXTURES, '--format', 'json']);
     const j = JSON.parse(r.out) as { map: { configs: Array<{ file: string; trifecta: boolean }> }; findings: Array<{ ruleId: string }> };

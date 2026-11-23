@@ -77,6 +77,8 @@ export const ConfigMapSchema = z.object({
   legs:     z.object({ 'private-data': LegNames, 'untrusted-input': LegNames, exfiltration: LegNames }),
   trifecta: z.boolean(),
   severity: z.enum(['critical', 'high']).nullable(),
+  /** Quiet servers left out of the drawing and list (the verdict covers them all). */
+  omitted:  z.number().int().nonnegative().optional(),
 });
 export type ConfigMapMsg = z.infer<typeof ConfigMapSchema>;
 

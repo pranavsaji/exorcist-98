@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeAll, afterEach } from 'vitest';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { loadCapabilityRules } from '../capabilities.js';
 import type { CapabilityRule } from '../capabilities.js';
 import { loadDefinitions } from '../definitions/loader.js';
 import type { VirusDefinition } from '../definitions/schema.js';
-import { analyzeConfig, parseMcpConfig, parsePins, stripJsonc, trifectaFinding } from '../trifecta.js';
+import { analyzeConfig, parseMcpConfig, parsePins, readPins, stripJsonc, trifectaFinding } from '../trifecta.js';
 import { mapRepo, scanRepo } from '../scanner/orchestrator.js';
 import type { FileRole, ScanEvent } from '../types.js';
 import { fromRoot } from './repo-root.js';
@@ -202,5 +202,68 @@ describe('REQ-02 in a scan: EX-023 and the map event', () => {
     expect(m?.ghosts.find((g) => g.name === 'scratchpad')?.capabilities).toEqual([]);
     // The other planted MCP configs do not form a trifecta.
     expect(r.findings.map((f) => f.file)).toEqual(['EX-023-lethal-trifecta.json']);
+  });
+});
+
+describe('security: no truncation, untrusted pin file', () => {
+  const MEMORY = { command: 'npx', args: ['-y', '@modelcontextprotocol/server-memory@2025.4.25'] };
+
+  it('1,000 harmless servers followed by a trifecta still give EX-023 (padding cannot hide a server)', () => {
+    const servers: Record<string, unknown> = {};
+    for (let i = 0; i < 1000; i++) servers[`filler-${i}`] = MEMORY;
+    servers['home'] = FS_HOME;
+    servers['web'] = FETCH;
+    const { cfg, map, finding } = check('.kiro/settings/mcp.json', 'mcp-config', { mcpServers: servers });
+    expect(cfg?.entries).toHaveLength(1002);
+    expect(map?.ghosts).toHaveLength(1002);
+    expect(map?.trifecta).toBe(true);
+    expect(finding?.ruleId).toBe('EX-023');
+  });
+
+  it('1,000 harmless permissions.allow entries followed by WebFetch and Bash still give EX-023', () => {
+    const allow = [...Array.from({ length: 1000 }, (_, i) => `Bash(npm run task-${i})`), 'WebFetch', 'Bash'];
+    expect(check('.claude/settings.json', 'mcp-config', { permissions: { allow } }).finding?.ruleId).toBe('EX-023');
+  });
+
+  it('a long server name is kept whole, so mcp__<name>__tool still auto-approves it', () => {
+    const name = `web-${'x'.repeat(200)}`;
+    const { cfg, finding } = check('.mcp.json', 'mcp-config', { mcpServers: { home: FS_HOME, [name]: FETCH }, permissions: { allow: [`mcp__${name}__fetch`] } });
+    expect(cfg?.entries.find((e) => e.name === name)?.autoApprove).toEqual(['fetch']);
+    expect(finding?.severity).toBe('critical');
+  });
+
+  const PINS = JSON.stringify({ version: 1, servers: { reader: { tools: { fetch_url: { hash: 'a'.repeat(64), description: 'Fetch a URL', pinnedAt: 'now' } } } } });
+
+  it('reads a regular pin file', async () => {
+    const root = repo({ '.exorcist/pins.json': PINS });
+    const r = await readPins(root);
+    expect(r.note).toBeNull();
+    expect(r.pins.get('reader')?.[0]?.name).toBe('fetch_url');
+    expect(await readPins(repo({}))).toEqual({ pins: new Map(), note: null });
+  });
+
+  it('ignores a pin file that is a symbolic link, with a note, and scanRepo reports the note', async () => {
+    const outside = repo({ 'elsewhere.json': PINS });
+    const root = repo({ '.kiro/settings/mcp.json': JSON.stringify({ mcpServers: { home: FS_HOME, reader: { command: 'node', args: ['r.js'] } } }) });
+    mkdirSync(join(root, '.exorcist'), { recursive: true });
+    symlinkSync(join(outside, 'elsewhere.json'), join(root, '.exorcist', 'pins.json'));
+    const r = await readPins(root);
+    expect(r.pins.size).toBe(0);
+    expect(r.note).toContain('symbolic link');
+    const events: ScanEvent[] = [];
+    for await (const ev of scanRepo(root, { definitionsDir: DEFS })) events.push(ev);
+    expect(events.some((e) => e.type === 'error' && e.file === '.exorcist/pins.json' && e.message.includes('symbolic link'))).toBe(true);
+    // The linked tools were not used, so there is no trifecta.
+    expect(events.some((e) => e.type === 'finding' && e.finding.ruleId === 'EX-023')).toBe(false);
+  });
+
+  it('ignores an oversized pin file without reading it, and a directory or invalid JSON, with a note', async () => {
+    const big = repo({ '.exorcist/pins.json': PINS });
+    const r = await readPins(big, 10);
+    expect(r.pins.size).toBe(0);
+    expect(r.note).toContain('larger than 10 bytes');
+    const dir = repo({ '.exorcist/pins.json/x': '' });
+    expect((await readPins(dir)).note).toContain('not a regular file');
+    expect((await readPins(repo({ '.exorcist/pins.json': '{nope' }))).note).toContain('not valid JSON');
   });
 });

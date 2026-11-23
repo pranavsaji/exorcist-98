@@ -7,6 +7,7 @@ import { ResultsWindow } from '@/components/ResultsWindow';
 import { NdjsonParser } from '@/lib/ndjson';
 import { initialScanState, scanReducer } from '@/lib/scan-state';
 import { scanTarget, toWebMap } from '@/lib/scan-service';
+import { HauntedMapSchema } from '@/lib/protocol';
 import type { ConfigMapMsg, HauntedMapMsg, ScanEventMsg } from '@/lib/protocol';
 
 vi.spyOn(console, 'log').mockImplementation(() => undefined);
@@ -103,6 +104,21 @@ describe('the map event in the stream and the page state', () => {
     expect(s.map).toEqual(map);
     expect(s.log.at(-1)?.text).toBe('Haunted House Map: 2 MCP configs mapped, 1 with the lethal trifecta.');
     expect(scanReducer(s, { type: 'reset', target: 'u' }).map).toBeNull();
+  });
+
+  it('toWebMap bounds only the drawing: a padded trifecta keeps its verdict and its dangerous ghosts', () => {
+    const quiet = Array.from({ length: 1000 }, (_, i) => ({ name: `filler-${i}`, kind: 'server' as const, capabilities: [], reasons: [], autoApproved: false }));
+    const padded = { ...lethal, ghosts: [...quiet, ...lethal.ghosts] };
+    const web = toWebMap({ configs: [padded] }, () => true);
+    const c = web?.configs[0];
+    expect(c?.trifecta).toBe(true);
+    expect(c?.severity).toBe('critical');
+    expect(c?.ghosts).toHaveLength(100);
+    expect(c?.ghosts.slice(0, 2).map((g) => g.name)).toEqual(['home-files', 'web-reader']);
+    expect(c?.omitted).toBe(903);
+    expect(HauntedMapSchema.safeParse(web).success).toBe(true);
+    const html = renderToStaticMarkup(<HauntedHouseMap map={web as HauntedMapMsg} />);
+    expect(html).toContain('903 more servers are not listed here. Every one was checked');
   });
 
   it('toWebMap keeps only shown configs, trifectas first', () => {

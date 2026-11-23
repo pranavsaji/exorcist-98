@@ -80,8 +80,8 @@ export async function trifectaReport(
   configs: readonly ParsedMcpConfig[],
   rules: readonly CapabilityRule[],
   defs: readonly VirusDefinition[],
-): Promise<{ map: HauntedMap; findings: SignatureFinding[] }> {
-  const pins = await readPins(root);
+): Promise<{ map: HauntedMap; findings: SignatureFinding[]; notes: string[] }> {
+  const { pins, note } = await readPins(root);
   const sorted = [...configs].sort((a, b) => (a.file < b.file ? -1 : a.file > b.file ? 1 : 0));
   const findings: SignatureFinding[] = [];
   const maps = sorted.map((c) => {
@@ -90,11 +90,11 @@ export async function trifectaReport(
     if (f) findings.push(f);
     return m;
   });
-  return { map: { configs: maps }, findings };
+  return { map: { configs: maps }, findings, notes: note ? [note] : [] };
 }
 
 export type MapRepoResult =
-  | { ok: true; map: HauntedMap; findings: SignatureFinding[] }
+  | { ok: true; map: HauntedMap; findings: SignatureFinding[]; notes: string[] }
   | { ok: false; error: string };
 
 /** Only the trifecta check, for `exorcist map`: reads MCP configs, not every file. */
@@ -165,7 +165,8 @@ export async function* scanRepo(
   // EX-023 looks at whole configs, so it runs after the walk (REQ-02).
   if (configs.length > 0) {
     if (capabilities.ok) {
-      const { map, findings } = await trifectaReport(root, configs, capabilities.rules, defs);
+      const { map, findings, notes } = await trifectaReport(root, configs, capabilities.rules, defs);
+      for (const message of notes) yield { type: 'error', file: '.exorcist/pins.json', message };
       for (const finding of findings) {
         findingsTotal++;
         yield { type: 'finding', finding };
