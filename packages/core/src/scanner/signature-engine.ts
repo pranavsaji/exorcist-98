@@ -156,6 +156,9 @@ function guarded(jobs: Job[], ms: number): RawMatch[][] | null {
   }
 }
 
+/** Number of short zero-width runs in one file that counts as a hidden message (see EX-001 minor_run). */
+export const MINOR_RUNS_ESCALATE = 5;
+
 export function runSignatures(
   file: RepoFile,
   norm: NormalizedText,
@@ -263,6 +266,8 @@ export function runSignatures(
       // Adjacent hidden characters are one finding: a payload of 37 tag
       // characters is one hidden message, not 37 problems.
       let run: UnicodeHit[] = [];
+      const mineStart = findings.length;
+      let minorRuns = 0;
       const flush = (): void => {
         const first = run[0];
         if (!first) return;
@@ -271,8 +276,9 @@ export function runSignatures(
         // usually left over from translation or formatting. Long runs, tag
         // characters and bidi controls keep the rule's own severity.
         const minor = match.minor_run;
-        const severity = minor && run.length <= minor.max_length && run.every((h) => minor.classes.includes(h.class))
-          ? minor.severity : base.severity;
+        const isMinor = Boolean(minor && run.length <= minor.max_length && run.every((h) => minor.classes.includes(h.class)));
+        if (isMinor) minorRuns++;
+        const severity = isMinor && minor ? minor.severity : base.severity;
         findings.push({ ...base, severity, line, col, span: joinEscapes(run) });
         run = [];
       };
@@ -286,6 +292,15 @@ export function runSignatures(
         run.push(hit);
       }
       flush();
+      // Many short runs spread through one file can spell out a message (one
+      // or two bits per gap, zero-width steganography). Past a handful, every
+      // run in the file is reported at the rule's full severity again.
+      if (minorRuns >= MINOR_RUNS_ESCALATE) {
+        for (let i = mineStart; i < findings.length; i++) {
+          const f = findings[i];
+          if (f && f.ruleId === def.id) findings[i] = { ...f, severity: base.severity };
+        }
+      }
     }
     // ── json_path (+ optional value_regex filter) ────────────────────────────
     if (match.json_path) {

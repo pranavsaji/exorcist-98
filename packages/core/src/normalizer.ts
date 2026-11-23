@@ -56,7 +56,7 @@ function neighbours(text: string, offset: number, len: number): [string, string]
  * emoji (family and profession emoji are built that way) and a byte-order
  * mark at the very start of a file.
  */
-function isBenign(text: string, cp: number, offset: number, len: number): boolean {
+function isBenign(text: string, cp: number, offset: number, len: number, joiningText: boolean): boolean {
   if (cp === 0xFEFF && offset === 0) return true;
   // Persian, Arabic, Hindi and other scripts need U+200C and U+200D between
   // letters to spell words correctly (seen: 2,180 hits in one Persian README).
@@ -66,9 +66,11 @@ function isBenign(text: string, cp: number, offset: number, len: number): boolea
     // In Persian (and other joining scripts) the non-joiner also sits between
     // a letter and a Latin word, a digit, a space or punctuation (seen: 25
     // findings in Persian docs, docs/FIELD_REPORT.md). A joining-script letter
-    // on one side is enough. A run of hidden characters is still reported:
-    // the neighbour must be a letter, not another hidden character.
-    if (JOINING_SCRIPT_LETTER.test(b) || JOINING_SCRIPT_LETTER.test(a)) return true;
+    // on one side is enough, but only in text that really is written in such
+    // a script: otherwise one Arabic letter planted next to each hidden
+    // character would switch detection off. A run of hidden characters is
+    // still reported: the neighbour must be a letter, not another hidden one.
+    if (joiningText && (JOINING_SCRIPT_LETTER.test(b) || JOINING_SCRIPT_LETTER.test(a))) return true;
   }
   if (cp === 0x200D) {
     const [b, a] = neighbours(text, offset, len);
@@ -78,14 +80,28 @@ function isBenign(text: string, cp: number, offset: number, len: number): boolea
   return false;
 }
 
+/** At least 3 joining-script letters, making up at least 30% of the letters. */
+function isJoiningScriptText(text: string): boolean {
+  let joining = 0;
+  let letters = 0;
+  for (const ch of text) {
+    if (!/\p{L}/u.test(ch)) continue;
+    letters++;
+    if (JOINING_SCRIPT_LETTER.test(ch)) joining++;
+  }
+  return joining >= 3 && joining * 10 >= letters * 3;
+}
+
 function findHiddenUnicode(text: string): UnicodeHit[] {
   const hits: UnicodeHit[] = [];
+  let joiningText: boolean | null = null;
   let offset = 0;
   for (const char of text) {
     const cp = char.codePointAt(0);
     if (cp !== undefined) {
       const cls = CP_TO_CLASS.get(cp);
-      if (cls !== undefined && !isBenign(text, cp, offset, char.length)) {
+      if (cls !== undefined) joiningText ??= (cp === 0x200C || cp === 0x200D) ? isJoiningScriptText(text) : null;
+      if (cls !== undefined && !isBenign(text, cp, offset, char.length, joiningText === true)) {
         hits.push({ char, codePoint: cp, offset, class: cls });
       }
     }
