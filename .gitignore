@@ -163,3 +163,7 @@ packages/cli/definitions.new-*/
 packages/cli/definitions.old-*/
 packages/mcp-server/definitions.new-*/
 packages/mcp-server/definitions.old-*/
+
+# Canary traps planted locally (exorcist canary plant): never commit the tokens
+.exorcist/canary/
+.exorcist/canaries.json

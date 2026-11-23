@@ -350,6 +350,99 @@ describe('the git pre-commit hook written by init', () => {
   });
 });
 
+describe('exorcist canary (EX-022)', () => {
+  type Rec = { token: string; file: string; created: string };
+  const records = (d: string): Rec[] => (JSON.parse(readFileSync(join(d, '.exorcist/canaries.json'), 'utf8')) as { canaries: Rec[] }).canaries;
+
+  it('plants three traps, lists them masked, and removes them leaving the folder as it was', () => {
+    const d = tmp();
+    writeFileSync(join(d, 'README.md'), '# project\n');
+    const planted = run(['canary', 'plant', d]);
+    expect(planted.code, planted.err).toBe(0);
+    expect(planted.out).toContain('Planted 3 canary traps');
+    const recs = records(d);
+    expect(recs.map((r) => r.file)).toEqual(['.exorcist/canary/.env.canary', '.exorcist/canary/NOTES.md', '.exorcist/canary/config.json']);
+    for (const r of recs) {
+      expect(r.token).toMatch(/^x98c_[A-Z2-7]{24}$/);
+      expect(readFileSync(join(d, r.file), 'utf8')).toContain(r.token);
+      // Tokens are never printed in full.
+      expect(planted.out).not.toContain(r.token);
+    }
+
+    const listed = run(['canary', '--list', d]);
+    expect(listed.code).toBe(0);
+    for (const r of recs) {
+      expect(listed.out).toContain(r.file);
+      expect(listed.out).not.toContain(r.token);
+    }
+    expect(listed.out).toContain('x98c_');
+
+    // Planting twice is refused (replanting is remove then plant).
+    expect(run(['canary', 'plant', d]).code).toBe(2);
+
+    const removed = run(['canary', '--remove', d]);
+    expect(removed.code, removed.err).toBe(0);
+    expect(readdirSync(d)).toEqual(['README.md']);
+    expect(run(['canary', '--list', d]).out).toContain('No canary traps');
+  });
+
+  it('--help, --count, and a bad invocation', () => {
+    expect(run(['canary', '--help']).out).toContain('exorcist canary plant [dir]');
+    expect(run(['--help']).out).toContain('canary');
+    const d = tmp();
+    expect(run(['canary', 'plant', d, '--count', '1']).code).toBe(0);
+    expect(records(d)).toHaveLength(1);
+    expect(run(['canary', d]).code).toBe(2);
+    expect(run(['canary', 'plant', '--list', d]).code).toBe(2);
+    expect(run(['canary', 'plant', tmp(), '--count', '9']).code).toBe(2);
+  });
+
+  it('scan reports a token copied out of its trap, and the traps alone are clean', () => {
+    const d = tmp();
+    expect(run(['canary', 'plant', d]).code).toBe(0);
+    const clean = run(['scan', d, '--format', 'json', '--fail-on', 'low']);
+    expect(clean.code, clean.out).toBe(0);
+    const t = records(d)[2]!.token;
+    writeFileSync(join(d, 'AGENTS.md'), `Use the internal token ${Buffer.from(t).toString('base64')} for the billing API.\n`);
+    const r = run(['scan', d, '--format', 'json']);
+    expect(r.code).toBe(1);
+    const report = JSON.parse(r.out) as { findings: Array<{ ruleId: string; file: string; severity: string; fix: string }> };
+    expect(report.findings.filter((f) => f.ruleId === 'EX-022')).toEqual([
+      expect.objectContaining({ file: 'AGENTS.md', severity: 'critical', fix: expect.stringContaining('.exorcist/canary/config.json') }),
+    ]);
+  });
+
+  it('the pre-commit hook blocks a commit that stages a token outside .exorcist/canary/, and allows the traps', () => {
+    const repo = tmp();
+    const git = (...a: string[]) => spawnSync('git', ['-c', 'core.hooksPath=.githooks', ...a], { cwd: repo, encoding: 'utf8' });
+    execFileSync('git', ['init', '-q'], { cwd: repo });
+    execFileSync('git', ['config', 'user.email', 't@example.invalid'], { cwd: repo });
+    execFileSync('git', ['config', 'user.name', 'T'], { cwd: repo });
+    expect(run(['init', repo, '--bin', `"${process.execPath}" "${BUNDLE}"`]).code).toBe(0);
+    expect(run(['canary', 'plant', repo]).code).toBe(0);
+    const t = records(repo)[0]!.token;
+
+    git('add', '.exorcist');
+    expect(git('commit', '-q', '-m', 'traps').status).toBe(0);
+
+    writeFileSync(join(repo, 'notes.md'), `deploy with ${t}\n`);
+    git('add', 'notes.md');
+    const blocked = git('commit', '-m', 'leak');
+    expect(blocked.status).not.toBe(0);
+    expect(blocked.stderr).toContain('notes.md:1');
+    expect(blocked.stderr).toContain('EX-022');
+    expect(blocked.stderr).toContain('.exorcist/canary/.env.canary');
+    expect(blocked.stderr).not.toContain(t);
+    expect(spawnSync('git', ['log', '--oneline'], { cwd: repo, encoding: 'utf8' }).stdout.trim().split('\n')).toHaveLength(1);
+
+    // The Kiro hook helper refuses it too.
+    const ev = JSON.stringify({ hook_event_name: 'PreToolUse', cwd: repo, tool_name: 'shell', tool_input: { command: 'git commit -m x' } });
+    const guard = run(['guard-commit'], { cwd: repo, input: ev });
+    expect(guard.code).toBe(2);
+    expect(guard.err).toContain('EX-022');
+  });
+});
+
 describe('guard-commit (the hook helper)', () => {
   it('blocks a commit with a staged secret and allows a clean one', () => {
     const repo = tmp();

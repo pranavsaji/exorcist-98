@@ -25,10 +25,10 @@ Commands:
   approve <kind>     Approve a changed tool or a host (see: exorcist approve --help)
   alerts             Show recent shield alerts
   init [folder]      Add hooks and steering to a Kiro project
-  canary [dir]        Plant, list (--list) or remove (--remove) canary traps
+  canary <command>   Plant, list (--list) or remove (--remove) canary traps (EX-022)
   guard-commit       Hook helper: block git commit while secrets are staged
   hook-scan          Hook helper: scan the file named in a Kiro "file saved" event
-  check-staged       Git pre-commit helper: exit 1 if staged files contain secrets
+  check-staged       Git pre-commit helper: exit 1 if staged files contain secrets or canary tokens
 
 Run "exorcist <command> --help" for details.
 `;

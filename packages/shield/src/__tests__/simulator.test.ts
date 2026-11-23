@@ -55,6 +55,25 @@ describe('Possession Lab simulator (real ShieldEngine)', () => {
     expect(fetch.shielded.serverReceived.map((c) => (c.args as { url: string }).url)).toEqual(['https://docs.example.com/getting-started']);
   });
 
+  it('the canary: the trap token leaves without the Shield, and EX-022 stops both copies with it', () => {
+    expect(SCENARIO_IDS).toHaveLength(6);
+    expect(listScenarios().find((s) => s.id === 'canary')?.title).toBe('The Canary');
+    const r = runScenario('canary', defs);
+    // Unprotected: the paste server got the .env.canary contents, plain and base64.
+    expect(r.unshielded.serverReceived.map((c) => (c.args as { title: string }).title)).toEqual(['deploy debug', 'deploy debug (encoded)', 'todo']);
+    expect(r.unshielded.leakedSecrets).toBe(2);
+    expect(r.steps[1]!.unshielded.some((e) => e.text.includes('trap token from .exorcist/canary/.env.canary'))).toBe(true);
+    // Shielded: both leaking calls blocked by a critical EX-022 naming the trap file; the honest paste goes through.
+    expect(r.shielded.serverReceived.map((c) => (c.args as { title: string }).title)).toEqual(['todo']);
+    for (const i of [1, 2]) {
+      const alert = r.steps[i]!.shielded.find((e) => e.ruleId === 'EX-022');
+      expect(alert?.severity).toBe('critical');
+      expect(alert?.text).toContain('EX-022 Canary token in a tool call');
+      expect(alert?.text).toContain('.exorcist/canary/.env.canary');
+    }
+    expect(r.steps[2]!.shielded.find((e) => e.ruleId === 'EX-022')?.text).toContain('base64');
+  });
+
   it('is deterministic', () => {
     for (const id of SCENARIO_IDS) expect(JSON.stringify(runScenario(id, defs))).toBe(JSON.stringify(runScenario(id, defs)));
   });

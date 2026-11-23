@@ -1,7 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { loadDefinitions } from '../definitions/loader.js';
-import { canariesPath, findCanaryInText, lineColOf, loadCanariesFile } from '../canary.js';
-import type { CanaryRecord } from '../canary.js';
+import { canariesPath, findCanaryInText, isCanaryHome, lineColOf, loadCanariesFile } from '../canary.js';
+import type { Canary } from '../canary.js';
+import type { VirusDefinition } from '../definitions/schema.js';
 import { walkRepo } from '../walker.js';
 import { normalize } from '../normalizer.js';
 import { runSignatures } from './signature-engine.js';
@@ -31,26 +32,36 @@ export function deduplicate(findings: Finding[]): Finding[] {
   });
 }
 
+const EX022_DEFAULTS = {
+  owasp: ['LLM02:2025 Sensitive Information Disclosure', 'ASI05 Sensitive Data Leakage'],
+};
+
 /**
- * A canary token found in a scanned file (EX-022). The tokens are unique per
- * install, so a copy outside `.exorcist/` was made by something that read the
- * trap: proof of an attempted leak.
+ * EX-022: a canary token found in a scanned file. Each token is unique to one
+ * install and lives only in its trap file and the records file, so a copy
+ * anywhere else (raw or disguised) was made by something that read the trap.
+ * The matching is in code, since only the records know the tokens; the
+ * definition supplies the OWASP mapping and the encyclopedia text.
  */
-export function canaryFindings(text: string, rel: string, records: readonly CanaryRecord[]): Finding[] {
-  return findCanaryInText(text, records).map((h) => {
+export function canaryFindings(text: string, rel: string, canaries: readonly Canary[], def?: VirusDefinition): Finding[] {
+  if (canaries.length === 0 || isCanaryHome(rel)) return [];
+  return findCanaryInText(text, canaries).map((h) => {
     const { line, col } = lineColOf(text, h.index);
-    const span = h.shape === 'raw' ? h.record.token : text.slice(h.index, h.index + 60).split(/[\n\r]/)[0] ?? h.record.token;
     return {
       source: 'signature' as const,
       ruleId: 'EX-022',
-      title: 'Canary token out of its trap',
+      title: 'Canary token copied out of its trap',
       severity: 'critical' as const,
       file: rel,
       line,
       col,
-      span: span.slice(0, 120),
-      owasp: ['LLM02:2025 Sensitive Information Disclosure', 'ASI05 Sensitive Data Leakage'],
-      fix: `A trap token from ${h.record.file} has been copied out of its trap. Find what copied it (a prompt injection in a file, a tool result or a dependency) and remove the instruction, then replant fresh traps with: exorcist canary plant`,
+      // The exact text found, as it appears in the file.
+      span: text.slice(h.index, Math.min(h.end, h.index + 120)),
+      owasp: def?.owasp ?? EX022_DEFAULTS.owasp,
+      fix:
+        `A trap token has been copied out of its trap (${h.canary.file}${h.shape === 'raw' ? '' : `, ${h.shape}`}). ` +
+        'Something that read the trap wrote it here: find the instruction that asked for it (a prompt injection in a file, a tool result or a dependency) and remove it, ' +
+        'delete this copy, then replant fresh traps: exorcist canary --remove && exorcist canary plant',
     };
   });
 }
@@ -64,7 +75,8 @@ export async function* scanRepo(
   if (!canaries.ok) {
     yield { type: 'error', file: '.exorcist/canaries.json', message: canaries.error };
   }
-  const records: CanaryRecord[] = canaries.ok ? canaries.canaries : [];
+  const records: Canary[] = canaries.ok ? canaries.canaries : [];
+  const ex022 = defs.find((d) => d.id === 'EX-022');
   const start = Date.now();
   let filesScanned = 0;
   let filesSkipped = 0;
@@ -80,7 +92,7 @@ export async function* scanRepo(
       const heurs = options.bedrockClient
         ? await runHeuristics(file, norm, sigs, options.bedrockClient)
         : [];
-      const traps = file.rel.replace(/\\/g, '/').startsWith('.exorcist/') ? [] : canaryFindings(text, file.rel, records);
+      const traps = canaryFindings(text, file.rel, records, ex022);
 
       const deduped = deduplicate([...sigs, ...heurs, ...traps]);
 

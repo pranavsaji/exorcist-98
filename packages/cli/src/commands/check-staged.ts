@@ -28,9 +28,9 @@ export async function checkStagedCommand(io: Io): Promise<number> {
     io.err('Remove them (use an environment variable or a secrets manager), unstage the file, then commit again.');
   }
   if (c.hits.length > 0) {
-    io.err(`Exorcist 98 blocked this commit: ${c.hits.length} canary token(s) are staged outside .exorcist/ (EX-022).`);
-    for (const h of c.hits) io.err(`  ${h.file}:${h.line}  ${h.redacted}`);
-    io.err('A trap token has been copied out of its trap: something moved it out of the project. Find what copied it, then replant with: exorcist canary plant');
+    io.err(`Exorcist 98 blocked this commit: ${c.hits.length} canary token(s) are staged outside .exorcist/canary/ (EX-022).`);
+    for (const h of c.hits) io.err(`  ${h.file}:${h.line}  ${h.redacted}  (from the trap ${h.trap})`);
+    io.err('A trap token has been copied out of its trap. Find what copied it (an instruction in a file, a tool result or a dependency), remove the copy, then replant: exorcist canary --remove && exorcist canary plant');
   }
   return 1;
 }

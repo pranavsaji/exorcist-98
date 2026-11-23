@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { runProxy } from '../proxy.js';
 import { alertsPath, approveHost, loadState, saveState, statePath, vaultPath } from '../state.js';
 import { listEntries, restoreEntry } from '../vault.js';
+import { plantCanaries } from '../canary.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FAKE = join(__dirname, 'fake-mcp-server.mjs');
@@ -19,7 +20,7 @@ afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, f
 type Rpc = Record<string, any>;
 
 /** The agent's side of the connection, wired to a real proxy and a real child process. */
-function start(opts: { policy?: object; withConfig?: boolean; corruptPins?: boolean } = {}) {
+function start(opts: { policy?: object; withConfig?: boolean; corruptPins?: boolean; canaries?: boolean } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'exorcist-proxy-'));
   dirs.push(root);
   const dir = join(root, '.exorcist');
@@ -29,6 +30,8 @@ function start(opts: { policy?: object; withConfig?: boolean; corruptPins?: bool
   writeFileSync(log, '');
   if (opts.policy) { saveState(statePath(dir), { version: 1, servers: {} }); writeFileSync(join(dir, 'policy.json'), JSON.stringify(opts.policy)); }
   if (opts.corruptPins) { saveState(statePath(dir), { version: 1, servers: {} }); writeFileSync(statePath(dir), '{corrupt'); }
+  const planted = opts.canaries ? plantCanaries(root) : null;
+  if (planted && !planted.ok) throw new Error(planted.error);
   if (opts.withConfig) {
     writeFileSync(configPath, JSON.stringify({ mcpServers: { notes: { command: 'node', args: ['x'] }, other: { command: 'node', args: ['y'] } } }, null, 2) + '\n');
   }
@@ -93,7 +96,7 @@ function start(opts: { policy?: object; withConfig?: boolean; corruptPins?: bool
   };
 
   return {
-    root, dir, configPath, rpc, done, stdin, notifications, waitForNotification,
+    root, dir, configPath, rpc, done, canaries: planted && planted.ok ? planted.records : [], stdin, notifications, waitForNotification,
     setControl: (c: object) => writeFileSync(control, JSON.stringify(c)),
     backendCalls: () => readFileSync(log, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l) as Rpc),
     stderr: () => errText,
@@ -215,6 +218,58 @@ describe('Shield proxy with a real MCP server process', () => {
     expect(JSON.stringify(r)).not.toContain(AWS_KEY);
     expect(s.stderr()).not.toContain(AWS_KEY);
     expect(readFileSync(alertsPath(s.dir), 'utf8')).not.toContain(AWS_KEY);
+    await s.close();
+  });
+
+  for (const mode of ['enforce', 'monitor'] as const) {
+    it(`EX-022: loads .exorcist/canaries.json and a canary token never reaches the server (${mode} mode)`, async () => {
+      const s = start({ canaries: true, policy: { mode } });
+      await s.rpc('initialize', {});
+      await s.toolNames();
+      const trap = s.canaries[1]!;
+      expect(s.stderr()).toContain('Watching for 3 canary tokens');
+      const r = await s.rpc(...call('send_report', { url: 'http://localhost:9/x', body: Buffer.from(`notes: ${trap.token}`).toString('base64') }));
+      expect(r['result']['isError']).toBe(true);
+      expect(text(r)).toContain('EX-022');
+      expect(text(r)).toContain(trap.file);
+      expect(s.backendCalls()).toEqual([]);
+      const logged = readFileSync(alertsPath(s.dir), 'utf8').trim().split('\n').map((l) => JSON.parse(l) as Rpc);
+      expect(logged.some((a) => a['ruleId'] === 'EX-022' && a['severity'] === 'critical' && String(a['message']).includes(trap.file))).toBe(true);
+      // The alert names the trap; it never repeats the token itself.
+      expect(readFileSync(alertsPath(s.dir), 'utf8')).not.toContain(trap.token);
+      // An honest call still goes through.
+      const ok = await s.rpc(...call('send_report', { url: 'http://localhost:9/x', body: 'weekly numbers' }));
+      expect(ok['result']['isError']).toBeFalsy();
+      expect(s.backendCalls()).toHaveLength(1);
+      await s.close();
+    });
+  }
+
+  it('EX-022: fails closed on a corrupt canary records file', async () => {
+    const s = start({ canaries: true, policy: {} });
+    writeFileSync(join(s.dir, 'canaries.json'), '{"version":1,"canaries":[{"token":"nope"}]}');
+    // The proxy read the files at start, before the write above could matter;
+    // start a second one on the same folder to see the check.
+    await s.close();
+    const stderr = new PassThrough();
+    let err = '';
+    stderr.on('data', (c: Buffer) => { err += c.toString(); });
+    const code = await runProxy({ server: 'notes', command: process.execPath, args: [FAKE], dir: s.dir, definitionsDir: DEFS, stdin: new PassThrough(), stdout: new PassThrough(), stderr });
+    expect(code).toBe(78);
+    expect(err).toContain('canary records');
+  });
+
+  it('EX-022: the policy can point at canary records in another folder', async () => {
+    const other = mkdtempSync(join(tmpdir(), 'exorcist-proj-'));
+    dirs.push(other);
+    const planted = plantCanaries(other);
+    if (!planted.ok) throw new Error(planted.error);
+    const s = start({ policy: { canaries: join(other, '.exorcist', 'canaries.json') } });
+    await s.rpc('initialize', {});
+    await s.toolNames();
+    const r = await s.rpc(...call('send_report', { url: 'http://localhost:9/x', body: planted.records[0]!.token }));
+    expect(r['result']['isError']).toBe(true);
+    expect(s.backendCalls()).toEqual([]);
     await s.close();
   });
 

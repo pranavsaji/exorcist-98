@@ -1,155 +1,258 @@
 /**
- * Canary traps, Shield side: planting the trap files, loading the records
- * and finding a token inside a JSON-RPC message. The token shapes and the
- * record file live in @exorcist-98/core so the scanner and the pre-commit
- * hook share the exact same detection.
+ * Canary traps, Shield side: planting and removing the trap files, loading
+ * the records and finding a token inside a JSON-RPC message (EX-022). The
+ * token format, the records file and the detection itself live in
+ * @exorcist-98/core, so the Shield, the scanner and the pre-commit hook all
+ * find exactly the same things.
  */
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
+import { isAbsolute, join, resolve } from 'node:path';
 import {
-  CanariesFileSchema,
-  findRecordIn,
+  CANARY_TRAP_DIR,
+  canariesPath,
+  findCanaryInText,
+  loadCanariesFile,
   newToken,
-  canariesPath as coreCanariesPath,
 } from '@exorcist-98/core';
-import type { CanaryHit, CanaryRecord } from '@exorcist-98/core';
-import { collectStringsChecked } from './inspect.js';
+import type { Canary, CanaryRecord, CanaryShape } from '@exorcist-98/core';
+import { policyPath } from './state.js';
 
-export type { CanaryRecord, CanaryHit } from '@exorcist-98/core';
-
-export { newToken } from '@exorcist-98/core';
-export { canariesPath } from '@exorcist-98/core';
-
-export type Canary = { token: string; file: string };
+export type { Canary, CanaryRecord, CanaryShape } from '@exorcist-98/core';
+export { newToken, canariesPath } from '@exorcist-98/core';
 
 /**
- * The three trap files planted by default. Each says in a comment that it is
- * an Exorcist 98 canary, in words that do not tell an agent to avoid it.
+ * The trap files. Each says in a comment that it is an Exorcist 98 canary, so
+ * a person who opens one is not confused. The comment only says what the file
+ * is; it does not ask anyone (or any AI) to stay away from it. The values do
+ * not match any real credential format, so secret scanners (ours included)
+ * have nothing to report in the trap itself.
  */
-const TRAPS: Array<{ file: string; body: (token: string) => string }> = [
+export const TRAPS: ReadonlyArray<{ name: string; body: (token: string) => string }> = [
   {
-    file: '.env.canary',
+    name: '.env.canary',
     body: (t) =>
-      `# Exorcist 98 canary file. These values are decoys planted by Exorcist 98\n# to detect leaks; they are not real credentials.\nAWS_ACCESS_KEY_ID=${t}\nAWS_REGION=us-east-1\n`,
+      '# Exorcist 98 canary trap, planted by "exorcist canary plant".\n' +
+      '# The value below is a unique marker, not a key for any service.\n' +
+      `DEPLOY_TOKEN=${t}\n`,
   },
   {
-    file: 'NOTES.md',
+    name: 'NOTES.md',
     body: (t) =>
-      `<!-- Exorcist 98 canary file: private-looking notes planted as a trap. -->\n# Personal notes\n\nDeploy key (keep to yourself): \`${t}\`\n\nRemember to rotate the staging key next week.\n`,
+      '<!-- Exorcist 98 canary trap, planted by "exorcist canary plant". The key below is a unique marker, not a real credential. -->\n' +
+      '# Ops notes\n\n' +
+      `Staging deploy key: ${t}\n\n` +
+      'Rotate it after the next release.\n',
   },
   {
-    file: 'config.json',
+    name: 'config.json',
     body: (t) =>
-      `${JSON.stringify({ _comment: 'Exorcist 98 canary file: decoy internal config planted as a trap.', internal_token: t, retries: 3 }, null, 2)}\n`,
+      `${JSON.stringify({
+        _comment: 'Exorcist 98 canary trap, planted by "exorcist canary plant". internalToken is a unique marker, not a real credential.',
+        service: 'billing-internal',
+        internalToken: t,
+      }, null, 2)}\n`,
   },
 ];
 
+export const DEFAULT_TRAPS = TRAPS.length;
+
+export type PlantOptions = {
+  /** How many traps (1 to 3). Default 3. */
+  count?: number;
+  /**
+   * The Shield's state folder. When it is not `<root>/.exorcist` (for example
+   * EXORCIST_DIR points elsewhere), its policy is told where the records are.
+   */
+  stateDir?: string;
+  now?: () => Date;
+};
+
 export type PlantResult =
-  | { ok: true; records: CanaryRecord[]; dir: string }
+  | { ok: true; records: CanaryRecord[]; recordsFile: string; policyUpdated?: string }
   | { ok: false; error: string };
+
+const firstLine = (err: unknown): string => String(err).split('\n')[0] ?? '';
 
 /**
- * Plant the trap files and record the tokens. `root` is the project root; the
- * traps go to `<root>/.exorcist/canary/` and the records to
- * `<root>/.exorcist/canaries.json`, which is also the Shield's state folder.
+ * Plant the trap files in `<root>/.exorcist/canary/` and record the tokens in
+ * `<root>/.exorcist/canaries.json`. Refuses to plant over existing traps or
+ * records: replanting is `remove` then `plant`, so no record ever points at a
+ * file that no longer holds its token.
  */
-export function plantCanaries(root: string, n: number = 3): PlantResult {
-  if (n < 1 || n > TRAPS.length) return { ok: false, error: `plant between 1 and ${TRAPS.length} traps.` };
-  const trapDir = join(root, '.exorcist', 'canary');
-  try {
-    mkdirSync(trapDir, { recursive: true });
-  } catch (err) {
-    return { ok: false, error: `Could not create ${trapDir}: ${String(err).split('\n')[0]}` };
+export function plantCanaries(root: string, o: PlantOptions = {}): PlantResult {
+  const count = o.count ?? DEFAULT_TRAPS;
+  if (!Number.isInteger(count) || count < 1 || count > TRAPS.length) {
+    return { ok: false, error: `Plant between 1 and ${TRAPS.length} traps.` };
   }
-  const existing = loadCanaries(root);
+  const recordsFile = canariesPath(root);
+  const existing = loadCanariesFile(recordsFile);
   if (!existing.ok) return existing;
-  const records = [...existing.canaries];
-  for (const trap of TRAPS.slice(0, n)) {
-    const token = newToken();
-    const file = join('.exorcist', 'canary', trap.file);
-    try {
-      writeFileSync(join(trapDir, trap.file), trap.body(token));
-    } catch (err) {
-      return { ok: false, error: `Could not write the trap file: ${String(err).split('\n')[0]}` };
-    }
-    records.push({ token, file, created: new Date().toISOString() });
+  if (existing.canaries.length > 0) {
+    return { ok: false, error: `Canary traps are already planted in ${root}. To replace them, run "exorcist canary --remove" first.` };
   }
+  const traps = TRAPS.slice(0, count);
+  for (const t of traps) {
+    const path = join(root, CANARY_TRAP_DIR, t.name);
+    if (existsSync(path)) return { ok: false, error: `${path} already exists; it was not overwritten.` };
+  }
+
+  const created = (o.now ? o.now() : new Date()).toISOString();
+  const records: CanaryRecord[] = [];
+  const madeDirs = ['.exorcist', CANARY_TRAP_DIR].filter((d) => !existsSync(join(root, d)));
   try {
-    writeFileSync(coreCanariesPath(root), `${JSON.stringify({ version: 1, canaries: records }, null, 2)}\n`);
+    mkdirSync(join(root, CANARY_TRAP_DIR), { recursive: true });
+    for (const t of traps) {
+      const token = newToken();
+      const file = `${CANARY_TRAP_DIR}/${t.name}`;
+      writeFileSync(join(root, file), t.body(token), { flag: 'wx' });
+      records.push({ token, file, created });
+    }
+    writeFileSync(recordsFile, `${JSON.stringify({ version: 1, canaries: records, ...(madeDirs.length > 0 ? { madeDirs } : {}) }, null, 2)}\n`);
   } catch (err) {
-    return { ok: false, error: `Could not write the canary records: ${String(err).split('\n')[0]}` };
+    // Leave nothing half-planted behind.
+    for (const r of records) rmSync(join(root, r.file), { force: true });
+    for (const d of [...madeDirs].reverse()) rmdirIfEmpty(join(root, d));
+    return { ok: false, error: `Could not plant the canary traps: ${firstLine(err)}` };
   }
-  return { ok: true, records, dir: trapDir };
+
+  const result: PlantResult = { ok: true, records, recordsFile };
+  if (o.stateDir && resolve(o.stateDir) !== resolve(root, '.exorcist')) {
+    const told = setPolicyCanaries(o.stateDir, recordsFile);
+    if (!told.ok) return { ok: false, error: `Planted the traps, but could not tell the Shield where they are: ${told.error}` };
+    result.policyUpdated = policyPath(o.stateDir);
+  }
+  return result;
 }
 
-export type LoadResult =
-  | { ok: true; canaries: CanaryRecord[] }
-  | { ok: false; error: string };
-
 /** Read the project's canary records from `<root>/.exorcist/canaries.json`. */
-export function loadCanaries(root: string): LoadResult {
-  const path = coreCanariesPath(root);
-  if (!existsSync(path)) return { ok: true, canaries: [] };
-  let json: unknown;
-  try {
-    json = JSON.parse(readFileSync(path, 'utf8'));
-  } catch {
-    return { ok: false, error: `The canary records file ${path} is not valid JSON.` };
-  }
-  const parsed = CanariesFileSchema.safeParse(json);
-  if (!parsed.success) {
-    return { ok: false, error: `The canary records file ${path} is invalid: ${parsed.error.issues[0]?.message ?? 'unknown problem'}` };
-  }
-  return { ok: true, canaries: parsed.data.canaries };
+export function loadCanaries(root: string): { ok: true; canaries: CanaryRecord[] } | { ok: false; error: string } {
+  const r = loadCanariesFile(canariesPath(root));
+  return r.ok ? { ok: true, canaries: r.canaries } : r;
 }
 
 export type RemoveResult =
   | { ok: true; removed: string[] }
   | { ok: false; error: string };
 
-/** Remove the trap files and the records. Nothing else in the project is touched. */
-export function removeCanaries(root: string): RemoveResult {
-  const existing = loadCanaries(root);
-  if (!existing.ok) return existing;
-  const removed: string[] = [];
+/** Remove a folder only if it is empty. */
+function rmdirIfEmpty(path: string): void {
   try {
-    const trapDir = join(root, '.exorcist', 'canary');
-    if (existsSync(trapDir)) {
-      for (const r of existing.canaries) {
-        const full = join(root, r.file);
-        if (existsSync(full)) {
-          rmSync(full);
-          removed.push(r.file);
-        }
-      }
-      // Only remove the trap folder when this install owns all of it.
-      const left = Array.from(new Set(TRAPS.map((t) => t.file))).filter((f) => existsSync(join(trapDir, f)));
-      if (left.length === 0) rmSync(trapDir, { recursive: true, force: true });
-    }
-    const records = coreCanariesPath(root);
-    if (existsSync(records)) {
-      rmSync(records);
-      removed.push('.exorcist/canaries.json');
-    }
-  } catch (err) {
-    return { ok: false, error: `Could not remove the canaries: ${String(err).split('\n')[0]}` };
+    if (lstatSync(path).isDirectory() && readdirSync(path).length === 0) rmdirSync(path);
+  } catch {
+    // missing or not removable: leave it
   }
-  return { ok: true, removed };
 }
 
 /**
- * Find a canary token anywhere in a JSON-like value: every string and key,
- * also base64- or percent-encoded, or with whitespace between its characters.
- * Fails closed when the value was too large to read fully.
+ * Remove the trap files named in the records, the records file, and the
+ * folders `plant` created if they are left empty. Nothing else in the project
+ * is touched (the records can only name files inside the trap folder).
  */
-export function findCanary(value: unknown, canaries: readonly Canary[]): { hit: CanaryHit; canary: Canary } | { truncated: true } | null {
-  const { strings, truncated } = collectStringsChecked(value);
-  if (truncated) return { truncated: true };
-  for (const c of canaries) {
-    for (const s of strings) {
-      const hit = findRecordIn({ token: c.token, file: c.file, created: '' }, s);
-      if (hit) return { hit, canary: c };
+export function removeCanaries(root: string, o: { stateDir?: string } = {}): RemoveResult {
+  const recordsFile = canariesPath(root);
+  const existing = loadCanariesFile(recordsFile);
+  if (!existing.ok) return existing;
+  const removed: string[] = [];
+  try {
+    for (const r of existing.canaries) {
+      const full = join(root, r.file);
+      if (existsSync(full) && lstatSync(full).isFile()) {
+        rmSync(full);
+        removed.push(r.file);
+      }
+    }
+    if (existsSync(recordsFile)) {
+      rmSync(recordsFile);
+      removed.push('.exorcist/canaries.json');
+    }
+  } catch (err) {
+    return { ok: false, error: `Could not remove the canary traps: ${firstLine(err)}` };
+  }
+  // Only the folders `plant` made, and only if nothing else was put there since.
+  if (existing.madeDirs.includes(CANARY_TRAP_DIR)) rmdirIfEmpty(join(root, CANARY_TRAP_DIR));
+  if (existing.madeDirs.includes('.exorcist')) rmdirIfEmpty(join(root, '.exorcist'));
+  if (o.stateDir && resolve(o.stateDir) !== resolve(root, '.exorcist')) clearPolicyCanaries(o.stateDir, recordsFile);
+  return { ok: true, removed };
+}
+
+// ── telling the Shield's state folder ────────────────────────────────────────
+
+function readPolicyObject(stateDir: string): { ok: true; obj: Record<string, unknown> } | { ok: false; error: string } {
+  const path = policyPath(stateDir);
+  if (!existsSync(path)) return { ok: true, obj: {} };
+  try {
+    const json: unknown = JSON.parse(readFileSync(path, 'utf8'));
+    if (!json || typeof json !== 'object' || Array.isArray(json)) return { ok: false, error: `${path} is not a JSON object.` };
+    return { ok: true, obj: json as Record<string, unknown> };
+  } catch (err) {
+    return { ok: false, error: `Could not read ${path}: ${firstLine(err)}` };
+  }
+}
+
+function setPolicyCanaries(stateDir: string, recordsFile: string): { ok: true } | { ok: false; error: string } {
+  const p = readPolicyObject(stateDir);
+  if (!p.ok) return p;
+  try {
+    mkdirSync(stateDir, { recursive: true });
+    writeFileSync(policyPath(stateDir), `${JSON.stringify({ ...p.obj, canaries: resolve(recordsFile) }, null, 2)}\n`);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: firstLine(err) };
+  }
+}
+
+function clearPolicyCanaries(stateDir: string, recordsFile: string): void {
+  const p = readPolicyObject(stateDir);
+  if (!p.ok || p.obj['canaries'] !== resolve(recordsFile)) return;
+  const { canaries: _gone, ...rest } = p.obj;
+  try {
+    if (Object.keys(rest).length === 0) rmSync(policyPath(stateDir));
+    else writeFileSync(policyPath(stateDir), `${JSON.stringify(rest, null, 2)}\n`);
+  } catch {
+    // the traps are gone; a stale path in the policy only means an empty list
+  }
+}
+
+/** The records file the Shield reads: the policy's `canaries` (relative to the state folder) or `<stateDir>/canaries.json`. */
+export function canariesFileFor(stateDir: string, policyCanaries?: string): string {
+  if (!policyCanaries) return join(stateDir, 'canaries.json');
+  return isAbsolute(policyCanaries) ? policyCanaries : resolve(stateDir, policyCanaries);
+}
+
+// ── detection in messages ────────────────────────────────────────────────────
+
+/** Every string and key in a JSON-like value, with no depth or count limit (so nothing is left unread). */
+function allStrings(value: unknown): string[] {
+  const out: string[] = [];
+  const seen = new Set<object>();
+  const stack: unknown[] = [value];
+  while (stack.length > 0) {
+    const v = stack.pop();
+    if (typeof v === 'string') out.push(v);
+    else if (v && typeof v === 'object') {
+      if (seen.has(v)) continue;
+      seen.add(v);
+      if (Array.isArray(v)) for (let i = v.length - 1; i >= 0; i--) stack.push(v[i]);
+      else {
+        const entries = Object.entries(v as Record<string, unknown>);
+        for (let i = entries.length - 1; i >= 0; i--) {
+          const [k, x] = entries[i] as [string, unknown];
+          stack.push(x, k);
+        }
+      }
     }
   }
-  return null;
+  return out;
+}
+
+/**
+ * Find a canary token anywhere in a JSON-like value: in any string or key, at
+ * any depth, raw, base64- or percent-encoded, or split by whitespace (also
+ * across neighbouring items of an array). Returns the first canary found.
+ */
+export function findCanary<C extends Canary>(value: unknown, canaries: readonly C[]): { canary: C; shape: CanaryShape } | null {
+  if (canaries.length === 0) return null;
+  const hits = findCanaryInText(allStrings(value).join('\n'), canaries);
+  const first = hits[0];
+  return first ? { canary: first.canary, shape: first.shape } : null;
 }

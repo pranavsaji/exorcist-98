@@ -7,6 +7,7 @@
  * tool_input }). Exit 0 lets the command run; a non-zero exit blocks it.
  */
 import { findStagedSecrets } from './secrets-check.js';
+import { findStagedCanaries } from './canary.js';
 
 export type HookDecision = { exitCode: 0 | 2; message: string };
 
@@ -35,14 +36,26 @@ export function decide(stdin: string, fallbackCwd: string = process.cwd()): Hook
   const cwd = typeof event.cwd === 'string' && event.cwd ? event.cwd : fallbackCwd;
   const result = findStagedSecrets(cwd);
   if (!result.ok) return { exitCode: 0, message: result.error };
-  if (result.hits.length === 0) return { exitCode: 0, message: '' };
+  const canaries = findStagedCanaries(cwd);
+  const canaryHits = canaries.ok ? canaries.hits : [];
+  if (result.hits.length === 0 && canaryHits.length === 0) return { exitCode: 0, message: canaries.ok ? '' : canaries.error };
 
-  const lines = result.hits.map((h) => `  ${h.file}:${h.line}  ${h.pattern}  ${h.redacted}`);
-  return {
-    exitCode: 2,
-    message:
+  const parts: string[] = [];
+  if (result.hits.length > 0) {
+    const lines = result.hits.map((h) => `  ${h.file}:${h.line}  ${h.pattern}  ${h.redacted}`);
+    parts.push(
       `Exorcist 98 blocked this commit: ${result.hits.length} possible secret(s) are staged.\n` +
       `${lines.join('\n')}\n` +
       'Remove them (use an environment variable or a secrets manager), unstage the file, then commit again.',
-  };
+    );
+  }
+  if (canaryHits.length > 0) {
+    const lines = canaryHits.map((h) => `  ${h.file}:${h.line}  ${h.redacted}  (from the trap ${h.trap})`);
+    parts.push(
+      `Exorcist 98 blocked this commit: ${canaryHits.length} canary token(s) are staged outside .exorcist/canary/ (EX-022).\n` +
+      `${lines.join('\n')}\n` +
+      'A trap token has been copied out of its trap. Find what copied it, remove the copy, then replant: exorcist canary --remove && exorcist canary plant',
+    );
+  }
+  return { exitCode: 2, message: parts.join('\n') };
 }

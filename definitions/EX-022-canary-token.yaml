@@ -14,22 +14,29 @@ applies_to:
   - definition
   - unknown
   - tool-result
-# The real matching is in code (packages/core/src/canary.ts), which reads the
-# project's canary records and knows which token belongs to which trap. This
-# entry is the encyclopedia record: description, severity and the OWASP
-# mapping shown for EX-022 findings.
+# The encyclopedia record for canary traps (exorcist canary plant). The real
+# matching is in code: packages/core/src/canary.ts for scans and the
+# pre-commit hook, packages/shield/src/engine.ts for tool calls. Only the
+# project's records (.exorcist/canaries.json) know which tokens are planted
+# and which trap each came from, and the code also finds a token that was
+# base64- or percent-encoded or split by whitespace. So this rule is not run
+# as a signature; the pattern below documents the token's shape.
 enabled: false
 match:
-  # The shape of a canary token: x98c_ + 24 base32 characters.
+  # x98c_ + 24 base32 characters, unique per install.
   regex: "x98c_[A-Z2-7]{24}"
-  # The traps and the records file hold the tokens on purpose.
-  skip_paths:
-    - "(^|/)\\.exorcist/"
+# The trap files and the records file hold the tokens on purpose.
+skip_paths:
+  - "(^|/)\\.exorcist/(canary/|canaries\\.json$)"
 owasp:
   - "LLM02:2025 Sensitive Information Disclosure"
   - "ASI05 Sensitive Data Leakage"
 fix: >
-  A canary trap has been copied out of its trap file. Find what copied it
-  (a prompt injection in a file, a tool result or a dependency) and remove
-  the instruction. Then run "exorcist canary --remove" and "exorcist canary
-  plant" to set fresh traps, since this one has been burned.
+  A canary trap was set off: a token that exists only in a trap file
+  (.exorcist/canary/) turned up in a tool call, a tool result, a file or a
+  commit. No honest task ever copies it, so something the agent read (a
+  prompt injection in a file, a tool result or a dependency) told it to leak.
+  The Real-Time Shield blocks such tool calls in every mode. Find and remove
+  the instruction, delete any copy of the token, then replant fresh traps with
+  "exorcist canary --remove" and "exorcist canary plant", since this one is
+  burned.

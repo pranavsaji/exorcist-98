@@ -1,6 +1,5 @@
 import { spawn } from 'node:child_process';
-import { mkdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, statSync } from 'node:fs';
 import { loadDefinitions } from '@exorcist-98/core';
 import type { Readable, Writable } from 'node:stream';
 import { ShieldEngine } from './engine.js';
@@ -8,6 +7,7 @@ import type { Action } from './engine.js';
 import { LineSplitter } from './jsonrpc.js';
 import { loadPolicy } from './policy.js';
 import { loadCanariesFile } from '@exorcist-98/core';
+import { canariesFileFor } from './canary.js';
 import { alertsPath, appendAlert, loadState, policyPath, saveState, serverState, statePath, vaultPath } from './state.js';
 import type { Alert, State } from './state.js';
 import { quarantineServer } from './vault.js';
@@ -93,12 +93,17 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
     return FAIL_CLOSED_EXIT;
   }
 
-  // EX-022: the canary records, from the policy path or the state folder
-  // (`exorcist canary plant` writes `<project>/.exorcist/canaries.json`, and
-  // the state folder is that same `.exorcist` by default).
-  const canariesFile = loadCanariesFile(policy.policy.canaries ?? join(o.dir, 'canaries.json'));
+  // EX-022: the canary records, from the policy's `canaries` path (relative
+  // to the state folder) or `<state folder>/canaries.json`, which is where
+  // `exorcist canary plant` writes them (the state folder is the project's
+  // `.exorcist` by default). An unreadable records file fails closed, like
+  // the policy: the traps would silently stop working otherwise.
+  const canariesAt = canariesFileFor(o.dir, policy.policy.canaries);
+  const canariesFile = loadCanariesFile(canariesAt);
   if (!canariesFile.ok) { log(canariesFile.error); return FAIL_CLOSED_EXIT; }
+  if (policy.policy.canaries && !existsSync(canariesAt)) log(`The policy names canary records at ${canariesAt}, but there is no such file; no canary traps are active.`);
   const canaries = canariesFile.canaries.map((r) => ({ token: r.token, file: r.file }));
+  if (canaries.length > 0) log(`Watching for ${canaries.length} canary token${canaries.length === 1 ? '' : 's'} (EX-022).`);
 
   const launchAlerts: Alert[] = [];
   if (o.launch && policy.policy.launchPin !== 'off') {
