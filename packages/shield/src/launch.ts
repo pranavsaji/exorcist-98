@@ -4,7 +4,8 @@
  * (a malicious update) is caught here before it starts.
  *
  * The pin covers the command, every argument (as a hash, because arguments
- * can hold tokens), and the contents of every argument that is a file
+ * can hold tokens), the entry's `cwd` and `env` from the MCP config (values
+ * hashed), and the contents of every argument that is a file
  * (`node dist/index.mjs`, `python server.py`). Package specs for runners such
  * as npx are recorded as text so a version change is readable, and a spec
  * without a fixed version is reported: the next release would run unreviewed.
@@ -73,7 +74,40 @@ export function specIsPinned(spec: string): boolean {
   return /^v?\d+\.\d+\.\d+([-+][0-9A-Za-z.-]+)?$/.test(version);
 }
 
-export function launchFingerprint(command: string, args: readonly string[], cwd: string, reader: FileReader = fsReader): LaunchPin {
+/**
+ * What the MCP config says about how the server runs besides its command and
+ * arguments. A changed `env` can change the program as much as a changed file
+ * (`NODE_OPTIONS=--require ./x.js`, `LD_PRELOAD`), so it is part of the pin.
+ */
+export type LaunchEntry = {
+  /** The entry's own `env`, as written in the config. */
+  env?: Readonly<Record<string, string>>;
+  /** The entry's `cwd`, as written in the config (not resolved: the same text on every machine). */
+  cwd?: string;
+};
+
+/** Environment variables that change how a program is loaded or what code runs first. */
+export const LOADER_ENV = /^(NODE_OPTIONS|LD_PRELOAD|LD_LIBRARY_PATH|LD_AUDIT|DYLD_[A-Z_]+|PYTHONPATH|PYTHONSTARTUP|PYTHONHOME|RUBYOPT|RUBYLIB|PERL5OPT|PERL5LIB|JAVA_TOOL_OPTIONS|_JAVA_OPTIONS|JDK_JAVA_OPTIONS|BASH_ENV|ENV)$/i;
+
+/** The keys of an entry's env that change how its program loads (EX-025), sorted. */
+export function loaderEnvKeys(env: Readonly<Record<string, unknown>> | undefined): string[] {
+  return Object.keys(env ?? {}).filter((k) => LOADER_ENV.test(k)).sort();
+}
+
+/** The `env` and `cwd` of a server entry in an MCP config, as the launch pin reads them. Anything else is ignored. */
+export function launchEntryOf(entry: unknown): LaunchEntry {
+  if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) return {};
+  const e = entry as Record<string, unknown>;
+  const out: LaunchEntry = {};
+  const env = e['env'];
+  if (env !== null && typeof env === 'object' && !Array.isArray(env)) {
+    out.env = Object.fromEntries(Object.entries(env as Record<string, unknown>).filter((kv): kv is [string, string] => typeof kv[1] === 'string'));
+  }
+  if (typeof e['cwd'] === 'string') out.cwd = e['cwd'];
+  return out;
+}
+
+export function launchFingerprint(command: string, args: readonly string[], cwd: string, reader: FileReader = fsReader, entry: LaunchEntry = {}): LaunchPin {
   const fileLine = (label: string, value: string): string | undefined => {
     if (value.length === 0 || value.length > 4096) return undefined;
     const path = isAbsolute(value) ? value : resolve(cwd, value);
@@ -94,6 +128,15 @@ export function launchFingerprint(command: string, args: readonly string[], cwd:
   args.forEach((a, i) => {
     parts.push(fileLine(`arg ${i}`, a) ?? `arg ${i} sha256:${sha256(a).slice(0, 16)}`);
   });
+  // The entry's working folder and environment, as written in the config.
+  // Values are hashed (they often hold tokens); keys are sorted, so the order
+  // they were written in does not matter. An entry with neither gives the
+  // same parts as before they were pinned.
+  if (entry.cwd !== undefined) parts.push(`cwd ${entry.cwd}`);
+  for (const k of Object.keys(entry.env ?? {}).sort()) {
+    const v = (entry.env as Record<string, string>)[k] as string;
+    parts.push(`env ${JSON.stringify(k).slice(1, -1)} sha256:${sha256(v).slice(0, 16)}${LOADER_ENV.test(k) ? ' (changes how the program loads)' : ''}`);
+  }
   return { hash: sha256(parts.join('\n')), parts };
 }
 

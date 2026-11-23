@@ -83,10 +83,12 @@ to list its tools. Only run them on a config you trust. On a pull request the
 config is the author's: a changed `command` would run inside your CI with its
 secrets and token. So the GitHub Action's `lock-check: true` always runs
 `lock --check --static`, which starts nothing and compares the server names,
-each server's program (command, arguments and argument files) and remote URLs
-with the lock. `lock-check: live` also compares tool descriptions, and the
-Action refuses it on `pull_request` and `pull_request_target` events and when
-the head repository is a fork. Servers that `exorcist lock` does start get a
+each server's program (command, arguments, argument files, env and cwd) and
+remote URLs with the lock. `lock-check: live` also compares tool descriptions;
+the Action runs it only on `push`, `schedule` and `workflow_dispatch` to the
+default branch, at the pushed commit, and refuses every other event. A server
+`env` that changes how its program loads (`NODE_OPTIONS`, `LD_PRELOAD` and
+similar) is reported as high (EX-025). Servers that `exorcist lock` does start get a
 minimal environment (PATH, HOME, LANG, LC_*, TMPDIR) plus their own `env`
 from the config, so tokens and keys in your shell are not passed on.
 

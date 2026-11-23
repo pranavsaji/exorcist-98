@@ -14,8 +14,8 @@ import type { LockExpectations } from './lockfile.js';
 import { alertsPath, appendAlert, loadState, policyPath, saveState, serverState, statePath, vaultPath } from './state.js';
 import type { Alert, ServerState, State } from './state.js';
 import { quarantineServer } from './vault.js';
-import { checkLaunch, launchFingerprint, packageSpec, specIsPinned } from './launch.js';
-import type { LaunchCheck, LaunchPin } from './launch.js';
+import { checkLaunch, launchEntryOf, launchFingerprint, packageSpec, specIsPinned } from './launch.js';
+import type { LaunchCheck, LaunchEntry, LaunchPin } from './launch.js';
 import { AiReview } from './ai-review.js';
 import type { AiJudge } from './ai-review.js';
 import { throttle } from './notify.js';
@@ -151,7 +151,7 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
   if (o.launch && policy.policy.launchPin !== 'off') {
     const { command, args, cwd } = o.launch;
     const s = serverState(first.state, o.server);
-    const live = launchFingerprint(command, args, cwd);
+    const live = launchFingerprint(command, args, cwd, undefined, configEntry(o.configPath, o.server, log));
     // Never pinned here, and not the program recorded in exorcist.lock: hold
     // it as a changed program, so `exorcist approve server` is the way in.
     const check = !s.launch && lockLaunch !== undefined && live.hash !== lockLaunch
@@ -271,6 +271,25 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
     ? (line: string): Promise<void> => (review as AiReview).prepare(line, (name) => Boolean(io.load().servers[o.server]?.tools[name]))
     : undefined;
   return { engine, log, handle, watch, ...(prepareServerLine ? { prepareServerLine } : {}) };
+}
+
+/**
+ * The `env` and `cwd` this server's entry sets in the MCP config, for the
+ * launch pin. The MCP client applies them to this process, so only the config
+ * says which variables are the entry's own. Without a config (a hand-written
+ * `exorcist shield -- ...`) there is nothing to read.
+ */
+function configEntry(configPath: string | undefined, server: string, log: (s: string) => void): LaunchEntry {
+  if (!configPath) return {};
+  try {
+    const json = JSON.parse(readFileSync(configPath, 'utf8')) as { mcpServers?: Record<string, unknown> } | null;
+    const servers = json && typeof json === 'object' ? json.mcpServers : undefined;
+    const entry = servers && typeof servers === 'object' && Object.hasOwn(servers, server) ? servers[server] : undefined;
+    return launchEntryOf(entry);
+  } catch {
+    log(`Could not read ${configPath} for the env and cwd of "${server}"; the program pin covers the command and arguments only.`);
+    return {};
+  }
 }
 
 /** A program never pinned here that differs from exorcist.lock: held like a changed program (m5). */

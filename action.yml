@@ -25,11 +25,14 @@ inputs:
     description: >-
       Check the MCP config against the committed exorcist.lock and fail the job on any difference.
       "true" runs "exorcist lock --check --static": it starts nothing and compares the server names,
-      each server's program (command, arguments, argument files) and remote URLs. "live" also starts
-      every server to compare tool descriptions; that runs the commands in the config, which a pull
-      request can change to run anything with this job's secrets and token, so the action refuses
-      "live" on pull_request and pull_request_target events and when the head repository is not this
-      one. With "comment", the report is posted on the pull request. "false" (default) skips it.
+      each server's program (command, arguments, argument files, env and cwd) and remote URLs.
+      "live" also starts every server to compare tool descriptions; that runs the commands in the
+      config, which a pull request (or any branch) can change to run anything with this job's secrets
+      and token. So "live" runs only on push, schedule and workflow_dispatch events, only on the
+      repository's default branch, and only when the commit checked out is GITHUB_SHA; the action
+      refuses it everywhere else (pull_request, pull_request_target, workflow_run, issue_comment,
+      merge_group and every other event). With "comment", the report is posted on the pull request.
+      "false" (default) skips it.
     default: "false"
   lock-config:
     description: MCP config for lock-check, relative to the workspace (default .kiro/settings/mcp.json).
@@ -114,8 +117,7 @@ runs:
         LOCK_CONFIG: ${{ inputs.lock-config }}
         LOCK_MODE: ${{ inputs.lock-check }}
         EVENT_NAME: ${{ github.event_name }}
-        HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
-        BASE_REPO: ${{ github.repository }}
+        DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
       run: |
         out="$RUNNER_TEMP/exorcist"
         mkdir -p "$out"
@@ -124,13 +126,22 @@ runs:
           true|static)
             args+=(--static) ;;
           live)
-            # A live check starts the servers named in the config. On a pull
-            # request that config is the author's, so it could run anything
-            # here with this job's secrets and token.
-            if [ "$EVENT_NAME" = "pull_request" ] || [ "$EVENT_NAME" = "pull_request_target" ] || { [ -n "$HEAD_REPO" ] && [ "$HEAD_REPO" != "$BASE_REPO" ]; }; then
-              echo "::error title=Exorcist 98::lock-check: live starts the MCP servers in the config, which this pull request controls. Refusing to run it on '$EVENT_NAME' (head repository: ${HEAD_REPO:-this one}). Use lock-check: true (static, starts nothing) on pull requests."
+            # A live check starts the servers named in the config, so it runs
+            # only where the config is the repository's own: an allowlist of
+            # events, on the default branch, at the commit that was pushed.
+            refuse() {
+              echo "::error title=Exorcist 98::lock-check: live starts every MCP server in the config, so it only runs on push, schedule or workflow_dispatch, on the default branch, with GITHUB_SHA checked out. Refusing: $1. Use lock-check: true (static, starts nothing) here."
               exit 2
-            fi ;;
+            }
+            case "$EVENT_NAME" in
+              push|schedule|workflow_dispatch) ;;
+              *) refuse "the event is '$EVENT_NAME'" ;;
+            esac
+            [ -n "$DEFAULT_BRANCH" ] || refuse "the repository's default branch is not known for this event"
+            [ "$GITHUB_REF" = "refs/heads/$DEFAULT_BRANCH" ] || refuse "'$GITHUB_REF' is not the default branch ($DEFAULT_BRANCH)"
+            checked_out="$(git rev-parse HEAD 2>/dev/null || true)"
+            [ -n "$GITHUB_SHA" ] && [ "$checked_out" = "$GITHUB_SHA" ] || refuse "the commit checked out (${checked_out:-none}) is not GITHUB_SHA (${GITHUB_SHA:-unset})"
+            ;;
           *)
             echo "::error title=Exorcist 98::lock-check must be false, true or live (got '$LOCK_MODE')."
             exit 2 ;;

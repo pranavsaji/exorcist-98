@@ -1,0 +1,20 @@
+id: EX-025
+title: MCP server environment changes how its program loads
+severity: high
+applies_to:
+  - mcp-config
+  - config
+match:
+  # The names of the variables each MCP server entry sets in its `env`.
+  json_path: "$..mcpServers.*.env.*~"
+  # Variables that make the runtime load extra code, or look for libraries
+  # and modules somewhere else, before the server's own code runs.
+  value_regex: "^(NODE_OPTIONS|LD_PRELOAD|LD_LIBRARY_PATH|LD_AUDIT|DYLD_[A-Z_]+|PYTHONPATH|PYTHONSTARTUP|PYTHONHOME|RUBYOPT|RUBYLIB|PERL5OPT|PERL5LIB|JAVA_TOOL_OPTIONS|_JAVA_OPTIONS|JDK_JAVA_OPTIONS|BASH_ENV|ENV)$"
+owasp:
+  - "ASI07 Supply Chain Vulnerabilities"
+  - "MCP04 Malicious MCP Package"
+fix: >
+  Remove the variable from the server's env unless you know exactly why it is
+  there. NODE_OPTIONS=--require, LD_PRELOAD and similar variables run code of
+  their choosing before the server starts, without changing its command or
+  arguments, so a reviewer looking at the command line would not notice.

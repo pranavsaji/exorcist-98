@@ -20,7 +20,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { z } from 'zod';
 import {
-  buildLock, diffLock, launchFingerprint, loadState, lockUrl, parseLock, pinsToLock, serializeLock, statePath, unwrapConfig,
+  buildLock, diffLock, launchEntryOf, launchFingerprint, loadState, loaderEnvKeys, lockUrl, parseLock, pinsToLock, serializeLock, statePath, unwrapConfig,
   LOCK_FILE,
 } from '@exorcist-98/shield';
 import type { Lock, LockChange, LockServer, ServerListing, ToolDef } from '@exorcist-98/shield';
@@ -155,7 +155,7 @@ export async function listTools(o: {
 // ── collecting the current lock ──────────────────────────────────────────────
 
 export type CollectResult =
-  | { ok: true; listings: ServerListing[]; kept: Array<[string, LockServer]>; notes: string[] }
+  | { ok: true; listings: ServerListing[]; kept: Array<[string, LockServer]>; notes: string[]; warnings: string[] }
   | { ok: false; errors: string[] };
 
 /** What a started server may inherit from this process: enough to run, nothing that grants access. */
@@ -195,6 +195,7 @@ export async function collectListings(
   const listings: ServerListing[] = [];
   const kept: Array<[string, LockServer]> = [];
   const notes: string[] = [];
+  const warnings: string[] = [];
   const errors: string[] = [];
   const jobs: Array<Promise<void>> = [];
   for (const name of Object.keys(config.mcpServers).sort()) {
@@ -216,22 +217,27 @@ export async function collectListings(
     }
     if (entry.command === undefined) { errors.push(`"${name}" has neither a "command" nor a "url".`); continue; }
     const command = entry.command;
+    const loaders = loaderEnvKeys(entry.env);
+    if (loaders.length > 0) {
+      warnings.push(`HIGH EX-025: "${name}" sets ${loaders.join(', ')} in its env, which changes how its program loads ` +
+        '(for example NODE_OPTIONS=--require runs extra code first). Make sure you know why it is there.');
+    }
     const cwd = entry.cwd === undefined ? o.cwd : isAbsolute(entry.cwd) ? entry.cwd : resolve(o.cwd, entry.cwd);
     if (o.static) {
       const old = o.previous && Object.hasOwn(o.previous.servers, name) ? o.previous.servers[name] : undefined;
-      kept.push([name, { launch: launchFingerprint(command, entry.args, cwd).hash, tools: old?.tools ?? {} }]);
+      kept.push([name, { launch: launchFingerprint(command, entry.args, cwd, undefined, launchEntryOf(entry)).hash, tools: old?.tools ?? {} }]);
       continue;
     }
     jobs.push((async () => {
       const r = await list({ command, args: entry.args, env: serverEnv(process.env, entry.env), cwd, timeoutMs: o.timeoutMs });
       if (!r.ok) { errors.push(`Could not list the tools of "${name}": ${r.error}`); return; }
       // The same fingerprint the Shield pins before it starts the server (S-006).
-      listings.push({ name, launch: launchFingerprint(command, entry.args, cwd).hash, tools: r.tools });
+      listings.push({ name, launch: launchFingerprint(command, entry.args, cwd, undefined, launchEntryOf(entry)).hash, tools: r.tools });
     })());
   }
   await Promise.all(jobs);
   if (errors.length > 0) return { ok: false, errors: errors.sort() };
-  return { ok: true, listings, kept, notes };
+  return { ok: true, listings, kept, notes, warnings: warnings.sort() };
 }
 
 /** The lock for the listed servers, plus the entries carried over unchanged (disabled servers). */
@@ -311,6 +317,7 @@ export async function lockCommand(argv: string[], io: Io): Promise<number> {
     }
     current = lockFrom(r.listings, r.kept);
     notes.push(...r.notes);
+    for (const w of r.warnings) io.out(printable(w));
     if (isStatic) notes.push('static check: no server was started, so tool descriptions were not compared; server names, programs and URLs were.');
   }
   for (const n of notes) io.out(`  ${printable(n)}`);

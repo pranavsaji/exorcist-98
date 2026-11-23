@@ -79,6 +79,35 @@ describe('launch fingerprint', () => {
   });
 });
 
+describe('launch fingerprint: the entry\'s env and cwd (m5-lockfile)', () => {
+  const r = memReader({ '/w/s.js': 'v1' });
+  it('an entry with no env and no cwd gives exactly the pin it gave before', () => {
+    const before = launchFingerprint('node', ['s.js'], '/w', r);
+    expect(launchFingerprint('node', ['s.js'], '/w', r, {})).toEqual(before);
+    expect(launchFingerprint('node', ['s.js'], '/w', r, { env: {} })).toEqual(before);
+  });
+  it('adding NODE_OPTIONS or LD_PRELOAD changes the pin and says why, without storing the value', () => {
+    const base = launchFingerprint('node', ['s.js'], '/w', r, { env: { NOTES_DIR: '/n' } });
+    const evil = launchFingerprint('node', ['s.js'], '/w', r, { env: { NOTES_DIR: '/n', NODE_OPTIONS: '--require ./evil.js' } });
+    expect(evil.hash).not.toBe(base.hash);
+    expect(evil.parts).toContainEqual(expect.stringMatching(/^env NODE_OPTIONS sha256:[0-9a-f]{16} \(changes how the program loads\)$/));
+    expect(evil.parts.join('\n')).not.toContain('evil.js');
+    expect(launchFingerprint('node', ['s.js'], '/w', r, { env: { LD_PRELOAD: './x.so' } }).hash).not.toBe(launchFingerprint('node', ['s.js'], '/w', r).hash);
+  });
+  it('any change to an env key, an env value or the cwd changes the pin; the order keys are written in does not', () => {
+    const envArb = fc.dictionary(fc.string({ minLength: 1, maxLength: 8 }).filter((k) => k !== '__proto__'), fc.string({ maxLength: 12 }), { maxKeys: 5 });
+    fc.assert(fc.property(envArb, fc.string({ minLength: 1, maxLength: 8 }).filter((k) => k !== '__proto__'), fc.string(), fc.option(fc.string({ maxLength: 10 }), { nil: undefined }), (env, key, value, cwd) => {
+      const entry = { env, ...(cwd !== undefined ? { cwd } : {}) };
+      const pin = launchFingerprint('node', ['s.js'], '/w', r, entry);
+      const reordered = launchFingerprint('node', ['s.js'], '/w', r, { ...entry, env: Object.fromEntries(Object.entries(env).reverse()) });
+      expect(reordered.hash).toBe(pin.hash);
+      if (env[key] !== value) expect(launchFingerprint('node', ['s.js'], '/w', r, { ...entry, env: { ...env, [key]: value } }).hash).not.toBe(pin.hash);
+      expect(launchFingerprint('node', ['s.js'], '/w', r, { ...entry, cwd: `${cwd ?? ''}/other` }).hash).not.toBe(pin.hash);
+      for (const v of Object.values(env)) if (v.length >= 6) expect(pin.parts.join('\n')).not.toContain(`sha256:${v}`);
+    }), { numRuns: 200 });
+  });
+});
+
 describe('checkLaunch and approve server', () => {
   it('pins on first start, passes the same program, holds a changed one until approved', () => {
     const state = emptyState();
@@ -103,7 +132,7 @@ describe('checkLaunch and approve server', () => {
 });
 
 /** Start the real proxy on a copy of the fake server, send initialize and tools/list, then close. */
-async function startOnce(root: string, policy?: object): Promise<{ code: number; err: string; listed: boolean }> {
+async function startOnce(root: string, policy?: object, configPath?: string): Promise<{ code: number; err: string; listed: boolean }> {
   const dir = join(root, '.exorcist');
   if (policy) { mkdirSync(dir, { recursive: true }); writeFileSync(join(dir, 'policy.json'), JSON.stringify(policy)); }
   const stdin = new PassThrough();
@@ -115,6 +144,7 @@ async function startOnce(root: string, policy?: object): Promise<{ code: number;
   stdout.on('data', (c: Buffer) => { out += c.toString(); });
   const done = runProxy({
     server: 'notes', command: process.execPath, args: ['server.mjs'], cwd: root, dir, definitionsDir: DEFS, pollMs: 50,
+    ...(configPath ? { configPath } : {}),
     env: { ...process.env, FAKE_MCP_CONTROL: join(root, 'control.json'), FAKE_MCP_LOG: join(root, 'calls.log') },
     stdin, stdout, stderr,
   });
@@ -156,6 +186,25 @@ describe('the proxy with a launch pin', () => {
     saveState(statePath(join(root, '.exorcist')), loaded.state);
     const again = await startOnce(root);
     expect(again.listed).toBe(true);
+  }, 30_000);
+
+  it('a config change that only adds NODE_OPTIONS to the server env is a changed program (m5-lockfile)', async () => {
+    const root = tmp();
+    copyFileSync(FAKE, join(root, 'server.mjs'));
+    const config = join(root, 'mcp.json');
+    const write = (env: Record<string, string>) => writeFileSync(config, JSON.stringify({ mcpServers: { notes: { command: 'exorcist', args: ['shield', '--server', 'notes', '--config', config, '--', 'node', 'server.mjs'], env } } }));
+    write({ NOTES_DIR: '/tmp/notes' });
+    expect((await startOnce(root, undefined, config)).listed).toBe(true);
+    expect((await startOnce(root, undefined, config)).listed).toBe(true); // same env: same program
+
+    write({ NOTES_DIR: '/tmp/notes', NODE_OPTIONS: '--require ./evil.js' });
+    const changed = await startOnce(root, undefined, config);
+    expect(changed.code).toBe(FAIL_CLOSED_EXIT);
+    expect(changed.listed).toBe(false);
+    const alerts = readFileSync(alertsPath(join(root, '.exorcist')), 'utf8');
+    expect(alerts).toContain('"ruleId":"EX-010"');
+    expect(alerts).toContain('+ env NODE_OPTIONS sha256:');
+    expect(alerts).not.toContain('evil.js');
   }, 30_000);
 
   it('policy launchPin "warn" starts a changed server with an alert; "off" pins nothing', async () => {

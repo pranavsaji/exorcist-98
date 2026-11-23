@@ -228,7 +228,7 @@ describe('GitHub Action and workflows', () => {
     expect(others).toEqual(['actions/setup-node@v7', 'Build Exorcist 98', 'Scan', 'Upload SARIF to code scanning', 'Comment on the pull request', 'Fail on findings']);
     expect(lockSteps[0]?.run).toContain('lock --check');
     // The risk of a live check is spelled out where the input is chosen.
-    expect(read('action.yml')).toMatch(/refuses\s+"live" on pull_request and pull_request_target/);
+    expect(read('action.yml')).toMatch(/"live" runs only on push, schedule and workflow_dispatch events, only on the\s+repository's default branch/);
   });
 
   it('the lock-check step records the exit code and fences the report so a description cannot break out', () => {
@@ -243,7 +243,7 @@ describe('GitHub Action and workflows', () => {
       writeFileSync(out, '');
       const r = spawnSync('bash', ['-eo', 'pipefail', '-c', step?.run ?? 'exit 99'], {
         cwd: d, encoding: 'utf8',
-        env: { ...process.env, RUNNER_TEMP: d, GITHUB_OUTPUT: out, GITHUB_STEP_SUMMARY: summary, EXORCIST_CLI: fakeCli, LOCK_CONFIG: 'tools/mcp.json', LOCK_MODE: 'true', EVENT_NAME: 'pull_request', HEAD_REPO: 'someone/fork', BASE_REPO: 'owner/repo' },
+        env: { ...process.env, RUNNER_TEMP: d, GITHUB_OUTPUT: out, GITHUB_STEP_SUMMARY: summary, EXORCIST_CLI: fakeCli, LOCK_CONFIG: 'tools/mcp.json', LOCK_MODE: 'true', EVENT_NAME: 'pull_request' },
       });
       expect(r.status, r.stderr).toBe(0); // the gate is a later step, after the comment
       expect(readFileSync(out, 'utf8')).toContain('code=1');
@@ -259,11 +259,16 @@ describe('GitHub Action and workflows', () => {
     }
   });
 
-  describe('lock-check: live never starts pull-request-controlled servers', () => {
+  describe('lock-check: live runs only on the default branch, for push, schedule and workflow_dispatch', () => {
     const step = action.runs.steps.find((s) => s.name === 'Check exorcist.lock');
-    function runStep(env: Record<string, string>) {
+    /** Run the step in a fresh git checkout, with a stand-in CLI that records whether it was started. */
+    function runStep(env: Record<string, string>, o: { otherSha?: boolean } = {}) {
       const d = mkdtempSync(join(tmpdir(), 'exorcist-action-live-'));
       try {
+        const git = (...a: string[]) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@example.invalid', ...a], { cwd: d, encoding: 'utf8' });
+        git('init', '-q');
+        git('commit', '-q', '--allow-empty', '-m', 'one');
+        const sha = git('rev-parse', 'HEAD').stdout.trim();
         const ran = join(d, 'cli-ran');
         const fakeCli = join(d, 'cli.mjs');
         writeFileSync(fakeCli, `import { writeFileSync } from 'node:fs';\nwriteFileSync(${JSON.stringify(ran)}, process.argv.slice(2).join(' '));\n`);
@@ -271,7 +276,12 @@ describe('GitHub Action and workflows', () => {
         writeFileSync(out, '');
         const r = spawnSync('bash', ['-eo', 'pipefail', '-c', step?.run ?? 'exit 99'], {
           cwd: d, encoding: 'utf8',
-          env: { ...process.env, RUNNER_TEMP: d, GITHUB_OUTPUT: out, GITHUB_STEP_SUMMARY: join(d, 's.md'), EXORCIST_CLI: fakeCli, LOCK_CONFIG: '', BASE_REPO: 'owner/repo', HEAD_REPO: '', ...env },
+          env: {
+            ...process.env, RUNNER_TEMP: d, GITHUB_OUTPUT: out, GITHUB_STEP_SUMMARY: join(d, 's.md'), EXORCIST_CLI: fakeCli, LOCK_CONFIG: '',
+            LOCK_MODE: 'live', EVENT_NAME: 'push', DEFAULT_BRANCH: 'main', GITHUB_REF: 'refs/heads/main',
+            GITHUB_SHA: o.otherSha ? 'f'.repeat(40) : sha,
+            ...env,
+          },
         });
         return { code: r.status, out: r.stdout + r.stderr, cliArgs: existsSync(ran) ? readFileSync(ran, 'utf8') : null };
       } finally {
@@ -279,26 +289,39 @@ describe('GitHub Action and workflows', () => {
       }
     }
 
-    for (const event of ['pull_request', 'pull_request_target']) {
-      it(`refuses live mode on a ${event} event, before anything runs`, () => {
-        const r = runStep({ LOCK_MODE: 'live', EVENT_NAME: event, HEAD_REPO: 'owner/repo' });
+    it('allows a push to the default branch with GITHUB_SHA checked out (and schedule, workflow_dispatch)', () => {
+      const r = runStep({});
+      expect(r.code, r.out).toBe(0);
+      expect(r.cliArgs).toBe('lock --check');
+      expect(runStep({ EVENT_NAME: 'schedule' }).cliArgs).toBe('lock --check');
+      expect(runStep({ EVENT_NAME: 'workflow_dispatch' }).cliArgs).toBe('lock --check');
+    });
+
+    it('refuses a push to another branch', () => {
+      const r = runStep({ GITHUB_REF: 'refs/heads/feature/evil' });
+      expect(r.code).toBe(2);
+      expect(r.out).toContain('is not the default branch');
+      expect(r.cliArgs).toBeNull();
+    });
+
+    it('refuses when the checked-out commit is not GITHUB_SHA, or the default branch is unknown', () => {
+      expect(runStep({}, { otherSha: true })).toMatchObject({ code: 2, cliArgs: null });
+      expect(runStep({ DEFAULT_BRANCH: '' })).toMatchObject({ code: 2, cliArgs: null });
+    });
+
+    for (const event of ['workflow_run', 'issue_comment', 'pull_request', 'pull_request_target', 'merge_group', 'repository_dispatch']) {
+      it(`refuses the ${event} event, before anything runs`, () => {
+        const r = runStep({ EVENT_NAME: event });
         expect(r.code).toBe(2);
         expect(r.out).toContain('::error');
-        expect(r.out).toContain('Refusing to run it');
+        expect(r.out).toContain(`the event is '${event}'`);
         expect(r.cliArgs).toBeNull();
       });
     }
 
-    it('refuses live mode when the head repository is not this one', () => {
-      const r = runStep({ LOCK_MODE: 'live', EVENT_NAME: 'workflow_run', HEAD_REPO: 'someone/fork' });
-      expect(r.code).toBe(2);
-      expect(r.cliArgs).toBeNull();
-    });
-
-    it('allows live mode on a push to this repository, and rejects unknown modes', () => {
-      expect(runStep({ LOCK_MODE: 'live', EVENT_NAME: 'push' }).cliArgs).toBe('lock --check');
-      expect(runStep({ LOCK_MODE: 'true', EVENT_NAME: 'push' }).cliArgs).toBe('lock --check --static');
-      const bad = runStep({ LOCK_MODE: 'yes please', EVENT_NAME: 'push' });
+    it('lock-check: true is static on any event, and unknown modes are rejected', () => {
+      expect(runStep({ LOCK_MODE: 'true', EVENT_NAME: 'pull_request_target', GITHUB_REF: 'refs/pull/1/merge' }).cliArgs).toBe('lock --check --static');
+      const bad = runStep({ LOCK_MODE: 'yes please' });
       expect(bad.code).toBe(2);
       expect(bad.cliArgs).toBeNull();
     });

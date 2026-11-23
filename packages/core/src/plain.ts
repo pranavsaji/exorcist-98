@@ -123,6 +123,11 @@ const ENTRIES: Record<string, PlainEntry> = {
     attack:
       'Each tool server looks harmless alone. But one agent session that can read private data, read text anyone can write (a web page, an issue, an email) and send data somewhere can be told by that text to copy your secrets out. This is the "lethal trifecta".',
   },
+  'EX-025': {
+    headline: 'A tool server is set up to load extra code before it starts',
+    attack:
+      'The settings for a tool server include a variable such as NODE_OPTIONS or LD_PRELOAD. These make the program load code of the attacker\'s choosing before it starts, without changing the command you see, so the server looks the same but does more.',
+  },
 };
 
 export function plainFor(ruleId: string, fallbackTitle: string): PlainEntry {

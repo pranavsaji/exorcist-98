@@ -210,7 +210,8 @@ describe('exorcist lock and the Shield agree', () => {
     let out = '';
     stdout.on('data', (c: Buffer) => { out += c.toString(); });
     const done = runProxy({
-      server: 'notes', command: process.execPath, args: [FAKE], dir, definitionsDir: DEFS, lockPath: p.lock,
+      // The config tells the Shield the entry's env, which is part of the program pin (as in the lock).
+      server: 'notes', command: process.execPath, args: [FAKE], dir, definitionsDir: DEFS, lockPath: p.lock, configPath: p.config,
       env: { ...process.env, FAKE_MCP_CONTROL: p.control }, stdin, stdout, stderr,
     });
     stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 't', version: '0' } } })}\n`);
@@ -260,6 +261,25 @@ describe('exorcist lock --check --static: starts nothing (safe for pull requests
 
     await new Promise((r) => setTimeout(r, 300)); // a started process would have written its marker by now
     for (const f of [ranOld, ranNew, ranAdded]) expect(existsSync(f), f).toBe(false);
+  }, SLOW);
+
+  it('a pull request that only adds NODE_OPTIONS to a server env fails the static check, with a HIGH warning', async () => {
+    const p = project({});
+    const ran = join(p.root, 'ran');
+    const args = ['-e', `require('fs').writeFileSync(${JSON.stringify(ran)}, 'ran')`];
+    const entry = { command: process.execPath, args, env: { NOTES_DIR: '/tmp/notes' } };
+    writeFileSync(p.lock, serializeLock(buildLock([{ name: 'notes', launch: launchFingerprint(process.execPath, args, process.cwd(), undefined, { env: entry.env }).hash, tools: [] }])));
+    p.writeConfig({ notes: entry });
+    const same = await p.run('--check', '--static');
+    expect(same.code).toBe(0);
+    expect(same.out).not.toContain('EX-025');
+
+    p.writeConfig({ notes: { ...entry, env: { ...entry.env, NODE_OPTIONS: '--require ./evil.js' } } });
+    const evil = await p.run('--check', '--static');
+    expect(evil.code).toBe(1);
+    expect(evil.out).toContain('The program behind "notes" changed');
+    expect(evil.out).toContain('HIGH EX-025: "notes" sets NODE_OPTIONS');
+    expect(existsSync(ran)).toBe(false);
   }, SLOW);
 
   it('only works with --check, and not with --from-shield', async () => {
