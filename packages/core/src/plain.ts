@@ -113,6 +113,11 @@ const ENTRIES: Record<string, PlainEntry> = {
     attack:
       'A key or token appears in the arguments of a tool call. If the call goes through, the secret goes to whoever runs that tool.',
   },
+  'EX-022': {
+    headline: 'A canary trap has been set off',
+    attack:
+      'Exorcist plants harmless, unique tokens in files only an attacker would want to read. No honest workflow ever sends one anywhere, so a canary token turning up in a tool call, a file or a commit is proof that something talked your AI into leaking.',
+  },
 };
 
 export function plainFor(ruleId: string, fallbackTitle: string): PlainEntry {

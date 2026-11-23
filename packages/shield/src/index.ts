@@ -30,3 +30,5 @@ export { quarantineServer, quarantineFile, listEntries, getEntry, diffEntry, res
 export type { VaultEntry, VaultResult } from './vault.js';
 export { wrapConfig, unwrapConfig, isWrapped } from './wrap.js';
 export type { McpConfig, WrapOptions } from './wrap.js';
+export { newToken, canariesPath, plantCanaries, loadCanaries, removeCanaries, findCanary } from './canary.js';
+export type { Canary, CanaryRecord as CanaryTrapRecord, PlantResult, LoadResult as CanaryLoadResult, RemoveResult as CanaryRemoveResult } from './canary.js';

@@ -10,6 +10,11 @@ export { toBadgeSvg, badgeStatus } from './reporters/badge.js';
 export { loadDefinitions } from './definitions/loader.js';
 export { DefinitionLoadError } from './definitions/schema.js';
 export { findSecrets, findStagedSecrets, redact } from './secrets-check.js';
+export {
+  newToken, canariesPath, loadCanariesFile, findCanaryInText, findRecordIn, base64Needles, lineColOf, findStagedCanaries,
+  CanariesFileSchema, CanaryRecordSchema,
+} from './canary.js';
+export type { CanaryRecord, CanariesFile, CanaryHit, CanariesResult, StagedCanaryHit, StagedCanaryResult } from './canary.js';
 export { fetchGithubRepo, isSafeRef, readTar, safeRelativePath, writeEntries, DEFAULT_TAR_LIMITS } from './remote/tarball.js';
 export type { TarLimits, TarEntry, ExtractResult, FetchLike } from './remote/tarball.js';
 export { decodeHidden, displayMessage, truncateMessage, encodeAsTags, encodeAsVariationSelectors, decodeVsBytes, MAX_HIDDEN_RUNS, MAX_DECODED_CHARS, MAX_VS_BYTES } from './ouija.js';

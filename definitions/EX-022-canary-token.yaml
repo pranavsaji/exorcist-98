@@ -1,0 +1,35 @@
+id: EX-022
+title: Canary token out of its trap
+severity: critical
+applies_to:
+  - instruction
+  - docs
+  - code
+  - config
+  - mcp-config
+  - hook
+  - memory
+  - power
+  - manifest
+  - definition
+  - unknown
+  - tool-result
+# The real matching is in code (packages/core/src/canary.ts), which reads the
+# project's canary records and knows which token belongs to which trap. This
+# entry is the encyclopedia record: description, severity and the OWASP
+# mapping shown for EX-022 findings.
+enabled: false
+match:
+  # The shape of a canary token: x98c_ + 24 base32 characters.
+  regex: "x98c_[A-Z2-7]{24}"
+  # The traps and the records file hold the tokens on purpose.
+  skip_paths:
+    - "(^|/)\\.exorcist/"
+owasp:
+  - "LLM02:2025 Sensitive Information Disclosure"
+  - "ASI05 Sensitive Data Leakage"
+fix: >
+  A canary trap has been copied out of its trap file. Find what copied it
+  (a prompt injection in a file, a tool result or a dependency) and remove
+  the instruction. Then run "exorcist canary --remove" and "exorcist canary
+  plant" to set fresh traps, since this one has been burned.

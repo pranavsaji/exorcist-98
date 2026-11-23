@@ -1,5 +1,6 @@
 import { decideCommitGuard } from '@exorcist-98/core';
 import { approveCommand, alertsCommand } from './commands/approve.js';
+import { canaryCommand } from './commands/canary.js';
 import { wrapCommand } from './commands/config.js';
 import { checkStagedCommand } from './commands/check-staged.js';
 import { hookScanCommand } from './commands/hook-scan.js';
@@ -24,6 +25,7 @@ Commands:
   approve <kind>     Approve a changed tool or a host (see: exorcist approve --help)
   alerts             Show recent shield alerts
   init [folder]      Add hooks and steering to a Kiro project
+  canary [dir]        Plant, list (--list) or remove (--remove) canary traps
   guard-commit       Hook helper: block git commit while secrets are staged
   hook-scan          Hook helper: scan the file named in a Kiro "file saved" event
   check-staged       Git pre-commit helper: exit 1 if staged files contain secrets
@@ -52,6 +54,7 @@ export async function main(argv: string[]): Promise<number> {
       return 0;
     case 'scan':   return await scanCommand(rest, stdio);
     case 'shield': return await shieldCommand(rest, stdio);
+    case 'canary': return await canaryCommand(rest, stdio);
     case 'wrap':   return await wrapCommand(rest, stdio, 'wrap');
     case 'unwrap': return await wrapCommand(rest, stdio, 'unwrap');
     case 'vault':  return await vaultCommand(rest, stdio);

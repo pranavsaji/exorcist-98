@@ -34,6 +34,11 @@ export const PolicySchema = z
      * a few seconds to the first tool list.
      */
     aiReview:       z.boolean().default(false),
+    /**
+     * Path to the canary records (EX-022). Default: `canaries.json` inside the
+     * state folder, which is where `exorcist canary plant` writes it.
+     */
+    canaries:       z.string().min(1).optional(),
   })
   .strict();
 

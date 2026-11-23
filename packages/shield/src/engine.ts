@@ -10,6 +10,8 @@ import type { Policy } from './policy.js';
 import { cleanText } from './notify.js';
 import { approveHost, serverState } from './state.js';
 import type { Alert, State } from './state.js';
+import { findCanary } from './canary.js';
+import type { Canary } from './canary.js';
 
 export type Action =
   | { type: 'forward'; to: 'server' | 'client'; message: unknown }
@@ -31,6 +33,8 @@ export type EngineOptions = {
   now?: () => Date;
   /** AI review findings for a tool version not pinned yet (S-009); absent when AI review is off. */
   aiFindings?: (fingerprint: string) => { block: Reason[]; warn: Reason[] };
+  /** Canary tokens loaded at start (EX-022); absent when the project has none. */
+  canaries?: Canary[];
 };
 
 /** A tool hidden from the agent. `fingerprint` is the version that was hidden (rug pulls only). */
@@ -197,6 +201,22 @@ export class ShieldEngine {
 
     const actions: Action[] = [];
     const forward = (): Action[] => [...actions, ...this.sendCall(msg, id, name)];
+
+    // 0. A canary token in the arguments is proof that something talked the
+    // agent into leaking, so the call is refused in every mode (EX-022).
+    if (this.o.canaries && this.o.canaries.length > 0) {
+      const canary = findCanary(params.arguments, this.o.canaries);
+      if (canary && 'hit' in canary) {
+        const c = canary.canary;
+        return [
+          { type: 'forward', to: 'client', message: toolErrorResult(id, `Exorcist 98 stopped this call to "${name}" before it left your machine. EX-022 Canary token in a tool call: the trap token planted in ${c.file} was in the arguments. No honest workflow ever sends it anywhere. Find the instruction that put it there, then set fresh traps with: exorcist canary plant`) },
+          this.alert({ ruleId: 'EX-022', severity: 'critical', tool: name, message: `EX-022 Canary token in a tool call: the trap token planted in ${c.file} was in the arguments of "${name}" (found ${canary.hit.shape}). The call was not sent, in every mode. The trap has been burned; replant it.` }),
+        ];
+      }
+      if (canary && canary.truncated) {
+        actions.push(this.alert({ ruleId: 'EX-022', severity: 'medium', tool: name, message: 'The arguments of this call were too large to check for canary tokens.' }));
+      }
+    }
 
     // 1. A tool that was withheld (rug pull or poisoned): never call it.
     const held = this.withheld.get(name);
@@ -370,24 +390,41 @@ export class ShieldEngine {
     return [alert, { type: 'forward', to: 'server', message: errorResponse(msg.id, -32001, 'Exorcist 98 refused this request: it looks like an attack on the AI.') }];
   }
 
-  /** The agent's answer to a server request: never let a secret go back to the server. */
+  /** The agent's answer to a server request: never let a secret or a canary token go back to the server. */
   private onClientReply(msg: JsonRpcMessage, id: JsonRpcId): Action[] {
     const method = this.serverRequests.get(id) ?? 'request';
     this.serverRequests.delete(id);
     const hits = secretsIn(msg.result);
-    if (hits.length === 0) return [{ type: 'forward', to: 'server', message: msg }];
+    const canary = this.o.canaries && this.o.canaries.length > 0 ? findCanary(msg.result, this.o.canaries) : null;
+    if (hits.length === 0 && (!canary || !('hit' in canary))) return [{ type: 'forward', to: 'server', message: msg }];
     const alert = this.alert({
-      ruleId: 'EX-017',
+      ruleId: canary && 'hit' in canary ? 'EX-022' : 'EX-017',
       severity: 'critical',
-      message: `The answer to the server's ${method} contained a secret (${hits.slice(0, 3).join('; ')}). ${this.enforcing() ? 'It was not sent.' : 'Monitor mode: it was sent.'}`,
+      message: hits.length > 0
+        ? `The answer to the server's ${method} contained a secret (${hits.slice(0, 3).join('; ')}). ${this.enforcing() ? 'It was not sent.' : 'Monitor mode: it was sent.'}`
+        : `The answer to the server's ${method} contained the canary token planted in ${canary && 'hit' in canary ? canary.canary.file : ''}. ${this.enforcing() ? 'It was not sent.' : 'Monitor mode: it was sent.'}`,
     });
     if (!this.enforcing()) return [alert, { type: 'forward', to: 'server', message: msg }];
     return [alert, { type: 'forward', to: 'server', message: errorResponse(id, -32001, 'Exorcist 98 withheld this answer because it contained a secret.') }];
   }
 
   private onToolResult(msg: JsonRpcMessage, tool: string | undefined): Action[] {
+    const pre: Action[] = [];
+    // A canary token echoed back by the server: the call already went out (or
+    // came from elsewhere), so this is an alert, not a block (EX-022).
+    if (this.o.canaries && this.o.canaries.length > 0) {
+      const canary = findCanary(msg.result, this.o.canaries);
+      if (canary && 'hit' in canary) {
+        pre.push(this.alert({
+          ruleId: 'EX-022',
+          severity: 'medium',
+          ...(tool ? { tool } : {}),
+          message: `A tool result contained the canary token planted in ${canary.canary.file}: the server echoed it. The token has been burned; replant the traps with: exorcist canary plant`,
+        }));
+      }
+    }
     const verdict = inspectResult(msg.result, this.o.defs);
-    if (verdict.action === 'allow') return [{ type: 'forward', to: 'client', message: msg }];
+    if (verdict.action === 'allow') return [...pre, { type: 'forward', to: 'client', message: msg }];
 
     const alert = this.alert({
       ruleId: verdict.reasons[0]?.ruleId ?? 'SHIELD',
@@ -395,7 +432,7 @@ export class ShieldEngine {
       ...(tool ? { tool } : {}),
       message: `A tool result was ${this.enforcing() ? 'withheld' : 'flagged'}: ${joinReasons(verdict.reasons)}`,
     });
-    if (!this.enforcing() || msg.id === undefined) return [alert, { type: 'forward', to: 'client', message: msg }];
+    if (!this.enforcing() || msg.id === undefined) return [...pre, alert, { type: 'forward', to: 'client', message: msg }];
 
     const text =
       `Exorcist 98 withheld the result of "${tool ?? 'this tool'}" because it looks like an attack on your AI: ` +
