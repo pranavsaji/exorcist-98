@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto';
+import { execFile } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createInterface } from 'node:readline';
@@ -27,18 +29,53 @@ The list is kept outside the project, per user:
   $EXORCIST_DIR/allowed-reads/<project id>.json  (default ~/.exorcist/...)
 A list inside the project folder is never used: the project could plant it.
 
-Only a person can allow a file: the command runs only in an interactive
-terminal and asks you to type the first 6 characters of the file's SHA-256,
-which it shows there. An agent's shell tool cannot approve its own read.
+Only a person can allow a file. The command runs only in an interactive
+terminal. On macOS it then asks through a native dialog you click (Deny is the
+default), which an agent's shell tool cannot answer. Elsewhere it shows a
+random code to type back: that stops ordinary non-interactive agent tools, but
+an agent that fully drives a terminal could still read it.
 `;
 
 /** The terminal allow-read talks to. Production uses the process's own (see processTerminal). */
+export type DialogAnswer = 'allow' | 'deny' | 'unavailable';
+
 export type Terminal = {
   /** True only when both stdin and stdout are a TTY. */
   interactive: boolean;
   /** Show `prompt` on the terminal and read one line typed there. */
   ask: (prompt: string) => Promise<string>;
+  /**
+   * Ask through a channel an agent's shell tool cannot answer: a native OS
+   * dialog the person has to click (macOS). 'unavailable' falls back to a
+   * typed code.
+   */
+  dialog?: (message: string) => Promise<DialogAnswer>;
+  /** A fresh random confirmation code (injectable for tests). */
+  nonce?: () => string;
 };
+
+/** Text for an AppleScript string literal: no control characters, quotes or backslashes escaped, bounded. */
+export function appleScriptText(s: string): string {
+  return s.replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, ' ')
+    .replace(/\\/g, '\\\\').replace(/"/g, '\\"').slice(0, 600);
+}
+
+/** A native macOS dialog, answered by a click (deny by default, gives up after two minutes). */
+export async function macDialog(message: string): Promise<DialogAnswer> {
+  if (process.platform !== 'darwin') return 'unavailable';
+  const script = `display dialog "${appleScriptText(message)}" with title "Exorcist 98" buttons {"Deny", "Allow"} default button "Deny" cancel button "Deny" with icon caution giving up after 120`;
+  return new Promise((done) => {
+    execFile('/usr/bin/osascript', ['-e', script], { timeout: 130_000 }, (err, stdout) => {
+      if (err) {
+        // Cancel ("Deny") exits non-zero with error -128; anything else means no GUI session.
+        done(/-128/.test(String(err.message)) ? 'deny' : 'unavailable');
+        return;
+      }
+      const out = String(stdout);
+      done(out.includes('button returned:Allow') && !out.includes('gave up:true') ? 'allow' : 'deny');
+    });
+  });
+}
 
 export const processTerminal = (): Terminal => ({
   interactive: process.stdin.isTTY === true && process.stdout.isTTY === true,
@@ -46,12 +83,16 @@ export const processTerminal = (): Terminal => ({
     const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
     rl.question(prompt, (answer) => { rl.close(); done(answer); });
   }),
+  dialog: macDialog,
+  nonce: () => randomBytes(4).toString('hex').slice(0, 6),
 });
 
-/** The confirmation allow-read asks for: the first 6 hex characters of the file's SHA-256. */
-export const confirmationCode = (sha256: string): string => sha256.slice(0, 6);
-export const confirms = (answer: string, sha256: string): boolean =>
-  answer.trim().toLowerCase() === confirmationCode(sha256);
+/**
+ * The typed fallback: a random code shown once, never derived from the file,
+ * so it cannot be computed ahead of time.
+ */
+export const confirms = (answer: string, code: string): boolean =>
+  code.length >= 6 && answer.trim().toLowerCase() === code.toLowerCase();
 
 /** The event's `cwd`, so the state folder is the project the agent works in, not the hook's own cwd. */
 function eventCwd(stdin: string): string {
@@ -110,11 +151,22 @@ export async function allowReadCommand(argv: string[], io: Io, term: Terminal = 
   const hash = sha256File(file);
   if (hash === null) { io.err(`Cannot read ${shownName(target)}.`); return 1; }
 
-  io.out(`File:    ${shownName(realPath(file))}`);
+  const shown = shownName(realPath(file));
+  io.out(`File:    ${shown}`);
   io.out(`SHA-256: ${hash}`);
   io.out('Allow only a file you have reviewed: Exorcist 98 will let your agent read exactly these bytes at this path.');
-  const answer = await term.ask(`Type the first 6 characters of the SHA-256 above to allow it: `);
-  if (!confirms(answer, hash)) { io.err('That does not match. Nothing was allowed.'); return 1; }
+  // First choice: a native dialog the person clicks, out of reach of an agent's shell tool.
+  const viaDialog = term.dialog
+    ? await term.dialog(`Allow your AI agent to read this file?\n\n${shown}\nSHA-256 ${hash.slice(0, 12)}...\n\nOnly allow a file you have reviewed.`)
+    : 'unavailable';
+  if (viaDialog === 'deny') { io.err('Denied in the dialog. Nothing was allowed.'); return 1; }
+  if (viaDialog === 'unavailable') {
+    // Fallback: a random code typed back at the terminal.
+    const code = (term.nonce ?? (() => randomBytes(4).toString('hex').slice(0, 6)))();
+    io.out(`Confirmation code: ${code}`);
+    const answer = await term.ask('Type the confirmation code above to allow it: ');
+    if (!confirms(answer, code)) { io.err('That does not match. Nothing was allowed.'); return 1; }
+  }
 
   // Only the bytes the user confirmed: if the file changed meanwhile, nothing is written.
   const result = addAllowedRead(process.cwd(), file, process.env, hash);
