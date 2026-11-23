@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -32,10 +32,10 @@ const preToolUse = (cwd: string, command: string): string => JSON.stringify({
 });
 
 /** Run a hook command string the way Kiro does: through a shell, with Kiro's PATH. */
-function runHook(command: string, input: string, cwd: string, nodeDirs: string) {
+function runHook(command: string, input: string, cwd: string, nodeDirs: string, home: string = tmp()) {
   const r = spawnSync('/bin/sh', ['-c', command], {
     cwd, input, encoding: 'utf8',
-    env: { PATH: KIRO_PATH, HOME: tmp(), X98_NODE_DIRS: nodeDirs },
+    env: { PATH: KIRO_PATH, HOME: home, X98_NODE_DIRS: nodeDirs },
   });
   return { code: r.status, err: r.stderr, out: r.stdout };
 }
@@ -125,10 +125,19 @@ describe('scripts/kiro-hook.sh', () => {
     expect(runHook(cmd, readEvent('README.md'), ROOT, NODE_DIR).code).toBe(0);
     // Anything it cannot understand must not stop the agent (REQ-01.6).
     expect(runHook(cmd, 'not json', ROOT, NODE_DIR).code).toBe(0);
-    // allow-read in the project lets the same bytes through this hook too (REQ-03).
-    const allow = spawnSync(TSX, [CLI_SRC, 'allow-read', 'CONTRIBUTING.md'], { cwd: d, encoding: 'utf8', env: { ...process.env, EXORCIST_DIR: '' } });
-    expect(allow.status).toBe(0);
-    expect(runHook(cmd, readEvent('CONTRIBUTING.md'), ROOT, NODE_DIR).code).toBe(0);
+    // A list the project ships in .exorcist/ is ignored by this hook (it could be planted).
+    mkdirSync(join(d, '.exorcist'));
+    const hash = execFileSync('shasum', ['-a', '256', join(d, 'CONTRIBUTING.md')], { encoding: 'utf8' }).split(' ')[0];
+    writeFileSync(join(d, '.exorcist/allowed-reads.json'), JSON.stringify({ version: 1, allowed: [hash] }));
+    const home = tmp();
+    expect(runHook(cmd, readEvent('CONTRIBUTING.md'), ROOT, NODE_DIR, home).code).toBe(2);
+    // allow-read by the user (per-user store under HOME) lets the same bytes through this hook (REQ-03).
+    const env: NodeJS.ProcessEnv = { ...process.env, HOME: home };
+    delete env['EXORCIST_DIR'];
+    const allow = spawnSync(TSX, [CLI_SRC, 'allow-read', 'CONTRIBUTING.md'], { cwd: d, encoding: 'utf8', env });
+    expect(allow.status, allow.stderr).toBe(0);
+    expect(existsSync(join(home, '.exorcist/allowed-reads'))).toBe(true);
+    expect(runHook(cmd, readEvent('CONTRIBUTING.md'), ROOT, NODE_DIR, home).code).toBe(0);
   }, 60_000);
 });
 

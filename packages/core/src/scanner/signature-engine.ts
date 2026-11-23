@@ -155,6 +155,11 @@ function rawMatches(re: RegExp, text: string): RawMatch[] {
 }
 const guardCtx = vm.createContext({ run: (jobs: Job[]) => jobs.map((j) => rawMatches(j.re, j.text)), jobs: null as Job[] | null, out: null as RawMatch[][] | null });
 const guardScript = new vm.Script('out = run(jobs)');
+/** The span of the finding a rule leaves when it runs out of time on a file (scanner text, never the file's). */
+export const timeoutSpan = (ruleId: string): string => `${ruleId} ran out of time on this file`;
+/** True for the medium finding a rule leaves when it could not finish on a file. */
+export const isTimeoutFinding = (f: { ruleId: string; span: string; source?: string }): boolean =>
+  f.source !== 'heuristic' && f.span === timeoutSpan(f.ruleId);
 /** Time allowed for all regex rules on one file. */
 export const REGEX_TIME_LIMIT_MS = 1500;
 function guarded(jobs: Job[], ms: number): RawMatch[][] | null {
@@ -246,7 +251,7 @@ export function runSignatures(
         // Never silently clean: the rule could not finish on this file.
         findings.push({
           ...base, severity: 'medium', line: 1, col: 1,
-          span: `${def.id} ran out of time on this file`,
+          span: timeoutSpan(def.id),
           fix: `This file made the ${def.id} check run too long, which can be a deliberate attack on the scanner. Review the file by hand. ${def.fix}`,
         });
       } else {

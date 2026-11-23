@@ -29,8 +29,9 @@ export { decide as decideCommitGuard, isGitCommit } from './hook-guard.js';
 export type { HookDecision } from './hook-guard.js';
 export { extractReadPaths, decideRead, isReadTool } from './on-access.js';
 export type { OnAccessDecision, DecideReadOptions } from './on-access.js';
-export { sha256File, sha256Bytes, readAllowedReads, addAllowedRead, allowedReadsPath } from './allowed-reads.js';
-export type { AllowReadResult } from './allowed-reads.js';
+export { sha256File, sha256Bytes, readAllowedReads, addAllowedRead, allowedReadsLocation, allowKey, findProjectRoot, isInside, realPath } from './allowed-reads.js';
+export type { AllowReadResult, AllowedRead, AllowedReadsLocation } from './allowed-reads.js';
+export { isTimeoutFinding } from './scanner/signature-engine.js';
 
 export type { ScanOptions, ScanEvent, ScanStats } from './types.js';
 export type { Finding, SignatureFinding, HeuristicFinding, FileRole, Severity, RepoFile, Capability, CapabilityReason, MapGhost, ConfigMap, HauntedMap } from './types.js';

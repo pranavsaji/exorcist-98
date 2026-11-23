@@ -15,13 +15,26 @@ Decisions made while finishing the spec (Claude Code, after Kiro's partial run).
   (`lines 11, 12, 14  EX-002 ...`) and the fix once, instead of the same fix
   repeated per line. The header no longer says every block is an injection:
   any high or critical rule blocks (for example EX-011 on a `.env` file).
-- **A rule that runs out of time** (L-004) is a medium finding, so the read is
-  allowed (REQ-01.5) with a warning saying the file could not be fully checked.
-  A crafted file that makes one rule slow can therefore get past on-access with
-  a warning; the full scan reports the same medium finding.
-- **State folder.** `allow-read`, `exorcist on-access` and
-  `scripts/hook-on-access.ts` all find `.exorcist/` the same way
-  (`findStateDir`: EXORCIST_DIR, else the project's `.exorcist`).
+- **A rule that runs out of time fails closed on access.** The full scan
+  reports a time-out as a medium finding (never "clean"). REQ-01.5 would let a
+  medium finding through, so a file crafted to make a rule slow got past
+  on-access with a warning. Now a time-out on a rule whose own severity is high
+  or critical blocks the read, says the file could not be fully checked, and
+  points to `exorcist allow-read`. A time-out on a medium or low rule still
+  only warns. The engine's retry budget is unchanged (L-004).
+- **Allowances live outside the project (REQ-03 deviation).** The spec put
+  them in `.exorcist/allowed-reads.json`, inside the scanned repository, so a
+  repo could ship its own list with the hash of its poisoned file. They are now
+  per user: `$EXORCIST_DIR/allowed-reads/<sha256 of the project's real
+  path>.json`, default `~/.exorcist/...`. A list that would be inside the
+  project tree (EXORCIST_DIR pointing into it, a symlink into it, or any
+  `.exorcist/allowed-reads.json` the repo carries) is ignored, and allow-read
+  refuses to write there. Each entry binds the file's real absolute path to its
+  SHA-256, so the same bytes at another path are scanned again. `allow-read`
+  lost its `--dir` option.
+- **Files over 1 MB are still allowed with a note** (REQ-01.3, as specified).
+  This is the same kind of gap: a file padded past 1 MB is not scanned on
+  access (the full scan skips it too). Left as specified; worth a decision.
 - **Regex time limit unchanged.** Kiro had made the per-rule retry use the full
   1.5 s budget for every rule, which let one crafted file cost up to
   1.5 s x (rules + 1) and hid a slow rule instead of fixing it. That was
@@ -30,12 +43,10 @@ Decisions made while finishing the spec (Claude Code, after Kiro's partial run).
   meets), which makes them about 5x faster on long lines that mention curl.
   `remote-shell-lookahead.property.test.ts` checks the patterns match exactly
   what they matched before.
-- **Task 5 left unticked.** On 2026-11-23 the machine ran at load 70-180 on 8
-  cores (other worktrees building and testing), and `pnpm test` failed only
-  wall-clock tests in suites this spec does not touch (shield proxy,
-  mcp-server, web route, orchestrator: 5 s timeouts; the precision-round2
-  "stays fast" bound). Every on-access, hook, CLI and init test passed in both
-  full runs. Tick it after a green `pnpm test` on an idle machine.
+- **Task 5.** The first runs on 2026-11-23 failed only on wall-clock tests in
+  untouched suites while the machine ran at load 70-180 on 8 cores (other
+  worktrees). After the security fixes `pnpm test` passed twice in a row,
+  831/831.
 - **`packages/cli/build.mjs`** now updates `definitions/` file by file (atomic
   renames) instead of swapping the folder, which left a moment with no folder
   and gave a parallel test reading it ENOENT.

@@ -1,9 +1,8 @@
 import { existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { findStateDir } from '@exorcist-98/shield';
-import { addAllowedRead, decideRead, loadDefinitions, readAllowedReads, sha256File } from '@exorcist-98/core';
+import { addAllowedRead, decideRead, loadDefinitions, readAllowedReads } from '@exorcist-98/core';
 import type { VirusDefinition } from '@exorcist-98/core';
-import { findDefinitionsDir, parse, stateDir, str } from '../util.js';
+import { findDefinitionsDir, parse } from '../util.js';
 import type { Io } from '../util.js';
 
 export const ON_ACCESS_HELP = `Usage: exorcist on-access   (Kiro hook helper)
@@ -17,13 +16,15 @@ Exit codes: 0 allow the read, 2 block it. Anything it cannot read or
 understand is allowed: the hook must never stop the agent from working.
 `;
 
-export const ALLOW_READ_HELP = `Usage: exorcist allow-read <file> [--dir <folder>]
+export const ALLOW_READ_HELP = `Usage: exorcist allow-read <file>
 
-Allow one file for on-access scanning: its current SHA-256 is recorded in
-.exorcist/allowed-reads.json, and the next read of exactly these bytes passes
+Allow one file for on-access scanning: its real path and current SHA-256 are
+recorded, and the next read of exactly these bytes at that path passes
 without a scan. Edit the file and it is checked again.
 
---dir sets the Exorcist state folder (default: ${"the project's .exorcist folder (or EXORCIST_DIR)"}).
+The list is kept outside the project, per user:
+  $EXORCIST_DIR/allowed-reads/<project id>.json  (default ~/.exorcist/...)
+A list inside the project folder is never used: the project could plant it.
 `;
 
 /** The event's `cwd`, so the state folder is the project the agent works in, not the hook's own cwd. */
@@ -57,7 +58,7 @@ export async function onAccessCommand(stdin: string, io: Io): Promise<number> {
 
   let allowed: ReadonlySet<string> = new Set();
   try {
-    allowed = readAllowedReads(findStateDir({ cwd }));
+    allowed = readAllowedReads(cwd);
   } catch {
     allowed = new Set();
   }
@@ -68,7 +69,7 @@ export async function onAccessCommand(stdin: string, io: Io): Promise<number> {
 }
 
 export async function allowReadCommand(argv: string[], io: Io): Promise<number> {
-  const p = parse(argv, { dir: { type: 'string' }, help: { type: 'boolean', short: 'h' } });
+  const p = parse(argv, { help: { type: 'boolean', short: 'h' } });
   if (!p.ok) { io.err(`${p.error}\n\n${ALLOW_READ_HELP}`); return 2; }
   if (p.values['help']) { io.out(ALLOW_READ_HELP); return 0; }
   const target = p.positionals[0];
@@ -76,12 +77,11 @@ export async function allowReadCommand(argv: string[], io: Io): Promise<number> 
   const file = resolve(target);
   if (!existsSync(file) || !statSync(file).isFile()) { io.err(`Not a readable file: ${target}`); return 1; }
 
-  const dir = stateDir(str(p.values['dir']));
-  const result = addAllowedRead(dir, file);
+  const result = addAllowedRead(process.cwd(), file);
   if (!result.ok) { io.err(result.error); return 1; }
-  const hash = sha256File(file);
-  io.out(`Allowed ${target}`);
-  if (hash) io.out(`sha256 ${hash}`);
-  io.out('The next read of exactly these bytes passes; any edit checks the file again.');
+  io.out(`Allowed ${result.path}`);
+  io.out(`sha256 ${result.hash}`);
+  io.out(`Recorded in ${result.store}`);
+  io.out('The next read of exactly these bytes at this path passes; any edit checks the file again.');
   return 0;
 }

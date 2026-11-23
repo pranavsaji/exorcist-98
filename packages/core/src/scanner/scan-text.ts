@@ -1,5 +1,5 @@
 import { normalize } from '../normalizer.js';
-import { runSignatures } from './signature-engine.js';
+import { REGEX_TIME_LIMIT_MS, runSignatures } from './signature-engine.js';
 import type { SignatureFinding, FileRole } from '../types.js';
 import type { VirusDefinition } from '../definitions/schema.js';
 
@@ -12,7 +12,8 @@ export function scanText(
   role: FileRole,
   defs: VirusDefinition[],
   label = '(text)',
+  limitMs: number = REGEX_TIME_LIMIT_MS,
 ): SignatureFinding[] {
   const file = { path: label, rel: label, role, sizeBytes: text.length };
-  return runSignatures(file, normalize(text, role), defs);
+  return runSignatures(file, normalize(text, role), defs, limitMs);
 }

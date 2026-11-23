@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeAll, afterEach } from 'vitest';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loadDefinitions } from '../definitions/loader.js';
 import { decideRead, extractReadPaths, isReadTool } from '../on-access.js';
-import { addAllowedRead, readAllowedReads, sha256File } from '../allowed-reads.js';
+import { addAllowedRead, allowedReadsLocation, isInside, readAllowedReads, realPath, sha256Bytes, sha256File } from '../allowed-reads.js';
 import { VirusDefinitionSchema } from '../definitions/schema.js';
 import type { VirusDefinition } from '../definitions/schema.js';
 import { fromRoot } from './repo-root.js';
@@ -139,15 +139,6 @@ describe('decideRead (REQ-01)', () => {
     expect(decideRead({ tool_name: 'read', tool_input: null }, defs).exitCode).toBe(0);
   });
 
-  it('a rule that runs out of time is a medium warning, worded as such (never "clean")', () => {
-    const d = tmp();
-    writeFileSync(join(d, 'notes.md'), `${'a'.repeat(40)}!\n`);
-    const slow = VirusDefinitionSchema.parse({ id: 'EX-901', title: 'Slow rule', severity: 'high', applies_to: ['docs'], match: { regex: '(a+)+$' }, owasp: ['x'], fix: 'Fix it.' });
-    const r = decideRead(event(d, { path: 'notes.md' }), [slow]);
-    expect(r.exitCode).toBe(0);
-    expect(r.message).toContain('could not be fully checked (EX-901 ran out of time)');
-  }, 20_000);
-
   it('allows a file larger than 1 MB, with a note (REQ-01.3)', () => {
     const d = tmp();
     writeFileSync(join(d, 'huge.log'), 'a'.repeat(1_048_577));
@@ -157,20 +148,95 @@ describe('decideRead (REQ-01)', () => {
     expect(r.message).toContain('1 MB');
   });
 
-  it('honours an allowed hash, and an edit invalidates it (REQ-03)', () => {
+  it('honours an allowance (path + hash), and an edit invalidates it (REQ-03)', () => {
     const d = tmp();
+    const env = { EXORCIST_DIR: tmp() }; // per-user store, outside the project
     const file = join(d, 'CONTRIBUTING.md');
     writeFileSync(file, EX2_BODY());
-    const stateDir = join(d, '.exorcist');
-    expect(decideRead(event(d, { path: 'CONTRIBUTING.md' }), defs, { cwd: d, allowed: readAllowedReads(stateDir) }).exitCode).toBe(2);
-    const add = addAllowedRead(stateDir, file);
+    const ev = event(d, { path: 'CONTRIBUTING.md' });
+    expect(decideRead(ev, defs, { allowed: readAllowedReads(d, env) }).exitCode).toBe(2);
+    const add = addAllowedRead(d, 'CONTRIBUTING.md', env);
     expect(add.ok).toBe(true);
-    if (add.ok) expect(add.hash).toBe(sha256File(file));
-    const allowed = readAllowedReads(stateDir);
+    if (!add.ok) return;
+    expect(add.hash).toBe(sha256File(file));
+    expect(isInside(add.store, d)).toBe(false);
+    const allowed = readAllowedReads(d, env);
     expect(allowed.size).toBe(1);
-    expect(decideRead(event(d, { path: 'CONTRIBUTING.md' }), defs, { cwd: d, allowed }).exitCode).toBe(0);
+    expect(decideRead(ev, defs, { allowed })).toEqual({ exitCode: 0, message: '' });
     writeFileSync(file, `${EX2_BODY()}\nchanged\n`);
-    expect(decideRead(event(d, { path: 'CONTRIBUTING.md' }), defs, { cwd: d, allowed }).exitCode).toBe(2);
+    expect(decideRead(ev, defs, { allowed }).exitCode).toBe(2);
+  });
+
+  it('an allowance is bound to the path: the same bytes elsewhere are scanned', () => {
+    const d = tmp();
+    const env = { EXORCIST_DIR: tmp() };
+    writeFileSync(join(d, 'CONTRIBUTING.md'), EX2_BODY());
+    writeFileSync(join(d, 'OTHER.md'), EX2_BODY());
+    expect(addAllowedRead(d, 'CONTRIBUTING.md', env).ok).toBe(true);
+    const allowed = readAllowedReads(d, env);
+    expect(decideRead(event(d, { path: 'CONTRIBUTING.md' }), defs, { allowed }).exitCode).toBe(0);
+    expect(decideRead(event(d, { path: 'OTHER.md' }), defs, { allowed }).exitCode).toBe(2);
+  });
+
+  it('a list committed inside the project has no effect, in any format', () => {
+    const d = tmp();
+    const home = tmp();
+    const file = join(d, 'CONTRIBUTING.md');
+    writeFileSync(file, EX2_BODY());
+    mkdirSync(join(d, '.git'));
+    mkdirSync(join(d, '.exorcist/allowed-reads'), { recursive: true });
+    const hash = sha256File(file) ?? '';
+    const project = realPath(d);
+    // The old format, and the new one with the right path and hash, at every place a repo could put it.
+    writeFileSync(join(d, '.exorcist/allowed-reads.json'), JSON.stringify({ version: 1, allowed: [hash] }));
+    const v2 = JSON.stringify({ version: 2, project, entries: [{ path: realPath(file), sha256: hash }] });
+    const loc = allowedReadsLocation(d, { EXORCIST_DIR: join(d, '.exorcist') });
+    expect(loc.ok).toBe(false); // EXORCIST_DIR inside the project: no safe place
+    writeFileSync(join(d, '.exorcist/allowed-reads', `${sha256Bytes(Buffer.from(project))}.json`), v2);
+    const ev = event(d, { path: 'CONTRIBUTING.md' });
+    for (const env of [{ EXORCIST_DIR: join(d, '.exorcist') }, { EXORCIST_DIR: '.exorcist' }, { EXORCIST_DIR: home }, {}]) {
+      expect(decideRead(ev, defs, { allowed: readAllowedReads(d, env) }).exitCode, JSON.stringify(env)).toBe(2);
+    }
+    // And allow-read refuses to write into the project.
+    expect(addAllowedRead(d, 'CONTRIBUTING.md', { EXORCIST_DIR: '.exorcist' }).ok).toBe(false);
+  });
+
+  it('a symlink from the per-user store into the project is not trusted', () => {
+    const d = tmp();
+    const store = tmp();
+    const file = join(d, 'CONTRIBUTING.md');
+    writeFileSync(file, EX2_BODY());
+    mkdirSync(join(d, '.git'));
+    const loc = allowedReadsLocation(d, { EXORCIST_DIR: store });
+    expect(loc.ok).toBe(true);
+    if (!loc.ok) return;
+    const planted = join(d, 'planted.json');
+    writeFileSync(planted, JSON.stringify({ version: 2, project: loc.project, entries: [{ path: realPath(file), sha256: sha256File(file) }] }));
+    mkdirSync(join(store, 'allowed-reads'));
+    symlinkSync(planted, loc.file);
+    expect(readAllowedReads(d, { EXORCIST_DIR: store }).size).toBe(0);
+  });
+
+  it('fails closed when a high or critical rule runs out of time on a crafted file', () => {
+    const d = tmp();
+    writeFileSync(join(d, 'notes.md'), `${'a'.repeat(28)}!\n`);
+    const rule = (severity: string) => VirusDefinitionSchema.parse({ id: 'EX-901', title: 'Slow rule', severity, applies_to: ['docs'], match: { regex: '(a+)+$' }, owasp: ['x'], fix: 'Fix it.' });
+    const ev = event(d, { path: 'notes.md' });
+    for (const sev of ['high', 'critical']) {
+      const r = decideRead(ev, [rule(sev)], { limitMs: 5 });
+      expect(r.exitCode, sev).toBe(2);
+      expect(r.message).toContain('could not be fully checked');
+      expect(r.message).toContain('exorcist allow-read notes.md');
+      expect(r.message).not.toContain('aaaa'); // nothing from the file
+    }
+    // A medium or low rule that times out only warns.
+    const low = decideRead(ev, [rule('medium')], { limitMs: 5 });
+    expect(low.exitCode).toBe(0);
+    expect(low.message).toContain('could not be fully checked (EX-901 ran out of time)');
+    // The allowance still works for a file the user has reviewed.
+    const env = { EXORCIST_DIR: tmp() };
+    expect(addAllowedRead(d, 'notes.md', env).ok).toBe(true);
+    expect(decideRead(ev, [rule('high')], { limitMs: 5, allowed: readAllowedReads(d, env) }).exitCode).toBe(0);
   });
 
   it('decides on a 100 KB file in well under 300 ms (REQ-04, generous bound)', () => {

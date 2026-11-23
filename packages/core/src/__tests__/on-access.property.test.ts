@@ -18,6 +18,9 @@ beforeAll(async () => {
 afterAll(() => { rmSync(root, { recursive: true, force: true }); });
 // One fresh folder per property run, all removed at the end.
 const fresh = (): string => mkdtempSync(join(root, 'run-'));
+let store = '';
+beforeAll(() => { store = mkdtempSync(join(tmpdir(), 'exorcist-allow-store-')); });
+afterAll(() => { rmSync(store, { recursive: true, force: true }); });
 
 const READ_KEYS = ['path', 'file_path', 'filePath', 'paths', 'uri'];
 const event = (cwd: string, tool_input: unknown): string =>
@@ -88,13 +91,13 @@ describe('PBT-ACC-03: allow-read passes the same bytes only', () => {
         const body = Buffer.from(`${text}\n${CRITICAL_SAMPLE()}`, 'utf8');
         const file = join(d, 'README.md');
         writeFileSync(file, body);
-        const stateDir = join(d, '.exorcist');
+        const env = { EXORCIST_DIR: store }; // per-user store, outside the project
         const ev = event(d, { path: 'README.md' });
-        expect(decideRead(ev, defs, { allowed: readAllowedReads(stateDir) }).exitCode).toBe(2);
+        expect(decideRead(ev, defs, { allowed: readAllowedReads(d, env) }).exitCode).toBe(2);
 
-        const add = addAllowedRead(stateDir, file);
+        const add = addAllowedRead(d, 'README.md', env);
         expect(add.ok).toBe(true);
-        const allowed = readAllowedReads(stateDir);
+        const allowed = readAllowedReads(d, env);
         expect(decideRead(ev, defs, { allowed })).toEqual({ exitCode: 0, message: '' });
 
         // Change one byte anywhere, to any other value.

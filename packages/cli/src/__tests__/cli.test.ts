@@ -22,8 +22,9 @@ const dirs: string[] = [];
 afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true }); });
 const tmp = (): string => { const d = mkdtempSync(join(tmpdir(), 'exorcist-cli-')); dirs.push(d); return d; };
 
-function run(args: string[], o: { cwd?: string; input?: string } = {}) {
-  const r = spawnSync(process.execPath, [BUNDLE, ...args], { cwd: o.cwd ?? ROOT, input: o.input, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+function run(args: string[], o: { cwd?: string; input?: string; env?: NodeJS.ProcessEnv } = {}) {
+  const env = o.env ? { ...process.env, ...o.env } : process.env;
+  const r = spawnSync(process.execPath, [BUNDLE, ...args], { cwd: o.cwd ?? ROOT, input: o.input, env, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   return { code: r.status, out: r.stdout, err: r.stderr };
 }
 
@@ -399,22 +400,45 @@ describe('allow-read', () => {
   const readEvent = (cwd: string, path: string): string =>
     JSON.stringify({ hook_event_name: 'PreToolUse', cwd, tool_name: 'read', tool_input: { path } });
 
-  it('records the hash; the same bytes pass and an edit is blocked again (REQ-03)', () => {
+  it('records path and hash outside the project; the same bytes pass and an edit is blocked again (REQ-03)', () => {
+    const d = tmp();
+    const env = { EXORCIST_DIR: tmp() }; // stands in for ~/.exorcist
+    const file = join(d, 'CONTRIBUTING.md');
+    writeFileSync(file, readFileSync(join(FIXTURES, 'EX-002-ai-instructions.md'), 'utf8'));
+    const ev = readEvent(d, 'CONTRIBUTING.md');
+    expect(run(['on-access'], { cwd: d, input: ev, env }).code).toBe(2);
+
+    const allow = run(['allow-read', 'CONTRIBUTING.md'], { cwd: d, env });
+    expect(allow.code).toBe(0);
+    expect(allow.out).toContain('sha256');
+    const stores = readdirSync(join(env.EXORCIST_DIR, 'allowed-reads'));
+    expect(stores).toHaveLength(1);
+    const state = JSON.parse(readFileSync(join(env.EXORCIST_DIR, 'allowed-reads', stores[0] ?? ''), 'utf8')) as { version: number; entries: Array<{ path: string; sha256: string }> };
+    expect(state.version).toBe(2);
+    expect(state.entries).toHaveLength(1);
+    expect(state.entries[0]?.path.endsWith('/CONTRIBUTING.md')).toBe(true);
+    expect(existsSync(join(d, '.exorcist'))).toBe(false); // nothing written into the project
+
+    expect(run(['on-access'], { cwd: d, input: ev, env }).code).toBe(0);
+    writeFileSync(file, `${readFileSync(join(FIXTURES, 'EX-002-ai-instructions.md'), 'utf8')}\nchanged\n`);
+    expect(run(['on-access'], { cwd: d, input: ev, env }).code).toBe(2);
+  });
+
+  it('a .exorcist/allowed-reads.json committed in the project has no effect', () => {
     const d = tmp();
     const file = join(d, 'CONTRIBUTING.md');
     writeFileSync(file, readFileSync(join(FIXTURES, 'EX-002-ai-instructions.md'), 'utf8'));
-    expect(run(['on-access'], { cwd: d, input: readEvent(d, 'CONTRIBUTING.md') }).code).toBe(2);
-
-    const allow = run(['allow-read', file], { cwd: d });
-    expect(allow.code).toBe(0);
-    expect(allow.out).toContain('sha256');
-    const state = JSON.parse(readFileSync(join(d, '.exorcist/allowed-reads.json'), 'utf8')) as { version: number; allowed: string[] };
-    expect(state.version).toBe(1);
-    expect(state.allowed).toHaveLength(1);
-
-    expect(run(['on-access'], { cwd: d, input: readEvent(d, 'CONTRIBUTING.md') }).code).toBe(0);
-    writeFileSync(file, `${readFileSync(join(FIXTURES, 'EX-002-ai-instructions.md'), 'utf8')}\nchanged\n`);
-    expect(run(['on-access'], { cwd: d, input: readEvent(d, 'CONTRIBUTING.md') }).code).toBe(2);
+    mkdirSync(join(d, '.git'));
+    mkdirSync(join(d, '.exorcist'));
+    const hash = execFileSync('shasum', ['-a', '256', file], { encoding: 'utf8' }).split(' ')[0];
+    writeFileSync(join(d, '.exorcist/allowed-reads.json'), JSON.stringify({ version: 1, allowed: [hash] }));
+    const ev = readEvent(d, 'CONTRIBUTING.md');
+    expect(run(['on-access'], { cwd: d, input: ev, env: { EXORCIST_DIR: tmp() } }).code).toBe(2);
+    // Pointing EXORCIST_DIR into the project does not help either, and allow-read refuses it.
+    expect(run(['on-access'], { cwd: d, input: ev, env: { EXORCIST_DIR: '.exorcist' } }).code).toBe(2);
+    const refused = run(['allow-read', 'CONTRIBUTING.md'], { cwd: d, env: { EXORCIST_DIR: '.exorcist' } });
+    expect(refused.code).toBe(1);
+    expect(refused.err).toContain('cannot be kept inside the project');
   });
 
   it('refuses a missing file and prints help', () => {

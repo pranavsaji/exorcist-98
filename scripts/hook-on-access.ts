@@ -9,7 +9,6 @@ import { fileURLToPath } from 'node:url';
 import { loadDefinitions } from '../packages/core/src/definitions/loader.js';
 import { decideRead } from '../packages/core/src/on-access.js';
 import { readAllowedReads } from '../packages/core/src/allowed-reads.js';
-import { findStateDir } from '../packages/shield/src/locate.js';
 
 const chunks: Buffer[] = [];
 process.stdin.on('data', (c: Buffer) => chunks.push(c));
@@ -37,7 +36,7 @@ async function run(stdin: string): Promise<0 | 2> {
   let event: unknown = stdin;
   try {
     event = JSON.parse(stdin) as { cwd?: unknown };
-    if (event && typeof event === 'object' && typeof (event as { cwd?: unknown }).cwd === 'string') {
+    if (event && typeof event === 'object' && typeof (event as { cwd?: unknown }).cwd === 'string' && (event as { cwd: string }).cwd) {
       cwd = (event as { cwd: string }).cwd;
     }
   } catch {
@@ -45,9 +44,9 @@ async function run(stdin: string): Promise<0 | 2> {
   }
 
   const defs = await loadDefinitions(defsDir);
-  // The project the agent works in, found the same way `exorcist allow-read`
-  // finds it (--dir aside): EXORCIST_DIR, else the project's .exorcist folder.
-  const allowed = readAllowedReads(findStateDir({ cwd }));
+  // Per-user allowances for the project the agent works in, kept outside it
+  // (a list inside the project is ignored: the project could plant it).
+  const allowed = readAllowedReads(cwd);
 
   const d = decideRead(event, defs, { cwd, allowed });
   if (d.message) process.stderr.write(`${d.message}\n`);
