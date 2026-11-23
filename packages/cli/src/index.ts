@@ -10,6 +10,7 @@ import { mapCommand } from './commands/map.js';
 import { onAccessCommand, allowReadCommand } from './commands/on-access.js';
 import { scanCommand } from './commands/scan.js';
 import { shieldCommand } from './commands/shield.js';
+import { updateCommand } from './commands/update.js';
 import { vaultCommand } from './commands/vault.js';
 import { stdio } from './util.js';
 
@@ -23,6 +24,8 @@ Commands:
   scan <path>        Scan a folder or file for attacks on AI agents
   map [dir]          Draw the Haunted House Map: which MCP servers read secrets,
                      take in untrusted text, or can send data out (EX-023)
+  update             LiveUpdate: verify and install signed definitions
+                     (exorcist update --from <url-or-file>, or --status)
   shield             Run an MCP server behind the Real-Time Shield
   wrap <mcp.json>    Run every local MCP server in a config through the shield
   unwrap <mcp.json>  Undo wrap
@@ -63,6 +66,7 @@ export async function main(argv: string[]): Promise<number> {
       return 0;
     case 'scan':   return await scanCommand(rest, stdio);
     case 'map':    return await mapCommand(rest, stdio);
+    case 'update': return await updateCommand(rest, stdio);
     case 'shield': return await shieldCommand(rest, stdio);
     case 'canary': return await canaryCommand(rest, stdio);
     case 'wrap':   return await wrapCommand(rest, stdio, 'wrap');

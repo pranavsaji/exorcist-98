@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, join, parse, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { BUNDLED_DEFINITIONS_VERSION, compareVersions, findNewestInstalledSet } from '@exorcist-98/core';
 
 /**
  * Shared lookups for the CLI and the MCP server, so they cannot drift (S-019).
@@ -23,13 +24,24 @@ export type DefinitionsLookup = {
   env?: NodeJS.ProcessEnv;
 };
 
-/** The virus definitions folder: explicit, then EXORCIST_DEFINITIONS, then next to the bundle, the repo, the cwd. */
+/**
+ * The virus definitions folder: explicit, then EXORCIST_DEFINITIONS, then the
+ * newest signature-verified installed set from LiveUpdate (m5-liveupdate),
+ * then next to the bundle, the repo, the cwd.
+ */
 export function findDefinitionsDir(o: DefinitionsLookup): string | null {
   const env = o.env ?? process.env;
   const cwd = o.cwd ?? process.cwd();
   if (o.explicit) return resolve(cwd, o.explicit);
   const fromEnv = env['EXORCIST_DEFINITIONS'];
   if (fromEnv) return resolve(cwd, fromEnv);
+  // LiveUpdate: a verified installed set newer than the bundled definitions
+  // wins over the definitions shipped with the build.
+  const installed = findNewestInstalledSet({ env });
+  if (installed && compareVersions(installed.version, BUNDLED_DEFINITIONS_VERSION) > 0) {
+    const dir = join(installed.dir, 'definitions');
+    if (hasDefinitions(dir)) return dir;
+  }
   const here = dirname(fileURLToPath(o.callerUrl));
   const candidates = [join(here, '..', 'definitions'), join(here, '..', '..', '..', 'definitions'), join(cwd, 'definitions')];
   return candidates.find(hasDefinitions) ?? null;

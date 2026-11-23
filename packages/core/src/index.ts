@@ -44,3 +44,12 @@ export { SCANNER_VERSION } from './version.js';
 export { walkRepo, classifyFile } from './walker.js';
 export { readZip, DEFAULT_ZIP_LIMITS } from './remote/zip.js';
 export type { ZipLimits, ZipResult } from './remote/zip.js';
+export {
+  DEFAULT_PUBLIC_KEY, BUNDLED_DEFINITIONS_VERSION, BUNDLED_DEFINITIONS_DATE,
+  DOWNLOAD_LIMIT_BYTES, DOWNLOAD_TIMEOUT_MS,
+  ManifestSchema, buildManifest, signManifest, buildTar, parseBundle, verifyBundle,
+  validateBundleDefinitions, installBundle, downloadBundle, makeKeyPair,
+  compareVersions, isValidVersion, sha256,
+  installedDefinitionsRoot, listInstalledSets, findNewestInstalledSet, verifyInstalledSet, activeVersion,
+} from './liveupdate.js';
+export type { Manifest, BundleFile, ParsedBundle, InstalledSet, LiveUpdateResult, FetchLike as UpdateFetchLike } from './liveupdate.js';
