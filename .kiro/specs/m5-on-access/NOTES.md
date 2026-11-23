@@ -32,9 +32,38 @@ Decisions made while finishing the spec (Claude Code, after Kiro's partial run).
   refuses to write there. Each entry binds the file's real absolute path to its
   SHA-256, so the same bytes at another path are scanned again. `allow-read`
   lost its `--dir` option.
-- **Files over 1 MB are still allowed with a note** (REQ-01.3, as specified).
-  This is the same kind of gap: a file padded past 1 MB is not scanned on
-  access (the full scan skips it too). Left as specified; worth a decision.
+- **Large files (REQ-01.3 revised).** Up to 10 MB a file is scanned whole, in
+  one pass. 1 MB windows with an overlap were tried first and dropped. A
+  maximum-match-length analysis of the rule regexes showed almost every rule
+  has an unbounded part (`\s+`, `[^\n]*`, `\S+`), so no fixed overlap is
+  safe, and capping those quantifiers would also weaken the full scan
+  (padding a payload with whitespace would get past it). One pass has no
+  boundary to straddle. Tests keep payloads across the 1 MB mark: a phrase
+  cut inside a word, a ~3,800-character EX-004 comment, and a fence that
+  closes past 1 MB.
+- **One deadline per call.** `decideRead` has a single 10 s deadline for all
+  the files it names (the hook times out at 15 s). Each scan gets a regex
+  limit from `limitFor`: the usual 1.5 s (scaled per MB), lowered so that
+  even if every rule job times out and is retried alone (the engine's
+  unchanged max(50 ms, limit/3) retries), the scan ends before the deadline.
+  Once there is no time left, the remaining agent-facing files are blocked
+  ("the scan ran out of time") and data files are allowed with a warning. A
+  rule that times out within its limit still fails closed when the rule is
+  high or critical. Not bounded: the base64 re-scan of decoded blobs
+  (`blobCounts`), which runs its own guarded calls per blob.
+- **Over 10 MB:** blocked for agent-facing roles (instruction, memory, hook,
+  config, mcp-config, tool-result, power), allowed with a warning otherwise.
+  Lockfiles (package-lock.json, pnpm-lock.yaml, *.lock, go.sum, ...)
+  classify as config but are exempt. Only the hash is computed (in chunks),
+  so a user's allowance still applies.
+- **The agent cannot allow its own read.** The block message reads "Ask the
+  user to review the file. Do not run allow-read yourself" and shows names
+  escaped (\u001B, \u202E, ...) and single-quoted. `allow-read` refuses
+  unless stdin and stdout are a TTY, then asks for the first 6 characters of
+  the SHA-256 it shows, and writes only if the file still has the hash that
+  was confirmed. Tests drive it through an injected terminal object (no flag
+  or variable in production code). An agent with a real pseudo-terminal could
+  still type the code; this stops the ordinary non-interactive shell tool.
 - **Regex time limit unchanged.** Kiro had made the per-rule retry use the full
   1.5 s budget for every rule, which let one crafted file cost up to
   1.5 s x (rules + 1) and hid a slow rule instead of fixing it. That was

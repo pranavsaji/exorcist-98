@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { emptyState, saveState, serverState, statePath } from '@exorcist-98/shield';
+import { addAllowedRead } from '@exorcist-98/core';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '../../../..');
@@ -408,9 +409,13 @@ describe('allow-read', () => {
     const ev = readEvent(d, 'CONTRIBUTING.md');
     expect(run(['on-access'], { cwd: d, input: ev, env }).code).toBe(2);
 
-    const allow = run(['allow-read', 'CONTRIBUTING.md'], { cwd: d, env });
-    expect(allow.code).toBe(0);
-    expect(allow.out).toContain('sha256');
+    // allow-read refuses without a terminal (an agent's shell tool, a pipe) and writes nothing.
+    const refused = run(['allow-read', 'CONTRIBUTING.md'], { cwd: d, env, input: 'anything\n' });
+    expect(refused.code).toBe(1);
+    expect(refused.err).toContain('only runs in an interactive terminal');
+    expect(existsSync(join(env.EXORCIST_DIR, 'allowed-reads'))).toBe(false);
+    // The user's own allow-read records it (the terminal step is tested in allow-read.test.ts).
+    expect(addAllowedRead(d, 'CONTRIBUTING.md', env).ok).toBe(true);
     const stores = readdirSync(join(env.EXORCIST_DIR, 'allowed-reads'));
     expect(stores).toHaveLength(1);
     const state = JSON.parse(readFileSync(join(env.EXORCIST_DIR, 'allowed-reads', stores[0] ?? ''), 'utf8')) as { version: number; entries: Array<{ path: string; sha256: string }> };
@@ -436,13 +441,11 @@ describe('allow-read', () => {
     expect(run(['on-access'], { cwd: d, input: ev, env: { EXORCIST_DIR: tmp() } }).code).toBe(2);
     // Pointing EXORCIST_DIR into the project does not help either, and allow-read refuses it.
     expect(run(['on-access'], { cwd: d, input: ev, env: { EXORCIST_DIR: '.exorcist' } }).code).toBe(2);
-    const refused = run(['allow-read', 'CONTRIBUTING.md'], { cwd: d, env: { EXORCIST_DIR: '.exorcist' } });
-    expect(refused.code).toBe(1);
-    expect(refused.err).toContain('cannot be kept inside the project');
+    expect(addAllowedRead(d, 'CONTRIBUTING.md', { EXORCIST_DIR: '.exorcist' })).toMatchObject({ ok: false });
   });
 
   it('refuses a missing file and prints help', () => {
-    expect(run(['allow-read', '/no/such/file']).code).toBe(1);
+    expect(run(['allow-read', '/no/such/file']).code).toBe(1); // no terminal: refused first
     expect(run(['allow-read']).code).toBe(2);
     expect(run(['allow-read', '--help']).code).toBe(0);
     expect(run(['--help']).out).toContain('allow-read');

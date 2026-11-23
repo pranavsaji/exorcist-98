@@ -11,6 +11,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
+import { addAllowedRead } from '@exorcist-98/core';
 import { KIRO_HOOK_SCRIPT } from '../kiro-hook-script.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -132,10 +133,8 @@ describe('scripts/kiro-hook.sh', () => {
     const home = tmp();
     expect(runHook(cmd, readEvent('CONTRIBUTING.md'), ROOT, NODE_DIR, home).code).toBe(2);
     // allow-read by the user (per-user store under HOME) lets the same bytes through this hook (REQ-03).
-    const env: NodeJS.ProcessEnv = { ...process.env, HOME: home };
-    delete env['EXORCIST_DIR'];
-    const allow = spawnSync(TSX, [CLI_SRC, 'allow-read', 'CONTRIBUTING.md'], { cwd: d, encoding: 'utf8', env });
-    expect(allow.status, allow.stderr).toBe(0);
+    // allow-read itself needs the user's terminal (allow-read.test.ts); record what it would.
+    expect(addAllowedRead(d, 'CONTRIBUTING.md', { EXORCIST_DIR: join(home, '.exorcist') }).ok).toBe(true);
     expect(existsSync(join(home, '.exorcist/allowed-reads'))).toBe(true);
     expect(runHook(cmd, readEvent('CONTRIBUTING.md'), ROOT, NODE_DIR, home).code).toBe(0);
   }, 60_000);

@@ -117,11 +117,16 @@ export function readAllowedReads(cwd: string, env: NodeJS.ProcessEnv = process.e
 
 export type AllowReadResult = { ok: true; hash: string; path: string; store: string; count: number } | { ok: false; error: string };
 
-/** Record a file's real path and current SHA-256 so the next on-access read of the same bytes at that path passes. */
-export function addAllowedRead(cwd: string, file: string, env: NodeJS.ProcessEnv = process.env): AllowReadResult {
+/**
+ * Record a file's real path and current SHA-256 so the next on-access read of
+ * the same bytes at that path passes. With `expected`, nothing is written
+ * unless the file still has that hash (the one the user confirmed).
+ */
+export function addAllowedRead(cwd: string, file: string, env: NodeJS.ProcessEnv = process.env, expected?: string): AllowReadResult {
   const abs = realPath(resolve(cwd, file));
   const hash = sha256File(abs);
-  if (hash === null) return { ok: false, error: `Cannot read ${file}, so it cannot be allowed.` };
+  if (hash === null) return { ok: false, error: 'Cannot read the file, so it cannot be allowed.' };
+  if (expected !== undefined && hash !== expected) return { ok: false, error: 'The file changed while you were confirming. Nothing was allowed; run allow-read again.' };
   const loc = allowedReadsLocation(cwd, env);
   if (!loc.ok) return loc;
 
