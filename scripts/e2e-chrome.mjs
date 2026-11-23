@@ -418,6 +418,8 @@ await step('Field Report window shows the two-round results and passes axe', asy
 
 await step('Possession Lab: Bring your own attack gives a real verdict for pasted text and samples (m5-byoa)', async () => {
   const lab = page.getByRole('dialog', { name: /Possession Lab/ });
+  // The Field Report window (previous step) opens over the lab's tabs; bring the lab to the front.
+  await lab.locator('.titlebar h2').click();
   const tab = lab.getByRole('tab', { name: 'Bring your own attack' });
   await tab.click();
   if ((await tab.getAttribute('aria-selected')) !== 'true') throw new Error('tab not selected');
@@ -438,6 +440,8 @@ await step('Possession Lab: Bring your own attack gives a real verdict for paste
   await lab.getByText('The invisible text says:').waitFor({ timeout: 10000 });
   const ouija = await lab.locator('.byoa-ouija').innerText();
   if (!/Ignore all previous instructions/.test(ouija)) throw new Error('decoded: ' + ouija);
+  // Let the verdict stamp finish animating in: axe measures contrast mid-fade otherwise.
+  await page.waitForFunction(() => [...document.querySelectorAll('.byoa-stamp')].every((el) => el.getAnimations().every((a) => a.playState === 'finished')));
   const r1 = await axe('byoa-exorcised'); axeReports.push(r1);
   // The benign sample: a CLEAN verdict, still with the honest caveat.
   await lab.getByRole('button', { name: /^Honest weather tool/ }).click();
@@ -445,6 +449,8 @@ await step('Possession Lab: Bring your own attack gives a real verdict for paste
   const v2 = await lab.locator('.byoa-verdict').innerText();
   if (!/CLEAN/.test(v2) || !/not proof of safety/.test(v2)) throw new Error('clean verdict: ' + v2.slice(0, 200));
   await page.screenshot({ path: `${SHOTS}/14-byoa-clean.png` });
+  // Let the verdict stamp finish animating in: axe measures contrast mid-fade otherwise.
+  await page.waitForFunction(() => [...document.querySelectorAll('.byoa-stamp')].every((el) => el.getAnimations().every((a) => a.playState === 'finished')));
   const r2 = await axe('byoa-clean'); axeReports.push(r2);
   // Arrow keys move between tabs.
   await lab.getByRole('tab', { name: 'Bring your own attack' }).focus();
