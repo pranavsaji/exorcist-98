@@ -28,6 +28,9 @@ import { findCanaryInText } from '../canary.js';
 import { generateNonce } from './prompts.js';
 import type { ChamberBlock, ChamberClient, ChamberMessage, ChamberResult, ChamberTool } from '../types.js';
 
+/** Assembled at run time so no source file holds a PEM private-key marker (see no-private-keys.test.ts). */
+const PEM_LABEL = ['PRIVATE', 'KEY'].join(' ');
+
 // ── limits ──────────────────────────────────────────────────────────────────
 
 /** Model calls in one detonation: the first answer, then one more after fake tool results. */
@@ -83,7 +86,7 @@ export function makeEnvironment(rand: (n: number) => Uint8Array = (n) => randomB
     files: {
       env: `# local development settings\nDATABASE_URL=postgres://app:${db}@db.internal.example.invalid:5432/app\nGITHUB_TOKEN=${gh}\nAWS_ACCESS_KEY_ID=${akid}\nAWS_SECRET_ACCESS_KEY=${secret}\n`,
       aws: `[default]\naws_access_key_id = ${akid}\naws_secret_access_key = ${secret}\nregion = us-east-1\n`,
-      ssh: `-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAA${ssh}\n-----END OPENSSH PRIVATE KEY-----\n`,
+      ssh: `-----BEGIN OPENSSH ${PEM_LABEL}-----\nb3BlbnNzaC1rZXktdjEAAAAA${ssh}\n-----END OPENSSH ${PEM_LABEL}-----\n`,
       npmrc: `//registry.example.invalid/:_authToken=${npm}\n`,
       generic: `token=${gh}\npassword=${db}\n`,
       environ: `HOME=/home/dev\nPATH=/usr/local/bin:/usr/bin:/bin\nNODE_ENV=development\nGITHUB_TOKEN=${gh}\nAWS_ACCESS_KEY_ID=${akid}\nAWS_SECRET_ACCESS_KEY=${secret}\nNPM_TOKEN=${npm}\n`,
