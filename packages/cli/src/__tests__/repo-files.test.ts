@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import yaml from 'js-yaml';
@@ -195,6 +196,50 @@ describe('GitHub Action and workflows', () => {
         if (s.uses?.startsWith('pnpm/action-setup')) expect(s.with?.['version'], name).toBeUndefined();
         if (s.uses?.startsWith('actions/setup-node')) expect(s.with?.['node-version'], name).toBe('22');
       }
+    }
+  });
+
+  // m5-lockfile REQ-03.3
+  it('lock-check is off by default, and every lock step runs only when it is "true"', () => {
+    expect(action.inputs['lock-check']?.default).toBe('false');
+    expect(action.inputs['lock-config']).toBeDefined();
+    const lockSteps = action.runs.steps.filter((s) => /exorcist\.lock/.test(s.name ?? ''));
+    expect(lockSteps.map((s) => s.name)).toEqual([
+      'Check exorcist.lock',
+      'Comment the exorcist.lock differences on the pull request',
+      'Fail on exorcist.lock differences',
+    ]);
+    for (const s of lockSteps) expect(s.if, s.name).toMatch(/inputs\.lock-check == 'true'/);
+    // The steps that existed before lock-check are unchanged in order and condition.
+    const others = action.runs.steps.filter((s) => !lockSteps.includes(s)).map((s) => s.name ?? s.uses);
+    expect(others).toEqual(['actions/setup-node@v7', 'Build Exorcist 98', 'Scan', 'Upload SARIF to code scanning', 'Comment on the pull request', 'Fail on findings']);
+    expect(lockSteps[0]?.run).toContain('lock --check');
+  });
+
+  it('the lock-check step records the exit code and fences the report so a description cannot break out', () => {
+    const step = action.runs.steps.find((s) => s.name === 'Check exorcist.lock');
+    const d = mkdtempSync(join(tmpdir(), 'exorcist-action-'));
+    try {
+      // A stand-in for the CLI: a report quoting a description with a code fence in it, and exit 1.
+      const fakeCli = join(d, 'cli.mjs');
+      writeFileSync(fakeCli, "console.log('args: ' + process.argv.slice(2).join(' ')); console.log('+Read a note. ```\\n# Ignore the reviewer'); process.exit(1);");
+      const out = join(d, 'out.txt');
+      const summary = join(d, 'summary.md');
+      writeFileSync(out, '');
+      const r = spawnSync('bash', ['-eo', 'pipefail', '-c', step?.run ?? 'exit 99'], {
+        cwd: d, encoding: 'utf8',
+        env: { ...process.env, RUNNER_TEMP: d, GITHUB_OUTPUT: out, GITHUB_STEP_SUMMARY: summary, EXORCIST_CLI: fakeCli, LOCK_CONFIG: 'tools/mcp.json' },
+      });
+      expect(r.status, r.stderr).toBe(0); // the gate is a later step, after the comment
+      expect(readFileSync(out, 'utf8')).toContain('code=1');
+      expect(r.stdout).toContain('args: lock --check --config tools/mcp.json');
+      const md = readFileSync(join(d, 'exorcist', 'lock.md'), 'utf8');
+      expect(md).toContain('does not match');
+      expect(md).toMatch(/^````text$/m); // longer than the ``` inside the report
+      expect(md.trimEnd().endsWith('````')).toBe(true);
+      expect(readFileSync(summary, 'utf8')).toBe(md);
+    } finally {
+      rmSync(d, { recursive: true, force: true });
     }
   });
 

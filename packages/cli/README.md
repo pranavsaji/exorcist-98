@@ -35,6 +35,19 @@ secrets and unknown hosts in tool calls, and withholds tool results that try to
 instruct your agent. `unwrap` restores the file exactly. See
 `exorcist shield --help`, `exorcist approve --help` and `exorcist alerts`.
 
+## Share approved tools with your team: exorcist.lock
+
+```sh
+npx -y @exorcist-98/cli@0.1.0 lock           # write exorcist.lock, then commit it
+npx -y @exorcist-98/cli@0.1.0 lock --check   # exit 1 if any tool or program changed
+```
+
+`exorcist.lock` records the fingerprint of every tool your MCP servers list,
+like a package lockfile for tool descriptions. Each teammate's Shield treats
+the locked tools as approved, so a rug pull is caught even on a machine that
+never saw the tool before. `--from-shield` writes the lock from your local
+pins without starting any server. In GitHub Actions, set `lock-check: true`.
+
 ## Licence
 
 Apache-2.0.

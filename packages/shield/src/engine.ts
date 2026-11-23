@@ -621,6 +621,29 @@ export class ShieldEngine {
         this.withheld.delete(tool.name);
         kept.push(raw);
       } else if (pin.hash === fp) {
+        if (pin.source === 'lock') {
+          // m5: the fingerprint was approved in exorcist.lock, a file from the
+          // project folder. Run the first-use signature checks anyway, so a
+          // lock cannot pre-approve a tool that hides instructions.
+          const reasons = inspectTool(tool, this.o.defs);
+          if (reasons.length > 0) {
+            if (this.firstTime(tool.name, fp)) {
+              actions.push(this.alert({
+                ruleId: 'EX-005',
+                severity: 'critical',
+                tool: tool.name,
+                message: `The tool "${tool.name}" is approved in exorcist.lock, but it was withheld: ${joinReasons(reasons)}`,
+              }));
+            }
+            if (this.enforcing()) {
+              this.withheld.set(tool.name, { ruleId: 'EX-005', reason: 'its description contains hidden instructions for your AI.' });
+              continue;
+            }
+          } else {
+            ss.tools[tool.name] = { hash: pin.hash, description: pin.description, pinnedAt: pin.pinnedAt };
+            changed = true;
+          }
+        }
         this.withheld.delete(tool.name);
         kept.push(raw);
       } else {

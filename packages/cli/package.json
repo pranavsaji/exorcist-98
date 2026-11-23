@@ -24,7 +24,9 @@
   "devDependencies": {
     "@exorcist-98/core": "workspace:*",
     "@exorcist-98/shield": "workspace:*",
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.0",
+    "@modelcontextprotocol/sdk": "^1.20.0",
+    "zod": "^3.23"
   },
   "publishConfig": {
     "access": "public"

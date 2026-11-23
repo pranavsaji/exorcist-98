@@ -48,10 +48,26 @@ describe('the built bundle', () => {
     expect(run(['--version']).out.trim()).toBe('0.1.0');
     const help = run(['--help']);
     expect(help.code).toBe(0);
-    for (const c of ['scan', 'shield', 'wrap', 'vault', 'approve', 'init']) expect(help.out).toContain(c);
+    for (const c of ['scan', 'shield', 'wrap', 'vault', 'approve', 'init', 'lock']) expect(help.out).toContain(c);
     expect(run([]).code).toBe(2);
     expect(run(['nonsense']).code).toBe(2);
   });
+});
+
+describe('exorcist lock in the bundle (m5)', () => {
+  it('bundles the MCP SDK client: writes a lock from a real server, then --check passes', () => {
+    const d = tmp();
+    const config = join(d, 'mcp.json');
+    writeFileSync(config, JSON.stringify({ mcpServers: { notes: { command: process.execPath, args: [FAKE] } } }));
+    const help = run(['lock', '--help']);
+    expect(help.code).toBe(0);
+    expect(help.out).toContain('--check');
+    const w = run(['lock', '--config', config], { cwd: d });
+    expect(w.err).toBe('');
+    expect(w.code).toBe(0);
+    expect(readFileSync(join(d, 'exorcist.lock'), 'utf8')).toContain('"read_note"');
+    expect(run(['lock', '--config', config, '--check'], { cwd: d }).code).toBe(0);
+  }, 60_000);
 });
 
 describe('exorcist scan', () => {

@@ -21,9 +21,9 @@ Commands:
   scan <path>        Scan a folder or file for attacks on AI agents
   shield             Run an MCP server behind the Real-Time Shield
   wrap <mcp.json>    Run every local MCP server in a config through the shield
-  lock              Write or verify exorcist.lock (approved MCP tools, like a
-                     package lockfile): "exorcist lock", "exorcist lock --check"
   unwrap <mcp.json>  Undo wrap
+  lock               Write exorcist.lock, the team's approved MCP tools; with
+                     --check, exit 1 if a tool changed (see: exorcist lock --help)
   vault <command>    Quarantine and restore MCP servers, hooks and steering files
   approve <kind>     Approve a changed tool or a host (see: exorcist approve --help)
   alerts             Show recent shield alerts
@@ -60,7 +60,7 @@ export async function main(argv: string[]): Promise<number> {
     case 'canary': return await canaryCommand(rest, stdio);
     case 'wrap':   return await wrapCommand(rest, stdio, 'wrap');
     case 'unwrap': return await wrapCommand(rest, stdio, 'unwrap');
-    case 'lock':  return await lockCommand(rest, stdio);
+    case 'lock':   return await lockCommand(rest, stdio);
     case 'vault':  return await vaultCommand(rest, stdio);
     case 'approve': return await approveCommand(rest, stdio);
     case 'alerts': return await alertsCommand(rest, stdio);

@@ -21,6 +21,15 @@ inputs:
   upload-sarif:
     description: Upload results to GitHub code scanning. Needs the security-events write permission.
     default: "false"
+  lock-check:
+    description: >-
+      Also run "exorcist lock --check": start the MCP servers in the config, and fail the job if
+      any tool or program differs from the committed exorcist.lock. With "comment", the differences
+      (with a diff of each changed description) are posted on the pull request.
+    default: "false"
+  lock-config:
+    description: MCP config for lock-check, relative to the workspace (default .kiro/settings/mcp.json).
+    default: ""
 
 outputs:
   sarif-file:
@@ -90,6 +99,74 @@ runs:
           } else {
             await github.rest.issues.createComment({ owner, repo, issue_number, body });
           }
+
+    # m5: exorcist.lock. Only when lock-check is "true"; otherwise none of these steps run.
+    - name: Check exorcist.lock
+      id: lock
+      if: ${{ inputs.lock-check == 'true' }}
+      shell: bash
+      env:
+        EXORCIST_CLI: ${{ github.action_path }}/packages/cli/dist/index.mjs
+        LOCK_CONFIG: ${{ inputs.lock-config }}
+      run: |
+        out="$RUNNER_TEMP/exorcist"
+        mkdir -p "$out"
+        args=()
+        [ -n "$LOCK_CONFIG" ] && args+=(--config "$LOCK_CONFIG")
+        set +e
+        node "$EXORCIST_CLI" lock --check "${args[@]}" > "$out/lock.txt" 2>&1
+        code=$?
+        set -e
+        cat "$out/lock.txt"
+        # The report quotes tool descriptions (untrusted text), so it goes in a
+        # code fence longer than any run of backticks inside it.
+        LOCK_CODE="$code" node -e '
+          const fs = require("fs");
+          const [txt, md] = process.argv.slice(1);
+          const text = fs.readFileSync(txt, "utf8").trimEnd();
+          const fence = "`".repeat(Math.max(3, ...(text.match(/`+/g) || []).map((m) => m.length + 1)));
+          const code = process.env.LOCK_CODE;
+          const head = code === "0" ? "exorcist.lock is up to date: every MCP tool matches its locked fingerprint."
+            : code === "1" ? "**exorcist.lock does not match the MCP servers.** A tool or program changed since it was approved. If every change is expected, run `exorcist lock` and commit exorcist.lock."
+            : "**exorcist.lock could not be checked.**";
+          fs.writeFileSync(md, `### Exorcist 98: exorcist.lock\n\n${head}\n\n${fence}text\n${text}\n${fence}\n`);
+        ' "$out/lock.txt" "$out/lock.md"
+        cat "$out/lock.md" >> "$GITHUB_STEP_SUMMARY"
+        echo "code=$code" >> "$GITHUB_OUTPUT"
+        echo "markdown=$out/lock.md" >> "$GITHUB_OUTPUT"
+
+    - name: Comment the exorcist.lock differences on the pull request
+      if: ${{ inputs.lock-check == 'true' && inputs.comment == 'true' && github.event_name == 'pull_request' }}
+      uses: actions/github-script@v9
+      env:
+        REPORT_FILE: ${{ steps.lock.outputs.markdown }}
+        LOCK_CODE: ${{ steps.lock.outputs.code }}
+      with:
+        script: |
+          const fs = require('fs');
+          const marker = '<!-- exorcist-98-lock -->';
+          const body = `${marker}\n${fs.readFileSync(process.env.REPORT_FILE, 'utf8')}`;
+          const { owner, repo } = context.repo;
+          const issue_number = context.issue.number;
+          const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+          const existing = comments.find((c) => c.body && c.body.startsWith(marker));
+          if (existing) {
+            await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+          } else if (process.env.LOCK_CODE !== '0') {
+            // Only a difference starts a new comment; an earlier one is updated once it is fixed.
+            await github.rest.issues.createComment({ owner, repo, issue_number, body });
+          }
+
+    - name: Fail on exorcist.lock differences
+      if: ${{ inputs.lock-check == 'true' }}
+      shell: bash
+      env:
+        LOCK_CODE: ${{ steps.lock.outputs.code }}
+      run: |
+        if [ "$LOCK_CODE" != "0" ]; then
+          echo "exorcist lock --check exited $LOCK_CODE (1: the lock does not match the MCP servers, 2: it could not be checked)."
+          exit 1
+        fi
 
     - name: Fail on findings
       shell: bash

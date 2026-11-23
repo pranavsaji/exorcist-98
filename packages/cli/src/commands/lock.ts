@@ -1,281 +1,298 @@
 /**
- * `exorcist lock`: create, update and verify exorcist.lock, the committed
- * list of approved MCP tools (m5).
+ * `exorcist lock`: write and verify exorcist.lock, the committed list of the
+ * MCP tools a team approved (m5).
  *
- * The lock command starts every local MCP server in the config to list its
- * tools over MCP stdio (a 20 s timeout bounds a server that never answers),
- * never starts a server marked disabled, and skips remote (http/sse) servers
- * with a note. With --from-shield it builds the lock from the local pin file
- * instead, without starting anything. With --check it re-lists and exits 1
- * on any difference.
+ * Every enabled local server in the MCP config is started and its tools are
+ * listed with the MCP SDK client over stdio, bounded by a timeout (20 s by
+ * default). Servers marked `disabled` are never started. Remote (http/sse)
+ * servers are recorded with their URL and a note; their tools are not
+ * listed. `--from-shield` builds the lock from the local Shield pin file
+ * without starting anything. `--check` builds the current lock the same way
+ * and exits 1 on any difference from the committed one.
+ *
+ * Tool descriptions are untrusted text: they are hashed and stored as data,
+ * and control and invisible characters are escaped before they reach the
+ * terminal.
  */
-import { spawn } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { isAbsolute, join, resolve, dirname } from 'node:path';
-import { createInterface } from 'node:readline';
+import { isAbsolute, join, resolve } from 'node:path';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { z } from 'zod';
 import {
-  buildLock, diffLock, launchFingerprint, LOCK_FILE, parseLock, pinsToLock, serializeLock, urlFingerprint,
-  loadState, statePath,
+  buildLock, diffLock, launchFingerprint, loadState, lockUrl, parseLock, pinsToLock, serializeLock, statePath, unwrapConfig,
+  LOCK_FILE,
 } from '@exorcist-98/shield';
-import type { Lock, LockChange, ServerListing } from '@exorcist-98/shield';
-import type { ToolDef } from '@exorcist-98/shield';
+import type { Lock, LockChange, LockServer, ServerListing, ToolDef } from '@exorcist-98/shield';
 import { parse, stateDir, str } from '../util.js';
 import type { Io } from '../util.js';
+
+export const DEFAULT_LOCK_TIMEOUT_MS = 20_000;
+const DEFAULT_CONFIG = join('.kiro', 'settings', 'mcp.json');
+/** A server that keeps returning a next page is cut off here. */
+const MAX_PAGES = 100;
 
 export const LOCK_HELP = `Usage: exorcist lock [options]
        exorcist lock --check [options]
        exorcist lock --from-shield [options]
 
-Write exorcist.lock, the committed list of MCP tools your team approved, like
-a package lockfile for tool descriptions. Every server in the MCP config is
-started, its tools listed, and each tool's fingerprint pinned. Remote (http
-and sse) servers are listed with their URL and skipped with a note.
+Write ${LOCK_FILE}, the list of MCP tools your team approved, like a package
+lockfile for tool descriptions. Commit it: every teammate's Shield then treats
+the locked tools as approved, and a changed tool as a rug pull, even on a
+machine that never saw the tool before.
+
+Every local server in the MCP config is started and its tools are listed.
+Servers marked "disabled" are never started (their entry in an existing lock
+is kept). Remote (http/sse) servers are recorded with their URL and a note.
 
 Options:
-  --config <file>       MCP config (default: .kiro/settings/mcp.json)
-  --from-shield         Build the lock from the local Shield pin file, without
-                        starting any server
-  --check               Re-list the tools and exit 1 on any difference
-  --out <file>          Lock file to write or check (default: ${LOCK_FILE})
-  --dir <folder>        State folder for --from-shield (default: the project's
-                        .exorcist folder, or EXORCIST_DIR)
-  --timeout <ms>        Per-server listing timeout (default: 20000)
+  --config <file>   MCP config (default: ${DEFAULT_CONFIG})
+  --check           Do not write: compare the servers with the lock and exit 1
+                    on any difference (added, removed or changed tool, changed
+                    program), with a diff of each changed description
+  --from-shield     Use the local Shield pin file instead of starting servers
+  --lock <file>     Lock file to write or check (default: ./${LOCK_FILE})
+  --dir <folder>    Shield state folder for --from-shield (default: the
+                    project's .exorcist folder, or EXORCIST_DIR)
+  --timeout <ms>    Time allowed for each server to list its tools
+                    (default: ${DEFAULT_LOCK_TIMEOUT_MS})
+
+Exit codes: 0 written or up to date, 1 the lock does not match, 2 error.
 `;
 
-const DEFAULT_TIMEOUT_MS = 20_000;
+// ── the MCP config ───────────────────────────────────────────────────────────
 
-type McpEntry = Record<string, unknown>;
+const ConfigSchema = z.object({ mcpServers: z.record(z.unknown()).default({}) }).passthrough();
+const EntrySchema = z.object({
+  command:  z.string().min(1).optional(),
+  args:     z.array(z.string()).default([]),
+  env:      z.record(z.string()).optional(),
+  cwd:      z.string().optional(),
+  url:      z.string().optional(),
+  disabled: z.boolean().optional(),
+}).passthrough();
 
-function readConfig(path: string, io: Io): { mcpServers: Record<string, McpEntry> } | null {
-  if (!existsSync(path)) { io.err(`MCP config not found: ${path}`); return null; }
+type Config = { mcpServers: Record<string, unknown> };
+
+function readConfig(path: string): { ok: true; config: Config } | { ok: false; error: string } {
+  let json: unknown;
   try {
-    const json = JSON.parse(readFileSync(path, 'utf8')) as unknown;
-    if (!json || typeof json !== 'object' || Array.isArray(json)) throw new Error('not an object');
-    const servers = (json as { mcpServers?: unknown }).mcpServers;
-    if (servers !== undefined && (typeof servers !== 'object' || servers === null || Array.isArray(servers))) throw new Error('mcpServers is not an object');
-    return { mcpServers: (servers ?? {}) as Record<string, McpEntry> };
+    json = JSON.parse(readFileSync(path, 'utf8'));
   } catch {
-    io.err(`${path} is not a valid MCP config (a JSON object with mcpServers).`);
-    return null;
+    return { ok: false, error: `${path} is not valid JSON.` };
   }
+  const parsed = ConfigSchema.safeParse(json);
+  if (!parsed.success) return { ok: false, error: `${path} is not an MCP config (a JSON object with "mcpServers").` };
+  // A config run through "exorcist wrap" starts each server through the
+  // Shield; the lock fingerprints the server itself, as the Shield does.
+  const { config } = unwrapConfig(parsed.data as never);
+  return { ok: true, config: { mcpServers: (config.mcpServers ?? {}) as Record<string, unknown> } };
 }
 
-// ── listing one stdio server ─────────────────────────────────────────────────
+// ── listing one stdio server with the MCP SDK client ─────────────────────────
 
-type ListResult = { ok: true; tools: ToolDef[] } | { ok: false; error: string };
+export type ListResult = { ok: true; tools: ToolDef[] } | { ok: false; error: string };
 
-/**
- * A minimal MCP stdio client: initialize, then tools/list (with pagination).
- * The server's descriptions and schemas are treated as data only; they are
- * hashed, never followed.
- */
-export function listTools(o: {
+/** tools/list, kept raw: the Shield fingerprints the JSON the server sent, so the lock must too. */
+const RawToolsPage = z.object({ tools: z.array(z.unknown()), nextCursor: z.string().optional() }).passthrough();
+
+const firstLine = (err: unknown): string => (err instanceof Error ? err.message : String(err)).split('\n')[0]?.slice(0, 300) ?? 'unknown error';
+
+/** Start one stdio MCP server, list its tools (all pages) and stop it, within `timeoutMs`. */
+export async function listTools(o: {
   command: string;
   args: string[];
-  env?: NodeJS.ProcessEnv;
-  cwd?: string;
+  env: Record<string, string>;
+  cwd: string;
   timeoutMs: number;
 }): Promise<ListResult> {
-  return new Promise<ListResult>((resolveP) => {
-    let settled = false;
-    const finish = (r: ListResult): void => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      if (child) child.kill();
-      resolveP(r);
-    };
-    const fail = (error: string): void => finish({ ok: false, error });
-
-    let child: ReturnType<typeof spawn> | null = null;
-    try {
-      child = spawn(o.command, o.args, {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env: o.env ?? process.env,
-        ...(o.cwd ? { cwd: o.cwd } : {}),
-      });
-    } catch (err) {
-      resolveP({ ok: false, error: String(err).split('\n')[0] ?? 'could not start' });
-      return;
-    }
-    const { stdin, stdout, stderr } = child;
-    if (!stdin || !stdout || !stderr) {
-      resolveP({ ok: false, error: `Could not open pipes to "${o.command}".` });
-      return;
-    }
-
-    const timer = setTimeout(() => fail(`The server did not answer within ${o.timeoutMs} ms.`), o.timeoutMs);
-    const send = (m: unknown): void => { if (!stdin.destroyed) stdin.write(`${JSON.stringify(m)}\n`); };
-
-    let nextId = 1;
-    const waiting = new Map<number, (value: { tools: ToolDef[]; nextCursor?: string } | { error: string }) => void>();
-    const call = (method: string, params: unknown): Promise<{ tools: ToolDef[]; nextCursor?: string } | { error: string }> =>
-      new Promise((res) => {
-        const id = nextId++;
-        waiting.set(id, res);
-        send({ jsonrpc: '2.0', id, method, params });
-      });
-    const rl = createInterface({ input: stdout });
-    const lineHandler = (line: string): void => {
-      if (settled) return;
-      let msg: { id?: unknown; result?: unknown; error?: unknown } | null = null;
-      try { msg = JSON.parse(line); } catch { return; }
-      if (!msg || msg.id === undefined) return;
-      if (typeof msg.id !== 'number') return;
-      const waiter = waiting.get(msg.id);
-      if (!waiter) return;
-      waiting.delete(msg.id);
-      if (msg.error !== undefined) waiter({ error: String((msg.error as { message?: unknown }).message ?? 'the server returned an error') });
-      else {
-        const r = (msg.result ?? {}) as { tools?: unknown; nextCursor?: unknown };
-        const tools = Array.isArray(r.tools)
-          ? r.tools.filter((t): t is ToolDef => t !== null && typeof t === 'object' && typeof (t as ToolDef).name === 'string')
-          : [];
-        waiter({ tools, ...(typeof r.nextCursor === 'string' ? { nextCursor: r.nextCursor } : {}) });
-      }
-    };
-    rl.on('line', lineHandler);
-    stderr.on('data', () => { /* the server's own logs are not ours to show */ });
-    child.on('error', (err) => fail(`Could not start "${o.command}": ${err.message}`));
-    child.on('close', (code) => { if (!settled) fail(`The server exited early (code ${code ?? 'null'}).`); });
-
-    void (async () => {
-      const init = await new Promise<boolean>((res) => {
-        const id = nextId++;
-        waiting.set(id, () => res(true));
-        send({
-          jsonrpc: '2.0', id, method: 'initialize',
-          params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'exorcist-lock', version: '0.1.0' } },
-        });
-      });
-      if (!settled && !init) { fail('The server did not answer initialize.'); return; }
-      send({ jsonrpc: '2.0', method: 'notifications/initialized' });
-      const all: ToolDef[] = [];
-      let cursor: string | undefined;
-      let pages = 0;
-      do {
-        const page = await call('tools/list', cursor === undefined ? {} : { cursor });
-        if ('error' in page) { fail(page.error); return; }
-        all.push(...page.tools);
-        cursor = page.nextCursor;
-        pages += 1;
-      } while (cursor !== undefined && pages < 10);
-      finish({ ok: true, tools: all });
-    })().catch((err: unknown) => fail(String(err).split('\n')[0] ?? 'listing failed'));
+  const transport = new StdioClientTransport({ command: o.command, args: o.args, env: o.env, cwd: o.cwd, stderr: 'ignore' });
+  const client = new Client({ name: 'exorcist-lock', version: '0.1.0' }, { capabilities: {} });
+  let timer: NodeJS.Timeout | undefined;
+  const timedOut = new Promise<ListResult>((res) => {
+    timer = setTimeout(() => res({ ok: false, error: `it did not list its tools within ${o.timeoutMs} ms.` }), o.timeoutMs);
   });
+  const work = (async (): Promise<ListResult> => {
+    try {
+      await client.connect(transport, { timeout: o.timeoutMs });
+      const tools: ToolDef[] = [];
+      let cursor: string | undefined;
+      for (let page = 0; page < MAX_PAGES; page++) {
+        const r = await client.request(
+          { method: 'tools/list', params: cursor === undefined ? {} : { cursor } },
+          RawToolsPage,
+          { timeout: o.timeoutMs },
+        );
+        for (const t of r.tools) {
+          if (t !== null && typeof t === 'object' && typeof (t as { name?: unknown }).name === 'string') tools.push(t as ToolDef);
+        }
+        cursor = r.nextCursor;
+        if (cursor === undefined) return { ok: true, tools };
+      }
+      return { ok: false, error: `it kept returning more pages of tools (over ${MAX_PAGES}).` };
+    } catch (err) {
+      return { ok: false, error: firstLine(err) };
+    }
+  })();
+  try {
+    return await Promise.race([work, timedOut]);
+  } finally {
+    clearTimeout(timer);
+    await client.close().catch(() => undefined); // stops the server process
+  }
 }
 
-// ── collecting listings from a config ─────────────────────────────────────────
+// ── collecting the current lock ──────────────────────────────────────────────
 
-export type CollectResult = { ok: true; listings: ServerListing[] } | { ok: false; error: string };
+export type CollectResult =
+  | { ok: true; listings: ServerListing[]; kept: Array<[string, LockServer]>; notes: string[] }
+  | { ok: false; errors: string[] };
 
-/** Start every enabled local server and list its tools; note the remote ones. */
+const processEnv = (): Record<string, string> =>
+  Object.fromEntries(Object.entries(process.env).filter((e): e is [string, string] => typeof e[1] === 'string'));
+
+/**
+ * Start every enabled local server and list its tools. Disabled servers are
+ * never started: their entry in `previous` (the existing lock) is kept as is.
+ */
 export async function collectListings(
-  cfg: { mcpServers: Record<string, McpEntry> },
-  configDir: string,
-  timeoutMs: number,
+  config: Config,
+  o: { timeoutMs: number; cwd: string; previous?: Lock; list?: typeof listTools },
 ): Promise<CollectResult> {
+  const list = o.list ?? listTools;
   const listings: ServerListing[] = [];
-  const failures: string[] = [];
-  for (const [name, entry] of Object.entries(cfg.mcpServers)) {
-    if (entry['disabled'] === true) {
-      listings.push({ name, launch: urlFingerprint(`disabled:${name}`), tools: [], note: 'skipped: this server is disabled (in the vault).' });
+  const kept: Array<[string, LockServer]> = [];
+  const notes: string[] = [];
+  const errors: string[] = [];
+  const jobs: Array<Promise<void>> = [];
+  for (const name of Object.keys(config.mcpServers).sort()) {
+    const parsed = EntrySchema.safeParse(config.mcpServers[name]);
+    if (!parsed.success) { errors.push(`"${name}": the entry is not valid (${parsed.error.issues[0]?.path.join('.') || 'entry'}: ${parsed.error.issues[0]?.message ?? 'invalid'}).`); continue; }
+    const entry = parsed.data;
+    if (entry.disabled === true) {
+      const old = o.previous && Object.hasOwn(o.previous.servers, name) ? o.previous.servers[name] : undefined;
+      if (old) kept.push([name, old]);
+      notes.push(`${name}: disabled, so it was not started.${old ? ` Its entry in ${LOCK_FILE} was kept as it was.` : ''}`);
       continue;
     }
-    const url = typeof entry['url'] === 'string' ? entry['url'] : undefined;
-    if (url) {
-      listings.push({
-        name, launch: urlFingerprint(url), tools: [], url,
-        note: `remote server; listed with its URL (${url}) and skipped: the lock does not pin remote tools.`,
-      });
+    if (entry.url !== undefined && entry.command === undefined) {
+      const url = lockUrl(entry.url);
+      const note = 'remote server: recorded with its URL; its tools are not listed by exorcist lock';
+      listings.push({ name, tools: [], url, note });
+      notes.push(`${name}: remote server at ${url}, skipped (${note}).`);
       continue;
     }
-    const command = entry['command'];
-    if (typeof command !== 'string') {
-      failures.push(`"${name}" has neither a command nor a URL; the lock does not know what it is.`);
-      continue;
-    }
-    const args = Array.isArray(entry['args']) && entry['args'].every((a) => typeof a === 'string') ? (entry['args'] as string[]) : [];
-    const entryEnv = entry['env'];
-    const env = entryEnv && typeof entryEnv === 'object' && !Array.isArray(entryEnv)
-      ? { ...process.env, ...(entryEnv as Record<string, string>) }
-      : process.env;
-    const cwd = typeof entry['cwd'] === 'string'
-      ? (isAbsolute(entry['cwd']) ? entry['cwd'] : resolve(configDir, entry['cwd']))
-      : process.cwd();
-    const r = await listTools({ command, args, env, ...(cwd ? { cwd } : {}), timeoutMs });
-    if (!r.ok) { failures.push(`Could not list "${name}": ${r.error}`); continue; }
-    listings.push({ name, launch: launchFingerprint(command, args, cwd).hash, tools: r.tools });
+    if (entry.command === undefined) { errors.push(`"${name}" has neither a "command" nor a "url".`); continue; }
+    const command = entry.command;
+    const cwd = entry.cwd === undefined ? o.cwd : isAbsolute(entry.cwd) ? entry.cwd : resolve(o.cwd, entry.cwd);
+    jobs.push((async () => {
+      const r = await list({ command, args: entry.args, env: { ...processEnv(), ...(entry.env ?? {}) }, cwd, timeoutMs: o.timeoutMs });
+      if (!r.ok) { errors.push(`Could not list the tools of "${name}": ${r.error}`); return; }
+      // The same fingerprint the Shield pins before it starts the server (S-006).
+      listings.push({ name, launch: launchFingerprint(command, entry.args, cwd).hash, tools: r.tools });
+    })());
   }
-  if (failures.length > 0) return { ok: false, error: failures.join('\n') };
-  return { ok: true, listings };
+  await Promise.all(jobs);
+  if (errors.length > 0) return { ok: false, errors: errors.sort() };
+  return { ok: true, listings, kept, notes };
+}
+
+/** The lock for the listed servers, plus the entries carried over unchanged (disabled servers). */
+function lockFrom(listings: ServerListing[], kept: Array<[string, LockServer]>): Lock {
+  const lock = buildLock(listings);
+  return { ...lock, servers: Object.fromEntries([...Object.entries(lock.servers), ...kept]) };
+}
+
+// ── output ───────────────────────────────────────────────────────────────────
+
+/** Untrusted text made safe for a terminal or a PR comment: control and invisible characters are shown escaped. */
+export function printable(s: string): string {
+  return s.replace(/[\u0000-\u0009\u000b-\u001f\u007f-\u009f­؜᠎​-‏‪-‮⁠-⁩﻿]/gu,
+    (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`);
 }
 
 function printChanges(io: Io, changes: LockChange[]): void {
   for (const c of changes) {
-    io.out(`${c.server}${c.tool ? `: tool "${c.tool}"` : ''} ${c.message}`);
-    if (c.detail) io.out(c.detail.trimEnd().split('\n').map((l) => `    ${l}`).join('\n'));
+    io.out(`- ${printable(c.message)}`);
+    if (c.detail) io.out(printable(c.detail.trimEnd()).split('\n').map((l) => `    ${l}`).join('\n'));
   }
 }
 
-/** Build the current lock: from live servers, or from the Shield pin file. */
-async function currentLock(o: { cfg: { mcpServers: Record<string, McpEntry> } | null; configDir: string; fromShield: boolean; dir: string; timeoutMs: number; io: Io }): Promise<{ lock: Lock } | { error: string; code: number }> {
-  if (o.fromShield) {
-    const r = loadState(statePath(o.dir));
-    if (!r.ok) return { error: r.error, code: 2 };
-    return { lock: pinsToLock(r.state) };
-  }
-  if (!o.cfg) return { error: 'There is no MCP config to list servers from; pass --config <file>.', code: 2 };
-  const r = await collectListings(o.cfg, o.configDir, o.timeoutMs);
-  if (!r.ok) return { error: r.error, code: 1 };
-  return { lock: buildLock(r.listings) };
-}
+const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+// ── the command ──────────────────────────────────────────────────────────────
 
 export async function lockCommand(argv: string[], io: Io): Promise<number> {
   const p = parse(argv, {
-    config: { type: 'string' }, 'from-shield': { type: 'boolean' }, check: { type: 'boolean' },
-    out: { type: 'string' }, dir: { type: 'string' }, timeout: { type: 'string' },
+    config: { type: 'string' }, check: { type: 'boolean' }, 'from-shield': { type: 'boolean' },
+    lock: { type: 'string' }, dir: { type: 'string' }, timeout: { type: 'string' },
     help: { type: 'boolean', short: 'h' },
   });
   if (!p.ok) { io.err(`${p.error}\n\n${LOCK_HELP}`); return 2; }
   if (p.values['help']) { io.out(LOCK_HELP); return 0; }
+  if (p.positionals.length > 0) { io.err(`Unexpected argument: ${p.positionals[0]}\n\n${LOCK_HELP}`); return 2; }
 
-  const timeoutMs = Number(str(p.values['timeout']) ?? DEFAULT_TIMEOUT_MS);
-  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) { io.err('--timeout must be a positive number of milliseconds.'); return 2; }
-  const outPath = resolve(str(p.values['out']) ?? LOCK_FILE);
-  const configArg = str(p.values['config']);
-  const configPath = resolve(configArg ?? join('.kiro', 'settings', 'mcp.json'));
-  const cfg = existsSync(configPath) ? readConfig(configPath, io) : null;
-  if (configArg && !cfg) return 2;
+  const timeoutText = str(p.values['timeout']);
+  const timeoutMs = timeoutText === undefined ? DEFAULT_LOCK_TIMEOUT_MS : Number(timeoutText);
+  if (!Number.isInteger(timeoutMs) || timeoutMs <= 0) { io.err('--timeout must be a positive whole number of milliseconds.'); return 2; }
+  const lockPath = resolve(str(p.values['lock']) ?? LOCK_FILE);
+  const checking = p.values['check'] === true;
+  const fromShield = p.values['from-shield'] === true;
 
-  const built = await currentLock({
-    cfg, configDir: dirname(configPath),
-    fromShield: p.values['from-shield'] === true,
-    dir: stateDir(str(p.values['dir'])),
-    timeoutMs, io,
-  });
-  if ('error' in built) { io.err(built.error); return built.code; }
-  const fresh = built.lock;
+  let previous: Lock | undefined;
+  if (existsSync(lockPath)) {
+    let text: string;
+    try { text = readFileSync(lockPath, 'utf8'); } catch (err) { io.err(`Could not read ${lockPath}: ${firstLine(err)}`); return 2; }
+    const r = parseLock(text);
+    if (r.ok) previous = r.lock;
+    else if (checking) { io.err(r.error); return 2; }
+    else io.err(`${r.error} It will be replaced.`);
+  } else if (checking) {
+    io.err(`There is no ${lockPath}. Run "exorcist lock" to create it, then commit it.`);
+    return 2;
+  }
 
-  if (p.values['check']) {
-    if (!existsSync(outPath)) { io.err(`No ${outPath}. Run "exorcist lock" first to create one.`); return 2; }
-    const old = parseLock(readFileSync(outPath, 'utf8'));
-    if (!old.ok) { io.err(old.error); return 2; }
-    const changes = diffLock(old.lock, fresh);
-    if (changes.length === 0) { io.out(`${outPath} is up to date: every tool matches its locked fingerprint.`); return 0; }
-    io.out(`${outPath} does not match the MCP servers (${changes.length} difference${changes.length === 1 ? '' : 's'}):`);
+  let current: Lock;
+  const notes: string[] = [];
+  if (fromShield) {
+    const st = loadState(statePath(stateDir(str(p.values['dir']))));
+    if (!st.ok) { io.err(st.error); return 2; }
+    current = pinsToLock(st.state);
+  } else {
+    const configPath = resolve(str(p.values['config']) ?? DEFAULT_CONFIG);
+    if (!existsSync(configPath)) { io.err(`MCP config not found: ${configPath}. Pass --config <file>, or --from-shield.`); return 2; }
+    const cfg = readConfig(configPath);
+    if (!cfg.ok) { io.err(cfg.error); return 2; }
+    const r = await collectListings(cfg.config, { timeoutMs, cwd: process.cwd(), ...(previous ? { previous } : {}) });
+    if (!r.ok) {
+      for (const e of r.errors) io.err(printable(e));
+      io.err(checking ? `Could not check ${lockPath}.` : `${lockPath} was not written.`);
+      return 2;
+    }
+    current = lockFrom(r.listings, r.kept);
+    notes.push(...r.notes);
+  }
+  for (const n of notes) io.out(`  ${printable(n)}`);
+
+  if (checking) {
+    const changes = diffLock(previous as Lock, current);
+    if (changes.length === 0) {
+      io.out(`${LOCK_FILE} is up to date: every MCP tool matches its locked fingerprint.`);
+      return 0;
+    }
+    io.out(`${LOCK_FILE} does not match the MCP servers (${plural(changes.length, 'difference')}):`);
     printChanges(io, changes);
-    io.out('Review the changes, then run "exorcist lock" to record them (or revert the server).');
+    io.out(`If every change is expected, run "exorcist lock" and commit ${LOCK_FILE}. If not, a tool may have been changed under you (a rug pull).`);
     return 1;
   }
 
-  const text = serializeLock(fresh);
-  writeFileSync(outPath, text, 'utf8');
-  const servers = Object.keys(fresh.servers).sort();
-  const tools = servers.reduce((n, s) => n + Object.keys(fresh.servers[s]!.tools).length, 0);
-  const skipped = servers.filter((s) => fresh.servers[s]!.note !== undefined);
-  io.out(`Wrote ${outPath}: ${servers.length} server${servers.length === 1 ? '' : 's'}, ${tools} pinned tool${tools === 1 ? '' : 's'}.`);
-  for (const s of skipped) io.out(`  ${s}: ${fresh.servers[s]!.note}`);
-  io.out('Commit exorcist.lock so your whole team, and CI, verifies the same tool fingerprints.');
+  const text = serializeLock(current);
+  try { writeFileSync(lockPath, text, 'utf8'); } catch (err) { io.err(`Could not write ${lockPath}: ${firstLine(err)}`); return 2; }
+  const servers = Object.values(current.servers);
+  const tools = servers.reduce((n, s) => n + Object.keys(s.tools).length, 0);
+  const changed = previous ? diffLock(previous, current).length : undefined;
+  io.out(`Wrote ${lockPath}: ${plural(servers.length, 'server')}, ${plural(tools, 'locked tool')}` +
+    `${changed === undefined ? '' : changed === 0 ? ' (no changes)' : ` (${plural(changed, 'change')})`}.`);
+  io.out(`Commit ${LOCK_FILE} so every teammate's Shield, and CI ("exorcist lock --check"), checks the same tools.`);
   return 0;
 }
