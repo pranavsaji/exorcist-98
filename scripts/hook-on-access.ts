@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { loadDefinitions } from '../packages/core/src/definitions/loader.js';
 import { decideRead } from '../packages/core/src/on-access.js';
 import { readAllowedReads } from '../packages/core/src/allowed-reads.js';
+import { findStateDir } from '../packages/shield/src/locate.js';
 
 const chunks: Buffer[] = [];
 process.stdin.on('data', (c: Buffer) => chunks.push(c));
@@ -44,14 +45,9 @@ async function run(stdin: string): Promise<0 | 2> {
   }
 
   const defs = await loadDefinitions(defsDir);
-  // The project the agent works in, not the repo the hook lives in.
-  let allowed: ReadonlySet<string> = new Set();
-  for (const dir of [join(cwd, '.exorcist'), join(process.cwd(), '.exorcist')]) {
-    if (existsSync(dir)) {
-      allowed = readAllowedReads(dir);
-      break;
-    }
-  }
+  // The project the agent works in, found the same way `exorcist allow-read`
+  // finds it (--dir aside): EXORCIST_DIR, else the project's .exorcist folder.
+  const allowed = readAllowedReads(findStateDir({ cwd }));
 
   const d = decideRead(event, defs, { cwd, allowed });
   if (d.message) process.stderr.write(`${d.message}\n`);

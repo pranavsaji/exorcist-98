@@ -125,6 +125,10 @@ describe('scripts/kiro-hook.sh', () => {
     expect(runHook(cmd, readEvent('README.md'), ROOT, NODE_DIR).code).toBe(0);
     // Anything it cannot understand must not stop the agent (REQ-01.6).
     expect(runHook(cmd, 'not json', ROOT, NODE_DIR).code).toBe(0);
+    // allow-read in the project lets the same bytes through this hook too (REQ-03).
+    const allow = spawnSync(TSX, [CLI_SRC, 'allow-read', 'CONTRIBUTING.md'], { cwd: d, encoding: 'utf8', env: { ...process.env, EXORCIST_DIR: '' } });
+    expect(allow.status).toBe(0);
+    expect(runHook(cmd, readEvent('CONTRIBUTING.md'), ROOT, NODE_DIR).code).toBe(0);
   }, 60_000);
 });
 
@@ -144,5 +148,15 @@ describe('the Kiro hooks written by exorcist init', () => {
     expect(r.code).toBe(2);
     expect(r.err).toContain('k.txt:1');
     expect(runHook(cmd, preToolUse(repo, 'git status'), repo, NODE_DIR).code).toBe(0);
+
+    // The on-access hook it writes blocks a haunted read with Kiro's PATH (REQ-02.3).
+    const onAccess = hookCommand(join(repo, '.kiro/hooks/exorcist-on-access.json'));
+    expect(onAccess.startsWith('sh .exorcist/kiro-hook.sh ')).toBe(true);
+    writeFileSync(join(repo, 'CONTRIBUTING.md'), readFileSync(join(ROOT, 'fixtures/haunted-repo/EX-002-ai-instructions.md'), 'utf8'));
+    const read = (path: string): string => JSON.stringify({ hook_event_name: 'PreToolUse', cwd: repo, tool_name: 'fs_read', tool_input: { path } });
+    const blocked = runHook(onAccess, read('CONTRIBUTING.md'), repo, NODE_DIR);
+    expect(blocked.code).toBe(2);
+    expect(blocked.err).toContain('EX-002');
+    expect(runHook(onAccess, read('k.txt.missing'), repo, NODE_DIR).code).toBe(0);
   }, 60_000);
 });

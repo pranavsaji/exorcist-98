@@ -27,7 +27,7 @@ export type { HiddenMessage, HiddenMessageKind } from './ouija.js';
 export { plainFor, hasPlainEntry } from './plain.js';
 export { decide as decideCommitGuard, isGitCommit } from './hook-guard.js';
 export type { HookDecision } from './hook-guard.js';
-export { extractReadPaths, decideRead } from './on-access.js';
+export { extractReadPaths, decideRead, isReadTool } from './on-access.js';
 export type { OnAccessDecision, DecideReadOptions } from './on-access.js';
 export { sha256File, sha256Bytes, readAllowedReads, addAllowedRead, allowedReadsPath } from './allowed-reads.js';
 export type { AllowReadResult } from './allowed-reads.js';
