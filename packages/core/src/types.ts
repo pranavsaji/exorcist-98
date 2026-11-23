@@ -133,4 +133,10 @@ export type ScanOptions = {
   definitionsDir:    string;
   bedrockClient?:    BedrockClient;
   maxFileSizeBytes?: number;
+  /**
+   * Local scans only: report findings in verified Quarantine Vault backups at
+   * low severity with a note (see vault-trust.ts). Never set for remote,
+   * uploaded or MCP-server scans; there the vault folder is ordinary files.
+   */
+  trustVault?:       boolean;
 };

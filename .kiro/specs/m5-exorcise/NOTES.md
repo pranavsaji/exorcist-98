@@ -29,10 +29,19 @@ Choices made where the spec left room or could not be followed literally.
   `--write` run (exact bytes, sha256 before and after), so one
   `exorcist vault restore <id>` undoes the whole run. Restore refuses a file
   that was edited after the exorcism unless `--force`.
-- **The vault is never scanned.** The walker skips a `vault` folder directly
-  inside a `.exorcist` folder (at any depth), so backups of possessed files
-  never show up as findings again. Everything else under `.exorcist/` is still
-  scanned, and so is any other folder named `vault`.
+- **Vault backups are not hidden (security review).** The walker does not
+  skip `.exorcist/vault/` (a skip by name let anything committed there evade
+  every scan). On a local CLI scan (`exorcist scan`, `exorcise`;
+  `ScanOptions.trustVault`), a file there counts as a genuine backup only if
+  its entry's `manifest.json` exists and names it, its sha256 matches the
+  recorded hash, and the manifest's target is this project by absolute path
+  (a vault committed elsewhere does not match). Its findings are then reported
+  at low severity with "Backup copy kept by exorcist exorcise (restore with
+  exorcist vault restore <id>)". Anything else there is reported in full.
+  Web (GitHub, upload, Haunted Repo), Lambda and MCP-server scans never apply
+  the downgrade. Limitation: someone who can write the local `.exorcist/` and
+  knows the project's absolute path can still forge a manifest, but the
+  finding is still reported (low), never hidden.
 - **Security review fixes.** A file whose name has control characters (C0,
   DEL, C1) or is not a plain relative path is never fixed or put in a patch
   (reported for a human); other unusual names are C-quoted in the patch the
@@ -46,9 +55,3 @@ Choices made where the spec left room or could not be followed literally.
   the Haunted Repo.
 - **CLI output.** In a dry run the diff goes to stdout and the summary to
   stderr, so `exorcist exorcise . > fix.patch && git apply fix.patch` works.
-- **Verification after the rebase (2026-11-23).** `pnpm -r typecheck` clean;
-  `pnpm test` 1040/1040 (80 files); web build OK; browser suite on
-  `next start -p 3205`: 32/32 steps, 0 axe violations. The m5-byoa step from
-  main failed in the merged suite (the Field Report window opened in the step
-  before covered the lab, so the tab click was intercepted); the step now
-  brings the lab to the front from the taskbar first.

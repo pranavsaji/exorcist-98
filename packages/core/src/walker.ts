@@ -10,17 +10,6 @@ const SKIP_DIRS = new Set([
   '.turbo', 'coverage', '.nyc_output',
 ]);
 
-/**
- * The Quarantine Vault (`.exorcist/vault/`) holds exact copies of quarantined
- * and exorcised files: the possessed originals. Scanning them would report
- * every threat again after it was fixed, so the walker never enters a
- * `vault` folder directly inside a `.exorcist` folder. Nothing else under
- * `.exorcist/` is skipped.
- */
-export function isVaultDir(rel: string): boolean {
-  return /(?:^|\/)\.exorcist\/vault$/.test(rel.replace(/\\/g, '/'));
-}
-
 // ── Classification ────────────────────────────────────────────────────────────
 
 /**
@@ -127,7 +116,7 @@ async function* walkDir(root: string, dir: string, maxFileSize: number): AsyncIt
     const rel     = relative(root, absPath).replace(/\\/g, '/');
 
     if (entry.isDirectory()) {
-      if (SKIP_DIRS.has(entry.name) || isVaultDir(rel)) continue;
+      if (SKIP_DIRS.has(entry.name)) continue;
       yield* walkDir(root, absPath, maxFileSize);
     } else if (entry.isFile()) {
       const info = await stat(absPath);

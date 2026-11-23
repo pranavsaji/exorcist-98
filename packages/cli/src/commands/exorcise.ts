@@ -109,7 +109,7 @@ export async function exorciseCommand(argv: string[], io: Io, deps: ExorciseDeps
 
   const findings: Finding[] = [];
   try {
-    for await (const ev of scanRepo(root, { definitionsDir: defsDir })) {
+    for await (const ev of scanRepo(root, { definitionsDir: defsDir, trustVault: true })) {
       if (ev.type === 'finding' && keep(ev.finding.file)) findings.push(ev.finding);
     }
   } catch (err) {

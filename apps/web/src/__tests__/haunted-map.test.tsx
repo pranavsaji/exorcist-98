@@ -132,9 +132,11 @@ describe('scanTarget: the map event (m5-trifecta)', () => {
   it('the Haunted Repo scan sends EX-023 with a snippet and one map event right before done', async () => {
     const events: ScanEventMsg[] = [];
     for await (const ev of scanTarget({ kind: 'haunted-repo', display: 'Haunted Repo' })) events.push(ev);
-    expect(events.at(-1)?.type).toBe('done');
-    expect(events.at(-2)?.type).toBe('map');
-    const m = events.at(-2);
+    // Stream order: findings..., map, done, then the exorcism patch (m5-exorcise).
+    expect(events.at(-1)?.type).toBe('patch');
+    expect(events.at(-2)?.type).toBe('done');
+    expect(events.at(-3)?.type).toBe('map');
+    const m = events.at(-3);
     if (m?.type !== 'map') throw new Error('no map');
     expect(m.map.configs[0]).toMatchObject({ file: 'EX-023-lethal-trifecta.json', trifecta: true, severity: 'critical' });
     for (const c of m.map.configs) expect(c.file).toMatch(/^EX-\d{3}-/);

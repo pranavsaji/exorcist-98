@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { loadDefinitions } from '../definitions/loader.js';
+import { asBackupFinding, vaultBackupChecker } from '../vault-trust.js';
 import { canariesPath, findCanaryInText, isCanaryHome, lineColOf, loadCanariesFile } from '../canary.js';
 import type { Canary } from '../canary.js';
 import type { VirusDefinition } from '../definitions/schema.js';
@@ -130,6 +131,7 @@ export async function* scanRepo(
   const ex022 = defs.find((d) => d.id === 'EX-022');
   const capabilities = await loadCapabilityRules(options.definitionsDir);
   const configs: ParsedMcpConfig[] = [];
+  const checkVault = options.trustVault === true ? vaultBackupChecker(root) : null;
   const start = Date.now();
   let filesScanned = 0;
   let filesSkipped = 0;
@@ -149,7 +151,11 @@ export async function* scanRepo(
         : [];
       const traps = canaryFindings(text, file.rel, records, ex022);
 
-      const deduped = deduplicate([...sigs, ...heurs, ...traps]);
+      let deduped = deduplicate([...sigs, ...heurs, ...traps]);
+      if (checkVault && deduped.length > 0 && file.rel.includes('.exorcist/vault/')) {
+        const backup = checkVault(file.rel, await readFile(file.path));
+        if (backup) deduped = deduped.map((f) => asBackupFinding(f, backup));
+      }
 
       for (const finding of deduped) {
         findingsTotal++;

@@ -172,7 +172,7 @@ export async function scanCommand(argv: string[], io: Io): Promise<number> {
   const ai = p.values['ai'] === true ? await makeAiClient(str(p.values['ai-max-calls']), io) : null;
   if (ai === false) return 2;
   try {
-    for await (const ev of scanRepo(root, { definitionsDir: defsDir, ...(ai ? { bedrockClient: ai.client } : {}) })) {
+    for await (const ev of scanRepo(root, { definitionsDir: defsDir, trustVault: true, ...(ai ? { bedrockClient: ai.client } : {}) })) {
       if (ev.type === 'finding') {
         if (only !== null && ev.finding.file !== only) continue;
         if (isIgnored(ev.finding.file, ignore)) continue;
