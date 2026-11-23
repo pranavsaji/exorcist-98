@@ -11,6 +11,7 @@ import { cleanText } from './notify.js';
 import { approveHost, serverState } from './state.js';
 import type { Alert, State } from './state.js';
 import { findCanary } from './canary.js';
+import { findCanaryInText } from '@exorcist-98/core';
 import type { Canary, CanaryShape } from './canary.js';
 
 const SHAPE_TEXT: Record<CanaryShape, string> = {
@@ -169,6 +170,17 @@ export class ShieldEngine {
   }
 
   onClient(msg: JsonRpcMessage): Action[] {
+    // EX-022 first: a canary token anywhere in a message from the agent (its
+    // id, method, params, result, error or any extra field; requests,
+    // notifications, initialize, answers and error answers alike) means
+    // something is leaking it. Nothing of that message reaches the server,
+    // in every mode. Answers to the Shield's own approval prompts are never
+    // forwarded, so they need no check.
+    const ownPrompt = msg.method === undefined && typeof msg.id === 'string' && msg.id.startsWith(PROMPT_PREFIX);
+    if (!ownPrompt) {
+      const trap = this.canaryIn(msg);
+      if (trap) return this.refuseCanary(msg, trap);
+    }
     if (msg.method === 'tools/call' && msg.id !== undefined) return this.onToolCall(msg, msg.id);
     if (msg.method === undefined && typeof msg.id === 'string' && msg.id.startsWith(PROMPT_PREFIX)) {
       // An answer to one of the Shield's own prompts: never passed to the server.
@@ -177,12 +189,6 @@ export class ShieldEngine {
     }
     if (msg.method === undefined && msg.id !== undefined && msg.result !== undefined && this.serverRequests.has(msg.id)) {
       return this.onClientReply(msg, msg.id);
-    }
-    if (msg.method !== undefined && msg.method !== 'initialize') {
-      // Any other request or notification to the server (resources/read,
-      // prompts/get, completion...) is a way out too.
-      const trap = this.canaryIn(msg.params);
-      if (trap) return this.refuseCanary(msg, trap, `the ${msg.method} ${msg.id === undefined ? 'notification' : 'request'}`);
     }
     if (msg.method === 'initialize') {
       const caps = (msg.params as { capabilities?: { elicitation?: unknown } } | undefined)?.capabilities;
@@ -220,21 +226,6 @@ export class ShieldEngine {
 
     const actions: Action[] = [];
     const forward = (): Action[] => [...actions, ...this.sendCall(msg, id, name)];
-
-    // 0. A canary token in the arguments is proof that something talked the
-    // agent into leaking, so the call is refused in every mode (EX-022).
-    const trap = this.canaryIn(params.arguments);
-    if (trap) {
-      return [
-        this.alert({
-          ruleId: 'EX-022',
-          severity: 'critical',
-          tool: name,
-          message: `EX-022 Canary token in a tool call: the trap token planted in ${trap.canary.file} was in the arguments of "${name}" (${SHAPE_TEXT[trap.shape]}). The call was not sent (canary calls are blocked in every mode). Something the agent read told it to leak; the trap is burned, so replant it.`,
-        }),
-        { type: 'forward', to: 'client', message: toolErrorResult(id, `Exorcist 98 stopped this call to "${name}" before it left your machine. EX-022 Canary token in a tool call: the arguments held the trap token planted in ${trap.canary.file}, and no honest task ever sends it anywhere. Find the instruction that asked for it (a file, a tool result or a web page), remove it, then replant the traps with: exorcist canary --remove && exorcist canary plant`) },
-      ];
-    }
 
     // 1. A tool that was withheld (rug pull or poisoned): never call it.
     const held = this.withheld.get(name);
@@ -408,17 +399,50 @@ export class ShieldEngine {
     return [alert, { type: 'forward', to: 'server', message: errorResponse(msg.id, -32001, 'Exorcist 98 refused this request: it looks like an attack on the AI.') }];
   }
 
-  /** A message to the server that carries a canary token: never sent, in any mode (EX-022). */
-  private refuseCanary(msg: JsonRpcMessage, trap: { canary: Canary; shape: CanaryShape }, what: string): Action[] {
+  /**
+   * A message from the agent that carries a canary token: never sent to the
+   * server, in any mode (EX-022). A request gets an error answer so the agent
+   * is not left waiting; an answer to the server is replaced by an error
+   * without the token, so the server is not left waiting either; a
+   * notification is dropped.
+   */
+  private refuseCanary(msg: JsonRpcMessage, trap: { canary: Canary; shape: CanaryShape }): Action[] {
+    const how = SHAPE_TEXT[trap.shape];
+    const file = trap.canary.file;
+    const replant = 'replant the traps with: exorcist canary --remove && exorcist canary plant';
+    const params = (msg.params ?? {}) as { name?: unknown };
+    // A tool name or method may itself carry the token: never repeat it in an alert.
+    const shown = (text: string, fallback: string): string =>
+      findCanaryInText(text, this.o.canaries ?? []).length > 0 ? fallback : cleanText(text, 80);
+
+    if (msg.method === 'tools/call' && msg.id !== undefined) {
+      const name = typeof params.name === 'string' ? shown(params.name, '(a tool whose name holds the token)') : 'a tool';
+      return [
+        this.alert({
+          ruleId: 'EX-022',
+          severity: 'critical',
+          tool: name,
+          message: `EX-022 Canary token in a tool call: the trap token planted in ${file} was in the call to "${name}" (${how}). The call was not sent (canary calls are blocked in every mode). Something the agent read told it to leak; the trap is burned, so ${replant}.`,
+        }),
+        { type: 'forward', to: 'client', message: toolErrorResult(msg.id, `Exorcist 98 stopped this call to "${name}" before it left your machine. EX-022 Canary token in a tool call: it held the trap token planted in ${file}, and no honest task ever sends it anywhere. Find the instruction that asked for it (a file, a tool result or a web page), remove it, then ${replant}`) },
+      ];
+    }
+
+    const method = msg.method === undefined ? undefined : shown(msg.method, '(a method whose name holds the token)');
+    const answerTo = msg.method === undefined && msg.id !== undefined ? this.serverRequests.get(msg.id) : undefined;
+    if (msg.method === undefined && msg.id !== undefined) this.serverRequests.delete(msg.id);
+    const what =
+      method !== undefined
+        ? `the ${method} ${msg.id === undefined ? 'notification' : 'request'}`
+        : `the ${msg.error !== undefined ? 'error answer' : 'answer'} to the server's ${answerTo ?? 'request'}`;
     const actions: Action[] = [this.alert({
       ruleId: 'EX-022',
       severity: 'critical',
-      message: `EX-022 Canary token in ${what}: the trap token planted in ${trap.canary.file} was in it (${SHAPE_TEXT[trap.shape]}). It was not sent (canary leaks are blocked in every mode).`,
+      message: `EX-022 Canary token in ${what} from the agent: the trap token planted in ${file} was in it (${how}). It was not sent (canary leaks are blocked in every mode). The trap is burned, so ${replant}.`,
     })];
     if (msg.id !== undefined && msg.method !== undefined) {
-      actions.push({ type: 'forward', to: 'client', message: errorResponse(msg.id, -32001, `Exorcist 98 refused ${what}: it held the canary token planted in ${trap.canary.file} (EX-022).`) });
-    }
-    if (msg.id !== undefined && msg.method === undefined) {
+      actions.push({ type: 'forward', to: 'client', message: errorResponse(msg.id, -32001, `Exorcist 98 refused ${what}: it held the canary token planted in ${file} (EX-022).`) });
+    } else if (msg.id !== undefined && answerTo !== undefined) {
       actions.push({ type: 'forward', to: 'server', message: errorResponse(msg.id, -32001, 'Exorcist 98 withheld this answer because it contained a canary token.') });
     }
     return actions;
@@ -428,8 +452,6 @@ export class ShieldEngine {
   private onClientReply(msg: JsonRpcMessage, id: JsonRpcId): Action[] {
     const method = this.serverRequests.get(id) ?? 'request';
     this.serverRequests.delete(id);
-    const trap = this.canaryIn(msg.result);
-    if (trap) return this.refuseCanary(msg, trap, `the answer to the server's ${method}`);
     const hits = secretsIn(msg.result);
     if (hits.length === 0) return [{ type: 'forward', to: 'server', message: msg }];
     const alert = this.alert({

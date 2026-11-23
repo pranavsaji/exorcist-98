@@ -5,9 +5,10 @@
  * @exorcist-98/core, so the Shield, the scanner and the pre-commit hook all
  * find exactly the same things.
  */
-import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
-import { isAbsolute, join, resolve } from 'node:path';
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 import {
+  CANARY_RECORDS_FILE,
   CANARY_TRAP_DIR,
   canariesPath,
   findCanaryInText,
@@ -90,6 +91,12 @@ export function plantCanaries(root: string, o: PlantOptions = {}): PlantResult {
   if (existing.canaries.length > 0) {
     return { ok: false, error: `Canary traps are already planted in ${root}. To replace them, run "exorcist canary --remove" first.` };
   }
+  for (const d of ['.exorcist', CANARY_TRAP_DIR]) {
+    const path = join(root, d);
+    if (existsSync(path) || isSymlink(path)) {
+      if (!isRealDir(path)) return { ok: false, error: `${path} is not a real folder (a symlink or a file); no traps were planted.` };
+    }
+  }
   const traps = TRAPS.slice(0, count);
   for (const t of traps) {
     const path = join(root, CANARY_TRAP_DIR, t.name);
@@ -131,10 +138,10 @@ export function loadCanaries(root: string): { ok: true; canaries: CanaryRecord[]
 }
 
 export type RemoveResult =
-  | { ok: true; removed: string[] }
+  | { ok: true; removed: string[]; warnings: string[] }
   | { ok: false; error: string };
 
-/** Remove a folder only if it is empty. */
+/** Remove a folder only if it is a real, empty folder (never through a symlink). */
 function rmdirIfEmpty(path: string): void {
   try {
     if (lstatSync(path).isDirectory() && readdirSync(path).length === 0) rmdirSync(path);
@@ -143,36 +150,98 @@ function rmdirIfEmpty(path: string): void {
   }
 }
 
+function isSymlink(path: string): boolean {
+  try {
+    return lstatSync(path).isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
+/** True when `path` exists and is a real folder, not a symlink to one. */
+function isRealDir(path: string): boolean {
+  try {
+    return lstatSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+const TRAP_NAMES = new Set(TRAPS.map((t) => t.name));
+
 /**
- * Remove the trap files named in the records, the records file, and the
- * folders `plant` created if they are left empty. Nothing else in the project
- * is touched (the records can only name files inside the trap folder).
+ * Remove the trap files named in the records, then the records file and the
+ * folders `plant` created if they are left empty.
+ *
+ * A file is deleted only when all of these hold, and otherwise left in place
+ * with a warning: its name is one `plant` writes, `.exorcist` and
+ * `.exorcist/canary` are real folders (not symlinks), the file's folder
+ * resolves to that trap folder, the file itself is a regular file (not a
+ * symlink), and it still holds the recorded token. So a tampered records
+ * file, a symlinked trap folder or a trap someone edited cannot make
+ * `--remove` delete anything else. If any trap is left, the records are kept
+ * too, so the Shield goes on watching those tokens.
  */
 export function removeCanaries(root: string, o: { stateDir?: string } = {}): RemoveResult {
   const recordsFile = canariesPath(root);
   const existing = loadCanariesFile(recordsFile);
   if (!existing.ok) return existing;
   const removed: string[] = [];
+  const warnings: string[] = [];
+  const stateFolder = join(root, '.exorcist');
+  const trapFolder = join(root, CANARY_TRAP_DIR);
+  const foldersReal = isRealDir(stateFolder) && isRealDir(trapFolder);
+  let trapReal: string | null = null;
   try {
-    for (const r of existing.canaries) {
-      const full = join(root, r.file);
-      if (existsSync(full) && lstatSync(full).isFile()) {
-        rmSync(full);
-        removed.push(r.file);
-      }
+    trapReal = foldersReal ? realpathSync(trapFolder) : null;
+  } catch {
+    trapReal = null;
+  }
+
+  let left = 0;
+  for (const r of existing.canaries) {
+    const full = join(root, r.file);
+    const name = r.file.slice(`${CANARY_TRAP_DIR}/`.length);
+    const leave = (why: string): void => { left++; warnings.push(`Left ${r.file} in place: ${why}`); };
+    let st;
+    try {
+      st = lstatSync(full);
+    } catch {
+      continue; // already gone
     }
-    if (existsSync(recordsFile)) {
+    if (!TRAP_NAMES.has(name)) { leave('it is not a file "exorcist canary plant" writes.'); continue; }
+    if (!foldersReal || trapReal === null) { leave(`${CANARY_TRAP_DIR} is not a real folder inside the project (a symlink?).`); continue; }
+    if (!st.isFile()) { leave('it is not a regular file (a symlink or a folder).'); continue; }
+    try {
+      if (realpathSync(dirname(full)) !== trapReal) { leave('it is not inside the trap folder.'); continue; }
+      if (!readFileSync(full, 'utf8').includes(r.token)) { leave('it no longer holds the token it was planted with, so it may not be the trap any more.'); continue; }
+      rmSync(full);
+      removed.push(r.file);
+    } catch (err) {
+      leave(`it could not be removed (${firstLine(err)}).`);
+    }
+  }
+
+  if (left > 0) {
+    warnings.push(`Kept ${CANARY_RECORDS_FILE} so the Shield goes on watching those tokens. Check the files above by hand, then run "exorcist canary --remove" again.`);
+    return { ok: true, removed, warnings };
+  }
+  try {
+    const st = lstatSync(recordsFile);
+    if (isRealDir(stateFolder) && st.isFile()) {
       rmSync(recordsFile);
-      removed.push('.exorcist/canaries.json');
+      removed.push(CANARY_RECORDS_FILE);
+    } else {
+      warnings.push(`Left ${CANARY_RECORDS_FILE} in place: it or the .exorcist folder is not a regular file or folder (a symlink?).`);
     }
   } catch (err) {
-    return { ok: false, error: `Could not remove the canary traps: ${firstLine(err)}` };
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') return { ok: false, error: `Could not remove the canary records: ${firstLine(err)}` };
   }
   // Only the folders `plant` made, and only if nothing else was put there since.
-  if (existing.madeDirs.includes(CANARY_TRAP_DIR)) rmdirIfEmpty(join(root, CANARY_TRAP_DIR));
-  if (existing.madeDirs.includes('.exorcist')) rmdirIfEmpty(join(root, '.exorcist'));
+  if (existing.madeDirs.includes(CANARY_TRAP_DIR)) rmdirIfEmpty(trapFolder);
+  if (existing.madeDirs.includes('.exorcist')) rmdirIfEmpty(stateFolder);
   if (o.stateDir && resolve(o.stateDir) !== resolve(root, '.exorcist')) clearPolicyCanaries(o.stateDir, recordsFile);
-  return { ok: true, removed };
+  return { ok: true, removed, warnings };
 }
 
 // ── telling the Shield's state folder ────────────────────────────────────────

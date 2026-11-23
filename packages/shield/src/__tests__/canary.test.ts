@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterEach } from 'vitest';
 import * as fc from 'fast-check';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -240,6 +240,74 @@ describe('Shield engine: canary tokens (EX-022)', () => {
     expect(forwards(actions, 'client')[0]?.['error']?.['message']).toContain('EX-022');
   });
 
+  describe('every kind of message from the agent is checked, whole, in both modes', () => {
+    type Kind = { name: string; line: (t: string) => string; before?: (e: ShieldEngine) => void; reply: 'client' | 'server' | 'none'; idIsToken?: boolean };
+    const kinds: Kind[] = [
+      { name: 'tools/call arguments', line: (t) => callLine(1, { text: t }), reply: 'client' },
+      { name: 'tools/call tool name', line: (t) => req(1, 'tools/call', { name: `paste_${t}`, arguments: {} }), reply: 'client' },
+      { name: 'initialize request', line: (t) => req(1, 'initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'agent', version: t } }), reply: 'client' },
+      { name: 'other request (resources/read)', line: (t) => req(1, 'resources/read', { uri: `file:///notes/${t}` }), reply: 'client' },
+      { name: 'request with the token in its method', line: (t) => req(1, `x/${t}`, {}), reply: 'client' },
+      { name: 'request with the token as its id', line: (t) => JSON.stringify({ jsonrpc: '2.0', id: t, method: 'ping' }), reply: 'client', idIsToken: true },
+      { name: 'notification', line: (t) => JSON.stringify({ jsonrpc: '2.0', method: 'notifications/cancelled', params: { requestId: 9, reason: t } }), reply: 'none' },
+      { name: 'notification (initialized) with an extra field', line: (t) => JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized', meta: { note: t } }), reply: 'none' },
+      {
+        name: 'answer to a server request',
+        before: (e) => { e.onServerLine(req(50, 'sampling/createMessage', { messages: [] })); },
+        line: (t) => res(50, { role: 'assistant', content: { type: 'text', text: t } }),
+        reply: 'server',
+      },
+      {
+        name: 'error answer to a server request',
+        before: (e) => { e.onServerLine(req(50, 'elicitation/create', { message: 'Your name?', requestedSchema: { type: 'object', properties: {} } })); },
+        line: (t) => JSON.stringify({ jsonrpc: '2.0', id: 50, error: { code: -1, message: 'failed', data: { leaked: Buffer.from(t).toString('base64') } } }),
+        reply: 'server',
+      },
+      { name: 'error answer to an unknown id', line: (t) => JSON.stringify({ jsonrpc: '2.0', id: 77, error: { code: -1, message: t } }), reply: 'none' },
+      { name: 'answer to an unknown id', line: (t) => res(78, { text: t }), reply: 'none' },
+    ];
+    for (const k of kinds) {
+      for (const mode of ['enforce', 'monitor'] as const) {
+        it(`${k.name} (${mode})`, () => {
+          const c = fresh();
+          const { engine } = setup([c], { mode });
+          k.before?.(engine);
+          const actions = engine.onClientLine(k.line(c.token));
+          const toServer = forwards(actions, 'server');
+          const toClient = forwards(actions, 'client');
+          // Nothing carrying the token reaches the server.
+          expect(JSON.stringify(toServer)).not.toContain(c.token);
+          // Alerts never repeat it; the refusal to the agent only echoes the
+          // request id, as JSON-RPC requires, when the id itself is the token.
+          expect(JSON.stringify(alerts(actions))).not.toContain(c.token);
+          if (!k.idIsToken) expect(JSON.stringify(actions)).not.toContain(c.token);
+          if (k.reply === 'server') {
+            expect(toServer).toHaveLength(1);
+            expect(toServer[0]?.['id']).toBe(50);
+            expect(toServer[0]?.['error']).toBeDefined();
+          } else {
+            expect(toServer).toEqual([]);
+          }
+          if (k.reply === 'client') {
+            expect(toClient).toHaveLength(1);
+            expect(JSON.stringify(toClient[0])).toContain('EX-022');
+          } else {
+            expect(toClient).toEqual([]);
+          }
+          const a = alerts(actions);
+          expect(a).toHaveLength(1);
+          expect(a[0]).toMatchObject({ ruleId: 'EX-022', severity: 'critical' });
+          expect(a[0]?.message).toContain(TRAP_FILE);
+        });
+      }
+    }
+
+    it('an initialize without a token still goes through', () => {
+      const { engine } = setup([fresh()]);
+      expect(forwards(engine.onClientLine(req(1, 'initialize', { capabilities: {} })), 'server')).toHaveLength(1);
+    });
+  });
+
   it('with no canaries planted nothing changes', () => {
     const { engine } = setup([]);
     const t = newToken();
@@ -302,12 +370,80 @@ describe('plant, list and remove', () => {
 
   it('remove never deletes a file outside the trap folder, even if the records are tampered with', () => {
     const d = tmp();
-    writeFileSync(join(d, 'precious.txt'), 'keep me');
-    mkdirSync(join(d, '.exorcist'), { recursive: true });
-    writeFileSync(join(d, '.exorcist/canaries.json'), JSON.stringify({ version: 1, canaries: [{ token: newToken(), file: '.exorcist/canary/../../precious.txt', created: 'x' }] }));
+    const t = newToken();
+    writeFileSync(join(d, 'precious.txt'), `keep me ${t}`);
+    mkdirSync(join(d, '.exorcist/canary'), { recursive: true });
+    for (const file of ['.exorcist/canary/../../precious.txt', join(d, 'precious.txt'), 'precious.txt', '.exorcist/canary/./../../precious.txt']) {
+      writeFileSync(join(d, '.exorcist/canaries.json'), JSON.stringify({ version: 1, canaries: [{ token: t, file, created: 'x' }] }));
+      const r = removeCanaries(d);
+      expect(r.ok, file).toBe(false);
+      expect(readFileSync(join(d, 'precious.txt'), 'utf8')).toBe(`keep me ${t}`);
+    }
+  });
+
+  it('remove leaves a recorded file that is not one of the trap names, with a warning, and keeps the records', () => {
+    const d = tmp();
+    mkdirSync(join(d, '.exorcist/canary'), { recursive: true });
+    const t = newToken();
+    writeFileSync(join(d, '.exorcist/canary/id_rsa'), `mine ${t}`);
+    writeFileSync(join(d, '.exorcist/canaries.json'), JSON.stringify({ version: 1, canaries: [{ token: t, file: '.exorcist/canary/id_rsa', created: 'x' }] }));
     const r = removeCanaries(d);
-    expect(r.ok).toBe(false);
-    expect(readFileSync(join(d, 'precious.txt'), 'utf8')).toBe('keep me');
+    if (!r.ok) throw new Error(r.error);
+    expect(r.removed).toEqual([]);
+    expect(r.warnings.join('\n')).toContain('.exorcist/canary/id_rsa');
+    expect(existsSync(join(d, '.exorcist/canary/id_rsa'))).toBe(true);
+    expect(existsSync(join(d, '.exorcist/canaries.json'))).toBe(true);
+  });
+
+  it('remove does not follow a symlinked .exorcist/canary out of the project', () => {
+    const d = tmp();
+    const outside = tmp();
+    expect(plantCanaries(d).ok).toBe(true);
+    const recs = loadCanaries(d);
+    if (!recs.ok) throw new Error(recs.error);
+    // Swap the trap folder for a symlink to another folder holding files with the same names and tokens.
+    for (const r of recs.canaries) writeFileSync(join(outside, r.file.split('/').at(-1)!), readFileSync(join(d, r.file)));
+    rmSync(join(d, '.exorcist/canary'), { recursive: true });
+    symlinkSync(outside, join(d, '.exorcist/canary'), 'dir');
+    const r = removeCanaries(d);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.removed).toEqual([]);
+    expect(r.warnings.length).toBeGreaterThan(0);
+    expect(readdirSync(outside).sort()).toEqual(['.env.canary', 'NOTES.md', 'config.json']);
+    expect(existsSync(join(d, '.exorcist/canaries.json'))).toBe(true);
+    // Nor will plant write through such a link.
+    const e = tmp();
+    mkdirSync(join(e, '.exorcist'));
+    symlinkSync(tmp(), join(e, '.exorcist/canary'), 'dir');
+    expect(plantCanaries(e).ok).toBe(false);
+  });
+
+  it('remove does not follow a trap file replaced by a symlink', () => {
+    const d = tmp();
+    const outside = tmp();
+    expect(plantCanaries(d, { count: 1 }).ok).toBe(true);
+    const recs = loadCanaries(d);
+    if (!recs.ok) throw new Error(recs.error);
+    const victim = join(outside, 'important.txt');
+    writeFileSync(victim, `also has the token ${recs.canaries[0]!.token}`);
+    rmSync(join(d, recs.canaries[0]!.file));
+    symlinkSync(victim, join(d, recs.canaries[0]!.file));
+    const r = removeCanaries(d);
+    expect(r.ok && r.removed).toEqual([]);
+    expect(readFileSync(victim, 'utf8')).toContain('also has the token');
+  });
+
+  it('remove leaves a trap whose token was edited, and the records with it', () => {
+    const d = tmp();
+    expect(plantCanaries(d).ok).toBe(true);
+    const notes = join(d, '.exorcist/canary/NOTES.md');
+    writeFileSync(notes, '# My real notes now\n');
+    const r = removeCanaries(d);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.removed).toEqual(['.exorcist/canary/.env.canary', '.exorcist/canary/config.json']);
+    expect(r.warnings.join('\n')).toContain('no longer holds the token');
+    expect(readFileSync(notes, 'utf8')).toBe('# My real notes now\n');
+    expect(existsSync(join(d, '.exorcist/canaries.json'))).toBe(true);
   });
 
   it('remove keeps the Shield state that shares the .exorcist folder', () => {

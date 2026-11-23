@@ -386,6 +386,17 @@ describe('exorcist canary (EX-022)', () => {
     expect(run(['canary', '--list', d]).out).toContain('No canary traps');
   });
 
+  it('--remove leaves an edited trap in place, says why, and exits 1', () => {
+    const d = tmp();
+    expect(run(['canary', 'plant', d]).code).toBe(0);
+    writeFileSync(join(d, '.exorcist/canary/NOTES.md'), 'my own notes now\n');
+    const r = run(['canary', '--remove', d]);
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('no longer holds the token');
+    expect(readFileSync(join(d, '.exorcist/canary/NOTES.md'), 'utf8')).toBe('my own notes now\n');
+    expect(existsSync(join(d, '.exorcist/canaries.json'))).toBe(true);
+  });
+
   it('--help, --count, and a bad invocation', () => {
     expect(run(['canary', '--help']).out).toContain('exorcist canary plant [dir]');
     expect(run(['--help']).out).toContain('canary');

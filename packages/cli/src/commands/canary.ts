@@ -89,11 +89,15 @@ function plant(io: Io, dir: string, state: string | undefined, count: number): n
 function remove(io: Io, dir: string, state: string | undefined): number {
   const r = removeCanaries(dir, state ? { stateDir: state } : {});
   if (!r.ok) { io.err(`Exorcist 98: ${r.error}`); return 2; }
-  if (r.removed.length === 0) {
+  if (r.removed.length === 0 && r.warnings.length === 0) {
     io.out(`No canary traps to remove in ${dir}.`);
     return 0;
   }
-  io.out(`Removed ${r.removed.length} file${r.removed.length === 1 ? '' : 's'}:`);
-  for (const f of r.removed) io.out(`  ${f}`);
-  return 0;
+  if (r.removed.length > 0) {
+    io.out(`Removed ${r.removed.length} file${r.removed.length === 1 ? '' : 's'}:`);
+    for (const f of r.removed) io.out(`  ${f}`);
+  }
+  for (const w of r.warnings) io.err(`Exorcist 98: ${w}`);
+  // Something was left in place on purpose: say so in the exit code too.
+  return r.warnings.length > 0 ? 1 : 0;
 }
