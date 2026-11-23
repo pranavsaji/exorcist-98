@@ -123,6 +123,11 @@ const ENTRIES: Record<string, PlainEntry> = {
     attack:
       'Each tool server looks harmless alone. But one agent session that can read private data, read text anyone can write (a web page, an issue, an email) and send data somewhere can be told by that text to copy your secrets out. This is the "lethal trifecta".',
   },
+  'EX-026': {
+    headline: 'A file your AI reads is too big to check',
+    attack:
+      'This file is one your AI agent takes instructions or settings from, but it is too large to scan. Padding a file with filler is a simple way to push hidden instructions past a scanner, so a huge agent file deserves a look.',
+  },
   'EX-025': {
     headline: 'A tool server is set up to load extra code before it starts',
     attack:

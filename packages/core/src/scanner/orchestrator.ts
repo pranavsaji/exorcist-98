@@ -12,7 +12,7 @@ import { loadCapabilityRules } from '../capabilities.js';
 import type { CapabilityRule } from '../capabilities.js';
 import { analyzeConfig, parseMcpConfig, readPins, trifectaFinding } from '../trifecta.js';
 import type { ParsedMcpConfig } from '../trifecta.js';
-import type { Finding, HauntedMap, ScanEvent, ScanOptions, SignatureFinding } from '../types.js';
+import type { Finding, HauntedMap, ScanEvent, ScanOptions, Severity, SignatureFinding } from '../types.js';
 
 export type { ScanOptions } from '../types.js';
 
@@ -110,6 +110,7 @@ export async function mapRepo(root: string, options: Pick<ScanOptions, 'definiti
   }
   const configs: ParsedMcpConfig[] = [];
   for await (const file of walkRepo(root, options.maxFileSizeBytes)) {
+    if (file.tooLarge) continue;
     if (file.role !== 'mcp-config' && file.role !== 'config') continue;
     const text = await readFile(file.path, 'utf8').catch(() => null);
     const cfg = text === null ? null : parseMcpConfig(file.rel, file.role, text);
@@ -137,8 +138,28 @@ export async function* scanRepo(
   let filesSkipped = 0;
   let findingsTotal = 0;
 
+  const ex026 = defs.find((d) => d.id === 'EX-026');
   for await (const file of walkRepo(root, options.maxFileSizeBytes)) {
     yield { type: 'file', file };
+
+    if (file.tooLarge) {
+      // Never silently clean: an agent file past the hard limit is reported.
+      if (ex026) {
+        findingsTotal++;
+        yield {
+          type: 'finding',
+          finding: {
+            source: 'signature', ruleId: ex026.id, title: ex026.title, severity: ex026.severity as Severity,
+            file: file.rel, line: 1, col: 1, span: `${Math.round(file.sizeBytes / 1_048_576)} MB, not checked`,
+            owasp: ex026.owasp, fix: ex026.fix,
+          },
+        };
+      } else {
+        filesSkipped++;
+        yield { type: 'error', file: file.rel, message: 'This agent file is too large to check.' };
+      }
+      continue;
+    }
 
     try {
       const text = await readFile(file.path, 'utf8');

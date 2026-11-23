@@ -24,6 +24,8 @@ export type RepoFile = {
   rel:       string;   // path relative to repo root
   role:      FileRole;
   sizeBytes: number;
+  /** An agent-facing file over the hard size limit: not read, reported as EX-026. */
+  tooLarge?: true;
 };
 
 // ── Severity ─────────────────────────────────────────────────────────────────

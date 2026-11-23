@@ -3,6 +3,23 @@ import { join, relative, extname, basename } from 'node:path';
 import type { FileRole, RepoFile } from './types.js';
 
 const MAX_FILE_SIZE = 1_048_576; // 1 MB
+/**
+ * Files an agent takes instructions or settings from are never skipped for
+ * size in silence: up to this many bytes they are scanned in full, and past it
+ * they are yielded with `tooLarge` so the scan reports EX-026. Otherwise a
+ * config padded past 1 MB would read as clean.
+ */
+export const AGENT_FILE_HARD_LIMIT = 10 * 1_048_576;
+const AGENT_FACING_ROLES: ReadonlySet<FileRole> = new Set<FileRole>(['instruction', 'memory', 'hook', 'config', 'mcp-config', 'tool-result', 'power']);
+const LOCKFILE_NAMES = new Set([
+  'package-lock.json', 'npm-shrinkwrap.json', 'pnpm-lock.yaml', 'pnpm-lock.yml', 'yarn.lock', 'bun.lock', 'bun.lockb',
+  'composer.lock', 'Gemfile.lock', 'Cargo.lock', 'poetry.lock', 'Pipfile.lock', 'uv.lock', 'go.sum',
+]);
+/** True for files an agent reads instructions or settings from (exact lockfile names excepted). */
+export function isAgentFacing(rel: string, role: FileRole): boolean {
+  if (!AGENT_FACING_ROLES.has(role)) return false;
+  return !(role === 'config' && LOCKFILE_NAMES.has(rel.split('/').pop() ?? ''));
+}
 const BINARY_PROBE  = 512;       // bytes to read for binary detection
 
 const SKIP_DIRS = new Set([
@@ -120,12 +137,19 @@ async function* walkDir(root: string, dir: string, maxFileSize: number): AsyncIt
       yield* walkDir(root, absPath, maxFileSize);
     } else if (entry.isFile()) {
       const info = await stat(absPath);
-      if (info.size > maxFileSize) continue;
+      const role = classifyFile(rel);
+      if (info.size > maxFileSize) {
+        if (!isAgentFacing(rel, role)) continue;
+        if (info.size > AGENT_FILE_HARD_LIMIT) {
+          yield { path: absPath, rel, role, sizeBytes: info.size, tooLarge: true };
+          continue;
+        }
+      }
       if (await isBinary(absPath))   continue;
       yield {
         path:      absPath,
         rel,
-        role:      classifyFile(rel),
+        role,
         sizeBytes: info.size,
       };
     }

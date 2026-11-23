@@ -1,0 +1,28 @@
+id: EX-026
+title: Agent file too large to check
+severity: medium
+applies_to:
+  - instruction
+  - memory
+  - hook
+  - config
+  - mcp-config
+  - tool-result
+  - power
+# Reported by the scanner itself, not matched as a signature
+# (packages/core/src/scanner/orchestrator.ts). Files an agent takes
+# instructions or settings from are scanned in full up to 10 MB; past that
+# they are reported with this rule instead of being skipped in silence, so
+# padding a file never makes a project look clean.
+enabled: false
+match:
+  regex: "(?!)"
+owasp:
+  - "LLM01:2025 Prompt Injection"
+  - "ASI03 Prompt Injection via External Content"
+fix: >
+  This file is one your AI agent reads for instructions or settings, and it is
+  over 10 MB, so Exorcist 98 did not check its contents. Ordinary agent files
+  are far smaller: an oversized one can be padding meant to hide something.
+  Open it and check what it is; if it is legitimate generated data, move it
+  out of the places agents read.
