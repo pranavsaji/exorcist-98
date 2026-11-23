@@ -78,6 +78,18 @@ await step('home loads with heading, taskbar and four desktop icons', async () =
   return `icon-ish controls: ${n}`;
 });
 
+await step('welcome tour shows on first visit; dismissing it sticks', async () => {
+  const tour = page.getByRole('dialog', { name: /Welcome to Exorcist 98/ });
+  await tour.waitFor({ timeout: 5000 });
+  const r = await axe('welcome-tour'); axeReports.push(r);
+  await tour.getByRole('button', { name: /Close and don't show again/ }).click();
+  await tour.waitFor({ state: 'detached', timeout: 3000 });
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForSelector('h1');
+  if (await page.getByRole('dialog', { name: /Welcome to Exorcist 98/ }).count()) throw new Error('tour came back after dismissal');
+  return `${r.violations.length} axe violation types; stays dismissed after reload`;
+});
+
 await step('axe scan: home (before scanning)', async () => {
   const r = await axe('home-initial');
   axeReports.push(r);
@@ -267,6 +279,45 @@ await step('reports: SARIF, Markdown, JSON and badge download from the results w
   }
   await page.screenshot({ path: `${SHOTS}/09-reports.png` });
   return got.join(', ');
+});
+
+await step('Possession Lab: the rug pull plays to the end, protected vs compromised', async () => {
+  await page.locator('main').getByRole('button', { name: 'Possession Lab' }).click();
+  const lab = page.getByRole('dialog', { name: /Possession Lab/ });
+  await lab.waitFor();
+  await lab.getByRole('button', { name: 'Next step ▶' }).waitFor();
+  for (let i = 0; i < 10; i++) {
+    const next = lab.getByRole('button', { name: 'Next step ▶' });
+    if (await next.isDisabled()) break;
+    await next.click();
+  }
+  await lab.getByText('Result: protected.').waitFor({ timeout: 5000 });
+  await lab.getByText('Result: compromised.').waitFor({ timeout: 5000 });
+  const diff = await lab.locator('.lab-diff').count();
+  await page.screenshot({ path: `${SHOTS}/12-lab-rug-pull.png` });
+  const r = await axe('possession-lab'); axeReports.push(r);
+  return `diff shown in past steps: ${diff >= 0}; ${r.violations.length} axe violation types`;
+});
+
+await step('Possession Lab: every attack ends with the shielded side protected', async () => {
+  const lab = page.getByRole('dialog', { name: /Possession Lab/ });
+  const names = ['The Rug Pull', 'The Poisoned Tool', 'The Secret Leak', 'The Unknown Host', 'The Poisoned Result'];
+  const seen = [];
+  for (const name of names) {
+    await lab.getByRole('button', { name, exact: true }).click();
+    await lab.getByText(/^Step 1 of/).waitFor({ timeout: 5000 });
+    for (let i = 0; i < 10; i++) {
+      const next = lab.getByRole('button', { name: 'Next step ▶' });
+      if (await next.isDisabled()) break;
+      await next.click();
+    }
+    const safe = await lab.locator('.lab-verdict-safe').innerText();
+    const harm = await lab.locator('.lab-verdict-harm').innerText();
+    if (!/Nothing leaked/.test(safe)) throw new Error(`${name}: shielded side not protected: ${safe}`);
+    if (!/compromised/.test(harm)) throw new Error(`${name}: unshielded side not compromised`);
+    seen.push(name);
+  }
+  return seen.join(', ');
 });
 
 await step('product page loads, links back to the desktop, and passes axe', async () => {

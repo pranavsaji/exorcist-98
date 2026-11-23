@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // The engine ships TypeScript source with ".js" import specifiers.
-  transpilePackages: ['@exorcist-98/core'],
+  transpilePackages: ['@exorcist-98/core', '@exorcist-98/shield'],
   // Self-contained server output (node server.js), so any Node host can run it.
   output: 'standalone',
   experimental: {
@@ -12,6 +12,7 @@ const nextConfig = {
     outputFileTracingRoot: fileURLToPath(new URL('../../', import.meta.url)),
     outputFileTracingIncludes: {
       '/api/scan': ['../../definitions/**/*', '../../fixtures/haunted-repo/**/*'],
+      '/api/shield-sim': ['../../definitions/**/*'],
       '/encyclopedia': ['../../definitions/**/*'],
       '/encyclopedia/[id]': ['../../definitions/**/*', '../../fixtures/haunted-repo/**/*'],
     },

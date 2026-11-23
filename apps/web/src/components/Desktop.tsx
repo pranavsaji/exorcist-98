@@ -12,19 +12,25 @@ import { NextSteps } from './NextSteps';
 import { ScanWindow } from './ScanWindow';
 import { Taskbar } from './Taskbar';
 import { Window } from './Window';
+import { PossessionLab } from './PossessionLab';
+import { Welcome } from './Welcome';
 import { useScan } from '@/hooks/useScan';
 
-type WinId = 'scan' | 'results' | 'detail' | 'about';
+type WinId = 'welcome' | 'scan' | 'results' | 'detail' | 'lab' | 'about';
 type WinState = { open: boolean; minimized: boolean; z: number; x: number; y: number };
 
 const TITLES: Record<WinId, string> = {
+  welcome: 'Welcome to Exorcist 98',
+  lab:     'Possession Lab - Real-Time Shield',
   scan:    'Exorcist 98 - Full System Scan',
   results: 'Threats Found',
   detail:  'Threat Details',
   about:   'About Exorcist 98',
 };
-const WIDTHS: Record<WinId, number> = { scan: 600, results: 480, detail: 620, about: 420 };
+const WIDTHS: Record<WinId, number> = { welcome: 520, scan: 600, results: 480, detail: 620, lab: 980, about: 420 };
 const ICONS: Record<WinId, ReactNode> = {
+  welcome: <GhostIcon size={18} />,
+  lab:     <ShieldIcon size={18} />,
   scan:    <ShieldIcon size={18} />,
   results: <SkullIcon size={18} />,
   detail:  <InfoIcon size={18} />,
@@ -32,21 +38,37 @@ const ICONS: Record<WinId, ReactNode> = {
 };
 
 const INITIAL: Record<WinId, WinState> = {
+  welcome: { open: true,  minimized: false, z: 11, x: 760, y: 40 },
+  lab:     { open: false, minimized: false, z: 1,  x: 110, y: 10 },
   scan:    { open: true,  minimized: false, z: 10, x: 130, y: 16 },
   results: { open: false, minimized: false, z: 1,  x: 750, y: 16 },
   detail:  { open: false, minimized: false, z: 1,  x: 260, y: 150 },
   about:   { open: false, minimized: false, z: 1,  x: 400, y: 90 },
 };
-const ORDER: WinId[] = ['scan', 'results', 'detail', 'about'];
+const ORDER: WinId[] = ['scan', 'results', 'detail', 'lab', 'about', 'welcome'];
+const WELCOME_KEY = 'exorcist-98-welcome';
 
 export function Desktop() {
   const { state, start, cancel } = useScan();
   const [wins, setWins] = useState<Record<WinId, WinState>>(INITIAL);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [soundOn, setSoundOn] = useState(false); // muted by default (ui.md)
-  const topZ = useRef(10);
+  const [possessed, setPossessed] = useState(false);
+  const topZ = useRef(11);
 
   useEffect(() => setSoundOn(soundEnabled()), []);
+
+  // The tour shows until it is dismissed once (per browser; storage may be unavailable).
+  useEffect(() => {
+    let dismissed = false;
+    try { dismissed = window.localStorage.getItem(WELCOME_KEY) === 'dismissed'; } catch { /* keep showing it */ }
+    if (dismissed) setWins((w) => ({ ...w, welcome: { ...w.welcome, open: false } }));
+  }, []);
+
+  function dismissWelcome() {
+    try { window.localStorage.setItem(WELCOME_KEY, 'dismissed'); } catch { /* private mode */ }
+    setWins((w) => ({ ...w, welcome: { ...w.welcome, open: false } }));
+  }
 
   // A ghost moan per threat (throttled in play) and a chime when a scan ends.
   useEffect(() => {
@@ -56,6 +78,11 @@ export function Desktop() {
   useEffect(() => {
     if (prevStatus.current === 'running' && state.status === 'done') {
       play(state.findings.length > 0 ? 'done-infected' : 'done-clean');
+      // A critical threat possesses the whole desktop for a moment.
+      if (state.findings.some((f) => f.finding.severity === 'critical')) {
+        setPossessed(true);
+        setTimeout(() => setPossessed(false), 1400);
+      }
     }
     prevStatus.current = state.status;
   }, [state.status, state.findings.length]);
@@ -104,6 +131,10 @@ export function Desktop() {
     return best;
   }, [wins]);
 
+  function openLab() {
+    open('lab');
+  }
+
   function scanHaunted() {
     start({ target: 'haunted-repo' }, 'the Haunted Repo');
     setSelectedId(null);
@@ -141,12 +172,20 @@ export function Desktop() {
   }
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden bg-desk">
+    <main className="relative h-screen w-screen overflow-hidden bg-desk" data-possessed={possessed ? 'true' : 'false'}>
       <h1 className="sr-only">Exorcist 98: antivirus for AI coding agents</h1>
+      <div className="desk-fog" aria-hidden="true" />
+      <div className="desk-ghost" aria-hidden="true"><GhostIcon size={56} /></div>
+      <div className="desk-wordmark" aria-hidden="true">
+        <div className="text-4xl">EXORCIST 98</div>
+        <span>ANTIVIRUS FOR AI AGENTS</span>
+      </div>
+      <div className="desk-scanlines" aria-hidden="true" />
 
       <div className="desktop-icons absolute left-2 top-2 flex flex-col gap-1">
         <DesktopIcon label="Full System Scan" icon={<ShieldIcon />} onOpen={() => open('scan')} />
         <DesktopIcon label="Scan the Haunted Repo" icon={<SkullIcon />} onOpen={scanHaunted} />
+        <DesktopIcon label="Possession Lab" icon={<ShieldIcon />} onOpen={openLab} />
         <DesktopIcon label="Virus Definitions" icon={<BookIcon />} href="/encyclopedia" />
         <DesktopIcon label="About" icon={<GhostIcon />} onOpen={() => open('about')} />
       </div>
@@ -191,6 +230,14 @@ export function Desktop() {
               </div>
             )}
             {id === 'detail' && <FindingDetail entry={selected} />}
+            {id === 'lab' && <PossessionLab />}
+            {id === 'welcome' && (
+              <Welcome
+                onScanHaunted={() => { scanHaunted(); }}
+                onOpenLab={openLab}
+                onDismiss={dismissWelcome}
+              />
+            )}
             {id === 'about' && (
               <div className="flex flex-col gap-2 text-sm">
                 <p className="m-0">
@@ -230,6 +277,8 @@ export function Desktop() {
         items={[
           { label: 'Full System Scan', icon: <ShieldIcon size={18} />, onSelect: () => open('scan') },
           { label: 'Scan the Haunted Repo', icon: <SkullIcon size={18} />, onSelect: scanHaunted },
+          { label: 'Possession Lab (Real-Time Shield)', icon: <ShieldIcon size={18} />, onSelect: openLab },
+          { label: 'Start here (tour)', icon: <GhostIcon size={18} />, onSelect: () => open('welcome') },
           { label: 'Virus Definitions', icon: <BookIcon size={18} />, href: '/encyclopedia' },
           { label: 'About Exorcist 98', icon: <GhostIcon size={18} />, onSelect: () => open('about') },
           { label: 'Product and plans', icon: <ShieldIcon size={18} />, href: '/product' },
