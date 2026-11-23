@@ -64,7 +64,7 @@ describe('scripts/kiro-hook.sh', () => {
   });
 
   it('every command hook in this repo goes through it, never a bare pnpm, npx or node', () => {
-    for (const f of ['pre-commit-secrets', 'definition-save', 'mcp-config-change']) {
+    for (const f of ['pre-commit-secrets', 'definition-save', 'mcp-config-change', 'on-access-scan']) {
       const cmd = hookCommand(join(ROOT, `.kiro/hooks/${f}.json`));
       expect(cmd.startsWith('sh scripts/kiro-hook.sh ')).toBe(true);
       expect(cmd).not.toMatch(/(^|\s)(pnpm|npx|node)(\s|$)/);
@@ -108,6 +108,24 @@ describe('scripts/kiro-hook.sh', () => {
     expect(r.code).toBe(1);
     expect(r.out + r.err).toContain('EX-005');
   });
+
+  it('the on-access hook blocks a read of a file that hides AI instructions, and allows a clean one', () => {
+    const d = tmp();
+    writeFileSync(join(d, 'CONTRIBUTING.md'), readFileSync(join(ROOT, 'fixtures/haunted-repo/EX-002-ai-instructions.md'), 'utf8'));
+    writeFileSync(join(d, 'README.md'), '# Clean\n\nNothing hidden here.\n');
+    const readEvent = (path: string): string => JSON.stringify({
+      hook_event_name: 'PreToolUse', cwd: d, tool_name: 'read', tool_input: { path },
+    });
+    const cmd = hookCommand(join(ROOT, '.kiro/hooks/on-access-scan.json'));
+    const blocked = runHook(cmd, readEvent('CONTRIBUTING.md'), ROOT, NODE_DIR);
+    expect(blocked.code).toBe(2);
+    expect(blocked.err).toContain('EX-002');
+    expect(blocked.err).not.toContain('Ignore previous instructions');
+    expect(blocked.err).toContain('exorcist allow-read');
+    expect(runHook(cmd, readEvent('README.md'), ROOT, NODE_DIR).code).toBe(0);
+    // Anything it cannot understand must not stop the agent (REQ-01.6).
+    expect(runHook(cmd, 'not json', ROOT, NODE_DIR).code).toBe(0);
+  }, 60_000);
 });
 
 describe('the Kiro hooks written by exorcist init', () => {

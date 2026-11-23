@@ -231,8 +231,12 @@ export function runSignatures(
   let results: (RawMatch[][] | null) = jobs.length > 0 ? guarded(jobs, limitMs) : [];
   const timedOut = new Set<number>();
   if (results === null) {
+    // The whole batch ran out of time: on a busy or efficiency core the
+    // wall-clock budget can be exceeded by contention alone. Retry each job
+    // alone with the full budget, so only a rule that is genuinely slow on
+    // this file (a real ReDoS attack) is reported as timed out.
     results = jobs.map((j, i) => {
-      const r = guarded([j], Math.max(50, Math.floor(limitMs / 3)));
+      const r = guarded([j], limitMs);
       if (r === null) { timedOut.add(i); return []; }
       return r[0] ?? [];
     });

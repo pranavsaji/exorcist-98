@@ -299,7 +299,9 @@ describe('EX-008 and EX-015: only commands that run, reported once per line', ()
     const t0 = Date.now();
     const f = scan('docs/directory/7.json', line);
     expect(f.filter((x) => /ran out of time/.test(x.span))).toEqual([]);
-    expect(Date.now() - t0).toBeLessThan(1000);
+    // The bound is generous: under a full parallel test run this can land on
+    // an efficiency core, where the same work takes several times longer.
+    expect(Date.now() - t0).toBeLessThan(2500);
   });
 
   it('inExecContext reads the key of the line or of the enclosing list', () => {

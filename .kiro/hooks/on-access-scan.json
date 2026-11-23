@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "on-access-scan",
+      "description": "Scan a file for instructions aimed at the AI before the agent reads it. Exit code 2 blocks the read; the message tells the user how to allow the file once. Runs through scripts/kiro-hook.sh because Kiro gives hook commands a PATH without Node.",
+      "trigger": "PreToolUse",
+      "matcher": "read|readFile|read_file|readCode|fs_read|readMultipleFiles",
+      "action": {
+        "type": "command",
+        "command": "sh scripts/kiro-hook.sh node_modules/.bin/tsx scripts/hook-on-access.ts"
+      },
+      "timeout": 15
+    }
+  ]
+}

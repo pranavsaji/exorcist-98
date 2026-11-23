@@ -47,8 +47,8 @@ const HookFile = z.object({
 describe('.kiro/hooks follow the documented v1 format', () => {
   const files = readdirSync(join(ROOT, '.kiro/hooks')).sort();
 
-  it('there are exactly four hook files and no leftover YAML', () => {
-    expect(files).toEqual(['definition-save.json', 'mcp-config-change.json', 'pre-commit-secrets.json', 'spec-change.json']);
+  it('there are exactly five hook files and no leftover YAML', () => {
+    expect(files).toEqual(['definition-save.json', 'mcp-config-change.json', 'on-access-scan.json', 'pre-commit-secrets.json', 'spec-change.json']);
   });
 
   for (const f of files) {
@@ -85,6 +85,19 @@ describe('.kiro/hooks follow the documented v1 format', () => {
     const m = new RegExp(h?.matcher ?? '');
     for (const id of ['shell', 'execute_bash']) expect(m.test(id), id).toBe(true);
     for (const id of ['read_file', 'fs_write', 'web_fetch']) expect(m.test(id), id).toBe(false);
+  });
+
+  it('the on-access hook runs before read tools, blocks by exit code and allows other tools', () => {
+    const h = HookFile.parse(readJson('.kiro/hooks/on-access-scan.json')).hooks[0];
+    expect(h?.trigger).toBe('PreToolUse');
+    expect(h?.timeout).toBe(15);
+    const m = new RegExp(h?.matcher ?? '');
+    for (const id of ['read', 'readFile', 'read_file', 'readCode', 'fs_read', 'readMultipleFiles']) expect(m.test(id), id).toBe(true);
+    for (const id of ['execute_bash', 'fs_write', 'web_fetch', 'web_search']) expect(m.test(id), id).toBe(false);
+    // The hook paths must exist (scripts/kiro-hook.sh, the tsx binary, the script).
+    expect(existsSync(join(ROOT, 'scripts/kiro-hook.sh'))).toBe(true);
+    expect(existsSync(join(ROOT, 'node_modules/.bin/tsx'))).toBe(true);
+    expect(existsSync(join(ROOT, 'scripts/hook-on-access.ts'))).toBe(true);
   });
 
   it('the spec-change hook still tells the agent to touch only THREATS.md', () => {

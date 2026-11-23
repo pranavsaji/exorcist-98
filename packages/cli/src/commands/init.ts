@@ -13,8 +13,10 @@ export const INIT_HELP = `Usage: exorcist init [folder] [--force] [--bin <comman
 Add Exorcist 98 to a Kiro project:
   .kiro/hooks/exorcist-secrets.json   block "git commit" while secrets are staged (Kiro hook)
   .kiro/hooks/exorcist-mcp-scan.json  scan MCP config whenever it is saved (Kiro hook)
+  .kiro/hooks/exorcist-on-access.json  scan a file before the agent reads it (Kiro hook)
   .kiro/steering/exorcist.md          tell the agent how to treat tool output
   .exorcist/kiro-hook.sh              puts Node on PATH for the Kiro hooks (Kiro's hook PATH has none)
+  .exorcist/.gitignore                keeps the hook log out of git
   .githooks/pre-commit                block secrets in every commit (git hook)
 
 Turn on the git hook once per clone:  git config core.hooksPath .githooks
@@ -69,6 +71,13 @@ export async function initCommand(argv: string[], io: Io): Promise<number> {
         matcher: '(\\.kiro/settings/mcp\\.json|\\.cursor/mcp\\.json|\\.vscode/mcp\\.json|claude_desktop_config\\.json)$',
         action: { type: 'command', command: `${HOOK_RUNNER} ${bin} hook-scan` },
         timeout: 60,
+      }),
+    },
+    {
+      rel: '.kiro/hooks/exorcist-on-access.json',
+      body: hook('exorcist-on-access', 'Scan a file for instructions aimed at the AI before the agent reads it. Exit code 2 blocks the read.', {
+        trigger: 'PreToolUse', matcher: 'read|readFile|read_file|readCode|fs_read|readMultipleFiles',
+        action: { type: 'command', command: `${HOOK_RUNNER} ${bin} on-access` }, timeout: 15,
       }),
     },
     { rel: '.kiro/steering/exorcist.md', body: STEERING },

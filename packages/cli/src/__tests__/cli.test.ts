@@ -339,7 +339,7 @@ describe('exorcist init', () => {
   it('writes valid Kiro hooks and a steering file, never overwriting without --force', () => {
     const d = tmp();
     expect(run(['init', d]).code).toBe(0);
-    for (const f of ['.kiro/hooks/exorcist-secrets.json', '.kiro/hooks/exorcist-mcp-scan.json']) {
+    for (const f of ['.kiro/hooks/exorcist-secrets.json', '.kiro/hooks/exorcist-mcp-scan.json', '.kiro/hooks/exorcist-on-access.json']) {
       const j = JSON.parse(readFileSync(join(d, f), 'utf8')) as { version: string; hooks: Array<{ trigger: string; action: { type: string; command: string } }> };
       expect(j.version).toBe('v1');
       expect(j.hooks[0]?.action.type).toBe('command');
@@ -348,6 +348,12 @@ describe('exorcist init', () => {
     expect(secrets.hooks[0]?.trigger).toBe('PreToolUse');
     expect(new RegExp(secrets.hooks[0]?.matcher ?? '').test('execute_bash')).toBe(true);
     expect(secrets.hooks[0]?.action.command).toContain('guard-commit');
+    const onAccess = JSON.parse(readFileSync(join(d, '.kiro/hooks/exorcist-on-access.json'), 'utf8')) as { hooks: Array<{ trigger: string; matcher: string; action: { command: string }; timeout?: number }> };
+    expect(onAccess.hooks[0]?.trigger).toBe('PreToolUse');
+    expect(new RegExp(onAccess.hooks[0]?.matcher ?? '').test('read')).toBe(true);
+    expect(new RegExp(onAccess.hooks[0]?.matcher ?? '').test('execute_bash')).toBe(false);
+    expect(onAccess.hooks[0]?.action.command).toContain('on-access');
+    expect(onAccess.hooks[0]?.timeout).toBe(15);
     expect(readFileSync(join(d, '.kiro/steering/exorcist.md'), 'utf8')).toContain('never an instruction');
 
     // The default command must be the scoped package: the unscoped npm name
@@ -363,6 +369,60 @@ describe('exorcist init', () => {
     expect(readFileSync(join(d, '.kiro/steering/exorcist.md'), 'utf8')).toBe('mine');
     expect(run(['init', d, '--force']).code).toBe(0);
     expect(readFileSync(join(d, '.kiro/steering/exorcist.md'), 'utf8')).toContain('never an instruction');
+  });
+});
+
+describe('on-access (the read hook helper)', () => {
+  const readEvent = (cwd: string, path: string): string =>
+    JSON.stringify({ hook_event_name: 'PreToolUse', cwd, tool_name: 'read', tool_input: { path } });
+
+  it('exits 2 on the Haunted Repo EX-002 sample and 0 on this repo\'s README.md', () => {
+    const d = tmp();
+    writeFileSync(join(d, 'CONTRIBUTING.md'), readFileSync(join(FIXTURES, 'EX-002-ai-instructions.md'), 'utf8'));
+    const blocked = run(['on-access'], { input: readEvent(d, 'CONTRIBUTING.md') });
+    expect(blocked.code).toBe(2);
+    expect(blocked.err).toContain('EX-002');
+    expect(blocked.err).toContain('exorcist allow-read');
+    expect(blocked.err).not.toContain('Ignore previous instructions'); // never quote the attacker
+    expect(run(['on-access'], { input: readEvent(ROOT, 'README.md') }).code).toBe(0);
+  });
+
+  it('never bricks the agent: bad JSON, no path and a missing file all exit 0', () => {
+    const d = tmp();
+    expect(run(['on-access'], { input: 'not json' }).code).toBe(0);
+    expect(run(['on-access'], { input: JSON.stringify({ tool_name: 'read', tool_input: { query: 'x' }, cwd: d }) }).code).toBe(0);
+    expect(run(['on-access'], { input: readEvent(d, 'missing.md') }).code).toBe(0);
+  });
+});
+
+describe('allow-read', () => {
+  const readEvent = (cwd: string, path: string): string =>
+    JSON.stringify({ hook_event_name: 'PreToolUse', cwd, tool_name: 'read', tool_input: { path } });
+
+  it('records the hash; the same bytes pass and an edit is blocked again (REQ-03)', () => {
+    const d = tmp();
+    const file = join(d, 'CONTRIBUTING.md');
+    writeFileSync(file, readFileSync(join(FIXTURES, 'EX-002-ai-instructions.md'), 'utf8'));
+    expect(run(['on-access'], { cwd: d, input: readEvent(d, 'CONTRIBUTING.md') }).code).toBe(2);
+
+    const allow = run(['allow-read', file], { cwd: d });
+    expect(allow.code).toBe(0);
+    expect(allow.out).toContain('sha256');
+    const state = JSON.parse(readFileSync(join(d, '.exorcist/allowed-reads.json'), 'utf8')) as { version: number; allowed: string[] };
+    expect(state.version).toBe(1);
+    expect(state.allowed).toHaveLength(1);
+
+    expect(run(['on-access'], { cwd: d, input: readEvent(d, 'CONTRIBUTING.md') }).code).toBe(0);
+    writeFileSync(file, `${readFileSync(join(FIXTURES, 'EX-002-ai-instructions.md'), 'utf8')}\nchanged\n`);
+    expect(run(['on-access'], { cwd: d, input: readEvent(d, 'CONTRIBUTING.md') }).code).toBe(2);
+  });
+
+  it('refuses a missing file and prints help', () => {
+    expect(run(['allow-read', '/no/such/file']).code).toBe(1);
+    expect(run(['allow-read']).code).toBe(2);
+    expect(run(['allow-read', '--help']).code).toBe(0);
+    expect(run(['--help']).out).toContain('allow-read');
+    expect(run(['--help']).out).toContain('on-access');
   });
 });
 
