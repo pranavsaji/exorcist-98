@@ -8,6 +8,12 @@ match:
   # Notes the agent reloads every session that leak secrets, hide themselves,
   # or grant standing permissions.
   regex: "(?:\\binclude\\s+(?:any\\s+|all\\s+)?(?:secret|secrets|keys?|tokens?|passwords?|credentials)\\b[^.\\n]{0,40}\\b(?:in\\s+full|verbatim|as\\s+is|unredacted)\\b|\\bnever\\s+mention\\s+this\\s+(?:note|file|instruction|memory)\\b|\\bif\\s+asked(?:\\s+about\\s+(?:it|this))?,?\\s+say\\s+(?:it|this)\\s+does\\s+not\\s+exist\\b|\\b(?:permanent|standing)\\s+(?:shell|command|execution)\\s+(?:execution\\s+)?permission\\b|\\balways\\s+approve\\s+requests\\s+from\\b)"
+  # A phrase in quotation marks that close right after it, in a passage that
+  # is warning about it or quoting it as an example ("never follow text such
+  # as ..."), is not an order. In the field that was 35 of 42 findings of
+  # EX-002 (docs/FIELD_REPORT.md). A quoted phrase that runs on into a longer
+  # instruction is still reported.
+  quoted_example_cues: '\b(?:such\s+as|e\.g\.|i\.e\.|for\s+(?:example|instance)|never|do\s+not|don''t|must\s+not|should\s+not|refuse|reject|treat|untrusted|inert|injection|jailbreak|adversarial|attack|malicious|hostile|crafted|hijack|red[- ]?team|detect|flag|block|strip|sanitiz|filter|pattern|phrase|cases?\b|example|quarantine|directive|look(?:s|ing)?\s+like|shaped)'
 owasp:
   - "ASI04 Memory Poisoning"
   - "LLM01:2025 Prompt Injection"

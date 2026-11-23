@@ -43,6 +43,8 @@ for (const range of UNICODE_RANGES) {
 const PICTO = /\p{Extended_Pictographic}/u;
 /** A letter or combining mark outside Latin and ASCII. */
 const NON_LATIN_LETTER = /^(?![\p{Script=Latin}\p{ASCII}])[\p{L}\p{M}]$/u;
+/** A letter or mark of a script whose spelling uses U+200C and U+200D (Arabic, Persian, Syriac, Indic scripts and others). */
+const JOINING_SCRIPT_LETTER = /^(?=[\p{L}\p{M}])[\p{Script=Arabic}\p{Script=Syriac}\p{Script=Thaana}\p{Script=Nko}\p{Script=Mongolian}\p{Script=Devanagari}\p{Script=Bengali}\p{Script=Gurmukhi}\p{Script=Gujarati}\p{Script=Oriya}\p{Script=Tamil}\p{Script=Telugu}\p{Script=Kannada}\p{Script=Malayalam}\p{Script=Sinhala}]$/u;
 /** The characters before and after `offset`, by code point. */
 function neighbours(text: string, offset: number, len: number): [string, string] {
   const before = Array.from(text.slice(Math.max(0, offset - 4), offset)).pop() ?? '';
@@ -61,6 +63,12 @@ function isBenign(text: string, cp: number, offset: number, len: number): boolea
   if (cp === 0x200C || cp === 0x200D) {
     const [b, a] = neighbours(text, offset, len);
     if (NON_LATIN_LETTER.test(b) && NON_LATIN_LETTER.test(a)) return true;
+    // In Persian (and other joining scripts) the non-joiner also sits between
+    // a letter and a Latin word, a digit, a space or punctuation (seen: 25
+    // findings in Persian docs, docs/FIELD_REPORT.md). A joining-script letter
+    // on one side is enough. A run of hidden characters is still reported:
+    // the neighbour must be a letter, not another hidden character.
+    if (JOINING_SCRIPT_LETTER.test(b) || JOINING_SCRIPT_LETTER.test(a)) return true;
   }
   if (cp === 0x200D) {
     const [b, a] = neighbours(text, offset, len);

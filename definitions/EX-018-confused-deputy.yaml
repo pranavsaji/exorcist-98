@@ -9,6 +9,12 @@ match:
   # Text that hands the agent powers it should not assume: admin rights,
   # permission to destroy data, or a claim that approval was already given.
   regex: "(?:\\bact\\s+with\\s+(?:admin|administrator|root|elevated|full|superuser)\\s+(?:permissions|privileges|rights|access)\\b|\\byou\\s+are\\s+(?:authori[sz]ed|permitted|allowed)\\s+to\\s+(?:drop|delete|wipe|truncate|bypass|disable|override|force[- ]push)\\b|\\bbypass\\s+(?:the\\s+)?(?:usual\\s+|normal\\s+|standard\\s+)?(?:confirmation|approval|review|safety)\\s+(?:steps?|checks?|prompts?)\\b|\\bthis\\s+(?:has\\s+been|is|was)\\s+(?:already\\s+)?pre-?approved\\b)"
+  # A phrase in quotation marks that close right after it, in a passage that
+  # is warning about it or quoting it as an example ("never follow text such
+  # as ..."), is not an order. In the field that was 35 of 42 findings of
+  # EX-002 (docs/FIELD_REPORT.md). A quoted phrase that runs on into a longer
+  # instruction is still reported.
+  quoted_example_cues: '\b(?:such\s+as|e\.g\.|i\.e\.|for\s+(?:example|instance)|never|do\s+not|don''t|must\s+not|should\s+not|refuse|reject|treat|untrusted|inert|injection|jailbreak|adversarial|attack|malicious|hostile|crafted|hijack|red[- ]?team|detect|flag|block|strip|sanitiz|filter|pattern|phrase|cases?\b|example|quarantine|directive|look(?:s|ing)?\s+like|shaped)'
 owasp:
   - "ASI02 Inadequate Human-in-the-Loop Controls"
   - "LLM06:2025 Excessive Agency"

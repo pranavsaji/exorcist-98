@@ -1,0 +1,2395 @@
+{
+  "title": "Exorcist 98 Field Report targets (fresh held-out set)",
+  "selectedOn": "2026-11-23",
+  "method": {
+    "summary": "Public GitHub repositories of MCP servers and agent configuration, drawn from public lists, pinned to the default-branch commit on the selection date.",
+    "sources": {
+      "awesomeMcp": {
+        "repo": "punkpeye/awesome-mcp-servers",
+        "sha": "9dbadb400a592289ec0f0dd97ee44632840c3c2b",
+        "path": "README.md",
+        "note": "GitHub repository links under \"## Server Implementations\" (everything after that heading)."
+      },
+      "awesomeClaudeCode": {
+        "repo": "hesreallyhim/awesome-claude-code",
+        "sha": "049f6c672df566513a40e1b0156a1f8dd7802d51",
+        "path": "README.md",
+        "note": "Every GitHub repository link (skills, hooks, CLAUDE.md collections, commands, configs)."
+      },
+      "mcpServersReadme": {
+        "repo": "modelcontextprotocol/servers",
+        "sha": "c799c8552b0f27b7a33a7b9233773da144dddcf5",
+        "path": "README.md",
+        "note": "Checked, not used: at this commit the README no longer carries the community or official-integrations lists (they moved to the MCP Registry)."
+      }
+    },
+    "topicSearch": {
+      "topics": [
+        "cursorrules",
+        "cursor-rules",
+        "claude-md",
+        "agents-md",
+        "kiro-steering",
+        "kiro",
+        "copilot-instructions",
+        "windsurf-rules"
+      ],
+      "query": "GitHub search API: topic:<t>, sorted by stars, first 30 results; the first N eligible are taken"
+    },
+    "plan": {
+      "mcpTop": 50,
+      "mcpTail": 65,
+      "topicTopEach": 7,
+      "accTop": 15,
+      "accTail": 15
+    },
+    "seededRandom": "Order candidates by sha256(\"exorcist-98-wild-scan-round2-2026-11-23:\" + lowercase owner/repo) and take the first eligible ones.",
+    "excludedAlways": "The 20 repositories in docs/BENCHMARK.md, forks, private, empty, missing, and repositories over 250 MB on GitHub.",
+    "excludedSets": [
+      "fixtures/wild-scan"
+    ],
+    "excludedFromEarlierSets": 224,
+    "order": "Pools are filled in the order listed in plan; a repository is taken once, by the first pool that reaches it."
+  },
+  "counts": {
+    "candidatesUnique": 5403,
+    "targets": 197,
+    "excluded": 33
+  },
+  "targets": [
+    {
+      "owner": "gamosoft",
+      "repo": "NoteDiscovery",
+      "sha": "8ba8b9602dd8210a6b72e45006f3d977e37925eb",
+      "branch": "main",
+      "stars": 2891,
+      "archived": false,
+      "diskKb": 6114,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "metatool-ai",
+      "repo": "metamcp",
+      "sha": "05818ec2767b946f98d280ae9cefa401f0362d62",
+      "branch": "ai-dev",
+      "stars": 2761,
+      "archived": true,
+      "diskKb": 14335,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "brightdata",
+      "repo": "brightdata-mcp",
+      "sha": "e3e2054dde029de28988bbe8d5e18a913b41a950",
+      "branch": "main",
+      "stars": 2734,
+      "archived": false,
+      "diskKb": 67458,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "devflowinc",
+      "repo": "trieve",
+      "sha": "a99b21e23f21025757b44efb594676c4a7b7495f",
+      "branch": "main",
+      "stars": 2726,
+      "archived": false,
+      "diskKb": 185124,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "CrossPaste",
+      "repo": "crosspaste-desktop",
+      "sha": "9498f76d23d85ba3c368bc97b3e10133038c4a88",
+      "branch": "main",
+      "stars": 2720,
+      "archived": false,
+      "diskKb": 38083,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "nteract",
+      "repo": "semiotic",
+      "sha": "693ebba0f981346598b59f6d452fad7679d6f69d",
+      "branch": "main",
+      "stars": 2716,
+      "archived": false,
+      "diskKb": 229145,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "0xMassi",
+      "repo": "webclaw",
+      "sha": "50e1a36bf82b9e7a61a8ea466f7c22d5458c1575",
+      "branch": "main",
+      "stars": 2443,
+      "archived": false,
+      "diskKb": 9673,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "moorcheh-ai",
+      "repo": "memanto",
+      "sha": "a118a1b1d396f79aac157179331c89f10bcabcfc",
+      "branch": "main",
+      "stars": 2413,
+      "archived": false,
+      "diskKb": 23530,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "LetsFG",
+      "repo": "LetsFG",
+      "sha": "f8836c842c0560e1695a1467ec17250911c908a2",
+      "branch": "main",
+      "stars": 2296,
+      "archived": false,
+      "diskKb": 59383,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "can4hou6joeng4",
+      "repo": "boss-agent-cli",
+      "sha": "0757e564272a02f05f15e6f9649aad82106dd305",
+      "branch": "master",
+      "stars": 2290,
+      "archived": false,
+      "diskKb": 66458,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "containers",
+      "repo": "kubernetes-mcp-server",
+      "sha": "5487d153843b1f4424d6ae3ce2452201d51331e7",
+      "branch": "main",
+      "stars": 2275,
+      "archived": false,
+      "diskKb": 18715,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "beelzebub-labs",
+      "repo": "beelzebub",
+      "sha": "3f20be5355c7d6f144329e39c478cdd7ff98184c",
+      "branch": "main",
+      "stars": 2253,
+      "archived": false,
+      "diskKb": 1381,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "joshuayoes",
+      "repo": "ios-simulator-mcp",
+      "sha": "4c1d8db0f0c9caaf6523c5c6bfe31b02195f42cf",
+      "branch": "main",
+      "stars": 2236,
+      "archived": false,
+      "diskKb": 431,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "benborla",
+      "repo": "mcp-server-mysql",
+      "sha": "b9c714e182422b9f18437242b80cf003adf1c7ea",
+      "branch": "main",
+      "stars": 2228,
+      "archived": false,
+      "diskKb": 29900,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "cjo4m06",
+      "repo": "mcp-shrimp-task-manager",
+      "sha": "8a3be6bced310c7b660e5cfc3f42e4e5e45f2f61",
+      "branch": "main",
+      "stars": 2154,
+      "archived": false,
+      "diskKb": 4293,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "doobidoo",
+      "repo": "mcp-memory-service",
+      "sha": "e4501cbfafd298d7e8428657975c4a37f6eef441",
+      "branch": "main",
+      "stars": 2145,
+      "archived": false,
+      "diskKb": 84727,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "vmoranv",
+      "repo": "jshookmcp",
+      "sha": "15d260e0890d22c448ad25ff1bc4d47fb13e1c40",
+      "branch": "master",
+      "stars": 2125,
+      "archived": false,
+      "diskKb": 27592,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "zereight",
+      "repo": "gitlab-mcp",
+      "sha": "603a694d6fbbc3123584274ee1a617a59b3f22f0",
+      "branch": "main",
+      "stars": 2118,
+      "archived": false,
+      "diskKb": 10472,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "chigwell",
+      "repo": "telegram-mcp",
+      "sha": "6045b24b844c9435f3d9c4f3948102a80e7ba5e6",
+      "branch": "main",
+      "stars": 2082,
+      "archived": false,
+      "diskKb": 2814,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "CoderGamester",
+      "repo": "mcp-unity",
+      "sha": "d572dc88f1b982a0fdfc09cd14cfdfd760b658e8",
+      "branch": "main",
+      "stars": 2019,
+      "archived": false,
+      "diskKb": 6798,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "Aas-ee",
+      "repo": "open-webSearch",
+      "sha": "2562c9233a945c18fa9d08b7e450ca218a8853b6",
+      "branch": "main",
+      "stars": 1917,
+      "archived": false,
+      "diskKb": 1112,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "korotovsky",
+      "repo": "slack-mcp-server",
+      "sha": "b88c0de3f706f4f07337c9eda7133c736d1c9524",
+      "branch": "master",
+      "stars": 1900,
+      "archived": false,
+      "diskKb": 21516,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "heymrun",
+      "repo": "heym",
+      "sha": "0f5316a171254bbc59d8c5b584246dde06c57b34",
+      "branch": "main",
+      "stars": 1846,
+      "archived": false,
+      "diskKb": 133950,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "jau123",
+      "repo": "MeiGen-AI-Design-MCP",
+      "sha": "95a983cf639fea264db4335491b697ee9c7e429f",
+      "branch": "main",
+      "stars": 1812,
+      "archived": false,
+      "diskKb": 5063,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "julien040",
+      "repo": "anyquery",
+      "sha": "b85153e638ad34ffde003db6e7c154db88d730f9",
+      "branch": "main",
+      "stars": 1794,
+      "archived": false,
+      "diskKb": 87747,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "bitbonsai",
+      "repo": "mcpvault",
+      "sha": "5d4e68550e9fe27fc24b9e16d96b8ff5b39355d7",
+      "branch": "main",
+      "stars": 1729,
+      "archived": false,
+      "diskKb": 5444,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "mediar-ai",
+      "repo": "terminator",
+      "sha": "73a381c0c1c33eda55f2c0ecb1d918bf5ec7561a",
+      "branch": "main",
+      "stars": 1673,
+      "archived": false,
+      "diskKb": 52961,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "vshulcz",
+      "repo": "deja-vu",
+      "sha": "585deef823b6214dd03c6bf45d8878f61b914a6e",
+      "branch": "main",
+      "stars": 1657,
+      "archived": false,
+      "diskKb": 52105,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "mcpjungle",
+      "repo": "MCPJungle",
+      "sha": "5676b76a7ea206b7fe2d7a74ec2c6eb12cc3d5c8",
+      "branch": "main",
+      "stars": 1636,
+      "archived": false,
+      "diskKb": 31528,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "isaacphi",
+      "repo": "mcp-language-server",
+      "sha": "e4395849a52e18555361abab60a060802c06bf50",
+      "branch": "main",
+      "stars": 1623,
+      "archived": false,
+      "diskKb": 2604,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "Flux159",
+      "repo": "mcp-server-kubernetes",
+      "sha": "f93604a20e388a08caac548c380cde8a5c532d5c",
+      "branch": "main",
+      "stars": 1614,
+      "archived": false,
+      "diskKb": 3037,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "ezyang",
+      "repo": "codemcp",
+      "sha": "1ebdb61755c33a420332e6ff73f9fd1c1254d721",
+      "branch": "main",
+      "stars": 1604,
+      "archived": false,
+      "diskKb": 1648,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "brave",
+      "repo": "brave-search-mcp-server",
+      "sha": "78f32e1d552231638d3f1afd9bc1572db635a651",
+      "branch": "main",
+      "stars": 1585,
+      "archived": false,
+      "diskKb": 956,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "nickclyde",
+      "repo": "duckduckgo-mcp-server",
+      "sha": "8182af3f2295017ca90527a924f48147fbf18d5b",
+      "branch": "main",
+      "stars": 1583,
+      "archived": false,
+      "diskKb": 457,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "qdrant",
+      "repo": "mcp-server-qdrant",
+      "sha": "ff5ddd6f4bddd937331695a8873582c6cdf01775",
+      "branch": "master",
+      "stars": 1575,
+      "archived": false,
+      "diskKb": 874,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "hashicorp",
+      "repo": "terraform-mcp-server",
+      "sha": "b4c8016f241461d7e6734c4c041bd504974e83a3",
+      "branch": "main",
+      "stars": 1561,
+      "archived": false,
+      "diskKb": 12591,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "anaisbetts",
+      "repo": "mcp-installer",
+      "sha": "747fbd88aa2e54368f98252fc9e8d228748dc594",
+      "branch": "main",
+      "stars": 1541,
+      "archived": false,
+      "diskKb": 30,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "robotmcp",
+      "repo": "ros-mcp-server",
+      "sha": "476591ac058f58cae810cc775e50b51f8d3d757c",
+      "branch": "main",
+      "stars": 1532,
+      "archived": false,
+      "diskKb": 167515,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "awdr74100",
+      "repo": "figwright",
+      "sha": "fe3173b72c43a5601c1906b7a7c10819bd79dbbb",
+      "branch": "main",
+      "stars": 1505,
+      "archived": false,
+      "diskKb": 35890,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "Get-Concord-AI",
+      "repo": "concord-mcp",
+      "sha": "6e6aa5d324d4be2a7bfed48acbb8431dd829cb72",
+      "branch": "main",
+      "stars": 1484,
+      "archived": false,
+      "diskKb": 2987,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "mbailey",
+      "repo": "voicemode",
+      "sha": "cf15f72bec2ba16e097b4392f8e1f36282a34f3c",
+      "branch": "master",
+      "stars": 1472,
+      "archived": false,
+      "diskKb": 70936,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "mnemox-ai",
+      "repo": "tradememory-protocol",
+      "sha": "cb599bd3614560435670a7afaee44d1bb62ec507",
+      "branch": "master",
+      "stars": 1450,
+      "archived": false,
+      "diskKb": 10737,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "designcomputer",
+      "repo": "mysql_mcp_server",
+      "sha": "943ce83816372a03e5872be5424ebfcf252aa5ac",
+      "branch": "main",
+      "stars": 1422,
+      "archived": false,
+      "diskKb": 105,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "anypost",
+      "repo": "emailmd",
+      "sha": "3adb4e0f9b1f6619b15d1bb7e4366d4196fc3aa8",
+      "branch": "main",
+      "stars": 1397,
+      "archived": false,
+      "diskKb": 8308,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "pipeboard-co",
+      "repo": "meta-ads-mcp",
+      "sha": "63d0e5e29f2cf823f7f5317a77e66151eceb7415",
+      "branch": "main",
+      "stars": 1386,
+      "archived": false,
+      "diskKb": 2178,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "ihor-sokoliuk",
+      "repo": "mcp-searxng",
+      "sha": "d636d77c16649aee904d3521c45bcb88cadb3c3e",
+      "branch": "main",
+      "stars": 1379,
+      "archived": false,
+      "diskKb": 2266,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "caol64",
+      "repo": "wenyan-mcp",
+      "sha": "83874e9eb3a9ac1b637330df0cceaf8b4784d902",
+      "branch": "main",
+      "stars": 1360,
+      "archived": false,
+      "diskKb": 399,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "datalayer",
+      "repo": "jupyter-mcp-server",
+      "sha": "cdf49eb7ced881553a32ea332882a0744ab0f62a",
+      "branch": "main",
+      "stars": 1332,
+      "archived": false,
+      "diskKb": 3229,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "apecloud",
+      "repo": "ApeRAG",
+      "sha": "8668010b5227d1bdccc63e3709a53afda19f9227",
+      "branch": "main",
+      "stars": 1319,
+      "archived": false,
+      "diskKb": 48818,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "rinadelph",
+      "repo": "Agent-MCP",
+      "sha": "13d98b2c9e770a97a77521e605e7e41db024852d",
+      "branch": "main",
+      "stars": 1309,
+      "archived": false,
+      "diskKb": 5280,
+      "pool": "mcp-server",
+      "how": "most-starred"
+    },
+    {
+      "owner": "paulf280-ui",
+      "repo": "solana-safe-sniper-mcp-template",
+      "sha": "c4f9aa22ff0d6aca58b467d1ae352a2d65e5fc65",
+      "branch": "main",
+      "stars": 2,
+      "archived": false,
+      "diskKb": 1099,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "louis030195",
+      "repo": "apollo-io-mcp",
+      "sha": "9d71e0ac368687a89d73ca8389217abeaf5aa07f",
+      "branch": "master",
+      "stars": 4,
+      "archived": false,
+      "diskKb": 35,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "lodordev",
+      "repo": "mcp-tautulli",
+      "sha": "ac421688cae4b55a77eb58673cf7e9e4d52a0fed",
+      "branch": "main",
+      "stars": 11,
+      "archived": false,
+      "diskKb": 172,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "mathbeal",
+      "repo": "avenir-mcp",
+      "sha": "8fad0440dd600d77ab6a60769eb1d164434928fa",
+      "branch": "main",
+      "stars": 6,
+      "archived": false,
+      "diskKb": 8348,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "nitin27may",
+      "repo": "ms-graph-mcp",
+      "sha": "5625f57a51a128880d39215038f92223d9ee526a",
+      "branch": "main",
+      "stars": 4,
+      "archived": false,
+      "diskKb": 2285,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "thomasjumper",
+      "repo": "agentbay",
+      "sha": "643a3d9c432f6fceaf297b756737c585adc900fd",
+      "branch": "main",
+      "stars": 2,
+      "archived": false,
+      "diskKb": 76,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "botwallet-co",
+      "repo": "mcp",
+      "sha": "a35195c85893a3df9be9db8126b8c05df176ba19",
+      "branch": "main",
+      "stars": 4,
+      "archived": false,
+      "diskKb": 358,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "kevin2003050666-coder",
+      "repo": "x402-micro-tollgate",
+      "sha": "55ac3b522780e807e58d9ff54609005696336134",
+      "branch": "main",
+      "stars": 0,
+      "archived": false,
+      "diskKb": 732,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "JamesANZ",
+      "repo": "us-legal-mcp",
+      "sha": "cde6f3b4ff7ee9ee98b1cc20782f3237bd4d7b7a",
+      "branch": "main",
+      "stars": 39,
+      "archived": false,
+      "diskKb": 177,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "blackwhite084",
+      "repo": "playwright-plus-python-mcp",
+      "sha": "e5bdaad978ca041620c18e5614a7fd4987d5a4f8",
+      "branch": "master",
+      "stars": 187,
+      "archived": false,
+      "diskKb": 23,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "pierrebrunelle",
+      "repo": "mcp-server-openai",
+      "sha": "67e598884e6fe7f28fc43bec2db8e37f482953ee",
+      "branch": "main",
+      "stars": 84,
+      "archived": false,
+      "diskKb": 178,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "SonAIengine",
+      "repo": "graph-tool-call",
+      "sha": "75b251a772f2b67e6a747724f2e9c1bbb21d09cf",
+      "branch": "main",
+      "stars": 18,
+      "archived": false,
+      "diskKb": 7207,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "gchen19",
+      "repo": "AnkusDrive",
+      "sha": "c4aa8536ab5a0b728752eca8531da07c9925bde7",
+      "branch": "main",
+      "stars": 14,
+      "archived": false,
+      "diskKb": 37372,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "jinzcdev",
+      "repo": "leetcode-mcp-server",
+      "sha": "2eb3c79d3aad09991757e573a25c9890c8de9ca2",
+      "branch": "main",
+      "stars": 158,
+      "archived": false,
+      "diskKb": 377,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "webdriverio",
+      "repo": "mcp",
+      "sha": "1354cf886ec337c35356fb5172da87aa004a6308",
+      "branch": "main",
+      "stars": 45,
+      "archived": false,
+      "diskKb": 1449,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "AishwaryShrivastav",
+      "repo": "vibe-testing",
+      "sha": "44cf2a3606595f4836cd003be9b4ffe776177b20",
+      "branch": "main",
+      "stars": 18,
+      "archived": false,
+      "diskKb": 962,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "alexsu1212",
+      "repo": "freebazi-mcp",
+      "sha": "a8ea1f77576ace9476090036e0ba241a34516beb",
+      "branch": "master",
+      "stars": 0,
+      "archived": false,
+      "diskKb": 55,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "MvikManners",
+      "repo": "aw1-circuit-breaker",
+      "sha": "1670ffe35fa91bf12ea3f601691cf5b446b25b99",
+      "branch": "main",
+      "stars": 2,
+      "archived": false,
+      "diskKb": 86763,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "GeiserX",
+      "repo": "genieacs-mcp",
+      "sha": "c2562c6bc5db28f6a666aa802456e9a83e97b9df",
+      "branch": "main",
+      "stars": 20,
+      "archived": false,
+      "diskKb": 931,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "anythink-cloud",
+      "repo": "anythink-cli",
+      "sha": "f6417008a0aacaae6700aa9e73bb8c32fd4e3caf",
+      "branch": "main",
+      "stars": 6,
+      "archived": false,
+      "diskKb": 1862,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "Dominic-DK",
+      "repo": "askew-mcp",
+      "sha": "0d08f3923a4350db313c8938534b7bd3a6dc363b",
+      "branch": "main",
+      "stars": 2,
+      "archived": false,
+      "diskKb": 259,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "ajibadedapo",
+      "repo": "flowproof-mcp",
+      "sha": "1bae15b029558979ab16a957ecf861707349d36a",
+      "branch": "main",
+      "stars": 2,
+      "archived": false,
+      "diskKb": 766,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "OSOJDJD",
+      "repo": "deeplook",
+      "sha": "a2426bbca0065f6d51b0dcf04683364d2eca6bbd",
+      "branch": "main",
+      "stars": 13,
+      "archived": false,
+      "diskKb": 1070,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "Aiven-Open",
+      "repo": "mcp-aiven",
+      "sha": "d07c8eed0ad623cbe2c811384c32ef0e17a37253",
+      "branch": "main",
+      "stars": 28,
+      "archived": false,
+      "diskKb": 1032,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "aethyn-io",
+      "repo": "aethyn-browser-mcp",
+      "sha": "8f698516e80a83cbeef228f61f3b9afb88447336",
+      "branch": "main",
+      "stars": 4,
+      "archived": false,
+      "diskKb": 26,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "ikoskela",
+      "repo": "wisepanel-mcp",
+      "sha": "bfd4910651a095388577404a1e3a4c1072d79642",
+      "branch": "master",
+      "stars": 4,
+      "archived": false,
+      "diskKb": 109,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "sgx-labs",
+      "repo": "statelessagent",
+      "sha": "85e7ff20edf0533a499cbd6a7620da50f5989ec2",
+      "branch": "main",
+      "stars": 24,
+      "archived": false,
+      "diskKb": 2820,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "verifyax",
+      "repo": "verifyax-mcp",
+      "sha": "a2fbf2f7022ca38815a61397bd622d3fed800ba3",
+      "branch": "main",
+      "stars": 1,
+      "archived": false,
+      "diskKb": 812,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "lacs-project",
+      "repo": "sysknife",
+      "sha": "949e16ffab7d6a0888986cd3090fd14cdc862abe",
+      "branch": "main",
+      "stars": 331,
+      "archived": false,
+      "diskKb": 37521,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "error-path",
+      "repo": "opendrs",
+      "sha": "00143efb60d7033f17fc6f67f1620fc22e013391",
+      "branch": "main",
+      "stars": 3,
+      "archived": false,
+      "diskKb": 4180,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "contentasoftware",
+      "repo": "appledger",
+      "sha": "08d506d1f2b7e844792ab21f6a8bf84cf1acd009",
+      "branch": "main",
+      "stars": 0,
+      "archived": false,
+      "diskKb": 137,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "kukapay",
+      "repo": "blockbeats-mcp",
+      "sha": "295c6aefb0cb7d2a43d390ce5d8c80e1dfd815ff",
+      "branch": "main",
+      "stars": 10,
+      "archived": false,
+      "diskKb": 26,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "kskurtveit",
+      "repo": "echocache",
+      "sha": "285892bee9c4ec4211a8a3b1a37440c6b7cd2af4",
+      "branch": "main",
+      "stars": 1,
+      "archived": false,
+      "diskKb": 373,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "drhalto",
+      "repo": "agentmako",
+      "sha": "e0aaf381f7fbf0a8ea328d8256eafa58364d803d",
+      "branch": "main",
+      "stars": 54,
+      "archived": false,
+      "diskKb": 6652,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "muammar-yacoob",
+      "repo": "GMail-Manager-MCP",
+      "sha": "fb1e435a2783c29cdc1af07929892e12a18d1f3b",
+      "branch": "main",
+      "stars": 10,
+      "archived": false,
+      "diskKb": 44318,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "mandarelabs",
+      "repo": "mandare",
+      "sha": "327442e714d35632c2cfc911f7839b69cbb0e4c7",
+      "branch": "main",
+      "stars": 2,
+      "archived": false,
+      "diskKb": 3882,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "velvetway",
+      "repo": "minreestr-mcp",
+      "sha": "87ba7724b29a0803ca7df839c738e77f1101bf16",
+      "branch": "main",
+      "stars": 7,
+      "archived": false,
+      "diskKb": 17,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "scrape-badger",
+      "repo": "scrapebadger-mcp",
+      "sha": "1a68ad9717f81238a4181457ccc804133917da48",
+      "branch": "main",
+      "stars": 2,
+      "archived": false,
+      "diskKb": 171,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "rm-rf-prod",
+      "repo": "GroundTruth-MCP",
+      "sha": "0f0e194ed75f431952cc6ae30919bc8130a949fc",
+      "branch": "main",
+      "stars": 7,
+      "archived": false,
+      "diskKb": 2870,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "phuocdu",
+      "repo": "agentpay-vn",
+      "sha": "11c57451bd0e6cbe2a9d57d802f842d42bfe7f9a",
+      "branch": "main",
+      "stars": 1,
+      "archived": false,
+      "diskKb": 41,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "atomno-mcp",
+      "repo": "mcp-fns-calc",
+      "sha": "7a3912f2567a72b65d08b665ea1c0459139a9f2f",
+      "branch": "main",
+      "stars": 1,
+      "archived": false,
+      "diskKb": 53,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "a-25",
+      "repo": "ios-mcp-code-quality-server",
+      "sha": "8c9e0f95826a403b1e2c4f4f8dbe406586aee2b0",
+      "branch": "main",
+      "stars": 12,
+      "archived": false,
+      "diskKb": 100130,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "Tomatio13",
+      "repo": "mcp-server-tavily",
+      "sha": "261215247293d6299b108f9f887eeddb5006ac97",
+      "branch": "main",
+      "stars": 50,
+      "archived": false,
+      "diskKb": 43,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "attalla1",
+      "repo": "photopea-mcp-server",
+      "sha": "7dd18067e7fbfc15c81904e035787902c2dd7793",
+      "branch": "main",
+      "stars": 56,
+      "archived": false,
+      "diskKb": 4245,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "ictinnovations",
+      "repo": "ictbroadcast-mcp",
+      "sha": "da56a626993cb6b6ccfb31e5f7779bbe86b61a20",
+      "branch": "main",
+      "stars": 16,
+      "archived": false,
+      "diskKb": 25,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "mahdibrr",
+      "repo": "dev-error-explainers",
+      "sha": "0fc912a1af4c3d208b61255dbe26df2921428f3b",
+      "branch": "main",
+      "stars": 0,
+      "archived": false,
+      "diskKb": 3615,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "strato-space",
+      "repo": "media-gen-mcp",
+      "sha": "893feb7b043984924c9d23c5f3face21966c55f7",
+      "branch": "main",
+      "stars": 9,
+      "archived": false,
+      "diskKb": 3623,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "lucygoodchild",
+      "repo": "mcp-national-rail",
+      "sha": "68e2d57b50d1eeb513c75eb6d1303d9c43e5b43b",
+      "branch": "main",
+      "stars": 7,
+      "archived": false,
+      "diskKb": 44,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "bguillow-rgb",
+      "repo": "pour-picks-mcp",
+      "sha": "9c9d264630c45fcd8a19373686d9fb6421d726a9",
+      "branch": "main",
+      "stars": 0,
+      "archived": false,
+      "diskKb": 93,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "MakeaMouse",
+      "repo": "fish-bridge-mcp",
+      "sha": "e995e569fbb9bb396fa26f82c5c0d4445cea204e",
+      "branch": "main",
+      "stars": 2,
+      "archived": false,
+      "diskKb": 608,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "tribal-memory",
+      "repo": "tribal",
+      "sha": "1ab5854bf74da46b26550d79a157e77de878a5d2",
+      "branch": "chore/bump-rust-version",
+      "stars": 10,
+      "archived": false,
+      "diskKb": 8058,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "Bartolome69",
+      "repo": "garmin-mcp",
+      "sha": "d4db6613f0043f75687852ff0e170d1954573eed",
+      "branch": "main",
+      "stars": 7,
+      "archived": false,
+      "diskKb": 4029,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "qr-maker-io",
+      "repo": "mcp-server",
+      "sha": "261589156869a79db6a4526008c8508a5f2c6d2e",
+      "branch": "master",
+      "stars": 1,
+      "archived": false,
+      "diskKb": 29,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "Explorer-64",
+      "repo": "imagcon-mcp",
+      "sha": "5e6e92d19b203c6beef266cbd36c8ad43637edde",
+      "branch": "main",
+      "stars": 2,
+      "archived": false,
+      "diskKb": 1427,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "adityatiwari101104",
+      "repo": "contribos",
+      "sha": "343fd435033f89f3984e2076f135436f9dc5fa35",
+      "branch": "main",
+      "stars": 14,
+      "archived": false,
+      "diskKb": 283,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "ypratap11",
+      "repo": "dokimo-mcp",
+      "sha": "25683a11f1faea708b9bde15cae18ddc6e36f42b",
+      "branch": "main",
+      "stars": 0,
+      "archived": false,
+      "diskKb": 40,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "f4ww4z",
+      "repo": "mcp-mysql-server",
+      "sha": "9e0a7df0cb5d1edaa0017ae555ae10aa4e69ce0c",
+      "branch": "main",
+      "stars": 171,
+      "archived": false,
+      "diskKb": 44,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "wisflux",
+      "repo": "docmost-local-mcp",
+      "sha": "0bb296068227c9d2eb4e83731806867c2b0b98f6",
+      "branch": "main",
+      "stars": 16,
+      "archived": false,
+      "diskKb": 296,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "irskep",
+      "repo": "persistproc",
+      "sha": "7889c26f0f4ea6c52dadd8ec68595bc5f5ab99f6",
+      "branch": "main",
+      "stars": 8,
+      "archived": false,
+      "diskKb": 423,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "infino-ai",
+      "repo": "infino-mcp",
+      "sha": "6c8da4647c2ce291342c0b3c9aa9435a12f143cf",
+      "branch": "main",
+      "stars": 0,
+      "archived": false,
+      "diskKb": 503,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "Work90210",
+      "repo": "APIFold",
+      "sha": "ffae6f30e4bae3f0e79369a0452ba81144c0468a",
+      "branch": "master",
+      "stars": 13,
+      "archived": false,
+      "diskKb": 1865,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "weibaohui",
+      "repo": "kom",
+      "sha": "225fe434e11d721c74738a8b5ed3c5a18f04f5f7",
+      "branch": "main",
+      "stars": 150,
+      "archived": false,
+      "diskKb": 1464,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "douglasgan",
+      "repo": "asktian-mcp",
+      "sha": "0c6b219a16a1fe5fa6f55faf18b3798eeaddd223",
+      "branch": "main",
+      "stars": 2,
+      "archived": false,
+      "diskKb": 120,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "Rarefied-Earth",
+      "repo": "groundwork",
+      "sha": "148a338f49dcd8455d66805b094f2dc5039b957b",
+      "branch": "main",
+      "stars": 1,
+      "archived": false,
+      "diskKb": 341,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "toolstem",
+      "repo": "toolstem-sec-mcp-server",
+      "sha": "7dd22e19fa6b56be2ea5ef3e6a4d19ba48fcc2b1",
+      "branch": "main",
+      "stars": 1,
+      "archived": false,
+      "diskKb": 348,
+      "pool": "mcp-server",
+      "how": "seeded-random"
+    },
+    {
+      "owner": "hao-ji-xing",
+      "repo": "awesome-cursor",
+      "sha": "bf80f871f31ff6325a3c1be86a1f1efe04a6aa66",
+      "branch": "main",
+      "stars": 94,
+      "archived": false,
+      "diskKb": 91,
+      "pool": "agent-config",
+      "how": "topic:cursorrules"
+    },
+    {
+      "owner": "ivangrynenko",
+      "repo": "cursorrules",
+      "sha": "8f652d24057ca37feae1c4a7185662f5589b0f5c",
+      "branch": "main",
+      "stars": 88,
+      "archived": false,
+      "diskKb": 807,
+      "pool": "agent-config",
+      "how": "topic:cursorrules"
+    },
+    {
+      "owner": "blefnk",
+      "repo": "awesome-cursor-rules",
+      "sha": "eb2fdbc5ad0ae9aedeae09965e54ea6ad88dc715",
+      "branch": "main",
+      "stars": 84,
+      "archived": false,
+      "diskKb": 24,
+      "pool": "agent-config",
+      "how": "topic:cursorrules"
+    },
+    {
+      "owner": "pilot-repl",
+      "repo": "getcursor",
+      "sha": "e2d8891290b3cb96441de8458bfed9219bc763cc",
+      "branch": "main",
+      "stars": 81,
+      "archived": false,
+      "diskKb": 22,
+      "pool": "agent-config",
+      "how": "topic:cursorrules"
+    },
+    {
+      "owner": "GeiserX",
+      "repo": "LynxPrompt",
+      "sha": "4faa9c0ace27d423a5ca1e443e43e694f796a809",
+      "branch": "main",
+      "stars": 60,
+      "archived": false,
+      "diskKb": 63154,
+      "pool": "agent-config",
+      "how": "topic:cursorrules"
+    },
+    {
+      "owner": "levifig",
+      "repo": "rails-instructions",
+      "sha": "06ee708dd01d65a27b7582edcdaf877011d996f9",
+      "branch": "main",
+      "stars": 57,
+      "archived": false,
+      "diskKb": 115,
+      "pool": "agent-config",
+      "how": "topic:cursorrules"
+    },
+    {
+      "owner": "TheWebScrapingClub",
+      "repo": "AI-Cursor-Scraping-Assistant",
+      "sha": "4755380be3ca6b63ff3d2fa1cb89dc54ab366f1e",
+      "branch": "main",
+      "stars": 56,
+      "archived": false,
+      "diskKb": 15,
+      "pool": "agent-config",
+      "how": "topic:cursorrules"
+    },
+    {
+      "owner": "yucezerey",
+      "repo": "turkish-anti-ai-skill",
+      "sha": "2abf2ffbba4392109dac78d510265859febd2c4e",
+      "branch": "main",
+      "stars": 331,
+      "archived": false,
+      "diskKb": 110,
+      "pool": "agent-config",
+      "how": "topic:cursor-rules"
+    },
+    {
+      "owner": "kleosr",
+      "repo": "cursorkleosr",
+      "sha": "c3f8854fb6740234ca1b4edcad4a05d4cd73ce55",
+      "branch": "main",
+      "stars": 325,
+      "archived": false,
+      "diskKb": 192,
+      "pool": "agent-config",
+      "how": "topic:cursor-rules"
+    },
+    {
+      "owner": "Mindrally",
+      "repo": "skills",
+      "sha": "7682ca77710e0971eab4e0ae5dddfa281aea0ba5",
+      "branch": "main",
+      "stars": 313,
+      "archived": false,
+      "diskKb": 932,
+      "pool": "agent-config",
+      "how": "topic:cursor-rules"
+    },
+    {
+      "owner": "danielvm-git",
+      "repo": "bigpowers",
+      "sha": "72f5e4c8b43f60cf86b37078ad8cd7e22daf67aa",
+      "branch": "main",
+      "stars": 293,
+      "archived": false,
+      "diskKb": 14245,
+      "pool": "agent-config",
+      "how": "topic:cursor-rules"
+    },
+    {
+      "owner": "mbeijen",
+      "repo": "andrej-karpathy-skills-cursor-vscode",
+      "sha": "a51d67704dc30e4adc9b322676548fa03fb078a7",
+      "branch": "main",
+      "stars": 275,
+      "archived": false,
+      "diskKb": 38,
+      "pool": "agent-config",
+      "how": "topic:cursor-rules"
+    },
+    {
+      "owner": "ilindaniel",
+      "repo": "ponytail-lite",
+      "sha": "e7b42dc2d384a702240dea4d52a7bf5530b821b6",
+      "branch": "main",
+      "stars": 252,
+      "archived": false,
+      "diskKb": 2703,
+      "pool": "agent-config",
+      "how": "topic:cursor-rules"
+    },
+    {
+      "owner": "KbWen",
+      "repo": "agentic-os",
+      "sha": "21b2a9a0caa673a57fd744d07b72a122f0583c66",
+      "branch": "main",
+      "stars": 242,
+      "archived": false,
+      "diskKb": 6930,
+      "pool": "agent-config",
+      "how": "topic:cursor-rules"
+    },
+    {
+      "owner": "sohaibt",
+      "repo": "product-mode",
+      "sha": "09d37f0e39a006eb3662735165058ce405ad073e",
+      "branch": "main",
+      "stars": 162,
+      "archived": false,
+      "diskKb": 21263,
+      "pool": "agent-config",
+      "how": "topic:claude-md"
+    },
+    {
+      "owner": "Avinash-jetwani",
+      "repo": "jevmem",
+      "sha": "c29753ccb2c9706e417fda25efa422682358955b",
+      "branch": "main",
+      "stars": 156,
+      "archived": false,
+      "diskKb": 8726,
+      "pool": "agent-config",
+      "how": "topic:claude-md"
+    },
+    {
+      "owner": "edvardgrishin27",
+      "repo": "nativeprompt",
+      "sha": "f2ab8f3b97dfbccb2cedaebecd95c12a4e247266",
+      "branch": "main",
+      "stars": 129,
+      "archived": false,
+      "diskKb": 3220,
+      "pool": "agent-config",
+      "how": "topic:claude-md"
+    },
+    {
+      "owner": "jrenaldi79",
+      "repo": "harness-engineering",
+      "sha": "09cb115ec9dca18949ebceb0876160dae0a0e277",
+      "branch": "main",
+      "stars": 126,
+      "archived": false,
+      "diskKb": 747,
+      "pool": "agent-config",
+      "how": "topic:claude-md"
+    },
+    {
+      "owner": "Lolner95",
+      "repo": "AIGX",
+      "sha": "b9669b317e76b0280bd183ab4708644bf2d37112",
+      "branch": "main",
+      "stars": 114,
+      "archived": false,
+      "diskKb": 471,
+      "pool": "agent-config",
+      "how": "topic:claude-md"
+    },
+    {
+      "owner": "solanabr",
+      "repo": "ai-kit",
+      "sha": "c17266a25f1907a1debd48eda315c3be52888bf5",
+      "branch": "main",
+      "stars": 113,
+      "archived": false,
+      "diskKb": 7564,
+      "pool": "agent-config",
+      "how": "topic:claude-md"
+    },
+    {
+      "owner": "globalmpc",
+      "repo": "nomore",
+      "sha": "7e2d2b2abc2d4b6229f191cb25c98d2bdf2c8f1e",
+      "branch": "main",
+      "stars": 112,
+      "archived": false,
+      "diskKb": 2566,
+      "pool": "agent-config",
+      "how": "topic:claude-md"
+    },
+    {
+      "owner": "LeanMeanCleanApps",
+      "repo": "CleanMinimalApi",
+      "sha": "fd0b4df79d62ee34e525f7927bafd793b5c830fa",
+      "branch": "main",
+      "stars": 401,
+      "archived": false,
+      "diskKb": 851,
+      "pool": "agent-config",
+      "how": "topic:agents-md"
+    },
+    {
+      "owner": "whitelonng",
+      "repo": "mancode",
+      "sha": "47db1745aa45f7a3a11641d1f50e7ce89f47d14c",
+      "branch": "main",
+      "stars": 361,
+      "archived": false,
+      "diskKb": 5003,
+      "pool": "agent-config",
+      "how": "topic:agents-md"
+    },
+    {
+      "owner": "coco-research",
+      "repo": "coco",
+      "sha": "cb50e479ef6618ce174ec291acd975612b4fc35f",
+      "branch": "main",
+      "stars": 327,
+      "archived": false,
+      "diskKb": 55908,
+      "pool": "agent-config",
+      "how": "topic:agents-md"
+    },
+    {
+      "owner": "uucz",
+      "repo": "moyu",
+      "sha": "f9ef7d0a01fe10c177a15f0f311c35acb0dad6b5",
+      "branch": "main",
+      "stars": 310,
+      "archived": false,
+      "diskKb": 1419,
+      "pool": "agent-config",
+      "how": "topic:agents-md"
+    },
+    {
+      "owner": "handsomeZR-netizen",
+      "repo": "mathmodel-skill",
+      "sha": "e0e65c8c56f1f0435fb76e99490dbae7c2704d59",
+      "branch": "main",
+      "stars": 310,
+      "archived": false,
+      "diskKb": 923,
+      "pool": "agent-config",
+      "how": "topic:agents-md"
+    },
+    {
+      "owner": "DengShiyingA",
+      "repo": "harmonyos-ai-skill",
+      "sha": "77c78fc98a3d4a0b1caf666bd92bdc0183e6d31a",
+      "branch": "main",
+      "stars": 293,
+      "archived": false,
+      "diskKb": 2780,
+      "pool": "agent-config",
+      "how": "topic:agents-md"
+    },
+    {
+      "owner": "YMuskrat",
+      "repo": "agentctx",
+      "sha": "d990cce2c5a6d9efcd90faa50a57df878d20256c",
+      "branch": "master",
+      "stars": 283,
+      "archived": false,
+      "diskKb": 28940,
+      "pool": "agent-config",
+      "how": "topic:agents-md"
+    },
+    {
+      "owner": "UBayouski",
+      "repo": "Grimsheet",
+      "sha": "f97be955d92cebfe12849154d54de31b60c39f34",
+      "branch": "main",
+      "stars": 1,
+      "archived": false,
+      "diskKb": 2553,
+      "pool": "agent-config",
+      "how": "topic:kiro-steering"
+    },
+    {
+      "owner": "63Klabs",
+      "repo": "atlantis-with-kiro-ai",
+      "sha": "3ec6a1e870b12a39159363d1f6e14be46278d395",
+      "branch": "main",
+      "stars": 0,
+      "archived": false,
+      "diskKb": 148,
+      "pool": "agent-config",
+      "how": "topic:kiro-steering"
+    },
+    {
+      "owner": "gitfool",
+      "repo": "kiro-dungeon",
+      "sha": "5ccbfa6377642eb2cb9d7d3f4cced5b4e62e21ad",
+      "branch": "main",
+      "stars": 0,
+      "archived": false,
+      "diskKb": 2738,
+      "pool": "agent-config",
+      "how": "topic:kiro-steering"
+    },
+    {
+      "owner": "SeemSeam",
+      "repo": "claude_codex_bridge",
+      "sha": "470eae0d0dac6b1de1a1b1049054c1349b937d16",
+      "branch": "main",
+      "stars": 3633,
+      "archived": false,
+      "diskKb": 55449,
+      "pool": "agent-config",
+      "how": "topic:kiro"
+    },
+    {
+      "owner": "lxf746",
+      "repo": "any-auto-register",
+      "sha": "a6e481eb554b56a9aae6519d10d367c2ae7f9c9a",
+      "branch": "main",
+      "stars": 3456,
+      "archived": false,
+      "diskKb": 9657,
+      "pool": "agent-config",
+      "how": "topic:kiro"
+    },
+    {
+      "owner": "mikeyobrien",
+      "repo": "ralph-orchestrator",
+      "sha": "7d36cc76495e2145699d0191d35414f0e9d7a801",
+      "branch": "main",
+      "stars": 3209,
+      "archived": false,
+      "diskKb": 15329,
+      "pool": "agent-config",
+      "how": "topic:kiro"
+    },
+    {
+      "owner": "jwadow",
+      "repo": "kiro-gateway",
+      "sha": "a5292ca04c7c6231e0b47673ac3f981f5a706e1e",
+      "branch": "main",
+      "stars": 2362,
+      "archived": false,
+      "diskKb": 880,
+      "pool": "agent-config",
+      "how": "topic:kiro"
+    },
+    {
+      "owner": "awslabs",
+      "repo": "cli-agent-orchestrator",
+      "sha": "e2f2978c26c1b50cee2db90b524e7656ef64f46f",
+      "branch": "main",
+      "stars": 1638,
+      "archived": false,
+      "diskKb": 64646,
+      "pool": "agent-config",
+      "how": "topic:kiro"
+    },
+    {
+      "owner": "wuji-labs",
+      "repo": "nopua",
+      "sha": "44010e045b7dd72b16d760ceefd7a8d408dabf37",
+      "branch": "main",
+      "stars": 1401,
+      "archived": false,
+      "diskKb": 5057,
+      "pool": "agent-config",
+      "how": "topic:kiro"
+    },
+    {
+      "owner": "Quorinex",
+      "repo": "Kiro-Go",
+      "sha": "f8f6071c9298a4266ad3e0c7e483d4a2510cbcaf",
+      "branch": "main",
+      "stars": 1212,
+      "archived": false,
+      "diskKb": 930,
+      "pool": "agent-config",
+      "how": "topic:kiro"
+    },
+    {
+      "owner": "heymegabyte",
+      "repo": "agent-skills",
+      "sha": "91fae80c2ae97bd44c4a127834f89c6c9dcd8294",
+      "branch": "main",
+      "stars": 29,
+      "archived": false,
+      "diskKb": 12466,
+      "pool": "agent-config",
+      "how": "topic:copilot-instructions"
+    },
+    {
+      "owner": "fadwen",
+      "repo": "ai-powershell-standards",
+      "sha": "79872d275e512cf5ccddf850516891d1d6e42d84",
+      "branch": "main",
+      "stars": 24,
+      "archived": false,
+      "diskKb": 892,
+      "pool": "agent-config",
+      "how": "topic:copilot-instructions"
+    },
+    {
+      "owner": "Zerik99",
+      "repo": "godot-copilot-instructions",
+      "sha": "5db1ac3226dcd5e9cf97b14ff3be95b7fca5d78e",
+      "branch": "main",
+      "stars": 19,
+      "archived": false,
+      "diskKb": 8,
+      "pool": "agent-config",
+      "how": "topic:copilot-instructions"
+    },
+    {
+      "owner": "caioribeiroclw-pixel",
+      "repo": "pluribus",
+      "sha": "b15a1886284ffd392223d6cf6d71c8f7dafe0b45",
+      "branch": "main",
+      "stars": 15,
+      "archived": false,
+      "diskKb": 5959,
+      "pool": "agent-config",
+      "how": "topic:copilot-instructions"
+    },
+    {
+      "owner": "YawLabs",
+      "repo": "ctxlint",
+      "sha": "1c8da6d61d9ea606a115e8e62152a7d1e483e15d",
+      "branch": "main",
+      "stars": 12,
+      "archived": false,
+      "diskKb": 3100,
+      "pool": "agent-config",
+      "how": "topic:copilot-instructions"
+    },
+    {
+      "owner": "RealistSec",
+      "repo": "mpa-first-guidelines",
+      "sha": "e7f74106184148fbaad8317efb5fb10878fce0f2",
+      "branch": "main",
+      "stars": 11,
+      "archived": false,
+      "diskKb": 100,
+      "pool": "agent-config",
+      "how": "topic:copilot-instructions"
+    },
+    {
+      "owner": "autovant",
+      "repo": "superpowers",
+      "sha": "22938b206bb2b84e86ee4314fd83e0cac73ecdeb",
+      "branch": "main",
+      "stars": 10,
+      "archived": false,
+      "diskKb": 1087,
+      "pool": "agent-config",
+      "how": "topic:copilot-instructions"
+    },
+    {
+      "owner": "softwareasg-tools",
+      "repo": "information-security-for-vibecoded-apps",
+      "sha": "483a0b526dd635828162ae8d5c7935f999cc3c7f",
+      "branch": "main",
+      "stars": 3,
+      "archived": false,
+      "diskKb": 29,
+      "pool": "agent-config",
+      "how": "topic:windsurf-rules"
+    },
+    {
+      "owner": "GeiserX",
+      "repo": "homebrew-lynxprompt",
+      "sha": "51767237692a256d3084ebd6e03429e6c5d81bc9",
+      "branch": "main",
+      "stars": 3,
+      "archived": false,
+      "diskKb": 164,
+      "pool": "agent-config",
+      "how": "topic:windsurf-rules"
+    },
+    {
+      "owner": "Erkan3034",
+      "repo": "aegis",
+      "sha": "17dae91062845e840316604d2793e360a52ea8bc",
+      "branch": "main",
+      "stars": 2,
+      "archived": false,
+      "diskKb": 413,
+      "pool": "agent-config",
+      "how": "topic:windsurf-rules"
+    },
+    {
+      "owner": "edsondviana8",
+      "repo": "ai-humanizer-core",
+      "sha": "e249d53adb59b765170c942ee87ac40b4ee6e592",
+      "branch": "main",
+      "stars": 2,
+      "archived": false,
+      "diskKb": 2153,
+      "pool": "agent-config",
+      "how": "topic:windsurf-rules"
+    },
+    {
+      "owner": "maurodesouza",
+      "repo": "ai-kanban-app-lab",
+      "sha": "6f1867f215cf86d20099b6dfb1164c79abfb87ce",
+      "branch": "main",
+      "stars": 2,
+      "archived": false,
+      "diskKb": 1525,
+      "pool": "agent-config",
+      "how": "topic:windsurf-rules"
+    },
+    {
+      "owner": "Neko-Koubou",
+      "repo": "vibe-coding-pipeline",
+      "sha": "8b503af8492ecb2544bf3647389a8eed266b6182",
+      "branch": "main",
+      "stars": 1,
+      "archived": false,
+      "diskKb": 165,
+      "pool": "agent-config",
+      "how": "topic:windsurf-rules"
+    },
+    {
+      "owner": "Max-Samson",
+      "repo": "knowme-careerforge-skill",
+      "sha": "b3c999abd996860d4068636ed45c6c5cc8dabfce",
+      "branch": "main",
+      "stars": 1,
+      "archived": false,
+      "diskKb": 866,
+      "pool": "agent-config",
+      "how": "topic:windsurf-rules"
+    },
+    {
+      "owner": "AgriciDaniel",
+      "repo": "claude-obsidian",
+      "sha": "2e545563172f97f02ecaaaab376ceea1246a0583",
+      "branch": "main",
+      "stars": 16705,
+      "archived": false,
+      "diskKb": 38035,
+      "pool": "agent-config",
+      "how": "awesome-claude-code most-starred"
+    },
+    {
+      "owner": "siteboon",
+      "repo": "claudecodeui",
+      "sha": "b6959148ec006f258d737e72bb630ff2e5e84672",
+      "branch": "main",
+      "stars": 14732,
+      "archived": false,
+      "diskKb": 22277,
+      "pool": "agent-config",
+      "how": "awesome-claude-code most-starred"
+    },
+    {
+      "owner": "sirmalloc",
+      "repo": "ccstatusline",
+      "sha": "0c94df755665ed7794f082863821fd5f428cdf60",
+      "branch": "main",
+      "stars": 13670,
+      "archived": false,
+      "diskKb": 15265,
+      "pool": "agent-config",
+      "how": "awesome-claude-code most-starred"
+    },
+    {
+      "owner": "Piebald-AI",
+      "repo": "claude-code-system-prompts",
+      "sha": "659d9f4cff186a44099048926a695647c0ba1814",
+      "branch": "main",
+      "stars": 13213,
+      "archived": false,
+      "diskKb": 6295,
+      "pool": "agent-config",
+      "how": "awesome-claude-code most-starred"
+    },
+    {
+      "owner": "Jeffallan",
+      "repo": "claude-skills",
+      "sha": "4b94d98605baf742b751bb82832ace5caf942271",
+      "branch": "main",
+      "stars": 12492,
+      "archived": false,
+      "diskKb": 12455,
+      "pool": "agent-config",
+      "how": "awesome-claude-code most-starred"
+    },
+    {
+      "owner": "getagentseal",
+      "repo": "codeburn",
+      "sha": "c08d761087afe8aaf132777f58326a6e7fecc7ef",
+      "branch": "main",
+      "stars": 11890,
+      "archived": false,
+      "diskKb": 67832,
+      "pool": "agent-config",
+      "how": "awesome-claude-code most-starred"
+    },
+    {
+      "owner": "nicobailon",
+      "repo": "visual-explainer",
+      "sha": "9d5f880b7e8e0a9a80c890b8e1bb6918b68481ad",
+      "branch": "main",
+      "stars": 11229,
+      "archived": false,
+      "diskKb": 3906,
+      "pool": "agent-config",
+      "how": "awesome-claude-code most-starred"
+    },
+    {
+      "owner": "diet103",
+      "repo": "claude-code-infrastructure-showcase",
+      "sha": "07f75ce3c301259e857343596e7883b8ce5a9f50",
+      "branch": "main",
+      "stars": 10056,
+      "archived": false,
+      "diskKb": 264,
+      "pool": "agent-config",
+      "how": "awesome-claude-code most-starred"
+    },
+    {
+      "owner": "frankbria",
+      "repo": "ralph-claude-code",
+      "sha": "11f9df5becc8093ff2265542107e8e53a42e9970",
+      "branch": "main",
+      "stars": 9739,
+      "archived": false,
+      "diskKb": 1243,
+      "pool": "agent-config",
+      "how": "awesome-claude-code most-starred"
+    },
+    {
+      "owner": "revfactory",
+      "repo": "harness",
+      "sha": "92d9f1b29e7af81acebf51a9fcd1832e739a1414",
+      "branch": "main",
+      "stars": 9392,
+      "archived": false,
+      "diskKb": 29980,
+      "pool": "agent-config",
+      "how": "awesome-claude-code most-starred"
+    },
+    {
+      "owner": "mvschwarz",
+      "repo": "openrig",
+      "sha": "5833cb296fa38ac8369380363f197e0ee5ef9320",
+      "branch": "main",
+      "stars": 8951,
+      "archived": false,
+      "diskKb": 77004,
+      "pool": "agent-config",
+      "how": "awesome-claude-code most-starred"
+    },
+    {
+      "owner": "smtg-ai",
+      "repo": "claude-squad",
+      "sha": "070eb9387cda2be2e64aa1a32ee81be160c457a1",
+      "branch": "main",
+      "stars": 8851,
+      "archived": false,
+      "diskKb": 3440,
+      "pool": "agent-config",
+      "how": "awesome-claude-code most-starred"
+    },
+    {
+      "owner": "automazeio",
+      "repo": "ccpm",
+      "sha": "0bcfabb516913b6d484f20a8c9e449fae8e0c0ee",
+      "branch": "main",
+      "stars": 8462,
+      "archived": false,
+      "diskKb": 1695,
+      "pool": "agent-config",
+      "how": "awesome-claude-code most-starred"
+    },
+    {
+      "owner": "Oldcircle",
+      "repo": "geo-sleuth",
+      "sha": "c27d5ee24ec4393633c5c3d5a3bbe0cebbe33d93",
+      "branch": "main",
+      "stars": 7433,
+      "archived": false,
+      "diskKb": 18255,
+      "pool": "agent-config",
+      "how": "awesome-claude-code most-starred"
+    },
+    {
+      "owner": "anthropics",
+      "repo": "claude-code-security-review",
+      "sha": "0c6a49f1fa56a1d472575da86a94dbc1edb78eda",
+      "branch": "main",
+      "stars": 7060,
+      "archived": false,
+      "diskKb": 61,
+      "pool": "agent-config",
+      "how": "awesome-claude-code most-starred"
+    },
+    {
+      "owner": "serpro69",
+      "repo": "capy",
+      "sha": "e51a8ed1d75f14e94d5ea2361f2c938f3125c6cb",
+      "branch": "master",
+      "stars": 15,
+      "archived": false,
+      "diskKb": 6491,
+      "pool": "agent-config",
+      "how": "awesome-claude-code seeded-random"
+    },
+    {
+      "owner": "Haleclipse",
+      "repo": "CCometixLine",
+      "sha": "1749ff85b52d8d10e67e0a04d247ceab768f380f",
+      "branch": "master",
+      "stars": 3566,
+      "archived": false,
+      "diskKb": 1291,
+      "pool": "agent-config",
+      "how": "awesome-claude-code seeded-random"
+    },
+    {
+      "owner": "ldayton",
+      "repo": "Dippy",
+      "sha": "2edad4a48d616a191c83417552ddc60eb79b526a",
+      "branch": "main",
+      "stars": 244,
+      "archived": false,
+      "diskKb": 1818,
+      "pool": "agent-config",
+      "how": "awesome-claude-code seeded-random"
+    },
+    {
+      "owner": "shengyanlin",
+      "repo": "claude-overlay",
+      "sha": "e964bf7858bc49655119cbf6afd30550a2b73f1f",
+      "branch": "main",
+      "stars": 104,
+      "archived": false,
+      "diskKb": 6982,
+      "pool": "agent-config",
+      "how": "awesome-claude-code seeded-random"
+    },
+    {
+      "owner": "zakariagharzouli",
+      "repo": "sparda",
+      "sha": "439617e44c22c6bd625a507e19c3deb1f75dbb92",
+      "branch": "main",
+      "stars": 9,
+      "archived": false,
+      "diskKb": 29675,
+      "pool": "agent-config",
+      "how": "awesome-claude-code seeded-random"
+    },
+    {
+      "owner": "vimalk78",
+      "repo": "dictate",
+      "sha": "0a44d889830effac5eb77a95949bdd8f55657158",
+      "branch": "main",
+      "stars": 26,
+      "archived": false,
+      "diskKb": 156,
+      "pool": "agent-config",
+      "how": "awesome-claude-code seeded-random"
+    },
+    {
+      "owner": "Li-Evan",
+      "repo": "BloomTutor",
+      "sha": "1c4be1491b54c17f705706b54a09848f545c7878",
+      "branch": "main",
+      "stars": 328,
+      "archived": false,
+      "diskKb": 9922,
+      "pool": "agent-config",
+      "how": "awesome-claude-code seeded-random"
+    },
+    {
+      "owner": "snwfdhmp",
+      "repo": "awesome-ralph",
+      "sha": "086b7bb57cf61155fe6017c6df35489318547700",
+      "branch": "main",
+      "stars": 939,
+      "archived": false,
+      "diskKb": 74,
+      "pool": "agent-config",
+      "how": "awesome-claude-code seeded-random"
+    },
+    {
+      "owner": "educlopez",
+      "repo": "ui-craft",
+      "sha": "c1e556ed843b5aad057678f9a152fbcf756eb62c",
+      "branch": "main",
+      "stars": 471,
+      "archived": false,
+      "diskKb": 19256,
+      "pool": "agent-config",
+      "how": "awesome-claude-code seeded-random"
+    },
+    {
+      "owner": "karanb192",
+      "repo": "awesome-claude-code-mods",
+      "sha": "9d2afde4534b5e8d7706b225c0ddc68fd2492c77",
+      "branch": "main",
+      "stars": 1061,
+      "archived": false,
+      "diskKb": 235833,
+      "pool": "agent-config",
+      "how": "awesome-claude-code seeded-random"
+    },
+    {
+      "owner": "OneRedOak",
+      "repo": "claude-code-workflows",
+      "sha": "29a34c725313c7621f426f838ed31cf482473fb4",
+      "branch": "main",
+      "stars": 3923,
+      "archived": false,
+      "diskKb": 3515,
+      "pool": "agent-config",
+      "how": "awesome-claude-code seeded-random"
+    },
+    {
+      "owner": "szymdzum",
+      "repo": "browser-debugger-cli",
+      "sha": "7593dd62c0a8518e55e18ac39e7e859fff0b5d34",
+      "branch": "main",
+      "stars": 186,
+      "archived": false,
+      "diskKb": 26332,
+      "pool": "agent-config",
+      "how": "awesome-claude-code seeded-random"
+    },
+    {
+      "owner": "patakuti",
+      "repo": "cc-semaphore",
+      "sha": "aaaf8d4818828c4dec7c3f90fc7feea9b4135e83",
+      "branch": "main",
+      "stars": 2,
+      "archived": false,
+      "diskKb": 617,
+      "pool": "agent-config",
+      "how": "awesome-claude-code seeded-random"
+    },
+    {
+      "owner": "mennanov",
+      "repo": "blockwatch",
+      "sha": "f76eacbaef7051cdd17a94233329c5e39145dbbe",
+      "branch": "main",
+      "stars": 34,
+      "archived": false,
+      "diskKb": 8684,
+      "pool": "agent-config",
+      "how": "awesome-claude-code seeded-random"
+    },
+    {
+      "owner": "Piebald-AI",
+      "repo": "tweakcc",
+      "sha": "b026fb55b2e85c9cfd92030e4175227030314152",
+      "branch": "main",
+      "stars": 2619,
+      "archived": false,
+      "diskKb": 75111,
+      "pool": "agent-config",
+      "how": "awesome-claude-code seeded-random"
+    }
+  ],
+  "excluded": [
+    {
+      "repo": "storybookjs/storybook",
+      "pool": "mcp-server",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "netdata/netdata",
+      "pool": "mcp-server",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "vectorize-io/hindsight",
+      "pool": "mcp-server",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "DeusData/codebase-memory-mcp",
+      "pool": "mcp-server",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "PostHog/posthog",
+      "pool": "mcp-server",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "topoteretes/cognee",
+      "pool": "mcp-server",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "mediar-ai/screenpipe",
+      "pool": "mcp-server",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "googleapis/genai-toolbox",
+      "pool": "mcp-server",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "mutonby/openshorts",
+      "pool": "mcp-server",
+      "reason": "fork"
+    },
+    {
+      "repo": "nhost/nhost",
+      "pool": "mcp-server",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "getopenscreen/openscreen",
+      "pool": "mcp-server",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "wiltodelta/remove-ai-watermarks",
+      "pool": "mcp-server",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "bram2w/baserow",
+      "pool": "mcp-server",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "callstackincubator/agent-device",
+      "pool": "mcp-server",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "IvanMurzak/Unity-MCP",
+      "pool": "mcp-server",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "microsoft/mcp",
+      "pool": "mcp-server",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "mckinsey/vizro",
+      "pool": "mcp-server",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "stack-chan/stack-chan",
+      "pool": "mcp-server",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "patrickchugh/terravision",
+      "pool": "mcp-server",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "hyperionxmota/cook-county-property-mcp",
+      "pool": "mcp-server",
+      "reason": "not found (deleted, renamed away or private)"
+    },
+    {
+      "repo": "smart-mcp-proxy/mcpproxy-go",
+      "pool": "mcp-server",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "marcusquinn/aidevops",
+      "pool": "agent-config",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "aws-samples/sample-ai-powered-sdlc-patterns-with-aws",
+      "pool": "agent-config",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "sickn33/agentic-awesome-skills",
+      "pool": "agent-config",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "jlcodes99/cockpit-tools",
+      "pool": "agent-config",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "lidge-jun/opencodex",
+      "pool": "agent-config",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "kirodotdev/KiroCrew",
+      "pool": "agent-config",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "777genius/agent-teams-ai",
+      "pool": "agent-config",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "garrytan/gstack",
+      "pool": "agent-config",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "tt-a1i/archify",
+      "pool": "agent-config",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "K-Dense-AI/scientific-agent-skills",
+      "pool": "agent-config",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "slopus/happy",
+      "pool": "agent-config",
+      "reason": "larger than 250 MB on GitHub"
+    },
+    {
+      "repo": "backnotprop/plannotator",
+      "pool": "agent-config",
+      "reason": "larger than 250 MB on GitHub"
+    }
+  ]
+}

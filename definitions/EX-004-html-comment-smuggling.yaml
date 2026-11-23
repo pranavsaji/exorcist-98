@@ -7,7 +7,15 @@ applies_to:
 match:
   # The match stays inside one comment ((?!-->) stops it at the closing marker).
   # Ordinary words like "fetch" or "send to" are not enough on their own.
-  regex: "<!--(?:(?!-->)[\\s\\S]){0,2000}?(?:\\b(?:ignore|disregard)\\s+(?:all\\s+|any\\s+|the\\s+)?(?:previous|prior|above|earlier)|exfiltrat|\\bsilently\\b|\\bdo\\s+not\\s+(?:mention|tell|reveal|inform)|\\b(?:ai|assistant|agent|llm|claude|copilot|cursor|kiro|gemini)\\s*[:,]\\s|\\byou\\s+are\\s+(?:now|an?\\s+ai)\\b|\\bas\\s+an\\s+ai\\b|\\b(?:curl|wget)\\s+\\S+[^\\n]*\\|\\s*(?:ba|z)?sh\\b|\\bsend\\s+(?:the\\s+|all\\s+|any\\s+)?(?:contents?|secrets?|keys?|tokens?|credentials?|\\.env)\\b)(?:(?!-->)[\\s\\S]){0,2000}?-->"
+  # Naming an AI product is not enough either ("e.g. OpenAI, Claude, Gemini"
+  # in an issue template): a name followed by ":" or "," must be followed by an
+  # order ("Copilot: fill all sections", "AI: before answering ..."), and
+  # "silently" must come with an action that moves data or runs code
+  # ("silently send", not "a range silently drops lines").
+  regex: "<!--(?:(?!-->)[\\s\\S]){0,2000}?(?:\\b(?:ignore|disregard)\\s+(?:all\\s+|any\\s+|the\\s+)?(?:previous|prior|above|earlier)|exfiltrat|\\b(?:silently|quietly|secretly)\\s+(?:send|post|upload|exfiltrat\\w*|forward|copy|include|add|append|insert|run|execute|install|download|fetch|curl|leak|transmit|share|email)\\b|\\bdo\\s+not\\s+(?:mention|tell|reveal|inform)|\\b(?:ai|assistant|agent|llm|claude|copilot|cursor|kiro|gemini)\\s*[:,]\\s*(?:please\\s+)?(?:ignore|disregard|forget|do|don'?t|never|always|you|before|after|when(?:ever)?|if|first|now|then|send|post|upload|fetch|read|open|run|execute|write|delete|remove|add|insert|append|include|tell|say|reply|respond|answer|output|print|return|use|call|invoke|make|create|fill|copy|paste|summari[sz]e|translate|follow|obey|act|pretend|treat|set|change|update|modify|install|download|visit|navigate|go|search|approve|grant|enable|disable|skip|hide|keep|silently|quietly|secretly)\\b|\\byou\\s+are\\s+(?:now|an?\\s+ai)\\b|\\bas\\s+an\\s+ai\\b|\\b(?:curl|wget)\\s+\\S+[^\\n]*\\|\\s*(?:ba|z)?sh\\b|\\bsend\\s+(?:the\\s+|all\\s+|any\\s+)?(?:contents?|secrets?|keys?|tokens?|credentials?|\\.env)\\b)(?:(?!-->)[\\s\\S]){0,2000}?-->"
+  # A comment inside Markdown code (backticks or a fenced block) is displayed,
+  # not hidden, so it is not smuggling.
+  skip_in_code: true
 owasp:
   - "LLM01:2025 Prompt Injection"
   - "ASI03 Prompt Injection via External Content"

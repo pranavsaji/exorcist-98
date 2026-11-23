@@ -58,10 +58,13 @@ describe('exorcist scan', () => {
   it('finds the planted attacks in the Haunted Repo and exits 1', () => {
     const r = run(['scan', FIXTURES, '--format', 'json']);
     expect(r.code).toBe(1);
-    const report = JSON.parse(r.out) as { version: string; findings: Array<{ ruleId: string; severity: string }> };
+    const report = JSON.parse(r.out) as { version: string; findings: Array<{ ruleId: string; severity: string; file: string }> };
     expect(report.version).toBe('1');
     const rules = new Set(report.findings.map((f) => f.ruleId));
-    for (const id of ['EX-001', 'EX-005', 'EX-006', 'EX-008', 'EX-015']) expect(rules.has(id), id).toBe(true);
+    for (const id of ['EX-001', 'EX-005', 'EX-006', 'EX-008']) expect(rules.has(id), id).toBe(true);
+    // The EX-015 sample (a download piped into a shell) is reported once, by
+    // the more severe EX-008, which matches the same line.
+    expect(report.findings.some((f) => f.file.endsWith('EX-015-shell-in-tool-output.json') && f.ruleId === 'EX-008')).toBe(true);
   });
 
   it('--fail-on controls the exit code', () => {

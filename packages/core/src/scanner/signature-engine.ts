@@ -4,6 +4,7 @@ import type { RepoFile, SignatureFinding, Severity } from '../types.js';
 import type { NormalizedText, UnicodeHit } from '../normalizer.js';
 import type { VirusDefinition } from '../definitions/schema.js';
 import { typosquatOf } from '../known-packages.js';
+import { decodeBlob, embeddedDocumentKind, fencedRanges, inExecContext, inMarkdownCode, isCredibleSecret, isQuotedExample } from './context.js';
 
 const MAX_SPAN = 120;
 
@@ -166,6 +167,7 @@ export function runSignatures(
   const active: Active[] = [];
   const jobs: Job[] = [];
   const vis = norm.visible;
+  const ctx = makeContext(file, norm, defs, limitMs);
   for (const def of defs) {
     if (def.enabled === false) continue;
     if (!def.applies_to.includes(file.role)) continue;
@@ -175,11 +177,14 @@ export function runSignatures(
     // descriptions (the Shield scans those) always qualify.
     if (match.file_regex && file.role === 'config' && !getRegex(match.file_regex, 'i').test(norm.plain)) continue;
     const exclude = match.exclude_regex ? getRegex(match.exclude_regex, 'i') : null;
+    // A merged rule validates whole blobs, after merging (see below).
+    const validateLater = match.merge_adjacent === true;
     const keep = (text: string): boolean => {
       if (exclude && exclude.test(text)) return false;
+      if (match.validate === 'typosquat' && typosquatOf(text) === null) return false;
+      if (validateLater) return true;
       if (match.validate === 'base64-text' && !isBase64Text(text)) return false;
       if (match.validate === 'encoded-text' && !isBase64Text(text) && !isHexText(text)) return false;
-      if (match.validate === 'typosquat' && typosquatOf(text) === null) return false;
       return true;
     };
     const base: Omit<SignatureFinding, 'line' | 'col' | 'span'> = {
@@ -226,18 +231,31 @@ export function runSignatures(
         });
       } else {
         const seen = new Set<number>();
+        const cands: Candidate[] = [];
         mine.forEach((jobIndex, k) => {
+          const src = k === 0 || !vis ? norm.plain : vis.text;
           const toPlain = k === 0 || !vis ? (i: number) => i : (i: number) => vis.map[i] ?? i;
           for (const [index, text] of results?.[jobIndex] ?? []) {
             if (!keep(text)) continue;
             const at = toPlain(index);
             if (seen.has(at)) continue;
+            if (!ctx.allows(def, text, at, src, index)) continue;
             seen.add(at);
-            // L-010: map the decoded-text index back to the original file.
-            const { line, col } = offsetToPosition(norm.original, norm.plainMap?.[at] ?? at);
-            findings.push({ ...base, line, col, span: truncateSpan(text) });
+            cands.push({ at, text });
           }
         });
+        cands.sort((a, b) => a.at - b.at);
+        const groups = match.merge_adjacent ? mergeAdjacent(cands, norm.plain) : cands.map((c) => [c]);
+        const mineOut: SignatureFinding[] = [];
+        for (const group of groups) {
+          if (match.merge_adjacent && !ctx.blobCounts(def, group)) continue;
+          const first = group[0];
+          if (!first) continue;
+          // L-010: map the decoded-text index back to the original file.
+          const { line, col } = offsetToPosition(norm.original, norm.plainMap?.[first.at] ?? first.at);
+          mineOut.push({ ...base, line, col, span: truncateSpan(first.text) });
+        }
+        findings.push(...capPerFile(def, mineOut));
       }
     }
     // ── unicode_class ────────────────────────────────────────────────────────
@@ -249,7 +267,13 @@ export function runSignatures(
         const first = run[0];
         if (!first) return;
         const { line, col } = offsetToPosition(norm.original, first.offset);
-        findings.push({ ...base, line, col, span: joinEscapes(run) });
+        // A short run of zero-width characters cannot carry a message; it is
+        // usually left over from translation or formatting. Long runs, tag
+        // characters and bidi controls keep the rule's own severity.
+        const minor = match.minor_run;
+        const severity = minor && run.length <= minor.max_length && run.every((h) => minor.classes.includes(h.class))
+          ? minor.severity : base.severity;
+        findings.push({ ...base, severity, line, col, span: joinEscapes(run) });
         run = [];
       };
       for (const hit of norm.hiddenUnicode) {
@@ -304,5 +328,124 @@ export function runSignatures(
     }
   }
 
-  return findings;
+  return sameLineGroups(findings, defs);
+}
+
+// ── Precision round 2 helpers ──────────────────────────────────────────────────
+
+type Candidate = { at: number; text: string };
+const SEVERITY_RANK: Record<Severity, number> = { critical: 4, high: 3, medium: 2, low: 1 };
+
+/**
+ * Rules in one `same_line_group` (for example "remote code in hook" and
+ * "shell in tool output") that report the same line are one problem: keep
+ * only the most severe finding for that line.
+ */
+function sameLineGroups(findings: SignatureFinding[], defs: VirusDefinition[]): SignatureFinding[] {
+  const groupOf = new Map(defs.filter((d) => d.same_line_group).map((d) => [d.id, d.same_line_group as string]));
+  if (groupOf.size === 0) return findings;
+  const best = new Map<string, SignatureFinding>();
+  for (const f of findings) {
+    const g = groupOf.get(f.ruleId);
+    if (!g) continue;
+    const k = `${g}|${f.file}|${f.line}`;
+    const cur = best.get(k);
+    if (!cur || SEVERITY_RANK[f.severity] > SEVERITY_RANK[cur.severity]) best.set(k, f);
+  }
+  return findings.filter((f) => {
+    const g = groupOf.get(f.ruleId);
+    return !g || best.get(`${g}|${f.file}|${f.line}`) === f;
+  });
+}
+
+/**
+ * Matches separated only by line breaks, quotes, commas, `+` or a string
+ * continuation are pieces of one blob (a base64 file wrapped over many lines,
+ * or split into concatenated string literals).
+ */
+function mergeAdjacent(cands: Candidate[], text: string): Candidate[][] {
+  const out: Candidate[][] = [];
+  let cur: Candidate[] = [];
+  let end = -1;
+  for (const c of cands) {
+    const gap = end >= 0 ? text.slice(end, c.at) : null;
+    if (gap !== null && gap.length <= 16 && /^[\s"'`+,\\]*$/.test(gap) && (gap.match(/\n/g) ?? []).length <= 2) cur.push(c);
+    else { if (cur.length) out.push(cur); cur = [c]; }
+    end = c.at + c.text.length;
+  }
+  if (cur.length) out.push(cur);
+  return out;
+}
+
+/** At most `max_per_file` findings; the last one says how many more there were. */
+function capPerFile(def: VirusDefinition, out: SignatureFinding[]): SignatureFinding[] {
+  const max = def.match.max_per_file;
+  if (!max || out.length <= max) return out;
+  const kept = out.slice(0, max - 1);
+  const rest = out.slice(max - 1);
+  const first = rest[0] as SignatureFinding;
+  const last = rest[rest.length - 1] as SignatureFinding;
+  kept.push({
+    ...first,
+    span: `${rest.length} more ${def.title.toLowerCase()} findings in this file (lines ${first.line}-${last.line}); only the first ${max - 1} are listed`,
+  });
+  return kept;
+}
+
+/** Per-file context for the checks a regex cannot make on its own (see context.ts). */
+function makeContext(file: RepoFile, norm: NormalizedText, defs: VirusDefinition[], limitMs: number) {
+  let fences: Array<[number, number]> | null = null;
+  // Rules whose phrases count as instructions when found inside a decoded file.
+  let rescan: Array<{ re: RegExp; cues: RegExp | null }> | null = null;
+  const rescanRules = (self: VirusDefinition): Array<{ re: RegExp; cues: RegExp | null }> => {
+    rescan ??= defs
+      .filter((d) => d.enabled !== false && d.id !== self.id && d.match.regex && !d.match.merge_adjacent
+        && (d.applies_to.includes('instruction') || d.applies_to.includes('hook')))
+      .map((d) => ({ re: getRegex(d.match.regex as string, 'gi'), cues: d.match.quoted_example_cues ? getRegex(d.match.quoted_example_cues, 'i') : null }));
+    return rescan;
+  };
+  return {
+    /** Context checks for one regex match. `src`/`index` are the text and offset it was found in. */
+    allows(def: VirusDefinition, text: string, at: number, src: string, index: number): boolean {
+      const m = def.match;
+      if (m.validate === 'secret-value' && !isCredibleSecret(text, src.slice(index + text.length, index + text.length + 200))) return false;
+      if (m.exec_context && file.role === 'config' && !inExecContext(file.rel, norm.plain, at, text)) return false;
+      if (m.skip_in_code) {
+        fences ??= fencedRanges(norm.plain);
+        if (inMarkdownCode(norm.plain, at, fences)) return false;
+      }
+      if (m.quoted_example_cues && isQuotedExample(src, index, text.length, getRegex(m.quoted_example_cues, 'i'))) return false;
+      return true;
+    },
+    /**
+     * Whether a merged encoded blob is reported. It must decode to readable
+     * text (as a whole, or one of its pieces). If it decodes to an embedded
+     * file (SVG, XML, PDF, a Markdown document, a licence, anything starting
+     * with a byte-order mark), it counts only when the decoded text contains
+     * something the other rules flag, or one of `decoded_flag_regex`.
+     */
+    blobCounts(def: VirusDefinition, group: Candidate[]): boolean {
+      const m = def.match;
+      const ok = (t: string): boolean =>
+        m.validate === 'base64-text' ? isBase64Text(t)
+          : m.validate === 'encoded-text' ? isBase64Text(t) || isHexText(t)
+            : true;
+      const merged = group.map((c) => c.text).join('');
+      const piece = ok(merged) ? merged : group.find((c) => ok(c.text))?.text;
+      if (piece === undefined) return false;
+      if (m.validate !== 'base64-text' && m.validate !== 'encoded-text') return true;
+      const decoded = decodeBlob(merged) ?? decodeBlob(piece) ?? '';
+      if (embeddedDocumentKind(decoded) === null) return true;
+      const sample = decoded.slice(0, 200_000);
+      if (m.decoded_flag_regex && getRegex(m.decoded_flag_regex, 'i').test(sample)) return true;
+      const rules = rescanRules(def);
+      const hits = guarded(rules.map(({ re }) => ({ re, text: sample })), Math.max(50, Math.floor(limitMs / 3)));
+      if (hits === null) return true; // could not finish: report rather than stay silent
+      // The same quoted-example exemption as in plain text.
+      return hits.some((h, i) => h.some(([index, t]) => {
+        const cues = rules[i]?.cues;
+        return !cues || !isQuotedExample(sample, index, t.length, cues);
+      }));
+    },
+  };
 }

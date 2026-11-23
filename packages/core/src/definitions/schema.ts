@@ -22,12 +22,44 @@ const MatchSchema = z
     // says it is not what the rule means; the rule only runs on a file whose
     // text matches file_regex.
     exclude_regex: z.string().optional(),
-    validate:      z.enum(['base64-text', 'encoded-text', 'typosquat']).optional(),
+    // secret-value: the matched value must look like a real credential, not a
+    // placeholder, a template, an expression or a documented example.
+    validate:      z.enum(['base64-text', 'encoded-text', 'typosquat', 'secret-value']).optional(),
     // Only for files of role `config`: the rule runs only if the file text matches.
     file_regex:    z.string().optional(),
     // With json_path selecting an `args` array: check only the package the
     // runner is told to run, not flags or paths.
     select:        z.enum(['package-arg']).optional(),
+    // ── Context checks (precision round 2, docs/FIELD_REPORT.md) ──────────────
+    // In generic config files (role `config`), a match counts only where it is
+    // something that runs: the value of a command-like key, an item of a
+    // command list, a step an agent is told to run, or anywhere in a known
+    // agent-environment or hook file. Hooks, MCP configs and tool results are
+    // always checked in full.
+    exec_context:  z.boolean().optional(),
+    // Ignore matches inside Markdown code (inline backticks or fenced blocks),
+    // where an HTML comment is shown, not hidden, and an image is not loaded.
+    skip_in_code:  z.boolean().optional(),
+    // A phrase inside quotation marks that closes right after it, in a passage
+    // matching this regex (words such as "never", "such as", "injection"), is
+    // being quoted as an example or warned against, not given as an order.
+    quoted_example_cues: z.string().optional(),
+    // Matches separated only by line breaks, quotes, commas or `+` are one
+    // encoded blob: one finding, checked as a whole.
+    merge_adjacent: z.boolean().optional(),
+    // At most this many findings of the rule in one file; the last one
+    // summarises the rest.
+    max_per_file:  z.number().int().min(1).optional(),
+    // With validate encoded-text: extra markers (for example chat-template
+    // tokens) that make decoded text count as instructions.
+    decoded_flag_regex: z.string().optional(),
+    // unicode_class only: a run of at most `max_length` characters, all of the
+    // listed classes, is reported at `severity` instead of the rule's own.
+    minor_run: z.object({
+      max_length: z.number().int().min(1),
+      classes:    z.array(z.string()).min(1),
+      severity:   z.enum(['critical', 'high', 'medium', 'low']),
+    }).optional(),
   })
   .superRefine((val, ctx) => {
     const hasAny =
@@ -50,7 +82,7 @@ const MatchSchema = z
     if ((val.exclude_regex !== undefined || val.validate !== undefined) && val.regex === undefined && val.json_path === undefined) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'match.exclude_regex and match.validate need match.regex or match.json_path' });
     }
-    for (const key of ['regex', 'value_regex', 'exclude_regex', 'file_regex'] as const) {
+    for (const key of ['regex', 'value_regex', 'exclude_regex', 'file_regex', 'quoted_example_cues', 'decoded_flag_regex'] as const) {
       const pattern = val[key];
       if (pattern !== undefined && !compiles(pattern)) {
         ctx.addIssue({
@@ -72,6 +104,9 @@ export const VirusDefinitionSchema = z.object({
   enabled:     z.boolean().optional().default(true),
   // Repo-relative paths (regexes) this rule never looks at, e.g. lockfiles.
   skip_paths:  z.array(z.string().refine(compiles, 'skip_paths entries must be valid regular expressions')).optional(),
+  // Rules in the same group that report the same line of the same file are
+  // one problem: only the most severe of them is kept.
+  same_line_group: z.string().min(1).optional(),
 });
 
 export type VirusDefinition = z.infer<typeof VirusDefinitionSchema>;

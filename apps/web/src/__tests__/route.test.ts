@@ -69,10 +69,13 @@ describe('POST /api/scan: golden path (Haunted Repo)', () => {
     const findings = events.flatMap((e) => (e.type === 'finding' ? [e] : []));
     const ruleIds = new Set(findings.map((f) => f.finding.ruleId));
     // Every shipped rule must fire on its planted fixture.
-    for (const n of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15]) {
+    for (const n of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]) {
       const id = `EX-${String(n).padStart(3, '0')}`;
       expect(ruleIds.has(id), id).toBe(true);
     }
+    // EX-015's sample (a download piped into a shell) is reported once, by the
+    // more severe EX-008 on the same line.
+    expect(findings.some((f) => f.finding.file === 'EX-015-shell-in-tool-output.json' && f.finding.ruleId === 'EX-008')).toBe(true);
     // Only planted samples are shown, never the folder's own test helpers.
     for (const f of findings) expect(f.finding.file).toMatch(/^EX-\d{3}-/);
     // Every finding carries a snippet that contains its line.

@@ -13,6 +13,18 @@ match:
     - zero-width # U+200B, U+200C, U+200D, U+FEFF
     - bidi-override # U+202A-U+202E, U+2066-U+2069
     - tag-block # U+E0000-U+E007F
+  # One to three zero-width characters on their own cannot carry a hidden
+  # message; in the field they were stray characters left by translation or
+  # formatting (docs/FIELD_REPORT.md). They are reported at medium. Longer
+  # runs, tag characters and bidi controls stay critical, and a phrase split
+  # by a zero-width character is still caught by the rule for that phrase.
+  # A U+200C/U+200D next to an Arabic, Persian or Indic letter is spelling and
+  # is not reported at all (packages/core/src/normalizer.ts).
+  minor_run:
+    max_length: 3
+    classes:
+      - zero-width
+    severity: medium
 owasp:
   - "LLM01:2025 Prompt Injection"
   - "ASI03 Prompt Injection via External Content"

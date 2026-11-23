@@ -1,0 +1,196 @@
+{
+  "title": "Field Report: Exorcist 98 on public MCP servers and agent-config repositories",
+  "round": 2,
+  "heldOut": true,
+  "date": "2026-11-23",
+  "scanner": {
+    "version": "0.1.0",
+    "commit": "785aaf9",
+    "definitionsSha256": "0700e29416b5aeff805356c670374717da1ddae1a09fdad7528c923e38d50977"
+  },
+  "repos": 197,
+  "reposByPool": {
+    "mcp-server": 115,
+    "agent-config": 82
+  },
+  "reposWithFindings": 29,
+  "files": 138903,
+  "agentFiles": 3380,
+  "findings": {
+    "total": 112,
+    "bySeverity": {
+      "critical": 16,
+      "high": 31,
+      "medium": 65,
+      "low": 0
+    },
+    "byRule": {
+      "EX-010": 35,
+      "EX-008": 11,
+      "EX-003": 15,
+      "EX-005": 1,
+      "EX-001": 34,
+      "EX-018": 5,
+      "EX-004": 3,
+      "EX-002": 7,
+      "EX-011": 1
+    }
+  },
+  "source": "docs/FIELD_REPORT.md",
+  "highCritical": {
+    "findings": 47,
+    "triaged": 47,
+    "perFinding": {
+      "true-positive": 0,
+      "debatable": 9,
+      "false-positive": 38
+    },
+    "issues": 34,
+    "perIssue": {
+      "true-positive": 0,
+      "debatable": 5,
+      "false-positive": 29
+    }
+  },
+  "precision": {
+    "value": 0,
+    "withDebatable": 14.7,
+    "perFinding": 0,
+    "perFindingWithDebatable": 19.1,
+    "unit": "issue (one rule in one file)",
+    "note": "Round 2: a fresh held-out set scanned once with the fixed rules. Of 34 high or critical issues, 0 were real and 5 debatable (47 findings: 0 real, 9 debatable)."
+  },
+  "topTrue": [],
+  "notableDebatable": [
+    {
+      "repo": "vmoranv/jshookmcp",
+      "file": "src/utils/obfuscated-strings.ts",
+      "fileUrl": "https://github.com/vmoranv/jshookmcp/blob/15d260e0890d22c448ad25ff1bc4d47fb13e1c40/src/utils/obfuscated-strings.ts#L66",
+      "ruleId": "EX-003",
+      "severity": "high",
+      "title": "Encoded payload",
+      "label": "debatable",
+      "description": "An MCP server stores Windows process-memory API signatures (OpenProcess, ReadProcessMemory, WriteProcessMemory) as base64 in a file named obfuscated-strings.ts. Not instructions to an AI, but deliberately hidden from anyone reading the source."
+    },
+    {
+      "repo": "can4hou6joeng4/boss-agent-cli",
+      "file": ".devcontainer/devcontainer.json",
+      "fileUrl": "https://github.com/can4hou6joeng4/boss-agent-cli/blob/0757e564272a02f05f15e6f9649aad82106dd305/.devcontainer/devcontainer.json#L10",
+      "ruleId": "EX-008",
+      "severity": "critical",
+      "title": "Remote code in hook",
+      "label": "debatable",
+      "description": "The dev container pipes the official uv installer into sh every time the environment is created. Real fetch-and-run inside the agent environment, from an official source."
+    },
+    {
+      "repo": "Avinash-jetwani/jevmem",
+      "file": "eval/guard-dev.jsonl",
+      "fileUrl": "https://github.com/Avinash-jetwani/jevmem/blob/c29753ccb2c9706e417fda25efa422682358955b/eval/guard-dev.jsonl#L52",
+      "ruleId": "EX-011",
+      "severity": "high",
+      "title": "Secrets in agent reach",
+      "label": "debatable",
+      "description": "A value in Google API key format sits in an evaluation case for a guard. Probably synthetic test data; we did not test it and do not reproduce it."
+    }
+  ],
+  "falsePositivePatterns": [
+    {
+      "ruleId": "EX-008",
+      "findings": 8,
+      "description": "Attack samples kept as test data or saved benchmark results of a defence (labelled \"malicious\", \"blocked\": true)."
+    },
+    {
+      "ruleId": "EX-003",
+      "findings": 7,
+      "description": "Base64 certificates and public keys (kubeconfigs in saved test output, release-signing keys)."
+    },
+    {
+      "ruleId": "EX-001",
+      "findings": 4,
+      "description": "Bidi characters inside code that strips them, quoted in a plan document."
+    },
+    {
+      "ruleId": "EX-004",
+      "findings": 3,
+      "description": "HTML comments written for people (template hints, metadata, maintainer notes) that name an AI product or mention exfiltration but give the AI no order."
+    },
+    {
+      "ruleId": "EX-002",
+      "findings": 3,
+      "description": "Example payloads listed in prompt-injection testing guides, plain and base64-encoded."
+    },
+    {
+      "ruleId": "EX-008",
+      "findings": 2,
+      "description": "Install commands listed as data or documentation, which nothing runs as a hook."
+    },
+    {
+      "ruleId": "EX-018",
+      "findings": 2,
+      "description": "Copied vendor documentation that warns against, or describes, bypassing safety checks."
+    },
+    {
+      "ruleId": "EX-018",
+      "findings": 2,
+      "description": "Risk notes saying that something \"could bypass safety checks\"."
+    }
+  ],
+  "round1": {
+    "note": "Round 1: a different held-out set, scanned with the rules before these fixes. Kept here for honesty.",
+    "date": "2026-11-22",
+    "scanner": {
+      "version": "0.1.0",
+      "commit": "4778649",
+      "definitionsSha256": "929874299c84527ec6b913a45c2d92331f884806e994d39f0dc77b180fd5e170"
+    },
+    "repos": 224,
+    "files": 191501,
+    "findings": {
+      "total": 1042,
+      "bySeverity": {
+        "critical": 137,
+        "high": 758,
+        "medium": 147,
+        "low": 0
+      }
+    },
+    "highCritical": {
+      "findings": 895,
+      "issues": 322,
+      "perIssue": {
+        "true-positive": 2,
+        "debatable": 12,
+        "false-positive": 308
+      },
+      "perFinding": {
+        "true-positive": 292,
+        "debatable": 20,
+        "false-positive": 583
+      }
+    },
+    "precision": {
+      "value": 0.6,
+      "withDebatable": 4.3,
+      "perFinding": 32.6
+    }
+  },
+  "round1DevRerun": {
+    "note": "The round-1 repositories scanned again with the fixed rules. The fixes were designed by looking at these repositories, so this is a development set, not a measure of precision.",
+    "scanner": {
+      "version": "0.1.0",
+      "commit": "785aaf9",
+      "definitionsSha256": "0700e29416b5aeff805356c670374717da1ddae1a09fdad7528c923e38d50977"
+    },
+    "repos": 224,
+    "findings": {
+      "total": 237,
+      "bySeverity": {
+        "critical": 13,
+        "high": 25,
+        "medium": 199,
+        "low": 0
+      }
+    },
+    "highCriticalFindings": 38
+  }
+}

@@ -16,6 +16,43 @@ Round 3 is the honest number: five repositories that no rule was ever
 adjusted for, about 9,500 files, scanned once. Its one finding is a real
 unpinned MCP server. Details below.
 
+## Re-run after the precision fixes of 2026-11-23
+
+The field report ([`FIELD_REPORT.md`](FIELD_REPORT.md)) found that on 224
+other public repositories almost every high or critical alert was noise, and
+the rules were changed to fix that. All 20 repositories above were scanned
+again at the same commits, with the scanner before those fixes and after
+them, using the same download method as the field report. No rule was changed
+for these repositories in this round, but they were looked at before, so
+these are not new held-out numbers:
+
+| Set | Findings before | Findings after | High or critical before | High or critical after |
+|---|---:|---:|---:|---:|
+| Tuning set | 2 | 2 | 2 | 2 |
+| Held-out round 1 | 13 | 4 | 11 | 0 |
+| Held-out round 2 | 6 | 6 | 5 | 4 |
+| Held-out round 3 | 1 | 1 | 0 | 0 |
+
+"Before" reproduces the "after" column of each round exactly. What changed:
+
+- `github/awesome-copilot`: 11 high or critical findings are gone. Five were
+  injection phrases quoted in order to warn about them ("never follow text
+  such as ..."), four were two install commands listed as data in a website
+  data file (each reported by both EX-008 and EX-015; nothing runs them as a
+  hook), and two single
+  zero-width spaces before code fences are now reported at medium.
+- `jlowin/fastmcp`: a single zero-width space in a workflow is now medium.
+- Unchanged and still listed: the Copilot HTML comment (EX-004), the minisign
+  key that decodes to readable words (EX-003, a false alarm), the long run of
+  zero-width spaces in `steipete/agent-rules` (EX-001), the two prompt phrases
+  in `jlowin/fastmcp` workflows (EX-005, EX-006, false alarms) and the
+  unpinned servers (EX-010).
+
+The labelled corpus below still gives 19 of 19 attacks caught and 19 of 19
+ordinary files clean. `packages/core/src/__tests__/precision-round2.test.ts`
+adds a regression test for every false-alarm pattern that was fixed and for
+every attack shape that must still be caught.
+
 ## Real public repositories (false alarms)
 
 These five repositories are maintained by the teams behind the agents and MCP

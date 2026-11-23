@@ -18,6 +18,17 @@ match:
   # and identifiers decode to binary noise; before this check they were about
   # 99% of all findings on ordinary repositories (docs/BENCHMARK.md).
   validate: encoded-text
+  # One finding per blob: a base64 file wrapped over many lines, or split into
+  # concatenated strings, is decoded and judged as a whole (one blob gave 291
+  # findings, one per line, in the field). At most five findings per file.
+  merge_adjacent: true
+  max_per_file: 5
+  # A blob that decodes to an embedded file (SVG, XML, HTML, PDF, a Markdown
+  # document, a licence, anything starting with a byte-order mark) counts only
+  # if what it says is flagged by the other rules, or contains a chat-template
+  # marker that starts a system prompt. Free text and commands still count as
+  # they are: hidden words are what this rule is for.
+  decoded_flag_regex: '<\|im_start\|>|<\|(?:system|user|assistant)\|>|\[/?INST\]|<<SYS>>|<\|start_header_id\|>'
 skip_paths:
   - "(^|/)(tests?|__tests__|__mocks__|spec|specs|fixtures?|testdata|test-data|e2e)/|[._-](test|spec)s?\\.[A-Za-z0-9]+$|_tests?\\.(rs|go|py)$"
   - "(^|/)(package-lock\\.json|npm-shrinkwrap\\.json|pnpm-lock\\.yaml|yarn\\.lock|bun\\.lockb?|Cargo\\.lock|poetry\\.lock|Pipfile\\.lock|uv\\.lock|go\\.sum|composer\\.lock|Gemfile\\.lock|[^/]*\\.lock\\.ya?ml)$"

