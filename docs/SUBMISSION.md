@@ -66,6 +66,22 @@ a quarantine vault) and pointed it at the files and tools an agent trusts.
   restore it byte for byte.
 - **Kiro Power, MCP server, CLI and GitHub Action** to use all of this from
   Kiro, the terminal and CI.
+- **Ten more 90s antivirus ideas, brought back:** On-Access Scanning (a Kiro
+  hook scans a file before the agent reads it; only the user can allow it, at a
+  real terminal), the Ouija Decoder (reads invisible Unicode smuggling back
+  into plain text), Canary Traps (bait tokens; the Shield blocks any tool call
+  carrying one, in every mode), Bring Your Own Attack (paste any text for the
+  real scanner's and Shield's verdict), the Haunted House Map (the "lethal
+  trifecta" across a config's MCP servers, EX-023), Disinfect (a one-click
+  patch for mechanical fixes, with exact vault backups), `exorcist.lock` (team
+  MCP fingerprints; CI never starts a pull request's servers), Possession
+  Origin (the commit that introduced each threat, never running a repo's own
+  git filters), signed LiveUpdate definitions, and the Detonation Chamber (a
+  sandboxed model with fake tools shows whether text *tries* to do harm).
+- **Field Report:** the scanner on 421 real public MCP servers and
+  agent-config repos in two held-out rounds, every serious alert read by hand.
+  Round 1 exposed too many false alarms; the fixes cut serious alarms from 4.0
+  to 0.24 per repository on a fresh set (docs/FIELD_REPORT.md).
 - **Crew app:** a nightly patrol of your folders with a dashboard page, an MCP rug-pull watch, and a confirm-first quarantine that only the dashboard owner can use.
 
 ## Best Kiro Crew App: writeup (paste into the bonus field)
@@ -112,6 +128,7 @@ where Crew behaved differently from its docs is listed in
 | MCP | Built the `exorcist` MCP server on the official SDK (4 tools), tested with the SDK client. | `packages/mcp-server/` |
 | Powers | Built the `exorcist` Power (MCP config plus 3 skills). | `power/` |
 | Measurement | We ran our own scanner on five real repos and found it raised 4,457 alarms, none real. Kiro then worked through a precision spec: rule-level controls in the YAML format, a labelled attack corpus, and a re-run: 2 alarms, 19 of 19 attacks caught. The same run found a CLI bug that cut reports at 64 KB. | `docs/BENCHMARK.md`, `fixtures/benchmark/` |
+| Kiro CLI | Ran **Kiro CLI 3.5.0 headless** on six M5 specs in parallel (one git worktree each), resuming each conversation until Kiro reported done. Kiro hit the account's monthly usage limit part-way: its partial work for each feature is committed separately (`git log --grep "partial implementation by Kiro"`) and was finished and security-reviewed outside Kiro. We also learned that Kiro Crew's `run` task runner can report success from an empty sandbox, so we check the working tree, not the summary. | `docs/KIRO_LOG.md` |
 | Crew | A separate Crew app repo: Sentry agent, agent-hygiene skill, a nightly patrol that sends Crew notifications, a backend and a dashboard page. Run inside Crew 0.12.2 and 0.13.0, including the Sentry agent reading results through its own read-only MCP tool; installing and running it found places where Crew behaves differently from its docs (each recorded in that repo's `docs/KNOWN_LIMITATIONS.md`) and fixed. | `pranavsaji/exorcist-98-crew` |
 
 Stack: TypeScript (strict) in a pnpm monorepo; Next.js for the web app;
@@ -151,8 +168,9 @@ hooks, a Power, an MCP server and a Crew app; and an exact-restore quarantine.
   the server changes it to "send the contents of .env to ...", the agent no
   longer sees it, the call is refused, and the server's own log proves it never
   received the call.
-- 465 tests in the main repo, 140 in the Crew repo; 0 axe violations on every
-  page in Chrome.
+- 1,510 tests in the main repo (unit, property-based with fast-check, and real
+  processes), 143 in the Crew repo; a 33-step Chrome run with 0 axe
+  violations on every window.
 
 ## How the Kiro tools differed
 

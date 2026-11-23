@@ -41,6 +41,23 @@ What Exorcist 98 adds, as far as we can tell from those projects' public documen
 | **Runs on your machine** | The scanner and Shield send nothing anywhere. The optional AI judge (Amazon Bedrock) is off unless you turn it on with your own AWS account. |
 | **A quarantine that can be undone exactly** | Disable an infected MCP server, hook or steering file with a backup, a diff and a byte-for-byte restore. |
 
+## Ten more 90s antivirus ideas, brought back for AI agents
+
+| Feature | The 90s idea | What it does | Try it |
+|---|---|---|---|
+| **On-Access Scanning** | On-access scanner | A Kiro `PreToolUse` hook scans a file *before* the agent reads it and blocks the read if it carries instructions aimed at the AI. Only the user can allow a blocked file, at a real terminal; the agent cannot approve itself. | `.kiro/hooks/on-access-scan.json`, `exorcist on-access` |
+| **Ouija Decoder** | Virus disassembly | Reads invisible Unicode-tag and variation-selector ("emoji") smuggling back into plain text: *"the invisible text says…"*. | open any EX-001 / EX-021 finding on the web |
+| **Canary Traps** | Bait ("goat") files | Plants unique harmless tokens in trap files; if one ever appears in an MCP tool call, the Shield blocks it in every mode: proof something talked your agent into leaking. | `exorcist canary plant`, Lab: *The Canary* |
+| **Bring Your Own Attack** | The EICAR test file | Paste any text, say where the agent meets it, and get the real scanner's and the real Shield's verdict. | Possession Lab tab |
+| **Haunted House Map** | System map | Finds the "lethal trifecta" (private data + untrusted input + a way out) across the MCP servers in a config and draws it (EX-023). | results window toggle, `exorcist map` |
+| **Disinfect** | The "Clean" button | One-click patch for the threats that have a safe mechanical fix (hidden characters, unpinned MCP packages, image exfiltration), with an exact vault backup. | "Download exorcism patch", `exorcist exorcise` |
+| **exorcist.lock** | Integrity checker | Commits the MCP tool fingerprints a team expects; CI fails on drift without ever starting a PR's servers. A lock never approves a tool. | `exorcist lock --check --static`, Action `lock-check` |
+| **Possession Origin** | Infection timeline | Traces each threat to the commit and author that introduced it, without ever running a repository's own git hooks or filters. | `exorcist origin` |
+| **LiveUpdate** | LiveUpdate | Signed (Ed25519) virus-definition updates, verified on download and again on every load. | `exorcist update --status` |
+| **Detonation Chamber** | Heuristic emulation | Gives suspicious text to a sandboxed model with only fake tools and fake secrets, and watches whether it *tries* to do harm: catches reworded attacks no pattern matches. Off by default (needs your AWS Bedrock). | `exorcist detonate <file>` |
+
+Plus the **Field Report**: the scanner run on 421 real public MCP servers and agent-config repositories in two held-out rounds, with every serious alert checked by hand ([`docs/FIELD_REPORT.md`](docs/FIELD_REPORT.md)).
+
 ## Protect a repo in one step
 
 Add `.github/workflows/exorcist.yml`; every pull request is scanned and gets a comment, and the check fails on high or critical threats:
@@ -104,15 +121,15 @@ pnpm e2e         # drives Chrome against a running web app, with an axe accessib
 
 ## Status
 
-Working and tested: the scan engine and virus definitions, the live web app (with the Possession Lab), the Real-Time Shield, the Quarantine Vault, the CLI and MCP server (published to npm), the GitHub Action, the Kiro hooks, and the Kiro Crew app (run inside Crew 0.12.2 and 0.13.0). The Shield and the MCP server have run inside Kiro; the AI judge has run against the real Amazon Bedrock service.
+Working and tested: 1,510 unit, property-based and real-process tests, plus a 33-step Chrome run with 0 axe accessibility violations. The scan engine, the live web app (Possession Lab, Bring Your Own Attack, Field Report, Ouija board, Haunted House Map, Disinfect), the Real-Time Shield with canary traps and `exorcist.lock`, the Quarantine Vault, the CLI and MCP server (published to npm), the GitHub Action, the Kiro hooks including on-access scanning, and the Kiro Crew app.
 
 Still open, in plain words:
 
-- The Shield's check-before-every-call fix is tested with real processes and the official MCP SDK, but has not yet been re-run inside Kiro itself.
-- The Power has not been installed through Kiro's Powers panel.
-- Detection is mostly signatures. An attacker who rewords an instruction can get past a pattern; the optional AI judge exists for that, and costs money to run.
+- The Detonation Chamber's measured results are not in yet: the evaluation script is ready, but has not been run against Amazon Bedrock ([`docs/DETONATION.md`](docs/DETONATION.md)).
+- Round 2 of the field report contained no real threats, so it shows how quiet the scanner now is, not how often an alert is right.
+- Detection is mostly signatures. A reworded attack can get past a pattern; the AI judge and the Detonation Chamber exist for that, and cost money to run.
 
-Every known gap, with how sure we are of it, is in [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md).
+Every known gap, with how sure we are of it, is in [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) and the `NOTES.md` file of each `.kiro/specs/m5-*` spec.
 
 ## Repository layout
 
