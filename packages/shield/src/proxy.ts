@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
 import { loadDefinitions } from '@exorcist-98/core';
 import type { Readable, Writable } from 'node:stream';
 import { ShieldEngine } from './engine.js';
@@ -8,6 +8,8 @@ import { LineSplitter } from './jsonrpc.js';
 import { loadPolicy } from './policy.js';
 import { loadCanariesFile } from '@exorcist-98/core';
 import { canariesFileFor } from './canary.js';
+import { join } from 'node:path';
+import { LOCK_FILE, parseLock, seedFromLock } from './lockfile.js';
 import { alertsPath, appendAlert, loadState, policyPath, saveState, serverState, statePath, vaultPath } from './state.js';
 import type { Alert, State } from './state.js';
 import { quarantineServer } from './vault.js';
@@ -37,6 +39,8 @@ export type ProxyOptions = {
   notify?: Notifier;
   /** The AI judge for `aiReview: true`; defaults to Amazon Bedrock. Tests pass a fake. */
   aiJudge?: AiJudge;
+  /** exorcist.lock to seed pins from; default: exorcist.lock in the current folder (m5). */
+  lockPath?: string;
 };
 
 export const FAIL_CLOSED_EXIT = 78;
@@ -54,6 +58,8 @@ export type ShieldSetupOptions = {
   launch?: { command: string; args: string[]; cwd: string };
   /** The AI judge for `aiReview: true`; defaults to Amazon Bedrock. Tests pass a fake. */
   aiJudge?: AiJudge;
+  /** exorcist.lock to seed pins from; default: exorcist.lock in the current folder (m5). */
+  lockPath?: string;
 };
 
 export type ShieldContext = {
@@ -104,6 +110,28 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
   if (policy.policy.canaries && !existsSync(canariesAt)) log(`The policy names canary records at ${canariesAt}, but there is no such file; no canary traps are active.`);
   const canaries = canariesFile.canaries.map((r) => ({ token: r.token, file: r.file }));
   if (canaries.length > 0) log(`Watching for ${canaries.length} canary token${canaries.length === 1 ? '' : 's'} (EX-022).`);
+  // exorcist.lock (m5): a committed lock of approved tools. On a machine that
+  // never pinned a tool, the locked fingerprints are treated as approved, so
+  // a rug pull that hits a teammate is caught here too.
+  const lockFile = o.lockPath ?? join(process.cwd(), LOCK_FILE);
+  if (existsSync(lockFile)) {
+    try {
+      const parsed = parseLock(readFileSync(lockFile, 'utf8'));
+      if (!parsed.ok) log(`Not seeding from ${lockFile}: ${parsed.error}`);
+      else {
+        const ls = parsed.lock.servers[o.server];
+        if (ls) {
+          const s = serverState(first.state, o.server);
+          if (seedFromLock(s, ls, log)) {
+            try { saveState(statePath(o.dir), first.state); } catch (err) { log(`Could not save the pin file: ${String(err)}`); return FAIL_CLOSED_EXIT; }
+            log(`Seeded the pins for "${o.server}" from ${lockFile}.`);
+          }
+        }
+      }
+    } catch {
+      log(`Could not read ${lockFile}; running with the local pins only.`);
+    }
+  }
 
   const launchAlerts: Alert[] = [];
   if (o.launch && policy.policy.launchPin !== 'off') {

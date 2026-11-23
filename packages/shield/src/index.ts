@@ -32,3 +32,8 @@ export { wrapConfig, unwrapConfig, isWrapped } from './wrap.js';
 export type { McpConfig, WrapOptions } from './wrap.js';
 export { newToken, canariesPath, canariesFileFor, plantCanaries, loadCanaries, removeCanaries, findCanary, TRAPS as CANARY_TRAPS } from './canary.js';
 export type { Canary, CanaryRecord, CanaryShape, PlantOptions, PlantResult, RemoveResult as CanaryRemoveResult } from './canary.js';
+export {
+  LockSchema, LockToolSchema, LockServerSchema, buildLock, serializeLock, parseLock, diffLock, pinsToLock,
+  lockServerToPins, seedFromLock, urlFingerprint, LOCK_FILE, DESCRIPTION_CHARS,
+} from './lockfile.js';
+export type { Lock, LockServer, LockTool, ServerListing, LockChange, LockChangeKind, ParseLockResult } from './lockfile.js';
