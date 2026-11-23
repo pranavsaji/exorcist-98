@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { readAllowedReads, sha256File } from '@exorcist-98/core';
-import { allowReadCommand, appleScriptText, confirms } from '../commands/on-access.js';
+import { allowReadCommand, dialogText, confirms } from '../commands/on-access.js';
 import type { DialogAnswer, Terminal } from '../commands/on-access.js';
 
 const dirs: string[] = [];
@@ -95,9 +95,10 @@ describe('exorcist allow-read: only a person can allow a file', () => {
     expect(confirms('', '')).toBe(false);
   });
 
-  it('dialog text is safe for AppleScript: quotes and backslashes escaped, controls removed', () => {
-    const t = appleScriptText('a"b\\c\u001b[31m\nd‮e');
-    expect(t).not.toMatch(/[\u0000-\u001f‮]/);
-    expect(t).toContain('a\\"b\\\\c');
+  it('dialog text has no control or direction characters and is bounded (it is passed as an argument, never as script)', () => {
+    const t = dialogText(`a"b\\c\u001b[31m\nd\u202ee${'x'.repeat(2000)}`);
+    expect(t).not.toMatch(/[\u0000-\u0009\u000b-\u001f\u202e]/);
+    expect(t.startsWith('a"b\\c')).toBe(true);
+    expect(t.length).toBe(600);
   });
 });

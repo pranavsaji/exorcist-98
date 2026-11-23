@@ -54,23 +54,30 @@ export type Terminal = {
   nonce?: () => string;
 };
 
-/** Text for an AppleScript string literal: no control characters, quotes or backslashes escaped, bounded. */
-export function appleScriptText(s: string): string {
-  return s.replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, ' ')
-    .replace(/\\/g, '\\\\').replace(/"/g, '\\"').slice(0, 600);
+/** Dialog text: no control, hidden or direction characters, bounded. Passed as an argument, never as script source. */
+export function dialogText(s: string): string {
+  return s.replace(/[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, ' ').slice(0, 600);
 }
 
-/** A native macOS dialog, answered by a click (deny by default, gives up after two minutes). */
+/** The script is fixed: the message arrives as argv, so no file name can change it. */
+const DIALOG_SCRIPT = [
+  'on run argv',
+  '  display dialog (item 1 of argv) with title "Exorcist 98" buttons {"Deny", "Allow"} default button "Deny" cancel button "Deny" with icon caution giving up after 120',
+  'end run',
+];
+
+/**
+ * A native macOS dialog, answered by a click (Deny by default, gives up after
+ * two minutes). On macOS any failure counts as Deny, never as "no dialog": a
+ * crafted file name must not be able to push allow-read onto the weaker
+ * typed code.
+ */
 export async function macDialog(message: string): Promise<DialogAnswer> {
   if (process.platform !== 'darwin') return 'unavailable';
-  const script = `display dialog "${appleScriptText(message)}" with title "Exorcist 98" buttons {"Deny", "Allow"} default button "Deny" cancel button "Deny" with icon caution giving up after 120`;
+  const args = DIALOG_SCRIPT.flatMap((line) => ['-e', line]);
   return new Promise((done) => {
-    execFile('/usr/bin/osascript', ['-e', script], { timeout: 130_000 }, (err, stdout) => {
-      if (err) {
-        // Cancel ("Deny") exits non-zero with error -128; anything else means no GUI session.
-        done(/-128/.test(String(err.message)) ? 'deny' : 'unavailable');
-        return;
-      }
+    execFile('/usr/bin/osascript', [...args, dialogText(message)], { timeout: 130_000 }, (err, stdout) => {
+      if (err) { done('deny'); return; }
       const out = String(stdout);
       done(out.includes('button returned:Allow') && !out.includes('gave up:true') ? 'allow' : 'deny');
     });
