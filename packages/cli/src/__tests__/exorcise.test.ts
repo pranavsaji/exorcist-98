@@ -73,7 +73,7 @@ describe('REQ-02 exorcist exorcise', { timeout: 60_000 }, () => {
     expect(diff).toMatch(/^\+Welcome to this project\.$/m);
     expect(diff).toContain('+      "args": ["@modelcontextprotocol/server-filesystem@1.2.3", "/home/user/projects"],');
     expect(diff).toContain(`+status <!-- exorcised: remote image removed -->`);
-    expect(io.errs.join('\n')).toMatch(/Dry run: \d+ fixes in 4 files\. Nothing was changed\./);
+    expect(io.errs.join('\n')).toMatch(/Dry run: \d+ fixes in 5 files\. Nothing was changed\./);
     expect(snapshot(repo, state)).toEqual(before);
   });
 
@@ -82,13 +82,14 @@ describe('REQ-02 exorcist exorcise', { timeout: 60_000 }, () => {
     const { code, io } = await run([repo, '--write', '--definitions', DEFS, '--dir', state]);
     expect(code).toBe(0);
     const out = io.outs.join('\n');
-    expect(out).toMatch(/Exorcised 4 files/);
+    expect(out).toMatch(/Exorcised 5 files/);
     expect(out).toMatch(/(\d+) threats removed, (\d+) need a human\./);
     const [, removed, left] = /(\d+) threats? removed, (\d+) needs? a human/.exec(out) ?? [];
     expect(Number(removed)).toBeGreaterThanOrEqual(10);
     expect(Number(left)).toBeGreaterThan(0);
     expect(readFileSync(join(repo, 'EX-001-hidden-unicode.md'), 'utf8')).not.toMatch(/[​‌‮‬]|[\u{E0000}-\u{E007F}]/u);
     expect(readFileSync(join(repo, 'EX-004-html-comment-smuggling.md'), 'utf8')).not.toContain('silently exfiltrate');
+    expect(readFileSync(join(repo, 'EX-021-smuggled-bytes.md'), 'utf8')).not.toMatch(/[\uFE00-\uFE0F\u{E0100}-\u{E01EF}]{4}/u);
     // The vault holds exact copies, and a second run does not touch them.
     expect(readdirSync(join(state, 'vault')).length).toBe(1);
     const again = await run([repo, '--write', '--definitions', DEFS, '--dir', state]);

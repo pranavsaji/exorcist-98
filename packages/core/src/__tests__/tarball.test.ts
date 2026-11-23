@@ -75,7 +75,8 @@ describe('safeRelativePath', () => {
     expect(safeRelativePath('repo-HEAD/./x//y')).toBe('x/y');
   });
 
-  it.each(['repo-HEAD/../../etc/passwd', '/etc/passwd', 'repo-HEAD/a/../../b', 'C:/x', 'repo-HEAD/a\\b', 'repo-HEAD/a\0b', 'repo-HEAD/', 'repo-HEAD'])(
+  it.each(['repo-HEAD/../../etc/passwd', '/etc/passwd', 'repo-HEAD/a/../../b', 'C:/x', 'repo-HEAD/a\\b', 'repo-HEAD/a\0b', 'repo-HEAD/', 'repo-HEAD',
+    'repo-HEAD/a\nb.md', 'repo-HEAD/a\rb.md', 'repo-HEAD/a\u001bb.md', 'repo-HEAD/a\u007fb.md', 'repo-HEAD/a\u0085b.md'])(
     'refuses %j', (p) => { expect(safeRelativePath(p)).toBeNull(); },
   );
 });
@@ -247,5 +248,12 @@ describe('streaming unpack (large repositories)', () => {
     expect(readFileSync(join(dir, 'AGENTS.md'), 'utf8')).toContain('ignore');
     const capped = await fetchGithubRepo({ owner: 'o', repo: 'r', dir: tmp(), fetchImpl: fake(gzipSync(github([{ name: 'a.md', data: Buffer.alloc(5000, 0x41) }, { name: 'b.md', data: Buffer.alloc(5000, 0x41) }]))), limits: { maxStoredBytes: 8000 } });
     expect(capped).toMatchObject({ ok: false, error: expect.stringContaining('text files') });
+  });
+});
+
+describe('security: entry names with control characters (m5-exorcise)', () => {
+  it('a tar entry named "a\\nb.md" is never read or written', () => {
+    const r = readTar(github([{ name: 'a\nb.md', data: 'x' }, { name: 'ok.md', data: 'y' }]));
+    expect(r.ok && r.entries.map((e) => e.path)).toEqual(['ok.md']);
   });
 });

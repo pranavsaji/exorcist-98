@@ -22,6 +22,8 @@ Fixes:
   EX-010  pin "npx pkg" / "uvx pkg" to the exact current version (looked up on
           npm or PyPI; skipped with a note when offline)
   EX-012  replace a data-carrying remote image with its alt text
+  EX-021  remove runs of 4+ variation selectors (smuggled bytes); one to three,
+          as in emoji, are never touched
 
 Options:
   --write              Apply the changes. Every file is copied into the
@@ -119,7 +121,7 @@ export async function exorciseCommand(argv: string[], io: Io, deps: ExorciseDeps
   const lookup = deps.lookup !== undefined ? deps.lookup : offline ? null : registryLookup({ timeoutMs: 5000 });
   const results = await exorciseRepo(root, findings, { only: only.ids, lookup });
   const changed = results.filter((r) => r.after !== r.before);
-  const fixes = changed.reduce((n, r) => n + r.changes.length, 0);
+  const fixes = changed.reduce((n, r) => n + r.changeCount, 0);
   const notes = noteLines(results);
 
   if (p.values['write'] !== true) {

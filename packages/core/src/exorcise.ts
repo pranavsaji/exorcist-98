@@ -4,6 +4,8 @@
  *   EX-001  remove hidden characters (the normalizer's benign uses are kept:
  *           emoji ZWJ sequences, U+FE0F, joining-script spelling, a leading BOM,
  *           subdivision flags)
+ *   EX-021  remove runs of 4+ variation selectors (smuggled bytes); one to
+ *           three, as in emoji and CJK presentation, are never touched
  *   EX-002  remove an HTML comment that holds instructions addressed to an AI
  *   EX-004  remove a smuggled HTML comment
  *   EX-010  pin `npx pkg` / `uvx pkg` to the exact current version (the version
@@ -20,7 +22,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createTwoFilesPatch } from 'diff';
 import { findHiddenUnicode, isHiddenCodePoint, normalize } from './normalizer.js';
-import type { UnicodeHit } from './normalizer.js';
+import type { UnicodeClass, UnicodeHit } from './normalizer.js';
 import { fencedRanges, inMarkdownCode } from './scanner/context.js';
 import { runSignatures } from './scanner/signature-engine.js';
 import { deduplicate } from './scanner/orchestrator.js';
@@ -31,7 +33,7 @@ import type { VirusDefinition } from './definitions/schema.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export const FIXABLE_RULES = ['EX-001', 'EX-002', 'EX-004', 'EX-010', 'EX-012'] as const;
+export const FIXABLE_RULES = ['EX-001', 'EX-002', 'EX-004', 'EX-010', 'EX-012', 'EX-021'] as const;
 export type FixableRule = (typeof FIXABLE_RULES)[number];
 export const isFixableRule = (id: string): id is FixableRule => (FIXABLE_RULES as readonly string[]).includes(id);
 
@@ -44,9 +46,15 @@ export type FileExorcism = {
   file:    string;
   before:  string;
   after:   string;
+  /** At most MAX_LISTED_CHANGES; past that the last entry summarises the rest. */
   changes: ExorciseChange[];
+  /** How many changes were really made (counted before the list was capped). */
+  changeCount: number;
   notes:   ExorciseNote[];
 };
+
+/** Changes (and notes) listed per file; a file with more gets one summary line for the rest. */
+export const MAX_LISTED_CHANGES = 500;
 
 export type Ecosystem = 'npm' | 'pypi';
 export type PinRequest = { ecosystem: Ecosystem; name: string };
@@ -60,23 +68,63 @@ export const IMAGE_COMMENT = '<!-- exorcised: remote image removed -->';
 
 // ── Positions ─────────────────────────────────────────────────────────────────
 
-/** UTF-16 offset of a 1-based line and column (the scanner's convention), or null. */
-export function positionToOffset(text: string, line: number, col: number): number | null {
-  if (!Number.isInteger(line) || !Number.isInteger(col) || line < 1 || col < 1) return null;
-  let start = 0;
-  for (let l = 1; l < line; l++) {
-    const nl = text.indexOf('\n', start);
-    if (nl === -1) return null;
-    start = nl + 1;
+/**
+ * Line starts of one text, computed once, so turning offsets into line and
+ * column (and back) costs a binary search instead of a pass over the text.
+ */
+class LineIndex {
+  private readonly starts: number[] = [0];
+  constructor(private readonly text: string) {
+    for (let i = text.indexOf('\n'); i !== -1; i = text.indexOf('\n', i + 1)) this.starts.push(i + 1);
   }
-  const at = start + col - 1;
-  return at <= text.length ? at : null;
+  /** UTF-16 offset of a 1-based line and column, or null when it is outside the text. */
+  offset(line: number, col: number): number | null {
+    if (!Number.isInteger(line) || !Number.isInteger(col) || line < 1 || col < 1) return null;
+    const start = this.starts[line - 1];
+    if (start === undefined) return null;
+    const at = start + col - 1;
+    return at <= this.text.length ? at : null;
+  }
+  /** 1-based line and column of an offset (the scanner's convention). */
+  position(offset: number): { line: number; col: number } {
+    let lo = 0;
+    let hi = this.starts.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if ((this.starts[mid] ?? 0) <= offset) lo = mid; else hi = mid - 1;
+    }
+    return { line: lo + 1, col: offset - (this.starts[lo] ?? 0) + 1 };
+  }
 }
 
-function offsetToPosition(text: string, offset: number): { line: number; col: number } {
-  const before = text.slice(0, offset);
-  const line = (before.match(/\n/g) ?? []).length + 1;
-  return { line, col: offset - (before.lastIndexOf('\n') + 1) + 1 };
+/** UTF-16 offset of a 1-based line and column (the scanner's convention), or null. */
+export function positionToOffset(text: string, line: number, col: number): number | null {
+  return new LineIndex(text).offset(line, col);
+}
+
+/**
+ * True for a path that is safe to name in a patch and to write: relative, no
+ * `.`/`..`/empty segments, no backslash and no control characters (C0, DEL,
+ * C1). A newline in a name could otherwise add diff headers of its own.
+ */
+export function isSafePatchPath(p: string): boolean {
+  return p.length > 0 && p.length <= 4096 && !/[\u0000-\u001F\u007F-\u009F\\]/.test(p) && !p.startsWith('/')
+    && !/^[A-Za-z]:/.test(p) && p.split('/').every((seg) => seg !== '' && seg !== '.' && seg !== '..');
+}
+
+/** A path as git writes it in a diff header: bare when plain, else C-quoted with octal UTF-8 bytes. */
+export function gitQuotePath(p: string): string {
+  if (/^[A-Za-z0-9._\/@+,=~-]+$/.test(p)) return p;
+  let out = '"';
+  for (const byte of Buffer.from(p, 'utf8')) {
+    if (byte === 0x22) out += '\\"';
+    else if (byte === 0x5c) out += '\\\\';
+    else if (byte === 0x09) out += '\\t';
+    else if (byte === 0x0a) out += '\\n';
+    else if (byte < 0x20 || byte >= 0x7f) out += `\\${byte.toString(8).padStart(3, '0')}`;
+    else out += String.fromCharCode(byte);
+  }
+  return `${out}"`;
 }
 
 const stripHidden = (s: string): string => Array.from(s).filter((c) => !isHiddenCodePoint(c.codePointAt(0) ?? 0)).join('');
@@ -95,7 +143,15 @@ function sameSpan(found: string, span: string): boolean {
 
 const isTimeoutFinding = (f: Finding): boolean => f.span === `${f.ruleId} ran out of time on this file`;
 
-// ── EX-001 hidden characters ──────────────────────────────────────────────────
+// ── EX-001 / EX-021 hidden characters ─────────────────────────────────────────
+
+/** The character classes each rule reports. */
+const RULE_CLASSES: Record<'EX-001' | 'EX-021', readonly UnicodeClass[]> = {
+  'EX-001': ['zero-width', 'bidi-override', 'tag-block'],
+  'EX-021': ['variation-selector'],
+};
+const ALL_CLASSES: ReadonlySet<UnicodeClass> = new Set([...RULE_CLASSES['EX-001'], ...RULE_CLASSES['EX-021']]);
+const ruleOfClass = (c: UnicodeClass): 'EX-001' | 'EX-021' => (c === 'variation-selector' ? 'EX-021' : 'EX-001');
 
 export type HiddenRemoval = {
   text:    string;
@@ -104,12 +160,14 @@ export type HiddenRemoval = {
 };
 
 /**
- * Remove every hidden character EX-001 reports. Only zero-width, bidi-control
- * and tag characters are ever removed, so the visible text is unchanged, and
- * the normalizer's benign uses (an emoji ZWJ sequence, a joining-script
- * spelling, a leading BOM, a subdivision flag) stay exactly as they are.
+ * Remove every hidden character EX-001 and EX-021 report (or only those of
+ * `classes`). Only zero-width, bidi-control, tag and variation-selector
+ * characters are ever removed, so the visible text is unchanged, and the
+ * normalizer's benign uses (an emoji ZWJ sequence, a single U+FE0F or any run
+ * of one to three variation selectors, a joining-script spelling, a leading
+ * BOM, a subdivision flag) stay exactly as they are.
  */
-export function removeHiddenUnicode(text: string): HiddenRemoval {
+export function removeHiddenUnicode(text: string, classes: ReadonlySet<UnicodeClass> = ALL_CLASSES): HiddenRemoval {
   let cur = text;
   // index in `cur` -> index in `text` (null while they are the same)
   let toOrig: number[] | null = null;
@@ -117,7 +175,7 @@ export function removeHiddenUnicode(text: string): HiddenRemoval {
   // Removing a character never makes another one hidden, so this loop ends
   // after one round; the bound is a guard, not a tuning knob.
   for (let round = 0; round < 4; round++) {
-    const hits = findHiddenUnicode(cur);
+    const hits = findHiddenUnicode(cur).filter((h) => classes.has(h.class));
     if (hits.length === 0) break;
     const parts: string[] = [];
     const nextOrig: number[] = [];
@@ -156,21 +214,23 @@ function shiftThrough(removed: readonly UnicodeHit[]): (o: number) => number {
 
 const cpName = (cp: number): string => `U+${cp.toString(16).toUpperCase().padStart(4, '0')}`;
 
-function hiddenChanges(original: string, removed: readonly UnicodeHit[]): ExorciseChange[] {
+function hiddenChanges(lines: LineIndex, removed: readonly UnicodeHit[]): ExorciseChange[] {
   const out: ExorciseChange[] = [];
   let run: UnicodeHit[] = [];
   const flush = (): void => {
     const first = run[0];
     if (!first) return;
-    const { line, col } = offsetToPosition(original, first.offset);
+    const { line, col } = lines.position(first.offset);
     const names = [...new Set(run.map((h) => cpName(h.codePoint)))];
     const list = names.length > 4 ? `${names.slice(0, 4).join(' ')} ...` : names.join(' ');
-    out.push({ ruleId: 'EX-001', line, col, summary: `removed ${run.length} hidden character${run.length === 1 ? '' : 's'} (${list})` });
+    const ruleId = ruleOfClass(first.class);
+    const what = ruleId === 'EX-021' ? 'variation selector' : 'hidden character';
+    out.push({ ruleId, line, col, summary: `removed ${run.length} ${what}${run.length === 1 ? '' : 's'} (${list})` });
     run = [];
   };
   for (const h of removed) {
     const prev = run[run.length - 1];
-    if (prev && h.offset !== prev.offset + prev.char.length) flush();
+    if (prev && (h.offset !== prev.offset + prev.char.length || ruleOfClass(prev.class) !== ruleOfClass(h.class))) flush();
     run.push(h);
   }
   flush();
@@ -277,18 +337,33 @@ export function exorciseFile(input: ExorciseFileInput): FileExorcism {
   const note = (f: Finding, ruleId: FixableRule, message: string): void => {
     notes.push({ ruleId, line: f.line, col: f.col, message });
   };
+  if (!isSafePatchPath(file)) {
+    const first = findings.find((f) => isFixableRule(f.ruleId));
+    return {
+      file, before: original, after: original, changes: [], changeCount: 0,
+      notes: first && isFixableRule(first.ruleId)
+        ? [{ ruleId: first.ruleId, line: first.line, col: first.col, message: 'the file name has control characters or is not a plain relative path, so it was not changed; needs a human' }]
+        : [],
+    };
+  }
+  const originalLines = new LineIndex(original);
 
   // 1. Hidden characters first; later edits are placed through the offset map.
+  //    When both rules are on, everything either reports goes, so taking out a
+  //    zero-width character can never leave a new run of selectors behind.
   let text = original;
   let shift = (o: number): number => o;
-  if (only.has('EX-001') && signatureFindings(findings, 'EX-001').length > 0) {
-    const r = removeHiddenUnicode(original);
+  const fix001 = only.has('EX-001') && signatureFindings(findings, 'EX-001').length > 0;
+  const fix021 = only.has('EX-021') && (signatureFindings(findings, 'EX-021').length > 0 || fix001);
+  const hiddenClasses = new Set<UnicodeClass>([...(fix001 ? RULE_CLASSES['EX-001'] : []), ...(fix021 ? RULE_CLASSES['EX-021'] : [])]);
+  if (hiddenClasses.size > 0) {
+    const r = removeHiddenUnicode(original, hiddenClasses);
     text = r.text;
     shift = shiftThrough(r.removed);
-    changes.push(...hiddenChanges(original, r.removed));
+    changes.push(...hiddenChanges(originalLines, r.removed));
   }
   const at = (f: Finding): number | null => {
-    const o = positionToOffset(original, f.line, f.col);
+    const o = originalLines.offset(f.line, f.col);
     return o === null ? null : shift(o);
   };
 
@@ -363,7 +438,7 @@ export function exorciseFile(input: ExorciseFileInput): FileExorcism {
       if (!answer.ok) { note(f, 'EX-010', `${answer.reason}; left for a human`); continue; }
       const quoted = JSON.stringify(t.name);
       const o = at(f);
-      const raw = positionToOffset(original, f.line, f.col);
+      const raw = originalLines.offset(f.line, f.col);
       if (o === null || raw === null || !original.startsWith(quoted, raw) || !text.startsWith(quoted, o)) {
         note(f, 'EX-010', 'the package name could not be located exactly; left for a human');
         continue;
@@ -392,16 +467,33 @@ export function exorciseFile(input: ExorciseFileInput): FileExorcism {
   changes.push(...kept.map((e) => e.change));
 
   // 6. A last check: nothing hidden is left behind by the edits.
-  if (only.has('EX-001') && signatureFindings(findings, 'EX-001').length > 0) {
-    const again = removeHiddenUnicode(text);
+  if (hiddenClasses.size > 0) {
+    const again = removeHiddenUnicode(text, hiddenClasses);
     if (again.removed.length > 0) {
-      changes.push(...hiddenChanges(text, again.removed));
+      changes.push(...hiddenChanges(new LineIndex(text), again.removed));
       text = again.text;
     }
   }
 
   changes.sort((a, b) => a.line - b.line || a.col - b.col);
-  return { file, before: original, after: text, changes, notes };
+  return { file, before: original, after: text, changes: capChanges(changes), changeCount: changes.length, notes: capNotes(notes) };
+}
+
+function capChanges(changes: ExorciseChange[]): ExorciseChange[] {
+  if (changes.length <= MAX_LISTED_CHANGES) return changes;
+  const kept = changes.slice(0, MAX_LISTED_CHANGES - 1);
+  const rest = changes.slice(MAX_LISTED_CHANGES - 1);
+  const first = rest[0] as ExorciseChange;
+  const last = rest[rest.length - 1] as ExorciseChange;
+  kept.push({ ...first, summary: `and ${rest.length} more changes in this file (lines ${first.line}-${last.line})` });
+  return kept;
+}
+
+function capNotes(notes: ExorciseNote[]): ExorciseNote[] {
+  if (notes.length <= MAX_LISTED_CHANGES) return notes;
+  const rest = notes.slice(MAX_LISTED_CHANGES - 1);
+  const first = rest[0] as ExorciseNote;
+  return [...notes.slice(0, MAX_LISTED_CHANGES - 1), { ...first, message: `and ${rest.length} more findings left for a human in this file` }];
 }
 
 // ── Several files ─────────────────────────────────────────────────────────────
@@ -463,7 +555,7 @@ export async function exorciseRepo(root: string, findings: readonly Finding[], o
     if (!Buffer.from(text, 'utf8').equals(bytes)) {
       const first = list[0];
       if (first && isFixableRule(first.ruleId)) {
-        notUtf8.push({ file, before: text, after: text, changes: [], notes: [{ ruleId: first.ruleId, line: first.line, col: first.col, message: 'the file is not valid UTF-8, so it was not changed' }] });
+        notUtf8.push({ file, before: text, after: text, changes: [], changeCount: 0, notes: [{ ruleId: first.ruleId, line: first.line, col: first.col, message: 'the file is not valid UTF-8, so it was not changed' }] });
       }
       continue;
     }
@@ -482,6 +574,8 @@ export type ExorcismPatch = {
   fixes:   number;
   /** Files left out because the patch reached `maxBytes`. */
   omitted: number;
+  /** Changed files left out because their path is unsafe (see isSafePatchPath). */
+  unsafe:  number;
 };
 
 /** One git-style unified diff (`git apply` and `patch -p1` both read it) for every changed file. */
@@ -492,19 +586,23 @@ export function toUnifiedDiff(results: readonly FileExorcism[], opts: { maxBytes
   let files = 0;
   let fixes = 0;
   let omitted = 0;
+  let unsafe = 0;
   for (const r of [...results].sort((a, b) => a.file.localeCompare(b.file))) {
     if (r.after === r.before) continue;
-    const body = createTwoFilesPatch(`a/${r.file}`, `b/${r.file}`, r.before, r.after, undefined, undefined, { context: 3 })
+    if (!isSafePatchPath(r.file)) { unsafe++; continue; }
+    const a = gitQuotePath(`a/${r.file}`);
+    const b = gitQuotePath(`b/${r.file}`);
+    const body = createTwoFilesPatch(a, b, r.before, r.after, undefined, undefined, { context: 3 })
       .replace(/^=+\n/, '');
-    const part = `diff --git a/${r.file} b/${r.file}\n${body}`;
+    const part = `diff --git ${a} ${b}\n${body}`;
     const bytes = Buffer.byteLength(part, 'utf8');
     if (size + bytes > max) { omitted++; continue; }
     parts.push(part);
     size += bytes;
     files++;
-    fixes += r.changes.length;
+    fixes += r.changeCount;
   }
-  return { patch: parts.join(''), files, fixes, omitted };
+  return { patch: parts.join(''), files, fixes, omitted, unsafe };
 }
 
 /** Signature findings for texts that are not (or no longer) what is on disk, as `scanRepo` would report them. */

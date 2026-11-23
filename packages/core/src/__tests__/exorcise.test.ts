@@ -7,7 +7,7 @@ import { loadDefinitions } from '../definitions/loader.js';
 import { scanText } from '../scanner/scan-text.js';
 import { scanRepo } from '../scanner/orchestrator.js';
 import {
-  IMAGE_COMMENT, exorciseFile, exorciseRepo, exorciseTexts, pinRequests, positionToOffset, rescanTexts, toUnifiedDiff,
+  IMAGE_COMMENT, MAX_LISTED_CHANGES, gitQuotePath, isSafePatchPath, exorciseFile, exorciseRepo, exorciseTexts, pinRequests, positionToOffset, rescanTexts, toUnifiedDiff,
 } from '../exorcise.js';
 import type { VersionAnswer, VersionLookup } from '../exorcise.js';
 import { registryLookup, registryUrl } from '../exorcise-registry.js';
@@ -282,17 +282,18 @@ describe('the Haunted Repo', () => {
     const changed = results.filter((r) => r.after !== r.before);
     expect(changed.map((r) => r.file).sort()).toEqual([
       'EX-001-hidden-unicode.md', 'EX-004-html-comment-smuggling.md', 'EX-010-unpinned-mcp-server.json', 'EX-012-markdown-image-exfil.md',
+      'EX-021-smuggled-bytes.md',
     ]);
     const patch = toUnifiedDiff(results);
-    expect(patch.files).toBe(4);
+    expect(patch.files).toBe(5);
     expect(patch.patch).toMatch(/^-.*​/m);
     writeFileSync(join(dir, 'fix.patch'), patch.patch);
     execFileSync('git', ['apply', 'fix.patch'], { cwd: dir, stdio: 'pipe' });
     for (const r of changed) expect(readFileSync(join(dir, r.file), 'utf8')).toBe(r.after);
 
     const after = rescanTexts(changed.map((r) => ({ file: r.file, text: r.after })), defs);
-    for (const f of after) expect(['EX-001', 'EX-004', 'EX-010', 'EX-012'], `${f.ruleId} ${f.file}:${f.line}`).not.toContain(f.ruleId);
-    const fixable = before.filter((f) => changed.some((r) => r.file === f.file) && ['EX-001', 'EX-004', 'EX-010', 'EX-012'].includes(f.ruleId));
+    for (const f of after) expect(['EX-001', 'EX-004', 'EX-010', 'EX-012', 'EX-021'], `${f.ruleId} ${f.file}:${f.line}`).not.toContain(f.ruleId);
+    const fixable = before.filter((f) => changed.some((r) => r.file === f.file) && ['EX-001', 'EX-004', 'EX-010', 'EX-012', 'EX-021'].includes(f.ruleId));
     expect(fixable.length).toBeGreaterThanOrEqual(10);
     // Every other planted sample is untouched.
     const untouched = readdirSync(fromRoot('fixtures/haunted-repo')).filter((f) => /^EX-\d{3}-/.test(f) && !changed.some((r) => r.file === f));
@@ -317,5 +318,87 @@ describe('the Haunted Repo', () => {
     const [r] = await exorciseRepo(dir, all, { lookup: null });
     expect(r?.after).toBe(r?.before);
     expect(r?.notes[0]?.message).toMatch(/not valid UTF-8/);
+  });
+});
+
+describe('EX-021 variation-selector runs', () => {
+  it('removes a run of 4+ selectors and keeps the emoji and CJK ones', () => {
+    const smuggled = Array.from({ length: 12 }, (_, i) => String.fromCodePoint(0xE0100 + i)).join('');
+    const text = `Love \u2764\uFE0F and \u845B\u{E0100} here.${smuggled}\n`;
+    const { findings, r } = fix('README.md', text);
+    expect(rules(findings)).toContain('EX-021');
+    expect(r.after).toBe('Love \u2764\uFE0F and \u845B\u{E0100} here.\n');
+    expect(r.changes.map((c) => c.ruleId)).toEqual(['EX-021']);
+    expect(r.changes[0]?.summary).toMatch(/removed 12 variation selectors/);
+    expect(rules(scanText(r.after, 'docs', defs))).toEqual([]);
+  });
+
+  it('`only` keeps EX-001 and EX-021 apart', () => {
+    const text = `a\u200B\u200B\u200B\u200Bb x\uFE00\uFE01\uFE02\uFE03\uFE04y\n`;
+    const findings = scanText(text, 'docs', defs, 'a.md');
+    expect(exorciseFile({ file: 'a.md', text, findings, only: new Set(['EX-021']) }).after).toBe('a\u200B\u200B\u200B\u200Bb xy\n');
+    expect(exorciseFile({ file: 'a.md', text, findings, only: new Set(['EX-001', 'EX-021']) }).after).toBe('ab xy\n');
+  });
+});
+
+describe('security: file names in the patch', () => {
+  it('refuses paths with control characters or that leave the folder', () => {
+    for (const p of ['a\nb.md', 'a\rb.md', 'a\u001Bb.md', 'a\u007Fb.md', 'a\u0085b.md', '../x.md', '/etc/x', 'a/./b', 'a//b', 'a\\b', 'C:/x', '']) {
+      expect(isSafePatchPath(p), JSON.stringify(p)).toBe(false);
+    }
+    for (const p of ['a.md', 'docs/a b.md', 'docs/\u00E9t\u00E9.md', '.github/x.md']) expect(isSafePatchPath(p), p).toBe(true);
+  });
+
+  it('a file named with a newline is never fixed or put in the patch, and is reported for a human', () => {
+    const evil = 'a\n+++ b/.bashrc\nb.md';
+    const text = 'x\u200B\u200B\u200B\u200By\n';
+    const findings = scanText(text, 'docs', defs, evil);
+    const r = exorciseFile({ file: evil, text, findings });
+    expect(r.after).toBe(text);
+    expect(r.notes[0]?.message).toMatch(/needs a human/);
+    const forced = toUnifiedDiff([{ ...r, after: 'xy\n', changeCount: 1 }]);
+    expect(forced.patch).toBe('');
+    expect(forced.unsafe).toBe(1);
+  });
+
+  it('quotes unusual names the way git does, and git apply reads them', () => {
+    expect(gitQuotePath('a/plain-name_1.md')).toBe('a/plain-name_1.md');
+    expect(gitQuotePath('a/x y.md')).toBe('"a/x y.md"');
+    expect(gitQuotePath('a/\u00E9.md')).toBe('"a/\\303\\251.md"');
+    expect(gitQuotePath('a/q"b.md')).toBe('"a/q\\"b.md"');
+    const dir = tmp();
+    const names = ['my notes.md', '\u00E9t\u00E9 "draft".md'];
+    const results = names.map((file) => {
+      const text = 'x\u200B\u200B\u200B\u200By\n';
+      writeFileSync(join(dir, file), text);
+      return exorciseFile({ file, text, findings: scanText(text, 'docs', defs, file) });
+    });
+    writeFileSync(join(dir, 'fix.patch'), toUnifiedDiff(results).patch);
+    execFileSync('git', ['apply', 'fix.patch'], { cwd: dir, stdio: 'pipe' });
+    for (const f of names) expect(readFileSync(join(dir, f), 'utf8')).toBe('xy\n');
+  });
+});
+
+describe('performance and output size', () => {
+  it('a 1 MB file with 50,000 hidden characters exorcises quickly, with a capped change list', () => {
+    const chunk = `${'w'.repeat(19)}\u200B`;
+    const lines: string[] = [];
+    for (let i = 0; i < 50_000; i++) lines.push(chunk);
+    const text = lines.join('\n'); // about 1 MB, 50,000 lines, one hidden character each
+    expect(text.length).toBeGreaterThan(1_000_000);
+    const finding: Finding = {
+      source: 'signature', ruleId: 'EX-001', title: 'Hidden Unicode instructions', severity: 'medium',
+      file: 'BIG.md', line: 1, col: 20, span: '\\u200B', owasp: [], fix: '',
+    };
+    const t0 = Date.now();
+    const r = exorciseFile({ file: 'BIG.md', text, findings: [finding] });
+    const ms = Date.now() - t0;
+    expect(r.after).toBe(text.replace(/\u200B/g, ''));
+    expect(r.changeCount).toBe(50_000);
+    expect(r.changes).toHaveLength(MAX_LISTED_CHANGES);
+    expect(r.changes.at(-1)?.summary).toBe(`and ${50_000 - MAX_LISTED_CHANGES + 1} more changes in this file (lines ${MAX_LISTED_CHANGES}-50000)`);
+    expect(r.changes[1]).toEqual({ ruleId: 'EX-001', line: 2, col: 20, summary: 'removed 1 hidden character (U+200B)' });
+    // Generous bound for a loaded machine; it takes well under a second normally.
+    expect(ms).toBeLessThan(2000);
   });
 });

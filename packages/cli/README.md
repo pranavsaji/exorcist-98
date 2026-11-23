@@ -44,7 +44,7 @@ npx -y @exorcist-98/cli@0.1.0 exorcise . --write   # apply, with a vault backup 
 ```
 
 Only threats with one safe, mechanical fix are repaired: hidden characters
-(EX-001), smuggled HTML comments (EX-002, EX-004), data-carrying remote images
+(EX-001), runs of four or more variation selectors (EX-021), smuggled HTML comments (EX-002, EX-004), data-carrying remote images
 (EX-012) and unpinned `npx`/`uvx` MCP servers (EX-010, pinned to the current
 version on npm or PyPI; `--offline` skips the lookup). Everything else is
 reported, never edited. `--only EX-001,EX-010` limits the fixes. After

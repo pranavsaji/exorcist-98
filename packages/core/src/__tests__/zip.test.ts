@@ -107,3 +107,14 @@ describe('L-032: reading uploaded ZIP files', () => {
     expect(r.ok && r.entries.map((e) => e.path).sort()).toEqual(['AGENTS.md', 'docs/a.md']);
   });
 });
+
+describe('security: entry names with control characters (m5-exorcise)', () => {
+  it('a zip entry named "a\\nb.md" is skipped, never unpacked', () => {
+    const r = readZip(makeZip([{ name: 'a\nb.md', data: t('x') }, { name: 'ok.md', data: t('y') }]));
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.entries.map((e) => e.path)).toEqual(['ok.md']);
+      expect(r.skipped).toBeGreaterThanOrEqual(1);
+    }
+  });
+});

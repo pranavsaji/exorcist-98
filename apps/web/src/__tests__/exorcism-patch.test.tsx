@@ -39,7 +39,7 @@ describe('REQ-03 the exorcism patch in the scan stream', { timeout: 60_000 }, ()
     expect(p.skipped).toBeGreaterThanOrEqual(2);
     // Only fixable threats are touched: nothing from the other samples.
     for (const f of p.patch.matchAll(/^diff --git a\/(\S+)/gm)) {
-      expect(['EX-001-hidden-unicode.md', 'EX-004-html-comment-smuggling.md', 'EX-012-markdown-image-exfil.md']).toContain(f[1]);
+      expect(['EX-001-hidden-unicode.md', 'EX-004-html-comment-smuggling.md', 'EX-012-markdown-image-exfil.md', 'EX-021-smuggled-bytes.md']).toContain(f[1]);
     }
   });
 

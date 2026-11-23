@@ -77,6 +77,9 @@ function paxPath(data: Buffer): string | null {
  */
 export function safeRelativePath(raw: string, stripTop = true): string | null {
   if (raw.includes('\0') || raw.includes('\\')) return null;
+  // A control character (a newline, ESC, DEL, C1) in a file name can forge
+  // lines in logs, terminals and patches that name the file. Never write one.
+  if (/[\u0001-\u001F\u007F-\u009F]/.test(raw)) return null;
   if (raw.startsWith('/') || /^[A-Za-z]:/.test(raw)) return null;
   const parts = raw.split('/').filter((p) => p !== '' && p !== '.');
   if (parts.some((p) => p === '..')) return null;
