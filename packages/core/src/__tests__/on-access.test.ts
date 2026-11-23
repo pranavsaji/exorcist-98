@@ -377,3 +377,14 @@ describe('decideRead (REQ-01)', () => {
     expect(ms).toBeLessThan(1000);
   });
 });
+
+describe('large-file lockfile exemption (security review)', () => {
+  it('only exact lockfile names classed as config are exempt; "evil.lock" or an AGENTS.md is not', async () => {
+    const { mustCheckFully } = await import('../on-access.js');
+    expect(mustCheckFully('pnpm-lock.yaml', 'config')).toBe(false);
+    expect(mustCheckFully('sub/dir/package-lock.json', 'config')).toBe(false);
+    expect(mustCheckFully('evil.lock', 'config')).toBe(true);
+    expect(mustCheckFully('.kiro/settings/mcp.lock', 'mcp-config')).toBe(true);
+    expect(mustCheckFully('yarn.lock', 'instruction')).toBe(true);
+  });
+});

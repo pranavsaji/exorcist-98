@@ -47,9 +47,18 @@ export const DECIDE_BUDGET_MS = 10_000;
  */
 const AGENT_FACING: ReadonlySet<FileRole> = new Set<FileRole>(['instruction', 'memory', 'hook', 'config', 'mcp-config', 'tool-result', 'power']);
 /** Lockfiles classify as config but are machine-written data; huge ones are normal. */
-const LOCKFILE = /(^|\/)(package-lock\.json|npm-shrinkwrap\.json|pnpm-lock\.ya?ml|yarn\.lock|bun\.lockb?|composer\.lock|Gemfile\.lock|Cargo\.lock|poetry\.lock|Pipfile\.lock|uv\.lock|go\.sum|[^/]+\.lock)$/;
+/**
+ * Exact lockfile names only, and only when the file is classed as config: a
+ * generic "*.lock" pattern would let an attacker name a poisoned config
+ * "evil.lock" to skip the full check.
+ */
+const LOCKFILE_NAMES = new Set([
+  'package-lock.json', 'npm-shrinkwrap.json', 'pnpm-lock.yaml', 'pnpm-lock.yml', 'yarn.lock', 'bun.lock', 'bun.lockb',
+  'composer.lock', 'Gemfile.lock', 'Cargo.lock', 'poetry.lock', 'Pipfile.lock', 'uv.lock', 'go.sum',
+]);
+const isLockfile = (label: string): boolean => LOCKFILE_NAMES.has(label.split(/[\\/]/).pop() ?? '');
 export function mustCheckFully(label: string, role: FileRole): boolean {
-  return AGENT_FACING.has(role) && !LOCKFILE.test(label);
+  return AGENT_FACING.has(role) && !(role === 'config' && isLockfile(label));
 }
 
 /**
