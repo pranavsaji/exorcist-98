@@ -55,7 +55,7 @@ function toWebFinding(f: Finding): WebFinding {
   if (f.source === "heuristic") {
     return { ...base, rationale: f.rationale, confidence: f.confidence };
   }
-  return base;
+  return { ...base, ...(f.decoded !== undefined ? { decoded: f.decoded } : {}) };
 }
 
 /**

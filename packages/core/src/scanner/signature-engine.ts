@@ -3,6 +3,7 @@ import { JSONPath } from 'jsonpath-plus';
 import type { RepoFile, SignatureFinding, Severity } from '../types.js';
 import type { NormalizedText, UnicodeHit } from '../normalizer.js';
 import type { VirusDefinition } from '../definitions/schema.js';
+import { decodeVsBytes, tagToAscii, variationSelectorByte, MAX_DECODED_CHARS } from '../ouija.js';
 import { typosquatOf } from '../known-packages.js';
 import { decodeBlob, embeddedDocumentKind, fencedRanges, inExecContext, inMarkdownCode, isCredibleSecret, isQuotedExample } from './context.js';
 
@@ -43,6 +44,31 @@ function joinEscapes(run: UnicodeHit[]): string {
     out += e;
   }
   return out;
+}
+
+/**
+ * The message a run of hidden characters carries, when it decodes (Ouija
+ * decoder). Tag characters map to ASCII; variation selectors carry bytes.
+ * The result is attacker text: it is shown to the user, never prompted,
+ * and truncated to 500 characters (REQ-04).
+ */
+function decodedForRun(run: UnicodeHit[]): string | undefined {
+  let msg: string | undefined;
+  if (run.every((h) => h.class === 'tag-block')) {
+    msg = run.reduce((acc, h) => {
+      const ascii = tagToAscii(h.codePoint);
+      return ascii === null ? acc : acc + String.fromCharCode(ascii);
+    }, '');
+    if (msg === undefined || msg.length < 2) return undefined;
+  } else if (run.every((h) => h.class === 'variation-selector')) {
+    if (run.length < 4) return undefined;
+    const bytes = run.map((h) => variationSelectorByte(h.codePoint) ?? 0);
+    msg = decodeVsBytes(bytes);
+  } else {
+    return undefined;
+  }
+  const text = msg ?? '';
+  return text.length > 0 ? (text.length <= MAX_DECODED_CHARS ? text : `${text.slice(0, MAX_DECODED_CHARS)}…`) : undefined;
 }
 
 function truncateSpan(s: string): string {
@@ -271,6 +297,9 @@ export function runSignatures(
       const flush = (): void => {
         const first = run[0];
         if (!first) return;
+        // A run shorter than the rule's minimum is not this rule's problem
+        // at all (EX-021: one or two variation selectors are emoji skin).
+        if (match.min_run !== undefined && run.length < match.min_run) { run = []; return; }
         const { line, col } = offsetToPosition(norm.original, first.offset);
         // A short run of zero-width characters cannot carry a message; it is
         // usually left over from translation or formatting. Long runs, tag
@@ -279,7 +308,8 @@ export function runSignatures(
         const isMinor = Boolean(minor && run.length <= minor.max_length && run.every((h) => minor.classes.includes(h.class)));
         if (isMinor) minorRuns++;
         const severity = isMinor && minor ? minor.severity : base.severity;
-        findings.push({ ...base, severity, line, col, span: joinEscapes(run) });
+        const decoded = decodedForRun(run);
+        findings.push({ ...base, severity, line, col, span: joinEscapes(run), ...(decoded !== undefined ? { decoded } : {}) });
         run = [];
       };
       for (const hit of norm.hiddenUnicode) {

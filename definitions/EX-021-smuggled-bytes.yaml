@@ -1,0 +1,25 @@
+id: EX-021
+title: Smuggled bytes in variation selectors
+severity: critical
+applies_to:
+  - instruction
+  - docs
+  - config
+  - memory
+  - hook
+  - tool-result
+match:
+  unicode_class:
+    - variation-selector # U+FE00-FE0F, U+E0100-E01EF
+  # A run of four or more variation selectors carries smuggled bytes. One or
+  # two are ordinary emoji presentation (a heart with U+FE0F) and are ignored.
+  min_run: 4
+owasp:
+  - "LLM01:2025 Prompt Injection"
+  - "ASI03 Prompt Injection via External Content"
+fix: >
+  Remove the variation selectors from the text. They hide bytes that people
+  cannot see but an AI model still reads. Use a Unicode-aware editor to reveal
+  them, and check where the file came from: smuggled text is usually placed by
+  whoever wanted the agent to follow it. The hidden message is shown in the
+  finding; treat it as attacker text, not as instructions.

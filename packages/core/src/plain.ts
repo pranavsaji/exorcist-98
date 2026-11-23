@@ -93,6 +93,11 @@ const ENTRIES: Record<string, PlainEntry> = {
     attack:
       'A Power looks like a helpful add-on, but it installs a hook that downloads and runs a script, or steering that tells the agent to stop asking you. Installing it hands control of your agent to its author.',
   },
+  'EX-021': {
+    headline: 'This file hides a secret message in emoji',
+    attack:
+      'Extra invisible characters are attached to an ordinary emoji. They carry a hidden message that people cannot see but an AI model still reads. The Ouija board in the finding shows exactly what the invisible text says; treat it as the attacker\u2019s words, not as instructions to follow.',
+  },
   'EX-015': {
     headline: 'A tool answered with a command for your AI to run',
     attack:

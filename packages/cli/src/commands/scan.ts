@@ -59,6 +59,7 @@ function renderText(findings: Finding[], stats: ScanStats): string {
   for (const f of sorted) {
     lines.push(`${f.severity.toUpperCase().padEnd(8)} ${f.file}:${f.line}:${f.col}  ${plainFor(f.ruleId, f.title).headline} (${f.ruleId})`);
     lines.push(`         found: ${f.span}`);
+    if (f.decoded) lines.push(`         hidden message: "${f.decoded}"`);
     lines.push(`         fix:   ${f.fix.replace(/\s+/g, ' ').trim()}`);
   }
   const counts = (['critical', 'high', 'medium', 'low'] as const)

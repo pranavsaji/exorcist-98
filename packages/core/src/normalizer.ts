@@ -2,7 +2,7 @@ import type { FileRole } from './types.js';
 
 // ── Unicode hidden-character detection ───────────────────────────────────────
 
-export type UnicodeClass = 'zero-width' | 'bidi-override' | 'tag-block';
+export type UnicodeClass = 'zero-width' | 'bidi-override' | 'tag-block' | 'variation-selector';
 
 export type UnicodeHit = {
   char:       string;
@@ -29,6 +29,16 @@ const UNICODE_RANGES: Array<{ class: UnicodeClass; points: number[] }> = [
   {
     class: 'tag-block',
     points: Array.from({ length: 0x80 }, (_, i) => 0xE0000 + i),
+  },
+  // Variation selectors: U+FE00-FE0F and U+E0100-E01EF. One or two are
+  // ordinary emoji presentation (a heart with U+FE0F); a run of four or
+  // more can carry smuggled bytes (EX-021, Ouija decoder).
+  {
+    class: 'variation-selector',
+    points: [
+      ...Array.from({ length: 0x10 }, (_, i) => 0xFE00 + i),
+      ...Array.from({ length: 0xF0 }, (_, i) => 0xE0100 + i),
+    ],
   },
 ];
 

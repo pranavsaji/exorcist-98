@@ -37,5 +37,6 @@ exports[`W-016: the Haunted Repo scan is pinned > finds exactly the expected (ru
   "EX-018 EX-018-confused-deputy.md:4",
   "EX-020 EX-020-suspicious-power.yaml:19",
   "EX-020 EX-020-suspicious-power.yaml:29",
+  "EX-021 EX-021-smuggled-bytes.md:14",
 ]
 `;

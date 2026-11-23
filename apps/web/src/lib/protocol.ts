@@ -35,6 +35,9 @@ export const WebFindingSchema = z.object({
   span:       z.string(),
   owasp:      z.array(z.string()),
   fix:        z.string(),
+  // Ouija decoder (m5-ouija): the message hidden in an invisible-text run,
+  // at most 500 characters. Attacker text, displayed only.
+  decoded:    z.string().optional(),
   rationale:  z.string().optional(),
   confidence: z.enum(['high', 'medium', 'low']).optional(),
 });

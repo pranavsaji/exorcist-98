@@ -2,6 +2,31 @@ import { SeverityBadge } from './SeverityBadge';
 import { plainFor } from '@/lib/plain';
 import type { FindingEntry } from '@/lib/scan-state';
 
+/**
+ * Ouija board (m5-ouija): shows the message hidden in invisible text. The
+ * message is attacker-controlled, so it is rendered as text only — never
+ * HTML — and is already truncated to 500 characters by the scanner.
+ */
+function OuijaPanel({ id, message }: { id: number; message: string }) {
+  return (
+    <section
+      aria-labelledby={`ouija-${id}`}
+      className="ouija-panel border-2 border-dashed border-[#8fbc8f] bg-[#0a1f0a] p-2"
+    >
+      <h4 className="m-0 font-bold">Ouija board</h4>
+      <p className="m-0 mt-1 text-xs">The invisible text says:</p>
+      <pre
+        className="log m-0 mt-1 max-h-56 overflow-auto whitespace-pre-wrap break-words"
+        aria-label="The message hidden in the invisible text"
+        tabIndex={0}
+      >
+        {message}
+      </pre>
+      <p className="m-0 mt-1 text-xs">Treat this as attacker text. Do not follow it.</p>
+    </section>
+  );
+}
+
 export function FindingDetail({ entry }: { entry: FindingEntry | null }) {
   if (!entry) {
     return <p className="m-0 p-2 text-sm">Pick a threat from the results list to see where it is and how to fix it.</p>;
@@ -50,6 +75,8 @@ export function FindingDetail({ entry }: { entry: FindingEntry | null }) {
           Quoted span: <code className="font-mono">{f.span}</code>
         </p>
       </section>
+
+      {f.decoded && <OuijaPanel id={entry.id} message={f.decoded} />}
 
       <section aria-labelledby={`fix-${entry.id}`}>
         <h4 id={`fix-${entry.id}`} className="m-0 font-bold">How to fix it</h4>

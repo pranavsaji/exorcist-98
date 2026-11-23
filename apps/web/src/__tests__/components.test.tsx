@@ -111,6 +111,25 @@ describe('FindingDetail', () => {
     expect(html).toContain('Confidence');
   });
 
+  it('shows the Ouija board with the decoded message, escaped as text', () => {
+    const e = entry(2, 'critical', 'EX-021');
+    const withDecoded: FindingEntry = {
+      ...e,
+      finding: { ...e.finding, decoded: 'DEFANGED: <img src=x onerror=alert(1)> placeholder' },
+    };
+    const html = renderToStaticMarkup(<FindingDetail entry={withDecoded} />);
+    expect(html).toContain('Ouija board');
+    expect(html).toContain('The invisible text says:');
+    // Attacker text is rendered as text, never as HTML.
+    expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+    expect(html).not.toContain('<img');
+  });
+
+  it('shows no Ouija board when the finding has no decoded message', () => {
+    const html = renderToStaticMarkup(<FindingDetail entry={entry(3, 'critical')} />);
+    expect(html).not.toContain('Ouija board');
+  });
+
   it('shows a prompt when nothing is selected (empty state)', () => {
     expect(renderToStaticMarkup(<FindingDetail entry={null} />)).toContain('Pick a threat');
   });

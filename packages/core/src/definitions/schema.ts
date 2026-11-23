@@ -53,6 +53,10 @@ const MatchSchema = z
     // With validate encoded-text: extra markers (for example chat-template
     // tokens) that make decoded text count as instructions.
     decoded_flag_regex: z.string().optional(),
+    // unicode_class only: a run of at least `min_run` characters is required
+    // for the rule to fire at all. Shorter runs are ignored entirely (used by
+    // EX-021: one or two variation selectors are ordinary emoji presentation).
+    min_run:      z.number().int().min(1).optional(),
     // unicode_class only: a run of at most `max_length` characters, all of the
     // listed classes, is reported at `severity` instead of the rule's own.
     minor_run: z.object({

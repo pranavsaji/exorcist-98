@@ -43,6 +43,11 @@ export type SignatureFinding = {
   span:     string;    // exact quoted substring, max 120 chars
   owasp:    string[];
   fix:      string;
+  /**
+   * When a hidden run decodes (Ouija decoder), the message it carries, at
+   * most 500 characters. Attacker text: displayed only, never prompted.
+   */
+  decoded?: string;
 };
 
 export type HeuristicFinding = Omit<SignatureFinding, 'source'> & {
