@@ -14,6 +14,7 @@ const nextConfig = {
       '/api/scan': ['../../definitions/**/*', '../../fixtures/haunted-repo/**/*'],
       // The haunted-repo folder is also how the server finds the repository root (lib/paths.ts).
       '/api/shield-sim': ['../../definitions/**/*', '../../fixtures/haunted-repo/**/*'],
+      '/api/byoa': ['../../definitions/**/*', '../../fixtures/haunted-repo/**/*'],
       '/encyclopedia': ['../../definitions/**/*'],
       '/encyclopedia/[id]': ['../../definitions/**/*', '../../fixtures/haunted-repo/**/*'],
     },

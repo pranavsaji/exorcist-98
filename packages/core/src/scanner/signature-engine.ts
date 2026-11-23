@@ -310,9 +310,13 @@ export function runSignatures(
       } catch {
         continue; // not valid JSON: skip silently
       }
+      // A bare JSON value (`false`, `0`, `"text"`) has no paths to match.
+      if (parsed === null || typeof parsed !== 'object') continue;
       let results: unknown[];
       try {
-        results = JSONPath({ path: match.json_path, json: parsed as object }) as unknown[];
+        const found: unknown = JSONPath({ path: match.json_path, json: parsed });
+        if (!Array.isArray(found)) continue;
+        results = found;
       } catch {
         continue;
       }

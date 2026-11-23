@@ -3,7 +3,8 @@
  * process: enough for one container. Two limits:
  *
  * - **Per visitor:** a token bucket per client address, separately for GitHub
- *   scans (each downloads a repository) and for the bundled Haunted Repo.
+ *   scans (each downloads a repository), the bundled Haunted Repo, uploads and
+ *   Bring Your Own Attack checks.
  * - **At once:** a cap on scans running at the same time, so a burst cannot
  *   fill the disk or the CPU.
  *
@@ -12,7 +13,7 @@
  * missing, every request shares one bucket: stricter, never looser.
  */
 
-export type ScanKind = 'github' | 'haunted-repo' | 'upload';
+export type ScanKind = 'github' | 'haunted-repo' | 'upload' | 'byoa';
 
 type Bucket = { tokens: number; updated: number };
 type Policy = { capacity: number; refillPerMs: number };
@@ -25,8 +26,10 @@ export const POLICIES: Record<ScanKind, Policy> = {
   'haunted-repo': { capacity: 20, refillPerMs: 1 / 10_000 },
   // Uploaded ZIP files (L-032): like GitHub scans, they unpack to disk.
   upload: { capacity: 6, refillPerMs: 1 / (2 * MINUTE) },
+  // Bring Your Own Attack (m5-byoa): in memory and fast, like the Haunted Repo.
+  byoa: { capacity: 20, refillPerMs: 1 / 6_000 },
 };
-export const MAX_CONCURRENT: Record<ScanKind, number> = { github: 3, 'haunted-repo': 8, upload: 3 };
+export const MAX_CONCURRENT: Record<ScanKind, number> = { github: 3, 'haunted-repo': 8, upload: 3, byoa: 8 };
 const MAX_BUCKETS = 10_000;
 
 export type Decision =
@@ -38,7 +41,7 @@ export function createLimiter(o: { policies?: Partial<Record<ScanKind, Policy>>;
   const maxConcurrent: Record<ScanKind, number> = { ...MAX_CONCURRENT, ...o.maxConcurrent };
   const now = o.now ?? (() => Date.now());
   const buckets = new Map<string, Bucket>();
-  const running: Record<ScanKind, number> = { github: 0, 'haunted-repo': 0, upload: 0 };
+  const running: Record<ScanKind, number> = { github: 0, 'haunted-repo': 0, upload: 0, byoa: 0 };
 
   function take(key: string, p: Policy, t: number): number {
     let b = buckets.get(key);
@@ -69,7 +72,9 @@ export function createLimiter(o: { policies?: Partial<Record<ScanKind, Policy>>;
           ok: false, status: 429, retryAfterSeconds: wait,
           error: kind === 'github'
             ? `You have scanned a lot of repositories in a short time. Try again in ${mins} minute${mins === 1 ? '' : 's'}, or run the Exorcist 98 CLI on your own machine.`
-            : `Too many scans in a short time. Try again in ${wait} seconds.`,
+            : kind === 'byoa'
+              ? `Too many attacks checked in a short time. Try again in ${wait} seconds.`
+              : `Too many scans in a short time. Try again in ${wait} seconds.`,
         };
       }
       running[kind]++;

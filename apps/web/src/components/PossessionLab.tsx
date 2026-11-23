@@ -1,8 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { KeyboardEvent } from 'react';
 import type { ScenarioId, SimEvent, SimResult } from '@exorcist-98/shield/simulator';
 import { play } from '@/lib/sound';
+import { ByoaLab } from './ByoaLab';
 
 type ScenarioCard = { id: ScenarioId; title: string; summary: string };
 
@@ -52,7 +54,63 @@ function keyMoment(events: SimEvent[]): { tone: SimEvent['tone']; label: string 
   return null;
 }
 
-export function PossessionLab({ initial = 'rug-pull' }: { initial?: ScenarioId }) {
+type LabTab = 'scripted' | 'byoa';
+const TABS: Array<{ id: LabTab; label: string }> = [
+  { id: 'scripted', label: 'Scripted attacks' },
+  { id: 'byoa', label: 'Bring your own attack' },
+];
+
+/** The Possession Lab: two tabs, the scripted replays and Bring Your Own Attack (m5-byoa). */
+export function PossessionLab({ initial = 'rug-pull', initialTab = 'scripted' }: { initial?: ScenarioId; initialTab?: LabTab }) {
+  const [tab, setTab] = useState<LabTab>(initialTab);
+  const refs = useRef<Record<LabTab, HTMLButtonElement | null>>({ scripted: null, byoa: null });
+
+  function onKey(e: KeyboardEvent) {
+    const i = TABS.findIndex((t) => t.id === tab);
+    let j = -1;
+    if (e.key === 'ArrowRight') j = (i + 1) % TABS.length;
+    else if (e.key === 'ArrowLeft') j = (i - 1 + TABS.length) % TABS.length;
+    else if (e.key === 'Home') j = 0;
+    else if (e.key === 'End') j = TABS.length - 1;
+    if (j < 0) return;
+    e.preventDefault();
+    const next = TABS[j]!.id;
+    setTab(next);
+    refs.current[next]?.focus();
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div role="tablist" aria-label="Possession Lab" className="lab-tabs" onKeyDown={onKey}>
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            ref={(el) => { refs.current[t.id] = el; }}
+            type="button"
+            role="tab"
+            id={`lab-tab-${t.id}`}
+            aria-selected={tab === t.id}
+            aria-controls={`lab-panel-${t.id}`}
+            tabIndex={tab === t.id ? 0 : -1}
+            className="lab-tab"
+            onClick={() => setTab(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div role="tabpanel" id="lab-panel-scripted" aria-labelledby="lab-tab-scripted" hidden={tab !== 'scripted'}>
+        <ScriptedLab initial={initial} />
+      </div>
+      <div role="tabpanel" id="lab-panel-byoa" aria-labelledby="lab-tab-byoa" hidden={tab !== 'byoa'}>
+        {/* Always mounted (it fetches nothing until asked), so a verdict survives switching tabs. */}
+        <ByoaLab />
+      </div>
+    </div>
+  );
+}
+
+function ScriptedLab({ initial }: { initial: ScenarioId }) {
   const [scenarios, setScenarios] = useState<ScenarioCard[]>([]);
   const [id, setId] = useState<ScenarioId>(initial);
   const [result, setResult] = useState<SimResult | null>(null);

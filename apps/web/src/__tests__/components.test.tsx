@@ -135,3 +135,25 @@ describe('ScanWindow', () => {
     expect(html).not.toMatch(/<button type="button" class="btn" disabled="">Cancel<\/button>/);
   });
 });
+
+describe('Possession Lab: Bring Your Own Attack tab (m5-byoa)', () => {
+  it('renders two tabs, with the scripted one selected and its panel shown', async () => {
+    const { PossessionLab } = await import('@/components/PossessionLab');
+    const html = renderToStaticMarkup(<PossessionLab />);
+    expect(html).toContain('role="tablist"');
+    expect(html).toMatch(/role="tab"[^>]*aria-selected="true"[^>]*>Scripted attacks</);
+    expect(html).toMatch(/role="tab"[^>]*aria-selected="false"[^>]*>Bring your own attack</);
+    expect(html).toMatch(/id="lab-panel-byoa"[^>]*hidden/);
+  });
+
+  it('the form has a labelled textarea capped at 20,000 characters, four placements and five samples', async () => {
+    const { ByoaLab } = await import('@/components/ByoaLab');
+    const html = renderToStaticMarkup(<ByoaLab />);
+    expect(html).toMatch(/<label for="byoa-text"[^>]*>Text to check \(up to 20,000 characters\)<\/label>/);
+    expect(html).toMatch(/<textarea id="byoa-text"[^>]*maxLength="20000"/);
+    expect((html.match(/type="radio"/g) ?? []).length).toBe(4);
+    for (const label of ['A README / rules file the agent reads', 'An MCP tool description', 'A tool result', 'Tool call arguments (JSON)']) expect(html).toContain(label);
+    expect((html.match(/byoa-sample"/g) ?? []).length).toBe(5);
+    expect(html).toContain('<legend');
+  });
+});

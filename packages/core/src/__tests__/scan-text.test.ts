@@ -72,6 +72,18 @@ describe('scanText on tool results', () => {
   });
 });
 
+describe('scanText on bare JSON values', () => {
+  // Found by PBT-BYO-01 (m5-byoa): json_path rules crashed on a config whose
+  // whole text is a JSON primitive.
+  it('does not throw for `false`, `0`, `"text"` or `null` in any JSON-reading role', () => {
+    for (const text of ['false', '0', '"text"', 'null', 'true']) {
+      for (const role of ['mcp-config', 'config', 'manifest'] as const) {
+        expect(() => scanText(text, role, defs, 'x.json'), `${role}: ${text}`).not.toThrow();
+      }
+    }
+  });
+});
+
 describe('toMarkdown', () => {
   const finding = (severity: Finding['severity'], ruleId: string, file: string, line: number): Finding => ({
     source: 'signature', ruleId, title: 't', severity, file, line, col: 1, span: 's', owasp: [], fix: 'f',
