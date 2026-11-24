@@ -171,25 +171,81 @@ async function classify(
 
 /** Files that hold credentials by design: never sent whole to the model. */
 const CREDENTIAL_FILE = /(^|\/)(\.env(\..*)?|[^/]*\.local\.json|claude_desktop_config\.json|\.npmrc|\.netrc|credentials(\.json)?)$/i;
-const SECRET_WORDS = '(?:key|token|secret|password|passwd|pwd|auth|credential|cookie|session)';
-/** "apiKey": "value" (JSON). */
-const SECRET_VALUE = new RegExp(`("[^"\\n]*${SECRET_WORDS}[^"\\n]*"\\s*:\\s*")([^"\\n]{4,})(")`, 'gi');
-/** API_KEY=value, apiKey: value, //registry/:_authToken=value (.env, YAML, ini, .npmrc). */
-const SECRET_ASSIGN = new RegExp(`^([^\\n=]*?${SECRET_WORDS}[^\\n=:]*\\s*[:=]\\s*)(["']?)([^\\s"'#\\n]{4,})`, 'gim');
+const SECRET_KEY_WORD = /(?:key|token|secret|password|passwd|pwd|auth|credential|cookie|session)/i;
+/** A key is one identifier-like token: `API_KEY`, `apiKey`, `//registry.npmjs.org/:_authToken`. No spaces. */
+const KEY_TOKEN = /^[A-Za-z0-9_.\-\/:@]{1,128}$/;
+const MAX_MASK_LINE = 2_000;
 
 /**
- * The text as the model may see it: every known secret format and every value
- * under a secret-sounding key masked, same length, so line and column numbers
- * still point at the right place in the file.
+ * True for a value that looks like a credential: long, one token, no URL or
+ * shell syntax, and mixing letters with digits or symbols. Prose and commands
+ * never qualify, so masking can never hide an instruction from the judge.
+ */
+export function looksLikeSecretValue(v: string): boolean {
+  if (v.length < 12 || v.length > 512) return false;
+  if (/[\s|;&$`<>(){}\[\]]/.test(v) || v.includes('://') || v.startsWith('~') || v.startsWith('/')) return false;
+  if (!/^[A-Za-z0-9+\/=_\-.:]+$/.test(v)) return false;
+  return /[A-Za-z]/.test(v) && /[0-9+\/=_\-]/.test(v);
+}
+
+/** Mask the value of one `KEY=value` / `KEY: value` / `"KEY": "value"` line, in place and at the same length. */
+function maskAssignmentLine(line: string): string {
+  if (line.length > MAX_MASK_LINE) return line;
+  // "key": "value"  (JSON), possibly several per line: scan with indexOf, no backtracking.
+  let out = line;
+  let from = 0;
+  for (;;) {
+    const colon = out.indexOf('":', from);
+    if (colon === -1) break;
+    const keyStart = out.lastIndexOf('"', colon - 1);
+    const valStart = out.indexOf('"', colon + 2);
+    if (keyStart === -1 || valStart === -1) break;
+    const between = out.slice(colon + 2, valStart);
+    const valEnd = out.indexOf('"', valStart + 1);
+    if (valEnd === -1 || between.trim() !== '') { from = colon + 2; continue; }
+    const key = out.slice(keyStart + 1, colon);
+    const value = out.slice(valStart + 1, valEnd);
+    if (KEY_TOKEN.test(key) && SECRET_KEY_WORD.test(key) && looksLikeSecretValue(value)) {
+      out = out.slice(0, valStart + 1) + '*'.repeat(value.length) + out.slice(valEnd);
+    }
+    from = valEnd + 1;
+  }
+  // KEY=value or KEY: value at the start of the line (env, YAML, ini, .npmrc).
+  const lead = out.length - out.trimStart().length;
+  let rest = out.slice(lead);
+  let offset = lead;
+  if (rest.startsWith('export ')) { rest = rest.slice(7); offset += 7; }
+  const eq = rest.indexOf('=');
+  const co = rest.indexOf(': ');
+  const sep = eq === -1 ? co : co === -1 ? eq : Math.min(eq, co);
+  if (sep > 0) {
+    const key = rest.slice(0, sep).trimEnd();
+    const after = rest.slice(sep + (rest[sep] === '=' ? 1 : 2));
+    const ws = after.length - after.trimStart().length;
+    let v = after.trimStart();
+    let q = '';
+    if (v.startsWith('"') || v.startsWith("'")) { q = v[0]!; v = v.slice(1); }
+    const endIdx = q ? v.indexOf(q) : v.search(/\s|#/);
+    const value = endIdx === -1 ? v : v.slice(0, endIdx);
+    if (KEY_TOKEN.test(key) && SECRET_KEY_WORD.test(key) && looksLikeSecretValue(value)) {
+      const at = offset + sep + (rest[sep] === '=' ? 1 : 2) + ws + q.length;
+      out = out.slice(0, at) + '*'.repeat(value.length) + out.slice(at + value.length);
+    }
+  }
+  return out;
+}
+
+/**
+ * The text as the model may see it: every known secret format, and the value
+ * of every credential-looking assignment, masked at the same length so line
+ * and column numbers still point at the right place. Linear time.
  */
 export function maskForModel(text: string): string {
   let out = text;
   for (const h of findSecrets(text)) {
     out = out.slice(0, h.offset) + redact(h.match).slice(0, h.match.length).padEnd(h.match.length, '*') + out.slice(h.offset + h.match.length);
   }
-  return out
-    .replace(SECRET_VALUE, (_m, a: string, v: string, z: string) => `${a}${'*'.repeat(v.length)}${z}`)
-    .replace(SECRET_ASSIGN, (_m, a: string, q: string, v: string) => `${a}${q}${'*'.repeat(v.length)}`);
+  return out.split('\n').map(maskAssignmentLine).join('\n');
 }
 
 export async function runHeuristics(
