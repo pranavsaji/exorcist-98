@@ -105,9 +105,19 @@ describe('EX-027 guard state machine (assessSession)', () => {
 
   it('a grant covers the facts so far; any newer fact arms it again', () => {
     const facts = [fact('untrusted', T0), fact('private', at(1000))];
-    expect(assessSession([rec('a', facts, [{ time: at(2000).toISOString(), by: 'prompt' }])], [], at(3000)).armed).toBe(false);
+    expect(assessSession([rec('a', facts, [{ time: at(2000).toISOString(), by: 'prompt' }])], [], at(3000), SESSION_TTL_MS, 'a').armed).toBe(false);
     const again = [...facts, fact('untrusted', at(4000), 'EX-002', 'fetch_url')];
-    expect(assessSession([rec('a', again, [{ time: at(2000).toISOString(), by: 'cli' }])], [], at(5000)).armed).toBe(true);
+    expect(assessSession([rec('a', again, [{ time: at(2000).toISOString(), by: 'cli' }])], [], at(5000), SESSION_TTL_MS, 'a').armed).toBe(true);
+  });
+
+  it('grants count only from the cli record and the Shield\'s own record, never from another file', () => {
+    const facts = [fact('untrusted', T0), fact('private', at(1000))];
+    const grant = [{ time: at(2000).toISOString(), by: 'prompt' as const }];
+    // Another Shield's file (or a file planted to look like one) cannot release this Shield.
+    expect(assessSession([rec('a', facts), rec('b', [], grant)], [], at(3000), SESSION_TTL_MS, 'a').armed).toBe(true);
+    expect(assessSession([rec('a', facts), rec('b', [], grant)], [], at(3000)).armed).toBe(true);
+    expect(assessSession([rec('a', facts), rec('cli', [], [{ ...grant[0]!, by: 'cli' }])], [], at(3000), SESSION_TTL_MS, 'a').armed).toBe(false);
+    expect(assessSession([rec('a', facts, grant)], [], at(3000), SESSION_TTL_MS, 'a').armed).toBe(false);
   });
 
   it('facts expire after the TTL, unless they happen again', () => {
@@ -130,7 +140,7 @@ describe('EX-027 guard state machine (assessSession)', () => {
   it('with unreadable state it is cautious once one leg is known, and not before', () => {
     expect(assessSession([], ['x.json is not valid JSON'], T0)).toMatchObject({ armed: false, cautious: false });
     expect(assessSession([rec('a', [fact('private', T0)])], ['x.json is not valid JSON'], T0)).toMatchObject({ armed: false, cautious: true });
-    expect(assessSession([rec('a', [fact('private', T0)], [{ time: at(1).toISOString(), by: 'cli' }])], ['x'], at(2)).cautious).toBe(false);
+    expect(assessSession([rec('a', [fact('private', T0)], [{ time: at(1).toISOString(), by: 'cli' }])], ['x'], at(2), SESSION_TTL_MS, 'a').cautious).toBe(false);
   });
 
   it('a guard keeps at most MAX_FACTS facts, refreshes repeats, and never writes an invalid rule id', () => {

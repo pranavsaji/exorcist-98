@@ -17,8 +17,9 @@ approve host    Let a server send data to a host (a name like api.example.com, o
 approve server  Accept a changed program behind a server (new code or arguments) and pin it.
 approve session Let an agent session the Session Guard (EX-027) is holding send data out again.
                 The key is in the alert. It asks again after new untrusted text or private data.
-                Only a person can run it: it needs an interactive terminal and a click
-                (or a typed one-time code), so the agent being held cannot release itself.
+                Only a person should run it: it needs an interactive terminal, then a
+                native dialog to click (macOS). Elsewhere it falls back to a typed one-time
+                code, which an agent driving a real terminal could read: weaker.
 alerts          Show recent shield alerts.
 
 The running shield picks the change up on the next request. Your AI client may
@@ -49,6 +50,9 @@ export async function approveCommand(argv: string[], io: Io, term: Terminal = pr
     const what = sessionSummary(dir, server, asOf);
     for (const w of what) io.out(`  - ${w}`);
     const msg = `Let this AI agent session send data out again?\n\nSession ${server}\n${what.map((w) => `- ${w}`).join('\n')}\n\nOnly release it if you asked for what it is trying to send.`;
+    if (!term.dialog || process.platform !== 'darwin') {
+      io.err('Note: there is no native dialog here, so this uses a typed code. An agent that drives a real terminal could read it; only type it yourself.');
+    }
     if (!(await personConfirms(term, io, msg))) return 1;
     const g = grantSession(dir, server, new Date(), asOf);
     if (!g.ok) { io.err(g.error); return 1; }
