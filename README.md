@@ -144,6 +144,8 @@ npx @exorcist-98/cli init --kiro          # hooks, steering, the hook PATH wrapp
 npx @exorcist-98/cli init --kiro --shield # also run every local MCP server through the Shield
 ```
 
+`--kiro` arrives in the next npm release. Until then, run it from a clone of this repository: `pnpm install && pnpm --filter @exorcist-98/cli build && node packages/cli/dist/index.mjs init --kiro <your-project>`.
+
 This writes Kiro hooks that block `git commit` while secrets or canary tokens are staged, scan an MCP config the moment it is saved, and (once a version with `on-access` is published) scan a file before the agent reads it; steering that tells the agent how to treat tool output; and an `exorcist-reviewer` custom agent that may only use the read-only tools of the Exorcist MCP server.
 
 **The pieces individually:**
