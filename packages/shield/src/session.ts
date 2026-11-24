@@ -196,6 +196,21 @@ export function assessSession(records: readonly SessionRecord[], problems: reado
   return { armed, cautious: !armed && issues.length > 0 && uncovered, untrusted, private: priv, problems: issues };
 }
 
+/**
+ * Keep at most MAX_FACTS facts, dropping the oldest first but never the newest
+ * fact of each kind: flooding one kind (many tools, or many server requests)
+ * must not push the other leg of the trifecta out of the record.
+ */
+export function boundFacts(facts: readonly Fact[]): Fact[] {
+  if (facts.length <= MAX_FACTS) return [...facts];
+  const keep = new Set<number>();
+  for (const kind of ['untrusted', 'private'] as const) {
+    for (let i = facts.length - 1; i >= 0; i--) if (facts[i]!.kind === kind) { keep.add(i); break; }
+  }
+  let drop = facts.length - MAX_FACTS;
+  return facts.filter((_, i) => keep.has(i) || drop-- <= 0);
+}
+
 // ── One process's view ───────────────────────────────────────────────────────
 
 /**
@@ -236,14 +251,18 @@ export class SessionGuard {
     const same = this.record.facts.find((f) => f.kind === kind && f.server === s && f.tool === t && f.ruleId === ruleId);
     this.record.facts = this.record.facts.filter((f) => f !== same && now.getTime() - timeOf(f.time) <= this.ttlMs);
     this.record.facts.push({ kind, server: s, tool: t, ruleId, time: now.toISOString() });
-    if (this.record.facts.length > MAX_FACTS) this.record.facts = this.record.facts.slice(-MAX_FACTS);
+    this.record.facts = boundFacts(this.record.facts);
     return this.save(now);
   }
 
-  /** The user let data go out: covers every fact so far. */
-  grant(by: Grant['by'], server?: string): string | null {
+  /**
+   * The user let data go out: covers the facts up to `asOf` (default now),
+   * the moment they were shown what they approved. Later facts arm it again.
+   */
+  grant(by: Grant['by'], server?: string, asOf?: Date): string | null {
     const now = this.now();
-    this.record.grants = [...this.record.grants, { time: now.toISOString(), by, ...(server ? { server: server.slice(0, NAME_CHARS) } : {}) }].slice(-MAX_GRANTS);
+    const at = asOf && asOf.getTime() <= now.getTime() ? asOf : now;
+    this.record.grants = [...this.record.grants, { time: at.toISOString(), by, ...(server ? { server: server.slice(0, NAME_CHARS) } : {}) }].slice(-MAX_GRANTS);
     return this.save(now);
   }
 
@@ -404,14 +423,28 @@ export function liveSessions(stateDir: string, now: Date = new Date(), ttlMs = S
  * the facts so far. Written as the session's `cli` record; a new fact arms
  * the guard again.
  */
-export function grantSession(stateDir: string, key: string, now: Date = new Date()): { ok: true; message: string } | { ok: false; error: string } {
+/** What `approve session` shows the person before they confirm: the newest fact of each kind, in plain words. */
+export function sessionSummary(stateDir: string, key: string, now: Date = new Date()): string[] {
+  if (!isSessionKey(key)) return [];
+  const view = new FileSessionStore(stateDir, key).read(now);
+  const a = assessSession(view.records, view.problems, now);
+  return [a.untrusted, a.private].filter((f): f is Fact => f !== null).map((f) => describeFact(f));
+}
+
+/**
+ * `asOf` is when the person was shown what they are releasing; facts after it
+ * are not covered, so something that happens while they read the dialog still
+ * arms the guard.
+ */
+export function grantSession(stateDir: string, key: string, now: Date = new Date(), asOf: Date = now): { ok: true; message: string } | { ok: false; error: string } {
   if (!isSessionKey(key)) return { ok: false, error: `"${key}" is not a session key.` };
   if (!liveSessions(stateDir, now).includes(key)) {
     return { ok: false, error: `There is no live session "${key}" in ${sessionsPath(stateDir)} (it may have expired).` };
   }
   const store = new FileSessionStore(stateDir, key);
   const prev = store.read(now).records.find((r) => r.writer === 'cli');
-  const grants = [...(prev?.grants ?? []), { time: now.toISOString(), by: 'cli' as const }].slice(-MAX_GRANTS);
+  const at = asOf.getTime() <= now.getTime() ? asOf : now;
+  const grants = [...(prev?.grants ?? []), { time: at.toISOString(), by: 'cli' as const }].slice(-MAX_GRANTS);
   const problem = store.write({ version: 1, writer: 'cli', updated: now.toISOString(), facts: [], grants });
   if (problem) return { ok: false, error: `Could not approve: ${problem}.` };
   return { ok: true, message: `Session "${key}" may send data out again. The Session Guard asks again if the agent takes in new untrusted text or reads private data.` };

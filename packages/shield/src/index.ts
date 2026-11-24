@@ -12,7 +12,7 @@ export type { State, ServerState, Alert, ApproveResult } from './state.js';
 export { inspectCall, inspectResult, inspectTool, collectStrings, hostsIn, extractResultText } from './inspect.js';
 export { ShieldEngine, readsSensitivePath } from './engine.js';
 export {
-  SessionGuard, MemorySessionStore, FileSessionStore, SessionRecordSchema, assessSession, grantSession, liveSessions,
+  SessionGuard, MemorySessionStore, FileSessionStore, SessionRecordSchema, assessSession, grantSession, liveSessions, sessionSummary, boundFacts,
   resolveSessionKey, psLookup, isLauncher, isSessionKey, sessionsPath, SESSION_RULE_ID, SESSION_TTL_MS,
 } from './session.js';
 export type { Fact, FactKind, Grant, SessionRecord, SessionRead, SessionStore, Assessment, ProcInfo, ProcLookup } from './session.js';

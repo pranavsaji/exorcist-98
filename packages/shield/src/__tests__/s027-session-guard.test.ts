@@ -145,6 +145,21 @@ describe('EX-027 guard state machine (assessSession)', () => {
     g.note('untrusted', 's', 'odd', 'SHIELD');
     expect(g.facts().find((f) => f.tool === 'odd')?.ruleId).toBe('EX-027');
   });
+
+  it('flooding one kind of fact never pushes the other leg out of the record', () => {
+    const clock = { now: T0 };
+    const g = new SessionGuard(new MemorySessionStore(), { writer: 'w', now: () => (clock.now = new Date(clock.now.getTime() + 1)) });
+    g.note('private', 'files', 'read_file', 'EX-017');
+    for (let i = 0; i < MAX_FACTS * 4; i++) g.note('untrusted', 'evil', `tool${i}`, 'CAP-010');
+    expect(g.facts()).toHaveLength(MAX_FACTS);
+    expect(g.facts().some((f) => f.kind === 'private' && f.tool === 'read_file')).toBe(true);
+    expect(g.assess().armed).toBe(true);
+    // And the other way round.
+    const h = new SessionGuard(new MemorySessionStore(), { writer: 'w', now: () => (clock.now = new Date(clock.now.getTime() + 1)) });
+    h.note('untrusted', 'web', 'fetch_url', 'CAP-010');
+    for (let i = 0; i < MAX_FACTS * 4; i++) h.note('private', 'files', `read${i}`, 'EX-017');
+    expect(h.assess().armed).toBe(true);
+  });
 });
 
 // ── the engine ───────────────────────────────────────────────────────────────
@@ -263,6 +278,25 @@ describe('EX-027 in the engine: hold, block, monitor, off', () => {
     expect(readsSensitivePath({ path: './src/index.ts' })).toBe(false);
     expect(readsSensitivePath({ path: '/etc/passwd' })).toBe(true);
     expect(readsSensitivePath({ file: 'deploy/.env.production' })).toBe(true);
+  });
+
+  it('a "rest of this session" answer covers only what the prompt showed, not facts that came while it was open', () => {
+    const s = armed({}, true);
+    const held = s.call('send_message', { channel: '#ops', text: 'x' });
+    expect(held.prompt).toBeDefined();
+    // While the prompt is open, new untrusted text arrives.
+    s.call('read_note', { name: 'later' }, INJECTION.replace('the team', 'someone'));
+    const yes = s.answer(held.prompt?.['id'], { action: 'accept', content: { session: true } });
+    expect(fwd(yes, 'server')).toHaveLength(1);
+    // The grant does not cover the later text: asked again.
+    expect(s.call('send_message', { channel: '#dev', text: 'y' }).prompt).toBeDefined();
+  });
+
+  it('an error result from an untrusted-input tool still counts as untrusted text', () => {
+    const s = shield('web');
+    s.engine.onClient({ jsonrpc: '2.0', id: 'e1', method: 'tools/call', params: { name: 'fetch_url', arguments: { url: 'https://docs.example.com' } } });
+    s.engine.onServer({ jsonrpc: '2.0', id: 'e1', result: { isError: true, content: [{ type: 'text', text: '404 page text from the site' }] } });
+    expect(s.session.facts().map((f) => f.kind)).toEqual(['untrusted']);
   });
 
   it('a failed call (isError) does not count as reading private data by label', () => {
@@ -407,6 +441,24 @@ describe('EX-027 across Shield processes (one state folder)', () => {
     a.call('fetch_url', { url: 'https://docs.example.com' }, 'A page.');
     expect(b.call('send_message', { text: 'x' }).sent).toBe(false);
     expect(grantSession(dir, '../escape').ok).toBe(false);
+  });
+
+  it('approve session covers only the facts the person was shown (asOf), not ones that came while they confirmed', () => {
+    const dir = tmp();
+    const key = 'p11-cli';
+    const clock = { now: new Date() };
+    const a = shield('web', { store: new FileSessionStore(dir, key), writer: '1', clock });
+    const b = shield('chat', { store: new FileSessionStore(dir, key), writer: '2', clock });
+    a.call('get_issue', { number: '1' }, 'An issue.');
+    a.call('read_file', { path: 'x' }, DOTENV);
+    const shown = new Date(clock.now.getTime() + 10);
+    clock.now = new Date(clock.now.getTime() + 1000);
+    // New untrusted text while the person reads the dialog (get_issue is untrusted input, not outbound).
+    a.call('get_issue', { number: '2' }, 'Another issue that came in during the dialog.');
+    expect(a.session.facts().filter((f) => f.kind === 'untrusted').at(-1)!.time > shown.toISOString()).toBe(true);
+    expect(grantSession(dir, key, new Date(clock.now.getTime() + 10), shown).ok).toBe(true);
+    clock.now = new Date(clock.now.getTime() + 1000);
+    expect(b.call('send_message', { text: 'x' }).sent).toBe(false);
   });
 });
 

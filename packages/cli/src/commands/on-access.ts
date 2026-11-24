@@ -142,6 +142,24 @@ export async function onAccessCommand(stdin: string, io: Io): Promise<number> {
   return decision.exitCode;
 }
 
+/**
+ * Ask the person at the keyboard, through channels an agent's shell tool
+ * cannot answer: first a native dialog they click; without one, a random code
+ * shown once and typed back. The caller has already checked `interactive`.
+ * Prints why on refusal. Used by allow-read and approve session.
+ */
+export async function personConfirms(term: Terminal, io: Io, dialogMessage: string): Promise<boolean> {
+  const viaDialog = term.dialog ? await term.dialog(dialogMessage) : 'unavailable';
+  if (viaDialog === 'deny') { io.err('Denied in the dialog. Nothing was allowed.'); return false; }
+  if (viaDialog === 'unavailable') {
+    const code = (term.nonce ?? (() => randomBytes(4).toString('hex').slice(0, 6)))();
+    io.out(`Confirmation code: ${code}`);
+    const answer = await term.ask('Type the confirmation code above to allow it: ');
+    if (!confirms(answer, code)) { io.err('That does not match. Nothing was allowed.'); return false; }
+  }
+  return true;
+}
+
 export async function allowReadCommand(argv: string[], io: Io, term: Terminal = processTerminal()): Promise<number> {
   const p = parse(argv, { help: { type: 'boolean', short: 'h' } });
   if (!p.ok) { io.err(`${p.error}\n\n${ALLOW_READ_HELP}`); return 2; }
@@ -162,18 +180,7 @@ export async function allowReadCommand(argv: string[], io: Io, term: Terminal = 
   io.out(`File:    ${shown}`);
   io.out(`SHA-256: ${hash}`);
   io.out('Allow only a file you have reviewed: Exorcist 98 will let your agent read exactly these bytes at this path.');
-  // First choice: a native dialog the person clicks, out of reach of an agent's shell tool.
-  const viaDialog = term.dialog
-    ? await term.dialog(`Allow your AI agent to read this file?\n\n${shown}\nSHA-256 ${hash.slice(0, 12)}...\n\nOnly allow a file you have reviewed.`)
-    : 'unavailable';
-  if (viaDialog === 'deny') { io.err('Denied in the dialog. Nothing was allowed.'); return 1; }
-  if (viaDialog === 'unavailable') {
-    // Fallback: a random code typed back at the terminal.
-    const code = (term.nonce ?? (() => randomBytes(4).toString('hex').slice(0, 6)))();
-    io.out(`Confirmation code: ${code}`);
-    const answer = await term.ask('Type the confirmation code above to allow it: ');
-    if (!confirms(answer, code)) { io.err('That does not match. Nothing was allowed.'); return 1; }
-  }
+  if (!(await personConfirms(term, io, `Allow your AI agent to read this file?\n\n${shown}\nSHA-256 ${hash.slice(0, 12)}...\n\nOnly allow a file you have reviewed.`))) return 1;
 
   // Only the bytes the user confirmed: if the file changed meanwhile, nothing is written.
   const result = addAllowedRead(process.cwd(), file, process.env, hash);

@@ -4,7 +4,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FileSessionStore, emptyState, saveState, serverState, statePath } from '@exorcist-98/shield';
+import { FileSessionStore, emptyState, grantSession, saveState, serverState, statePath } from '@exorcist-98/shield';
+import { approveCommand } from '../commands/approve.js';
 import { addAllowedRead } from '@exorcist-98/core';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -353,9 +354,30 @@ describe('vault, approve and alerts', () => {
     expect(none.code).toBe(2);
     expect(none.err).toContain(key);
     expect(run(['approve', 'session', 'p1-nope', '--dir', dir]).code).toBe(1);
-    const ok = run(['approve', 'session', key, '--dir', dir]);
-    expect(ok.code).toBe(0);
-    expect(ok.out).toContain('may send data out again');
+    // Run by a script or an agent's shell tool (no terminal): refused, nothing released.
+    const agent = run(['approve', 'session', key, '--dir', dir]);
+    expect(agent.code).toBe(1);
+    expect(agent.err).toContain('only runs in an interactive terminal');
+    expect(existsSync(join(dir, 'sessions', key, 'cli.json'))).toBe(false);
+  });
+
+  it('approve session needs a person: a click on Allow releases it; Deny or a wrong code does not', async () => {
+    const d = tmp();
+    const dir = join(d, '.exorcist');
+    const key = 'p4243-abcd1234';
+    const store = new FileSessionStore(dir, key);
+    const now = new Date().toISOString();
+    store.write({ version: 1, writer: '4243', updated: now, facts: [{ kind: 'untrusted', server: 'web', tool: 'fetch_url', ruleId: 'CAP-010', time: now }], grants: [] });
+    const out: string[] = [];
+    const io = { out: (x: string) => void out.push(x), err: (x: string) => void out.push(x) };
+    const term = (dialog: 'allow' | 'deny' | 'unavailable', typed = '') => ({ interactive: true, dialog: async () => dialog, ask: async () => typed, nonce: () => 'c0ffee' });
+
+    expect(await approveCommand(['session', key, '--dir', dir], io, term('deny'))).toBe(1);
+    expect(await approveCommand(['session', key, '--dir', dir], io, term('unavailable', 'nope'))).toBe(1);
+    expect(existsSync(join(dir, 'sessions', key, 'cli.json'))).toBe(false);
+
+    expect(await approveCommand(['session', key, '--dir', dir], io, term('allow'))).toBe(0);
+    expect(out.join('\n')).toContain('may send data out again');
     const cli = JSON.parse(readFileSync(join(dir, 'sessions', key, 'cli.json'), 'utf8')) as { grants: Array<{ by: string }> };
     expect(cli.grants.map((g) => g.by)).toEqual(['cli']);
   });
@@ -750,13 +772,17 @@ describe('exorcist shield, end to end through the real command', () => {
     expect(readFileSync(logB, 'utf8')).toBe('');
     expect(b.err()).toContain('EX-027 Lethal trifecta in this session');
     expect(b.err()).toContain('exorcist approve session e2e-session');
+    expect(JSON.stringify(held['result'])).toContain('Do not try to release it yourself');
     // The shared state holds facts only.
     const folder = join(dir, 'sessions', 'e2e-session');
     const state = readdirSync(folder).map((f) => readFileSync(join(folder, f), 'utf8')).join('');
     expect(state).not.toContain(AWS_KEY);
     expect(state).not.toContain('Ignore all previous');
 
-    expect(run(['approve', 'session', 'e2e-session', '--dir', dir]).code).toBe(0);
+    // The agent cannot release itself through the CLI...
+    expect(run(['approve', 'session', 'e2e-session', '--dir', dir]).code).toBe(1);
+    // ...a person can (approve session, confirmed, writes this grant).
+    expect(grantSession(dir, 'e2e-session').ok).toBe(true);
     const sent = await b.rpc('tools/call', { name: 'send_report', arguments: { url: 'https://collector.example.invalid/r', body: 'hi' } });
     expect(sent['result']['isError']).toBeUndefined();
     expect(readFileSync(logB, 'utf8')).toContain('send_report');
