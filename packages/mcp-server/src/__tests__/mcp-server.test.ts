@@ -29,8 +29,8 @@ afterEach(async () => {
 const tmp = (): string => { const d = mkdtempSync(join(tmpdir(), 'exorcist-mcp-')); dirs.push(d); return d; };
 
 /** Connect the official SDK client to the built server over stdio. */
-async function connect(cwd: string): Promise<Client> {
-  const transport = new StdioClientTransport({ command: process.execPath, args: [BUNDLE], cwd, env: { PATH: process.env['PATH'] ?? '' } });
+async function connect(cwd: string, env: Record<string, string> = {}): Promise<Client> {
+  const transport = new StdioClientTransport({ command: process.execPath, args: [BUNDLE], cwd, env: { PATH: process.env['PATH'] ?? '', ...env } });
   const client = new Client({ name: 'test', version: '0.0.0' });
   await client.connect(transport);
   clients.push(client);
@@ -74,6 +74,30 @@ describe('the exorcist MCP server (official SDK client, real stdio)', () => {
     // Hidden-character findings are quoted as escape text, never as the raw character.
     expect(r.text).toMatch(/quoted: "\\\\u(200B|202E|\{E00[0-9A-F]{2})/);
     expect(r.text).not.toMatch(/[\u200B-\u200D\uFEFF\u202A-\u202E\u2066-\u2069\u{E0000}-\u{E007F}]/u);
+  });
+
+  it('EXORCIST_MCP_NO_QUOTES=1 never returns quoted text, even when a call asks for it (exorcist-reviewer agent)', async () => {
+    const c = await connect(ROOT, { EXORCIST_MCP_NO_QUOTES: '1' });
+    const r = await call(c, 'scan_repo', { path: 'fixtures/haunted-repo', includeQuotes: true, maxFindings: 100 });
+    expect(r.isError).toBe(false);
+    expect(r.text).toContain('rule: EX-002');
+    expect(r.text).not.toContain('quoted:');
+    expect(r.text).not.toContain('untrusted data');
+    const m = await call(c, 'scan_mcp_config', { path: 'fixtures/haunted-repo/EX-005-tool-description-poisoning.json', includeQuotes: true });
+    expect(m.text).not.toContain('quoted:');
+    // Off by default: the same call without the variable quotes.
+    const open = await call(await connect(ROOT), 'scan_repo', { path: 'fixtures/haunted-repo', includeQuotes: true, maxFindings: 100 });
+    expect(open.text).toContain('quoted:');
+  });
+
+  it('the exorcist-reviewer Kiro agent may use only read-only tools of this server', async () => {
+    const agent = JSON.parse(readFileSync(join(ROOT, '.kiro/agents/exorcist-reviewer.json'), 'utf8')) as { tools: string[] };
+    const { tools } = await (await connect(ROOT)).listTools();
+    const readOnly = new Set(tools.filter((t) => t.annotations?.readOnlyHint === true).map((t) => `@exorcist/${t.name}`));
+    expect(agent.tools.length).toBeGreaterThan(0);
+    for (const t of agent.tools) expect(readOnly.has(t), `${t} must be a read-only exorcist tool`).toBe(true);
+    expect(agent.tools).not.toContain('@exorcist/quarantine');
+    expect(agent.tools).not.toContain('@exorcist');
   });
 
   it('M5-REQ-04.1: a decoded hidden message is never handed to the agent, even with quotes on', async () => {

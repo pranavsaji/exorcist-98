@@ -12,6 +12,7 @@ const VERSION = '0.1.0';
 const ctx: Ctx = {
   cwd: process.cwd(),
   definitionsDir: findDefinitionsDir(process.cwd()) ?? '',
+  noQuotes: process.env['EXORCIST_MCP_NO_QUOTES'] === '1',
 };
 
 const reply = (r: ToolText) => ({ content: [{ type: 'text' as const, text: r.text }], ...(r.isError ? { isError: true } : {}) });

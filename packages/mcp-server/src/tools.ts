@@ -13,7 +13,16 @@ export type Ctx = {
   definitionsDir: string;
   /** More folders the tools may read: the client's MCP roots and EXORCIST_ROOTS (S-018). Absolute, real paths. */
   roots?: readonly string[];
+  /**
+   * EXORCIST_MCP_NO_QUOTES=1: never return quoted file text, even when a call
+   * asks for it (includeQuotes is ignored). Set by the exorcist-reviewer Kiro
+   * agent, so a quote cannot reach that agent even if it asks for one.
+   */
+  noQuotes?: boolean;
 };
+
+/** Quotes only when the call asks for them and the server allows them. */
+const quotesWanted = (ctx: Ctx, asked: boolean | undefined): boolean => asked === true && ctx.noQuotes !== true;
 
 const RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
 const HIDDEN = /[\u200B-\u200D\uFEFF\u202A-\u202E\u2066-\u2069\u{E0000}-\u{E007F}]/gu;
@@ -135,7 +144,7 @@ export async function scanRepoTool(ctx: Ctx, a: { path: string; maxFindings?: nu
     if (ev.type === 'finding' && (only === null || ev.finding.file === only)) findings.push(ev.finding);
   }
   const limit = Math.min(Math.max(a.maxFindings ?? 25, 1), 100);
-  const quotes = a.includeQuotes === true;
+  const quotes = quotesWanted(ctx, a.includeQuotes);
   return { text: [summary(findings, files), quotes ? UNTRUSTED : '', describe(findings, limit, quotes)].filter(Boolean).join('\n') };
 }
 
@@ -160,9 +169,10 @@ export async function scanMcpConfigTool(ctx: Ctx, a: { path: string; includeQuot
   const protectedNames = local.filter(([, e]) => isWrapped(e)).map(([n]) => n);
   const open = local.filter(([, e]) => !isWrapped(e)).map(([n]) => n);
 
+  const quotes = quotesWanted(ctx, a.includeQuotes);
   const lines = [summary(findings, 1)];
-  if (a.includeQuotes) lines.push(UNTRUSTED);
-  if (findings.length > 0) lines.push(describe(findings, 25, a.includeQuotes === true));
+  if (quotes) lines.push(UNTRUSTED);
+  if (findings.length > 0) lines.push(describe(findings, 25, quotes));
   lines.push(
     `Servers in this file: ${servers.length}. Behind the shield: ${protectedNames.length ? protectedNames.join(', ') : 'none'}.` +
       (open.length ? ` Not behind the shield: ${open.join(', ')}. The user can run: exorcist wrap ${a.path}` : ''),
