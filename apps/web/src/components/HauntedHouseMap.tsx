@@ -171,8 +171,8 @@ function HouseDrawing({ config, titleId, descId }: { config: ConfigMapMsg; title
           <path d="M116 264 C116 240 124 230 140 220" fill="none" stroke="#ff7a9c" strokeWidth="2.5" strokeDasharray="6 4" markerEnd={`url(#${titleId}-arrow)`} />
           <path d="M260 220 C276 230 284 240 284 262" fill="none" stroke="#ff7a9c" strokeWidth="2.5" strokeDasharray="6 4" markerEnd={`url(#${titleId}-arrow)`} />
           <path d="M364 330 H394" fill="none" stroke="#ff7a9c" strokeWidth="2.5" strokeDasharray="6 4" markerEnd={`url(#${titleId}-arrow)`} />
-          <text x="44" y="240" fontSize="10" fontWeight="700" fill="#ffd1dc">1 orders in</text>
-          <text x="292" y="240" fontSize="10" fontWeight="700" fill="#ffd1dc">2 secrets out</text>
+          <text x="44" y="240" fontSize="10" fontWeight="700" fill="#ffd1dc">Step 1: orders in</text>
+          <text x="292" y="240" fontSize="10" fontWeight="700" fill="#ffd1dc">Step 2: secrets out</text>
           <text x="200" y="252" fontSize="10" fontWeight="800" textAnchor="middle" fill="#ffd1dc" letterSpacing="0.08em">LETHAL TRIFECTA</text>
         </g>
       ) : (
