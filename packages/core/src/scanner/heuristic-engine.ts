@@ -162,7 +162,8 @@ async function classify(
   model: "haiku" | "sonnet",
   prompt: string,
 ): Promise<Verdict | null> {
-  const r = await client.call({ model, prompt, maxTokens: 512 });
+  // The sink: whatever path built the prompt, no secret leaves in it.
+  const r = await client.call({ model, prompt: maskForModel(prompt), maxTokens: 512 });
   if (!r.ok) return null;
   const parsed = VerdictSchema.safeParse(safeParseJson(r.raw));
   return parsed.success ? parsed.data : null;
@@ -170,7 +171,11 @@ async function classify(
 
 /** Files that hold credentials by design: never sent whole to the model. */
 const CREDENTIAL_FILE = /(^|\/)(\.env(\..*)?|[^/]*\.local\.json|claude_desktop_config\.json|\.npmrc|\.netrc|credentials(\.json)?)$/i;
-const SECRET_VALUE = /("[^"\n]*(?:key|token|secret|password|passwd|auth|credential|cookie|session)[^"\n]*"\s*:\s*")([^"\n]{4,})(")/gi;
+const SECRET_WORDS = '(?:key|token|secret|password|passwd|pwd|auth|credential|cookie|session)';
+/** "apiKey": "value" (JSON). */
+const SECRET_VALUE = new RegExp(`("[^"\\n]*${SECRET_WORDS}[^"\\n]*"\\s*:\\s*")([^"\\n]{4,})(")`, 'gi');
+/** API_KEY=value, apiKey: value, //registry/:_authToken=value (.env, YAML, ini, .npmrc). */
+const SECRET_ASSIGN = new RegExp(`^([^\\n=]*?${SECRET_WORDS}[^\\n=:]*\\s*[:=]\\s*)(["']?)([^\\s"'#\\n]{4,})`, 'gim');
 
 /**
  * The text as the model may see it: every known secret format and every value
@@ -182,7 +187,9 @@ export function maskForModel(text: string): string {
   for (const h of findSecrets(text)) {
     out = out.slice(0, h.offset) + redact(h.match).slice(0, h.match.length).padEnd(h.match.length, '*') + out.slice(h.offset + h.match.length);
   }
-  return out.replace(SECRET_VALUE, (_m, a: string, v: string, z: string) => `${a}${'*'.repeat(v.length)}${z}`);
+  return out
+    .replace(SECRET_VALUE, (_m, a: string, v: string, z: string) => `${a}${'*'.repeat(v.length)}${z}`)
+    .replace(SECRET_ASSIGN, (_m, a: string, q: string, v: string) => `${a}${q}${'*'.repeat(v.length)}`);
 }
 
 export async function runHeuristics(
@@ -191,10 +198,12 @@ export async function runHeuristics(
   sigFindings: SignatureFinding[],
   client: BedrockClient,
 ): Promise<HeuristicFinding[]> {
-  // Nothing that looks like a secret ever reaches the model (or the report).
+  // Credential files never go to the model by any path.
+  if (CREDENTIAL_FILE.test(file.rel)) return [];
+  // Masked here so spans, context and quotes point into masked text; the
+  // prompt itself is masked again at the sink (classify) for every path.
   const norm: NormalizedText = { ...rawNorm, original: maskForModel(rawNorm.original) };
   if (!shouldEscalate(file, norm, sigFindings)) {
-    if (CREDENTIAL_FILE.test(file.rel)) return [];
     // Layered detection: a file an agent takes instructions or settings from
     // is judged whole even when no signature fired. Reworded attacks trip no
     // pattern; on our 10 reworded attacks signatures caught 0 and the judge 6,

@@ -402,3 +402,13 @@ describe('chamber modes', () => {
     expect(c.system).not.toContain('obedient');
   });
 });
+
+describe('the chamber never sends a secret from the scanned text', () => {
+  it('masks a key in the suspect text before the model sees it', async () => {
+    const { detonate } = await import('../detonation.js');
+    const key = ['AKIA', 'Q7EXAMPLE2DEMO9X'].join('');
+    const client = new FakeChamberClient([answer('Summary: deploy notes.')]);
+    await detonate(`Deploy notes. AWS_ACCESS_KEY_ID=${key}\n`, 'file', client, { fileName: 'notes.md' });
+    expect(JSON.stringify(client.requests ?? client)).not.toContain(key);
+  });
+});

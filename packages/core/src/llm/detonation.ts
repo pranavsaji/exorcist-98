@@ -27,6 +27,7 @@ import { z } from 'zod';
 import { findCanaryInText } from '../canary.js';
 import { generateNonce } from './prompts.js';
 import type { ChamberBlock, ChamberClient, ChamberMessage, ChamberResult, ChamberTool } from '../types.js';
+import { maskForModel } from '../scanner/heuristic-engine.js';
 
 /** Assembled at run time so no source file holds a PEM private-key marker (see no-private-keys.test.ts). */
 const PEM_LABEL = ['PRIVATE', 'KEY'].join(' ');
@@ -569,7 +570,8 @@ export type DetonateOptions = {
  */
 export async function detonate(text: string, placement: Placement, judge: ChamberClient, opts: DetonateOptions = {}): Promise<DetonationReport> {
   const env = opts.env ?? makeEnvironment();
-  const chamber = buildChamber(text, placement, opts.nonce ?? generateNonce(), opts.fileName, opts.mode ?? 'obedient');
+  // No secret in the scanned text ever reaches the model (masked at the same length).
+  const chamber = buildChamber(maskForModel(text), placement, opts.nonce ?? generateNonce(), opts.fileName, opts.mode ?? 'obedient');
   const results: ChamberResult[] = [];
   let messages = chamber.messages;
   for (let turn = 1; turn <= MAX_TURNS; turn++) {
