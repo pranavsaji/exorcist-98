@@ -1,0 +1,81 @@
+name: Release to npm
+
+# Publishes @exorcist-98/cli and @exorcist-98/mcp-server from CI with npm
+# provenance: each package on npm then carries a signed statement of the exact
+# commit and workflow that built it, so users can check that what they install
+# came from this repository (npm audit signatures).
+#
+# One-time setup by the owner on npmjs.com, for each of the two packages:
+# Settings -> Trusted publishing -> GitHub Actions, repository
+# pranavsaji/exorcist-98, workflow release.yml. No npm token is stored here.
+#
+# Run it from the Actions tab (Run workflow) on the release commit.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type the version to publish (must match both package.json files)
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
+      # Trusted publishing needs npm 11.5.1 or later.
+      - run: npm install -g npm@^11.5.1
+      - name: Versions match the confirmation and are not on npm yet
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          CLI_V=$(node -p "require('./packages/cli/package.json').version")
+          MCP_V=$(node -p "require('./packages/mcp-server/package.json').version")
+          [ "$CLI_V" = "$CONFIRM" ] && [ "$MCP_V" = "$CONFIRM" ] || { echo "package.json versions are $CLI_V and $MCP_V, not $CONFIRM"; exit 1; }
+          for p in "cli@$CLI_V" "mcp-server@$MCP_V"; do
+            if npm view "@exorcist-98/$p" version >/dev/null 2>&1; then echo "@exorcist-98/$p is already on npm"; exit 1; fi
+          done
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r typecheck
+      - run: pnpm --filter @exorcist-98/cli build && pnpm --filter @exorcist-98/mcp-server build
+      - run: pnpm --filter @exorcist-98/cli exec vitest run && pnpm --filter @exorcist-98/mcp-server exec vitest run
+      - name: Only dist/, definitions/, README, LICENSE and package.json ship
+        run: |
+          for d in cli mcp-server; do
+            ( cd "packages/$d" && npm pack --dry-run --json 2>/dev/null ) | node -e '
+              const files = JSON.parse(require("fs").readFileSync(0, "utf8"))[0].files.map((f) => f.path);
+              const bad = files.filter((f) => !/^(dist\/|definitions\/|README\.md$|package\.json$|LICENSE$)/.test(f));
+              if (bad.length) { console.error("unexpected files: " + bad.join(", ")); process.exit(1); }
+              console.log(files.length + " files OK");'
+          done
+      - run: cd packages/cli && npm publish --provenance --access public
+      - run: cd packages/mcp-server && npm publish --provenance --access public
+      - name: The published package installs and runs
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          # The registry can take a minute to serve a new version.
+          for i in 1 2 3 4 5 6; do
+            npx -y "@exorcist-98/cli@$CONFIRM" --version && exit 0
+            sleep 20
+          done
+          exit 1
+      - name: Provenance verifies
+        run: |
+          mkdir -p "$RUNNER_TEMP/verify" && cd "$RUNNER_TEMP/verify"
+          npm init -y >/dev/null
+          npm install "@exorcist-98/cli@${CONFIRM}" "@exorcist-98/mcp-server@${CONFIRM}" >/dev/null
+          npm audit signatures
+        env:
+          CONFIRM: ${{ inputs.confirm }}

@@ -287,6 +287,13 @@ A scanner reads attacker text all day, so it is built to be attacked:
 
 The Detonation Chamber, canaries and every Haunted Repo sample use fake secrets built at run time and `.invalid` hosts.
 
+Releases and the repository itself:
+
+- npm releases are built and published from CI ([`release.yml`](.github/workflows/release.yml)) with **npm provenance**, so `npm audit signatures` proves a package came from this repository and commit. No npm token is stored anywhere.
+- CodeQL (security-extended queries) runs on every change and weekly; Dependabot groups dependency and Actions updates weekly.
+- The repository scans itself with its own GitHub Action on every pull request.
+- Found a way past the Shield or the scanner? See [`SECURITY.md`](SECURITY.md) for private reporting.
+
 ## Built with Kiro
 
 Milestones M0 to M4 were built spec by spec in **Kiro IDE**: five specs (requirements, design, tasks), four steering files that every change followed, property-based tests for the requirements, and hooks on file save and before commits. The last stretch (M5) was started by **Kiro CLI** in headless runs, one git worktree per feature, until the account's monthly usage limit; it was finished outside Kiro. The **Kiro Crew** app was built for Crew and run inside it.
