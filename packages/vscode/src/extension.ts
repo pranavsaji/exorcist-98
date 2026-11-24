@@ -19,6 +19,7 @@ import type { Exorcism } from './fixes.js';
 import { hiddenRuns, hoverMarkdown, runAt } from './hidden.js';
 import type { HiddenRun } from './hidden.js';
 import { WORKSPACE_EXCLUDE, WORKSPACE_INCLUDE, agentRelativePath, compileGlobs, decideScan } from './roles.js';
+import type { GlobMatcher } from './roles.js';
 import { GhostScanner, HARD_LIMIT_CHARS, isSeverity, meetsThreshold } from './scanner.js';
 
 const CHANGE_DEBOUNCE_MS = 400;
@@ -32,7 +33,7 @@ const SCHEMES = new Set(['file', 'vscode-remote', 'vscode-vfs', 'vscode-userdata
 
 type Settings = {
   enable: boolean;
-  extra: RegExp[];
+  extra: GlobMatcher[];
   extraGlobs: string[];
   invalidGlobs: string[];
   minimumSeverity: Severity;
@@ -182,16 +183,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const first = decideScan(rel, settings.extra);
     if (first.scan === false) { collection.delete(uri); return 0; }
     const st = await vscode.workspace.fs.stat(uri);
-    if ((st.type & vscode.FileType.File) === 0) return 0;
+    if ((st.type & vscode.FileType.File) === 0) { collection.delete(uri); return 0; }
     if (st.size > HARD_LIMIT_CHARS) {
-      if (first.scan !== true) return 0;
+      if (first.scan !== true) { collection.delete(uri); return 0; }
       const f = scanner.tooLarge(rel, st.size);
       const index = new LineIndex('');
       collection.set(uri, f.filter((x) => meetsThreshold(x.severity, settings.minimumSeverity)).map((x) => toDiagnostic(toDiagnosticSpec(x, index, []))));
       return f.length;
     }
     const bytes = await vscode.workspace.fs.readFile(uri);
-    if (bytes.subarray(0, BINARY_PROBE).includes(0)) return 0;
+    // A NUL byte means binary, so a file that is only a candidate is skipped.
+    // A known agent file is scanned anyway: a NUL byte must not be a way to
+    // hide instructions from the scanner while the agent still reads the rest.
+    if (first.scan !== true && bytes.subarray(0, BINARY_PROBE).includes(0)) { collection.delete(uri); return 0; }
     const text = new TextDecoder('utf-8').decode(bytes);
     const d = first.scan === true ? first : decideScan(rel, settings.extra, text);
     if (d.scan !== true) { collection.delete(uri); return 0; }
@@ -234,7 +238,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       async (progress, token) => {
         const started = Date.now();
         const found = new Map<string, vscode.Uri>();
-        const globs = [WORKSPACE_INCLUDE, ...settings.extraGlobs.map((g) => (g.includes('/') ? g : `**/${g}`))];
+        const globs = [WORKSPACE_INCLUDE, ...settings.extraGlobs.filter((g) => !settings.invalidGlobs.includes(g)).map((g) => (g.includes('/') ? g : `**/${g}`))];
         for (const g of globs) {
           const uris = await vscode.workspace.findFiles(g, WORKSPACE_EXCLUDE, MAX_WORKSPACE_FILES, token);
           for (const u of uris) found.set(keyOf(u), u);

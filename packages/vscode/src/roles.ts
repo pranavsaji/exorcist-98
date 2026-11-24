@@ -39,55 +39,140 @@ export const WORKSPACE_EXCLUDE = `**/{${SKIP_DIRS.join(',')}}/**`;
 
 // ── Globs ─────────────────────────────────────────────────────────────────────
 
+/** Longest glob accepted, and most alternatives after `{a,b}` expansion. */
+export const MAX_GLOB_LENGTH = 200;
+export const MAX_GLOB_ALTERNATIVES = 64;
+
+/** A compiled glob. `test` takes a workspace-relative path with forward slashes. */
+export type GlobMatcher = { readonly glob: string; test(path: string): boolean };
+
+type Tok =
+  | { k: 'lit'; c: string }
+  | { k: 'one' }                                      // ?
+  | { k: 'class'; neg: boolean; ranges: [string, string][] } // [...]
+  | { k: 'star' }                                     // * : any run without a slash
+  | { k: 'dirs' }                                     // **/ : zero or more whole folders
+  | { k: 'all' };                                     // trailing ** : anything
+
 /**
- * A glob as a regular expression over a workspace-relative path with forward
- * slashes. Supports `**`, `*`, `?`, `{a,b}` and `[...]`. A glob without a
- * slash matches the file name in any folder (as in .gitignore), so `*.prompt.md`
- * works anywhere; `docs/*.md` is anchored at the workspace folder.
+ * Compile a glob. Supports `**`, `*`, `?`, `{a,b}` (not nested) and `[...]`.
+ * A glob without a slash matches the file name in any folder (as in
+ * .gitignore), so `*.prompt.md` works anywhere; `docs/*.md` is anchored at the
+ * workspace folder.
+ *
+ * Extra globs come from settings a workspace can set itself, so they are
+ * untrusted input. They are never turned into a backtracking RegExp: matching
+ * simulates the glob as a small automaton, one pass over the path, so its time
+ * is linear in the path length whatever the glob (`*a*a*a*a*b` included).
+ * Globs over the length or alternative limits, or with nested braces, throw.
  */
-export function globToRegExp(glob: string): RegExp {
+export function compileGlob(glob: string): GlobMatcher {
   let g = glob.trim().replace(/\\/g, '/').replace(/^\.\//, '');
+  if (g.length > MAX_GLOB_LENGTH) throw new Error('glob too long');
   if (!g.includes('/')) g = `**/${g}`;
-  let re = '';
-  let depth = 0;
+  const alts = expandBraces(g).map(tokenize);
+  return { glob, test: (path: string) => alts.some((t) => run(t, path)) };
+}
+
+function expandBraces(g: string): string[] {
+  const open = g.indexOf('{');
+  if (open === -1) return [g];
+  const close = g.indexOf('}', open + 1);
+  if (close === -1) return [g];                          // an unclosed brace is literal
+  const body = g.slice(open + 1, close);
+  if (body.includes('{')) throw new Error('nested braces');
+  const out: string[] = [];
+  for (const rest of expandBraces(g.slice(close + 1))) {
+    for (const opt of body.split(',')) {
+      out.push(g.slice(0, open) + opt + rest);
+      if (out.length > MAX_GLOB_ALTERNATIVES) throw new Error('too many alternatives');
+    }
+  }
+  return out;
+}
+
+function tokenize(g: string): Tok[] {
+  const toks: Tok[] = [];
   for (let i = 0; i < g.length; i++) {
     const c = g[i] as string;
     if (c === '*') {
-      if (g[i + 1] === '*') {
-        // `**/` matches zero or more folders; a trailing `**` matches anything.
-        if (g[i + 2] === '/') { re += '(?:.*/)?'; i += 2; } else { re += '.*'; i += 1; }
-      } else {
-        re += '[^/]*';
-      }
+      let j = i;
+      while (g[j + 1] === '*') j++;                     // runs of * collapse
+      const globstar = j > i;
+      i = j;
+      if (globstar && g[i + 1] === '/') { i++; if (toks.at(-1)?.k !== 'dirs') toks.push({ k: 'dirs' }); }
+      else if (globstar) toks.push({ k: 'all' });
+      else if (toks.at(-1)?.k !== 'star') toks.push({ k: 'star' });
     } else if (c === '?') {
-      re += '[^/]';
-    } else if (c === '{') {
-      depth++; re += '(?:';
-    } else if (c === '}' && depth > 0) {
-      depth--; re += ')';
-    } else if (c === ',' && depth > 0) {
-      re += '|';
+      toks.push({ k: 'one' });
     } else if (c === '[') {
-      const close = g.indexOf(']', i + 1);
-      if (close === -1) { re += '\\['; continue; }
-      const body = g.slice(i + 1, close).replace(/\\/g, '\\\\').replace(/^!/, '^');
-      re += `[${body}]`;
+      const close = g.indexOf(']', i + 2);
+      if (close === -1) { toks.push({ k: 'lit', c }); continue; }
+      let body = g.slice(i + 1, close);
+      const neg = body[0] === '!' || body[0] === '^';
+      if (neg) body = body.slice(1);
+      const ranges: [string, string][] = [];
+      for (let k = 0; k < body.length; k++) {
+        const a = body[k] as string;
+        if (body[k + 1] === '-' && k + 2 < body.length) { ranges.push([a, body[k + 2] as string]); k += 2; }
+        else ranges.push([a, a]);
+      }
+      toks.push({ k: 'class', neg, ranges });
       i = close;
     } else {
-      re += c.replace(/[.+^$()|\\\]]/g, '\\$&');
+      toks.push({ k: 'lit', c });
     }
   }
-  while (depth-- > 0) re += ')';
-  return new RegExp(`^${re}$`);
+  return toks;
+}
+
+/**
+ * Run the automaton. State 2i is "before token i"; state 2i+1 is "inside the
+ * folders of a `**` token i", which may only leave right after a slash.
+ */
+function run(toks: Tok[], path: string): boolean {
+  const n = toks.length;
+  const close = (set: Set<number>): Set<number> => {
+    for (let i = 0; i < n; i++) {
+      const k = toks[i]!.k;
+      if (set.has(2 * i) && (k === 'star' || k === 'dirs' || k === 'all')) set.add(2 * (i + 1));
+    }
+    return set;
+  };
+  let cur = close(new Set([0]));
+  for (const ch of path) {
+    const next = new Set<number>();
+    for (const s of cur) {
+      const i = s >> 1;
+      if (s & 1) { next.add(s); if (ch === '/') next.add(2 * (i + 1)); continue; }
+      if (i === n) continue;
+      const t = toks[i]!;
+      switch (t.k) {
+        case 'lit': if (ch === t.c) next.add(2 * (i + 1)); break;
+        case 'one': if (ch !== '/') next.add(2 * (i + 1)); break;
+        case 'class': {
+          const hit = t.ranges.some(([lo, hi]) => ch >= lo && ch <= hi);
+          if (ch !== '/' && hit !== t.neg) next.add(2 * (i + 1));
+          break;
+        }
+        case 'star': if (ch !== '/') next.add(s); break;
+        case 'dirs': next.add(s + 1); if (ch === '/') next.add(2 * (i + 1)); break;
+        case 'all': next.add(s); break;
+      }
+    }
+    if (next.size === 0) return false;
+    cur = close(next);
+  }
+  return cur.has(2 * n);
 }
 
 /** Compile globs once; invalid ones are dropped (and reported by the caller). */
-export function compileGlobs(globs: readonly string[]): { patterns: RegExp[]; invalid: string[] } {
-  const patterns: RegExp[] = [];
+export function compileGlobs(globs: readonly string[]): { patterns: GlobMatcher[]; invalid: string[] } {
+  const patterns: GlobMatcher[] = [];
   const invalid: string[] = [];
   for (const g of globs) {
     if (typeof g !== 'string' || g.trim() === '') continue;
-    try { patterns.push(globToRegExp(g)); } catch { invalid.push(String(g)); }
+    try { patterns.push(compileGlob(g)); } catch { invalid.push(String(g)); }
   }
   return { patterns, invalid };
 }
@@ -128,7 +213,7 @@ export type ScanDecision =
  * config (an `mcpServers` object); without it (the workspace scan, before
  * reading), such a file is a candidate only when its name mentions MCP.
  */
-export function decideScan(rel: string, extra: readonly RegExp[] = [], text?: string): ScanDecision {
+export function decideScan(rel: string, extra: readonly GlobMatcher[] = [], text?: string): ScanDecision {
   const norm = rel.replace(/\\/g, '/');
   const role = classifyFile(norm);
   if (AGENT_ROLES.has(role)) return { scan: true, role, reason: 'role' };
