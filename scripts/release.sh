@@ -29,7 +29,7 @@ pnpm --filter @exorcist-98/mcp-server exec vitest run
 
 # Only dist/, definitions/, README.md and package.json may ship.
 for d in cli mcp-server; do
-  ( cd "packages/$d" && npm pack --dry-run --json 2>/dev/null ) | node -e '
+  ( cd "packages/$d" && npm pack --dry-run --json --ignore-scripts 2>/dev/null ) | node -e '
     const files = JSON.parse(require("fs").readFileSync(0, "utf8"))[0].files.map((f) => f.path);
     const bad = files.filter((f) => !/^(dist\/|definitions\/|README\.md$|package\.json$|LICENSE$)/.test(f));
     if (bad.length) { console.error("unexpected files: " + bad.join(", ")); process.exit(1); }
