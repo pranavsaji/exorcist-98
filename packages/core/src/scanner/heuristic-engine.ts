@@ -174,65 +174,79 @@ const CREDENTIAL_FILE = /(^|\/)(\.env(\..*)?|[^/]*\.local\.json|claude_desktop_c
 const SECRET_KEY_WORD = /(?:key|token|secret|password|passwd|pwd|auth|credential|cookie|session)/i;
 /** A key is one identifier-like token: `API_KEY`, `apiKey`, `//registry.npmjs.org/:_authToken`. No spaces. */
 const KEY_TOKEN = /^[A-Za-z0-9_.\-\/:@]{1,128}$/;
-const MAX_MASK_LINE = 2_000;
 
 /**
- * True for a value that looks like a credential: long, one token, no URL or
- * shell syntax, and mixing letters with digits or symbols. Prose and commands
- * never qualify, so masking can never hide an instruction from the judge.
+ * Under a secret-named key, every single-token value is masked (fail closed),
+ * whatever its length or characters. It stays visible only when it is clearly
+ * prose or a command, so masking can never hide an instruction from the judge.
  */
 export function looksLikeSecretValue(v: string): boolean {
-  if (v.length < 12 || v.length > 512) return false;
-  if (/[\s|;&$`<>(){}\[\]]/.test(v) || v.includes('://') || v.startsWith('~') || v.startsWith('/')) return false;
-  if (!/^[A-Za-z0-9+\/=_\-.:]+$/.test(v)) return false;
-  return /[A-Za-z]/.test(v) && /[0-9+\/=_\-]/.test(v);
+  if (v.length < 4) return false;
+  if (/\s/.test(v)) return false;                                   // prose
+  if (v.includes('://') || v.startsWith('~') || v.startsWith('/') || v.startsWith('./')) return false; // URL or path
+  if (/[|;&$`<>()]/.test(v)) return false;                          // shell syntax
+  return true;
 }
 
-/** Mask the value of one `KEY=value` / `KEY: value` / `"KEY": "value"` line, in place and at the same length. */
+const isSecretKey = (k: string): boolean => KEY_TOKEN.test(k) && SECRET_KEY_WORD.test(k);
+const stars = (n: number): string => '*'.repeat(n);
+
+/** Strip one pair of surrounding quotes; returns the inner value and its offset. */
+function unquote(v: string): { value: string; at: number } {
+  const q = v[0];
+  if ((q === '"' || q === "'") && v.length >= 2 && v.endsWith(q)) return { value: v.slice(1, -1), at: 1 };
+  return { value: v, at: 0 };
+}
+
+/** Mask every credential-looking assignment on one line, in place and at the same length. Linear. */
 function maskAssignmentLine(line: string): string {
-  if (line.length > MAX_MASK_LINE) return line;
-  // "key": "value"  (JSON), possibly several per line: scan with indexOf, no backtracking.
-  let out = line;
+  const chars = line.split('');
+  const maskRange = (from: number, len: number): void => { for (let i = from; i < from + len; i++) chars[i] = '*'; };
+
+  // 1. "key": "value" pairs (JSON), any number per line, scanned with indexOf.
   let from = 0;
   for (;;) {
-    const colon = out.indexOf('":', from);
+    const colon = line.indexOf('":', from);
     if (colon === -1) break;
-    const keyStart = out.lastIndexOf('"', colon - 1);
-    const valStart = out.indexOf('"', colon + 2);
-    if (keyStart === -1 || valStart === -1) break;
-    const between = out.slice(colon + 2, valStart);
-    const valEnd = out.indexOf('"', valStart + 1);
-    if (valEnd === -1 || between.trim() !== '') { from = colon + 2; continue; }
-    const key = out.slice(keyStart + 1, colon);
-    const value = out.slice(valStart + 1, valEnd);
-    if (KEY_TOKEN.test(key) && SECRET_KEY_WORD.test(key) && looksLikeSecretValue(value)) {
-      out = out.slice(0, valStart + 1) + '*'.repeat(value.length) + out.slice(valEnd);
-    }
+    from = colon + 2;
+    const keyStart = line.lastIndexOf('"', colon - 1);
+    if (keyStart === -1) continue;
+    let i = colon + 2;
+    while (i < line.length && (line[i] === ' ' || line[i] === '\t')) i++;
+    if (line[i] !== '"') continue;
+    const valEnd = line.indexOf('"', i + 1);
+    if (valEnd === -1) break;
+    const key = line.slice(keyStart + 1, colon);
+    const value = line.slice(i + 1, valEnd);
+    if (isSecretKey(key) && looksLikeSecretValue(value)) maskRange(i + 1, value.length);
     from = valEnd + 1;
   }
-  // KEY=value or KEY: value at the start of the line (env, YAML, ini, .npmrc).
-  const lead = out.length - out.trimStart().length;
-  let rest = out.slice(lead);
-  let offset = lead;
-  if (rest.startsWith('export ')) { rest = rest.slice(7); offset += 7; }
-  const eq = rest.indexOf('=');
-  const co = rest.indexOf(': ');
-  const sep = eq === -1 ? co : co === -1 ? eq : Math.min(eq, co);
-  if (sep > 0) {
-    const key = rest.slice(0, sep).trimEnd();
-    const after = rest.slice(sep + (rest[sep] === '=' ? 1 : 2));
-    const ws = after.length - after.trimStart().length;
-    let v = after.trimStart();
-    let q = '';
-    if (v.startsWith('"') || v.startsWith("'")) { q = v[0]!; v = v.slice(1); }
-    const endIdx = q ? v.indexOf(q) : v.search(/\s|#/);
-    const value = endIdx === -1 ? v : v.slice(0, endIdx);
-    if (KEY_TOKEN.test(key) && SECRET_KEY_WORD.test(key) && looksLikeSecretValue(value)) {
-      const at = offset + sep + (rest[sep] === '=' ? 1 : 2) + ws + q.length;
-      out = out.slice(0, at) + '*'.repeat(value.length) + out.slice(at + value.length);
-    }
+
+  // 2. KEY=value tokens anywhere on the line (env, shell, .npmrc, ini).
+  const tokenRe = /\S+/g;
+  let m: RegExpExecArray | null;
+  while ((m = tokenRe.exec(line)) !== null) {
+    const tok = m[0];
+    const eq = tok.indexOf('=');
+    if (eq <= 0) continue;
+    const key = tok.slice(0, eq).replace(/^export$/, '');
+    const { value, at } = unquote(tok.slice(eq + 1));
+    if (isSecretKey(key) && looksLikeSecretValue(value)) maskRange(m.index + eq + 1 + at, value.length);
   }
-  return out;
+
+  // 3. YAML / ini "key: value" or "key:value" at the start of the line.
+  const lead = line.length - line.trimStart().length;
+  const body = line.slice(lead);
+  const colon = body.indexOf(':');
+  if (colon > 0 && !body.includes('=')) {
+    const key = body.slice(0, colon).replace(/^- /, '');
+    let i = colon + 1;
+    while (i < body.length && body[i] === ' ') i++;
+    const raw = body.slice(i).replace(/\s+#.*$/, '').trimEnd();
+    const { value, at } = unquote(raw);
+    if (isSecretKey(key) && looksLikeSecretValue(value)) maskRange(lead + i + at, value.length);
+  }
+  return chars.join('');
 }
 
 /**
