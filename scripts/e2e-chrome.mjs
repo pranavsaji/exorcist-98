@@ -713,6 +713,24 @@ await step('unknown encyclopedia id gives a 404 page', async () => {
   return '404';
 });
 
+await step('How Kiro built it (/how-kiro): every Kiro feature, the surprises, built outside Kiro; passes axe, fits 390px', async () => {
+  await page.goto(`${BASE}/how-kiro`, { waitUntil: 'networkidle' });
+  const h1 = await page.locator('h1').innerText();
+  const sections = await page.locator('main section h2').allInnerTexts();
+  await page.screenshot({ path: `${SHOTS}/09-how-kiro.png`, fullPage: true });
+  const r = await axe('how-kiro'); axeReports.push(r);
+  for (const t of ['Specs', 'Steering', 'Hooks', 'MCP', 'Powers', 'Custom agents', 'Kiro CLI', 'Kiro Crew', 'Where Kiro surprised us', 'Built outside Kiro']) {
+    if (!sections.includes(t)) throw new Error('missing section: ' + t);
+  }
+  const m = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const p = await m.newPage();
+  await p.goto(`${BASE}/how-kiro`, { waitUntil: 'networkidle' });
+  const overflow = await p.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+  await m.close();
+  if (overflow > 0) throw new Error('page scrolls sideways at 390px by ' + overflow + 'px');
+  return `${JSON.stringify(h1)}; ${sections.length} sections; ${r.violations.length} axe violation types; no sideways scroll at 390px`;
+});
+
 await step('narrow screen (390x844): screenshot only, checks horizontal overflow', async () => {
   const m = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const p = await m.newPage();
