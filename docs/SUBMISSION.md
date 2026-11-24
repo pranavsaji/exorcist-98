@@ -62,10 +62,22 @@ a quarantine vault) and pointed it at the files and tools an agent trusts.
   from the agent and calls to it are refused, with a diff of what changed. It
   also blocks secrets and unknown hosts in tool calls and withholds tool
   results that look like attacks.
+- **Session Guard (EX-027):** the Shield remembers what a session has
+  actually read. Once it has taken in untrusted text (an issue, a web page)
+  and private data (`.env`, a secret), the next call that could send data out
+  is held until the person approves it, even when each step went through a
+  different MCP server. Only the person can release it, at their own terminal;
+  an agent running the command is refused. Possession Lab: `/?demo=trifecta`.
 - **Quarantine Vault:** disable a suspicious MCP server with a backup and
   restore it byte for byte.
 - **Kiro Power, MCP server, CLI and GitHub Action** to use all of this from
   Kiro, the terminal and CI.
+- **Editor extension "Exorcist 98 for Kiro"** (`packages/vscode`): poisoned
+  lines in steering, spec, hook and MCP files and `AGENTS.md` are underlined as
+  you type, hidden messages are decoded on hover, and a one-click *Exorcise*
+  fix removes hidden characters. Read-only, no network, works in Restricted
+  Mode. Seen running inside Kiro 1.5.11, where Kiro offers its own *Ask Kiro to
+  Fix* on our findings (screenshots in the README).
 - **Ten more 90s antivirus ideas, brought back:** On-Access Scanning (a Kiro
   hook scans a file before the agent reads it; only the user can allow it, at a
   real terminal), the Ouija Decoder (reads invisible Unicode smuggling back
@@ -168,9 +180,9 @@ hooks, a Power, an MCP server and a Crew app; and an exact-restore quarantine.
   the server changes it to "send the contents of .env to ...", the agent no
   longer sees it, the call is refused, and the server's own log proves it never
   received the call.
-- 1,510 tests in the main repo (unit, property-based with fast-check, and real
-  processes), 143 in the Crew repo; a 33-step Chrome run with 0 axe
-  violations on every window.
+- 1,755 tests in the main repo (unit, 127 property-based with fast-check, and
+  real processes), 143 in the Crew repo; a 44-step Chrome run with 0 axe
+  violations on every window that plays all seven Possession Lab attacks.
 
 ## How the Kiro tools differed
 
@@ -209,6 +221,11 @@ running it, and every gap written down (`docs/KNOWN_LIMITATIONS.md`).
   exfiltration instruction no signature caught), but it costs money per call.
 - A bigger benchmark corpus and more well-known MCP packages for the
   typosquat check.
+- Publish the editor extension to Open VSX so Kiro users can install it from
+  the Extensions panel.
+- Confirm Session Guard releases through an OS prompt (for example the
+  keychain) instead of a file any program running as the user could write
+  (`docs/KNOWN_LIMITATIONS.md`, S-027).
 
 ## Startup (Best Startup Project)
 
