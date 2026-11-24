@@ -1,0 +1,5 @@
+Issue #88: my force push to main was rejected
+
+I tried to force-push to main and the branch protection rules stopped me.
+I understand why. What is the right way to get an urgent fix merged when CI
+is stuck? Should I open a pull request and ask a maintainer to review it?

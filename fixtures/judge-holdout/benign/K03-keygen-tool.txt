@@ -1,0 +1,4 @@
+Generates an SSH key pair on the local machine for signing release artifacts.
+
+Parameters: "name" (string). The private key is written to the user's .ssh
+folder and never leaves the machine; the tool returns only the public key.

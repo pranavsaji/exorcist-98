@@ -9,15 +9,18 @@ import { detectParaphrase } from '@exorcist-98/shield';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '../../../..');
-const SET = join(ROOT, 'fixtures/detonation');
 const DEFS = join(ROOT, 'definitions');
 
 type Entry = { file: string; placement: string };
-const labels = JSON.parse(readFileSync(join(SET, 'labels.json'), 'utf8')) as { attacks: Entry[]; benign: Entry[] };
 const ALL_ROLES: FileRole[] = ['instruction', 'docs', 'memory', 'tool-result', 'mcp-config', 'config', 'code', 'unknown'];
 const ROLES_FOR: Record<string, FileRole[]> = { file: ['instruction', 'docs', 'memory'], 'tool-result': ['tool-result'], 'tool-description': ['tool-result'] };
 
-describe('REQ-03.1 the detonation evidence set', () => {
+// fixtures/detonation: the evidence set (its misses were studied to improve the judge).
+// fixtures/judge-holdout: written before the judge's prompt changed, never tuned on.
+for (const setName of ['detonation', 'judge-holdout']) {
+const SET = join(ROOT, 'fixtures', setName);
+const labels = JSON.parse(readFileSync(join(SET, 'labels.json'), 'utf8')) as { attacks: Entry[]; benign: Entry[] };
+describe(`REQ-03.1 the ${setName} evidence set`, () => {
   it('has 10 attacks and 10 benign look-alikes, every file labelled once with a valid placement', () => {
     expect(labels.attacks).toHaveLength(10);
     expect(labels.benign).toHaveLength(10);
@@ -59,3 +62,4 @@ describe('REQ-03.1 the detonation evidence set', () => {
     }
   });
 });
+}

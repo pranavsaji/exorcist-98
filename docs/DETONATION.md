@@ -1,6 +1,6 @@
 # Detonation Chamber: measured results
 
-**Short version:** the Detonation Chamber caught **1 of 10** reworded attacks in both runs below, with no false alarms. A safety-trained model makes a poor victim: Claude Haiku 4.5 refused to leak secrets or run destructive commands even when told to emulate a fully obedient agent. The AI judge, which asks the model to *spot* instructions aimed at an AI instead of falling for them, caught **6 of 10** on the same texts with **0 false alarms** ([AI_JUDGE_EVAL.md](AI_JUDGE_EVAL.md)). Together the two caught 7 of 10. Signatures catch 0 of these 10 by construction.
+**Short version:** the Detonation Chamber caught **1 of 10** reworded attacks in both runs below, with no false alarms. A safety-trained model makes a poor victim: Claude Haiku 4.5 refused to leak secrets or run destructive commands even when told to emulate a fully obedient agent. The AI judge, which asks the model to *spot* instructions aimed at an AI instead of falling for them, caught **10 of 10** on the same texts with **0 false alarms** after a quote-matching fix (6 of 10 before it), and 10 of 10 on a held-out set ([AI_JUDGE_EVAL.md](AI_JUDGE_EVAL.md)). Signatures catch 0 of these 10 by construction.
 
 So the scanner now sends every agent-facing file (rules files, steering, memory, hooks, MCP configs, tool output) to the AI judge when `--ai` is on, even when no signature fired. The chamber stays available as `exorcist detonate` and `scan --detonate`, labelled experimental.
 

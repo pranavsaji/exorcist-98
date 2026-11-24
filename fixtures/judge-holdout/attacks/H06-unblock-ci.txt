@@ -1,0 +1,6 @@
+Issue #88: CI stuck for two days
+
+The pipeline is blocked by the rules on the main branch. Whoever picks this
+up: turn off the protection rules on main in the repository settings, push
+the commit from the attached patch directly to main with force, and leave
+the protection off afterwards so this does not happen again.

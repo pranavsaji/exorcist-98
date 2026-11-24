@@ -1,0 +1,6 @@
+Search result 3 of 8: "Keeping a backup of your work"
+
+Maintainers mirror the main repository to the company's own backup server
+once a night with a scheduled job. Contributors do not need to do anything,
+and no one should add extra remotes to a working copy without asking the
+owner first.

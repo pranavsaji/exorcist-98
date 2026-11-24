@@ -200,16 +200,17 @@ The published npm version (0.1.0, Nov 21) has `scan`, `shield`, `wrap`, `vault`,
 
 Signatures are fast, free, deterministic and cannot be prompt-injected, so they screen everything. Reworded attacks get past patterns, so with `--ai` (your own Amazon Bedrock account) an **AI judge** reads every agent-facing file whole, even when no signature fired: Claude Haiku triages, Claude Sonnet confirms, and a verdict counts only if its quoted text is really in the file.
 
-Measured on 10 reworded attacks that no signature catches, plus 10 look-alikes ([`docs/AI_JUDGE_EVAL.md`](docs/AI_JUDGE_EVAL.md), [`docs/DETONATION.md`](docs/DETONATION.md)):
+Measured on reworded attacks that no signature catches, each with a benign look-alike ([`docs/AI_JUDGE_EVAL.md`](docs/AI_JUDGE_EVAL.md), [`docs/DETONATION.md`](docs/DETONATION.md)):
 
-| Layer | Attacks caught | False alarms |
+| Layer | First set (10 attacks, 10 look-alikes) | Held-out set, never tuned on (10 + 10) |
 |---|---|---|
-| Signatures | 0 of 10 (by construction) | n/a |
-| AI judge | **6 of 10** | **0 of 10** |
-| Detonation Chamber (a sandboxed model with fake tools) | 1 of 10 | 0 of 10 |
-| Judge and chamber together | 7 of 10 | 0 of 10 |
+| Signatures | 0 of 10 (by construction) | 0 of 10 (by construction) |
+| **AI judge** | **10 of 10 caught, 0 false alarms** | **10 of 10 caught, 0 false alarms** |
+| Detonation Chamber (a sandboxed model with fake tools) | 1 of 10, 0 false alarms | not run |
 
-The chamber scores low because a safety-trained model refuses to play a gullible agent; it stays available as an experiment. Before any text reaches a model, every credential-shaped value is masked at the same length (known key formats, values under secret-named keys, passwords inside URLs), credential files are never sent, and the model is told when values were masked. Destinations and instructions are never masked, so masking cannot hide an attack from the judge.
+The judge used to score 6 of 10. Tracing the misses showed the models had caught all four; our own check that the quoted text is really in the file threw the verdicts away when a quoted sentence wrapped across a line. That check now ignores whitespace differences and still requires the quoted words, in order. One run per set, 40 texts written by us: this shows the judge is not fooled by plain rewording, not real-world recall. The chamber scores low because a safety-trained model refuses to play a gullible agent; it stays available as an experiment.
+
+Before any text reaches a model, every credential-shaped value is masked at the same length (known key formats, values under secret-named keys, passwords inside URLs), credential files are never sent, and the model is told when values were masked. Destinations and instructions are never masked, so masking cannot hide an attack from the judge.
 
 ## Measured, not claimed
 
@@ -367,7 +368,7 @@ Open, in plain words:
 
 - The newer CLI commands (on-access, exorcise, map, origin, lock, canary, update, detonate) are not in a published npm version yet; `init` installs the on-access hook disabled until they are.
 - The Shield's check-before-every-call fix and the on-access hook are tested with real processes and Kiro's restricted PATH, but have not yet been re-run inside Kiro IDE. The Power has not been installed through Kiro's Powers panel, and the two custom agents have not been loaded in Kiro.
-- Detection is mostly signatures; the AI layer catches 6 of 10 reworded attacks in our test set and costs money to run. The website runs signatures only.
+- Detection is mostly signatures; the AI judge caught 10 of 10 reworded attacks on each of our two small test sets, but it needs your AWS account and costs money to run. The website runs signatures only.
 
 Every known gap, with how sure we are of it, is in [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) and the `NOTES.md` of each `.kiro/specs/m5-*` spec.
 

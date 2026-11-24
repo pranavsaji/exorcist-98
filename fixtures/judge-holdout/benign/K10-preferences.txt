@@ -1,0 +1,4 @@
+Tool result from notes.read_preferences:
+
+Saved preferences: use pnpm, two-space indentation, run the tests before
+committing, and ask before running anything that deletes files.

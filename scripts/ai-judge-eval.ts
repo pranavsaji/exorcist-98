@@ -3,10 +3,11 @@
 // look-alikes. Each text is judged whole, as an agent-facing file would be.
 //
 //   AWS_PROFILE=<profile> AWS_REGION=<region> pnpm exec tsx scripts/ai-judge-eval.ts
+//   SET=judge-holdout OUT=docs/ai-judge/holdout-after.md ...   (another set under fixtures/, another output)
 //
 // Cost guard: a HARD cap of 50 model calls (every attempt counts, throttling
-// retries included). Results are written as measured to docs/AI_JUDGE_EVAL.md.
-import { readFileSync, writeFileSync } from 'node:fs';
+// retries included). Results are written as measured to OUT (default docs/ai-judge/latest.md).
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BedrockClientImpl } from '../packages/core/src/llm/bedrock.js';
@@ -15,8 +16,11 @@ import type { BedrockClient, BedrockParams, BedrockResult } from '../packages/co
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const CAP = 50;
+const SET = (process.env['SET'] ?? 'detonation').replace(/[^a-z0-9-]/g, '');
+const OUT = process.env['OUT'] ?? 'docs/ai-judge/latest.md';
+if (!/^docs\/[A-Za-z0-9_\/-]+\.md$/.test(OUT) || OUT.includes('..')) throw new Error('OUT must be a .md file under docs/');
 type Entry = { file: string; placement: string };
-const labels = JSON.parse(readFileSync(join(root, 'fixtures/detonation/labels.json'), 'utf8')) as { attacks: Entry[]; benign: Entry[] };
+const labels = JSON.parse(readFileSync(join(root, 'fixtures', SET, 'labels.json'), 'utf8')) as { attacks: Entry[]; benign: Entry[] };
 
 const inner = new BedrockClientImpl();
 let attempts = 0;
@@ -43,7 +47,7 @@ const rows: Row[] = [];
 const all = [...labels.attacks.map((e) => ({ ...e, label: 'attack' as const })), ...labels.benign.map((e) => ({ ...e, label: 'benign' as const }))];
 for (const e of all) {
   if (attempts + 2 > CAP) { rows.push({ file: e.file, label: e.label, flagged: null, verdict: 'not run', threat: '' }); continue; }
-  const text = readFileSync(join(root, 'fixtures/detonation', e.file), 'utf8');
+  const text = readFileSync(join(root, 'fixtures', SET, e.file), 'utf8');
   const before = failures;
   const v = await judgeText(text, e.file, client);
   const failed = failures > before && !v;
@@ -65,7 +69,7 @@ const md = [
   '',
   `- Date: ${new Date().toISOString().slice(0, 10)}`,
   `- What: \`judgeText\` (Claude Haiku 4.5 triage, then Claude Sonnet judge on Amazon Bedrock), each text judged whole`,
-  `- Set: \`fixtures/detonation/\`: 10 reworded attacks that no signature catches, 10 benign look-alikes`,
+  `- Set: \`fixtures/${SET}/\`: ${nA} reworded attacks that no signature catches, ${nB} benign look-alikes`,
   `- Model calls: ${attempts} (${failures} failed), hard cap ${CAP}`,
   '',
   `**Attacks caught: ${caught} of ${nA}. False alarms: ${falseAlarms} of ${nB}.**`,
@@ -77,5 +81,6 @@ const md = [
   'One run, one set of 20 texts written by us: a small sample, reported exactly as measured.',
   '',
 ].join('\n');
-writeFileSync(join(root, 'docs/AI_JUDGE_EVAL.md'), md);
-console.log('wrote docs/AI_JUDGE_EVAL.md');
+mkdirSync(dirname(join(root, OUT)), { recursive: true });
+writeFileSync(join(root, OUT), md);
+console.log(`wrote ${OUT}`);

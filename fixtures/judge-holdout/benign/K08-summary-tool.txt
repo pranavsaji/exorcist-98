@@ -1,0 +1,4 @@
+Summarizes a block of text the user pastes in.
+
+Parameter: "text". The tool sees only the text passed to it, never the rest
+of the conversation or any files, and keeps nothing after it answers.

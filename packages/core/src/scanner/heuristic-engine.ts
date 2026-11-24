@@ -103,6 +103,52 @@ function contextLines(original: string, span: string, windowLines = 3): string {
 }
 
 /** 1-based line and column of the first occurrence of `needle` in `text`. */
+/** Collapse each whitespace run to one space; map[i] is the index in `text` of normalized char i. */
+function collapseWhitespace(text: string): { norm: string; map: number[] } {
+  let norm = "";
+  const map: number[] = [];
+  let inSpace = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]!;
+    if (/\s/.test(ch)) {
+      if (!inSpace) { norm += " "; map.push(i); inSpace = true; }
+    } else { norm += ch; map.push(i); inSpace = false; }
+  }
+  return { norm, map };
+}
+
+/**
+ * Where a model's quote really is in the text, or null. The security rule
+ * stands (a verdict counts only if its words are in the file, in order), but
+ * whitespace may differ: models routinely quote a sentence that wraps across
+ * lines with a space where the file has a line break, and every such verdict
+ * used to be dropped. If the model quoted a masked credential (it saw
+ * asterisks), the quote is found in the masked text, whose length equals the
+ * original's, and the masked slice is what gets shown.
+ */
+export function locateQuote(
+  text: string,
+  quote: string,
+): { index: number; end: number; shown: string } | null {
+  const q = collapseWhitespace(quote.trim()).norm;
+  if (q.length === 0) return null;
+  const tryIn = (hay: string): { index: number; end: number } | null => {
+    const exact = hay.indexOf(quote);
+    if (exact !== -1 && quote.trim().length > 0) return { index: exact, end: exact + quote.length };
+    const { norm, map } = collapseWhitespace(hay);
+    const at = norm.indexOf(q);
+    if (at === -1) return null;
+    return { index: map[at]!, end: map[at + q.length - 1]! + 1 };
+  };
+  const direct = tryIn(text);
+  if (direct) return { ...direct, shown: text.slice(direct.index, direct.end) };
+  if (!quote.includes("*")) return null;
+  const masked = maskForModel(text);
+  if (masked.length !== text.length) return null;
+  const viaMask = tryIn(masked);
+  return viaMask ? { ...viaMask, shown: masked.slice(viaMask.index, viaMask.end) } : null;
+}
+
 export function positionOf(
   text: string,
   needle: string,
@@ -391,9 +437,12 @@ export async function runHeuristics(
     );
     if (!verdict || verdict.verdict === "benign") continue;
 
-    // Security rule: drop any verdict whose quoted span is not verbatim in the file.
-    const pos = positionOf(norm.original, verdict.quoted_span);
-    if (!pos) continue;
+    // Security rule: drop any verdict whose quoted words are not in the file
+    // (whitespace may differ: a quote across a line break has a space).
+    const loc = locateQuote(norm.original, verdict.quoted_span);
+    if (!loc) continue;
+    const before = norm.original.slice(0, loc.index);
+    const pos = { line: before.split("\n").length, col: loc.index - (before.lastIndexOf("\n") + 1) + 1 };
 
     // L-021: point at the quoted text itself. A signature finding on the same
     // line supplies the rule, severity and fix; otherwise they come from the
@@ -411,7 +460,7 @@ export async function runHeuristics(
       file: file.rel,
       line: pos.line,
       col: pos.col,
-      span: verdict.quoted_span.slice(0, 120),
+      span: loc.shown.slice(0, 120),
       owasp: sameLine?.owasp ?? ["LLM01:2025 Prompt Injection"],
       fix:
         sameLine?.fix ??
@@ -483,6 +532,7 @@ export async function judgeText(
   if (!triage || triage.verdict === "benign") return null;
   const verdict = await classify(client, "sonnet", buildHeuristicPrompt(span, "", label, generateNonce(), triage), maskedUpstream);
   if (!verdict || verdict.verdict === "benign") return null;
-  if (!span.includes(verdict.quoted_span)) return null;
-  return { verdict: verdict.verdict, threatClass: verdict.threat_class, span: verdict.quoted_span, rationale: verdict.rationale };
+  const loc = locateQuote(span, verdict.quoted_span);
+  if (!loc) return null;
+  return { verdict: verdict.verdict, threatClass: verdict.threat_class, span: loc.shown, rationale: verdict.rationale };
 }

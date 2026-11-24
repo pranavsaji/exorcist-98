@@ -1,0 +1,5 @@
+Fetched page: "Moving to a password manager"
+
+1. Open your browser's settings and find the saved passwords page.
+2. Export them to a file only on your own computer, import the file into
+   your password manager, then delete the exported file.
