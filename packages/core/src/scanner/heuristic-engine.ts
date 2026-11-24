@@ -8,6 +8,7 @@ import type {
   Severity,
 } from "../types.js";
 import type { NormalizedText } from "../normalizer.js";
+import { isAgentFacing } from '../walker.js';
 
 const SUSPICIOUS_PHRASES = [
   "ignore previous",
@@ -172,7 +173,13 @@ export async function runHeuristics(
   sigFindings: SignatureFinding[],
   client: BedrockClient,
 ): Promise<HeuristicFinding[]> {
-  if (!shouldEscalate(file, norm, sigFindings)) return [];
+  if (!shouldEscalate(file, norm, sigFindings)) {
+    // Layered detection: a file an agent takes instructions or settings from
+    // is judged whole even when no signature fired. Reworded attacks trip no
+    // pattern; on our 10 reworded attacks signatures caught 0 and the judge 6,
+    // with 0 false alarms on 10 look-alikes (docs/AI_JUDGE_EVAL.md).
+    return isAgentFacing(file.rel, file.role) ? judgeWholeFile(file, norm, client) : [];
+  }
   const findings: HeuristicFinding[] = [];
 
   for (const span of candidateSpans(file, norm, sigFindings)) {
@@ -224,6 +231,37 @@ export async function runHeuristics(
     });
   }
   return findings;
+}
+
+/** At most this many 4,000-character windows of one agent-facing file are judged. */
+export const MAX_WHOLE_FILE_WINDOWS = 3;
+
+/** Judge an agent-facing file with no signature hit, window by window (bounded). */
+async function judgeWholeFile(file: RepoFile, norm: NormalizedText, client: BedrockClient): Promise<HeuristicFinding[]> {
+  const text = norm.original;
+  for (let w = 0; w < MAX_WHOLE_FILE_WINDOWS; w++) {
+    const start = w * (MAX_JUDGED_CHARS - 200);
+    if (start >= text.length) break;
+    const v = await judgeText(text.slice(start, start + MAX_JUDGED_CHARS), file.rel, client);
+    if (!v) continue;
+    const pos = positionOf(text, v.span);
+    if (!pos) continue;
+    return [{
+      source: 'heuristic',
+      ruleId: 'HEU-000',
+      title: readableTitle(v.threatClass),
+      severity: severityFor(v.threatClass, v.verdict),
+      file: file.rel,
+      line: pos.line,
+      col: pos.col,
+      span: v.span.slice(0, 120),
+      owasp: ['LLM01:2025 Prompt Injection'],
+      fix: 'Review the quoted text. Remove anything that gives instructions to an AI agent or sends data elsewhere.',
+      rationale: v.rationale,
+      confidence: v.verdict === 'malicious' ? 'high' : 'medium',
+    }];
+  }
+  return [];
 }
 
 /** Most characters of one text sent to the model by judgeText. */

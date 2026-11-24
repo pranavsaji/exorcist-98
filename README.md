@@ -54,7 +54,7 @@ What Exorcist 98 adds, as far as we can tell from those projects' public documen
 | **exorcist.lock** | Integrity checker | Commits the MCP tool fingerprints a team expects; CI fails on drift without ever starting a PR's servers. A lock never approves a tool. | `exorcist lock --check --static`, Action `lock-check` |
 | **Possession Origin** | Infection timeline | Traces each threat to the commit and author that introduced it, without ever running a repository's own git hooks or filters. | `exorcist origin` |
 | **LiveUpdate** | LiveUpdate | Signed (Ed25519) virus-definition updates, verified on download and again on every load. | `exorcist update --status` |
-| **Detonation Chamber** | Heuristic emulation | Gives suspicious text to a sandboxed model with only fake tools and fake secrets, and watches whether it *tries* to do harm: catches reworded attacks no pattern matches. Off by default (needs your AWS Bedrock). | `exorcist detonate <file>` |
+| **Detonation Chamber** (experimental) | Heuristic emulation | Gives suspicious text to a sandboxed model with only fake tools and fake secrets and records what it *tries* to do. Measured honestly: 1 of 10 reworded attacks, because Claude refuses to play a gullible agent; the AI judge catches 6 of 10 on the same set. Off by default (needs your AWS Bedrock). | `exorcist detonate <file>` |
 
 Plus the **Field Report**: the scanner run on 421 real public MCP servers and agent-config repositories in two held-out rounds, with every serious alert checked by hand ([`docs/FIELD_REPORT.md`](docs/FIELD_REPORT.md)).
 
@@ -125,7 +125,7 @@ Working and tested: 1,510 unit, property-based and real-process tests, plus a 33
 
 Still open, in plain words:
 
-- The Detonation Chamber's measured results are not in yet: the evaluation script is ready, but has not been run against Amazon Bedrock ([`docs/DETONATION.md`](docs/DETONATION.md)).
+- **AI layer, measured on 10 reworded attacks that no signature catches** (Claude on Amazon Bedrock, `--ai`): the AI judge caught 6 of 10 with 0 false alarms on 10 look-alikes; the Detonation Chamber caught 1 of 10, because a safety-trained model refuses to play a gullible agent; together 7 of 10 ([`docs/AI_JUDGE_EVAL.md`](docs/AI_JUDGE_EVAL.md), [`docs/DETONATION.md`](docs/DETONATION.md)). With `--ai`, every agent-facing file is now judged by the AI even when no signature fired. The website runs signatures only.
 - Round 2 of the field report contained no real threats, so it shows how quiet the scanner now is, not how often an alert is right.
 - Detection is mostly signatures. A reworded attack can get past a pattern; the AI judge and the Detonation Chamber exist for that, and cost money to run.
 

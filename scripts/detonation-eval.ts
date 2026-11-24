@@ -35,11 +35,18 @@ export function capped(inner: ChamberClient, cap: number): ChamberClient & { att
     failures: () => failures,
     firstError: () => first,
     async converse(req: ChamberRequest): Promise<ChamberResult> {
-      if (attempts >= cap) return { ok: false, error: 'hard cap reached' };
-      attempts++;
-      const r = await inner.converse(req);
-      if (!r.ok) { failures++; first ??= r.error.split('\n')[0]?.slice(0, 200) ?? r.error; }
-      return r;
+      // Throttling is retried with backoff; every attempt still counts toward the cap.
+      for (let tryNo = 0; ; tryNo++) {
+        if (attempts >= cap) return { ok: false, error: 'hard cap reached' };
+        attempts++;
+        const r = await inner.converse(req);
+        if (r.ok) return r;
+        const throttled = /thrott|too many requests|rate exceeded|429/i.test(r.error);
+        if (throttled && tryNo < 3) { await new Promise((ok) => setTimeout(ok, 2_000 * 2 ** tryNo)); continue; }
+        failures++;
+        first ??= r.error.split('\n')[0]?.slice(0, 200) ?? r.error;
+        return r;
+      }
     },
   };
 }
