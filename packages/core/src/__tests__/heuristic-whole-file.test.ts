@@ -210,3 +210,13 @@ describe('masking keeps destinations visible (security review, round 7)', () => 
     expect(client.calls[0]?.prompt).not.toContain('not evidence either way');
   });
 });
+
+describe('passwords inside non-// addresses (security review, round 8)', () => {
+  it('masks user:password@ after any scheme, keeping the host', async () => {
+    const { maskForModel } = await import('../scanner/heuristic-engine.js');
+    const m = maskForModel('REMOTE=ssh:deploy:Sup3rS3cret@git.example.invalid/repo');
+    expect(m).not.toContain('Sup3rS3cret');
+    expect(m).toContain('git.example.invalid/repo');
+    expect(maskForModel('contact mailto:help@example.invalid please')).toBe('contact mailto:help@example.invalid please');
+  });
+});

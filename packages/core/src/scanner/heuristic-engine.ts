@@ -201,7 +201,7 @@ export function looksLikeSecretValue(v: string): boolean {
 }
 
 /** user:password@ in any URL, masked wherever it appears (same length). */
-const URL_USERINFO = /\b([a-z][a-z0-9+.\-]{0,20}:\/\/)([^\s\/@:"']{1,256}):([^\s\/@"']{1,512})@/gi;
+const URL_USERINFO = /\b([a-z][a-z0-9+.\-]{0,20}:(?:\/\/)?)([^\s\/@:"']{1,256}):([^\s\/@"']{1,512})@/gi;
 
 /** True for base64 or hex that decodes to readable words: content the judge must see. */
 function decodesToText(v: string): boolean {
@@ -303,7 +303,7 @@ export function maskForModel(text: string): string {
   for (const h of findSecrets(text)) {
     out = out.slice(0, h.offset) + redact(h.match).slice(0, h.match.length).padEnd(h.match.length, '*') + out.slice(h.offset + h.match.length);
   }
-  if (out.includes('://')) out = out.replace(URL_USERINFO, (_m, scheme: string, user: string, pass: string) => `${scheme}${user}:${'*'.repeat(pass.length)}@`);
+  if (out.includes('@')) out = out.replace(URL_USERINFO, (_m, scheme: string, user: string, pass: string) => `${scheme}${user}:${'*'.repeat(pass.length)}@`);
   return out.split('\n').map(maskAssignmentLine).join('\n');
 }
 
