@@ -115,7 +115,7 @@ Milestones M0 to M4 were built spec by spec in Kiro IDE, as `docs/KIRO_LOG.md` r
 - The `exorcist` MCP server, on the official MCP SDK: `scan_repo`, `scan_mcp_config` and `explain_finding` (read-only) and `quarantine` (changes the config, so the agent must ask first). Its answers leave out quoted file text unless a call asks for it, so it cannot become an injection channel.
 - On 2026-11-20, with `.kiro/settings/mcp.json` added by the owner (it holds local paths, so it is not committed), Kiro started the server and the Shield. `scan_repo` on the Haunted Repo returned 51 threats in 23 files, the same as the CLI, and refused `../exorcist-98-crew` as outside the project.
 - The Real-Time Shield (`exorcist shield`, `exorcist wrap`) is an MCP proxy. Running it inside Kiro found the biggest problem of the project (see "Where Kiro surprised us"); the fix is tested with real processes and the SDK but has not yet been repeated inside Kiro (S-001).
-- New in this change: `EXORCIST_MCP_NO_QUOTES=1` makes the server ignore `includeQuotes`, so an agent configured with it cannot get quoted text even by asking. The published 0.1.0 package predates it.
+- New in this change: `EXORCIST_MCP_NO_QUOTES=1` makes the server ignore `includeQuotes`, so an agent configured with it cannot get quoted text even by asking. Published in 0.1.1.
 
 **Files**
 
@@ -139,8 +139,8 @@ Milestones M0 to M4 were built spec by spec in Kiro IDE, as `docs/KIRO_LOG.md` r
 
 **What we did**
 
-- The `exorcist` Power in the Agent Plugins layout that kiro.dev/docs/powers documents: `plugin.json` (manifest and activation keywords), `mcp.json` (the MCP server, pinned to `@exorcist-98/mcp-server@0.1.0`) and three skills: scan a repo, set up the Shield, quarantine.
-- The npm packages it points at are published (`@exorcist-98/cli` and `@exorcist-98/mcp-server` 0.1.0, 2026-11-21). Installing the Power through Kiro's Powers panel has not been done yet.
+- The `exorcist` Power in the Agent Plugins layout that kiro.dev/docs/powers documents: `plugin.json` (manifest and activation keywords), `mcp.json` (the MCP server, pinned to `@exorcist-98/mcp-server@0.1.1`) and three skills: scan a repo, set up the Shield, quarantine.
+- The npm packages it points at are published (`@exorcist-98/cli` and `@exorcist-98/mcp-server`: 0.1.0 on 2026-11-21, 0.1.1 with every M5 command after it). Installing the Power through Kiro's Powers panel has not been done yet.
 
 **Files**
 
@@ -315,7 +315,7 @@ Installing the Crew app found that crons need `permissions.cron`, the proxy head
 
 ### Found while writing this page: an unknown command exits 2, and exit 2 blocks
 
-A PreToolUse hook that exits 2 blocks the tool. The published `@exorcist-98/cli@0.1.0` predates `on-access`, so it answers that command with "Unknown command" and exit code 2: an on-access hook written by `exorcist init` with the default command would have blocked every file read. `exorcist init` now writes that hook disabled under the default command and says why; with `--bin` pointing at a newer build it is on.
+A PreToolUse hook that exits 2 blocks the tool. The published `@exorcist-98/cli@0.1.0` predates `on-access`, so it answers that command with "Unknown command" and exit code 2: an on-access hook written by `exorcist init` with the default command would have blocked every file read. `exorcist init` wrote that hook disabled under the default command and said why. 0.1.1 has the command, so the hook is now on by default; the guard stays for any future command that is not yet published.
 
 - `packages/cli/src/commands/init.ts`
 - `packages/cli/src/__tests__/init-kiro.test.ts`

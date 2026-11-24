@@ -141,4 +141,4 @@ lives. This becomes the Devpost write-up and the blog post.
 - Crew apps: 1 (`exorcist-98-crew`), run in Crew 0.12.2 and 0.13.0: install, page, patrol, notification, rug-pull watch, owner-only quarantine and restore, Sentry agent and skill in chat, agent cron, and the backend's 02:00 patrol on a real clock.
 - Property-based tests: 123 `fc.assert` properties in this repository (fast-check), plus properties in the Crew repo.
 - Tests passing: 1,596 in 111 files (last full run), plus 44 browser steps in `pnpm e2e` (0 accessibility violations).
-- Powers: 1 built (`exorcist`); not installed through Kiro's Powers panel. npm: `@exorcist-98/cli` and `@exorcist-98/mcp-server` 0.1.0 are published (2026-11-21); the M5 commands are not in a published version yet.
+- Powers: 1 built (`exorcist`); not installed through Kiro's Powers panel. npm: `@exorcist-98/cli` and `@exorcist-98/mcp-server` 0.1.0 were published on 2026-11-21, and 0.1.1 with every M5 command after it.

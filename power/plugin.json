@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "exorcist",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Antivirus for AI coding agents. Scan repos and MCP configs for prompt injection, poisoned tools and dangerous hooks, put a shield in front of MCP servers, and quarantine anything infected.",
   "author": {
     "name": "Pranav Saji",

@@ -79,14 +79,13 @@ describe('exorcist init --kiro', () => {
     }
   });
 
-  it('writes the on-access hook disabled under the default command, which predates on-access, and says so', async () => {
+  it('under the default command (0.1.1, which has on-access) every hook is on', async () => {
     const d = tmp();
     const io = capture();
     expect(await initCommand([d, '--kiro'], io)).toBe(0);
-    expect(hookOf(d, 'exorcist-on-access').enabled).toBe(false);
+    expect(hookOf(d, 'exorcist-on-access').enabled).toBeUndefined();
     expect(hookOf(d, 'exorcist-on-access').action.command).toContain(DEFAULT_BIN);
-    expect(io.all()).toContain('WRITTEN DISABLED');
-    // The other hooks call commands the published 0.1.0 has, so they stay on.
+    expect(io.all()).not.toContain('WRITTEN DISABLED');
     expect(hookOf(d, 'exorcist-secrets').enabled).toBeUndefined();
     expect(hookOf(d, 'exorcist-mcp-scan').enabled).toBeUndefined();
 
@@ -192,7 +191,7 @@ describe('exorcist init --kiro', () => {
 
 describe('splitCommand (how --bin and --mcp-bin become a command and its arguments)', () => {
   it('splits on whitespace and groups quotes', () => {
-    expect(splitCommand(DEFAULT_BIN)).toEqual(['npx', '-y', '@exorcist-98/cli@0.1.0']);
+    expect(splitCommand(DEFAULT_BIN)).toEqual(['npx', '-y', '@exorcist-98/cli@0.1.1']);
     expect(splitCommand(`"/a b/node" '/c d/cli.mjs'  x`)).toEqual(['/a b/node', '/c d/cli.mjs', 'x']);
     expect(splitCommand('""')).toEqual(['']);
     expect(splitCommand('  ')).toBeNull();

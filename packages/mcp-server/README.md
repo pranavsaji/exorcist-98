@@ -21,7 +21,7 @@ out of results unless you ask for it, and is then marked as untrusted.
 ```json
 {
   "mcpServers": {
-    "exorcist": { "command": "npx", "args": ["-y", "@exorcist-98/mcp-server@0.1.0"] }
+    "exorcist": { "command": "npx", "args": ["-y", "@exorcist-98/mcp-server@0.1.1"] }
   }
 }
 ```

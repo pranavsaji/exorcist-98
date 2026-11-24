@@ -150,9 +150,7 @@ npx @exorcist-98/cli init --kiro          # hooks, steering, the hook PATH wrapp
 npx @exorcist-98/cli init --kiro --shield # also run every local MCP server through the Shield
 ```
 
-`--kiro` arrives in the next npm release. Until then, run it from a clone of this repository: `pnpm install && pnpm --filter @exorcist-98/cli build && node packages/cli/dist/index.mjs init --kiro <your-project>`.
-
-This writes Kiro hooks that block `git commit` while secrets or canary tokens are staged, scan an MCP config the moment it is saved, and (once a version with `on-access` is published) scan a file before the agent reads it; steering that tells the agent how to treat tool output; and an `exorcist-reviewer` custom agent that may only use the read-only tools of the Exorcist MCP server.
+This writes Kiro hooks that block `git commit` while secrets or canary tokens are staged, scan an MCP config the moment it is saved, and scan a file before the agent reads it; steering that tells the agent how to treat tool output; and an `exorcist-reviewer` custom agent that may only use the read-only tools of the Exorcist MCP server.
 
 **The pieces individually:**
 
@@ -200,7 +198,7 @@ jobs:
 | `update [--status]` | Install signed (Ed25519) definition updates, verified on download and on every load |
 | `detonate <file>` | The Detonation Chamber (experimental, needs AWS) |
 
-The published npm version (0.1.0, Nov 21) has `scan`, `shield`, `wrap`, `vault`, `approve`, `alerts` and `init`; the newer commands run from this repository until the next release.
+Every command above is in the published npm version, `@exorcist-98/cli@0.1.1`.
 
 ## The optional AI layer
 
@@ -372,7 +370,6 @@ Working and tested: everything described above runs from this repository and the
 
 Open, in plain words:
 
-- The newer CLI commands (on-access, exorcise, map, origin, lock, canary, update, detonate) are not in a published npm version yet; `init` installs the on-access hook disabled until they are.
 - The Shield's check-before-every-call fix and the on-access hook are tested with real processes and Kiro's restricted PATH, but have not yet been re-run inside Kiro IDE. The Power has not been installed through Kiro's Powers panel, and the two custom agents have not been loaded in Kiro.
 - Detection is mostly signatures; the AI judge caught 10 of 10 reworded attacks on each of our two small test sets, but it needs an AWS account and costs money to run. On the public website it is off until the operator turns it on ([`docs/WEB_AI.md`](docs/WEB_AI.md)).
 

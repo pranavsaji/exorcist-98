@@ -10,16 +10,18 @@ import { wrapCommand } from './config.js';
 
 // The CLI is published as @exorcist-98/cli. The unscoped npm name "exorcist"
 // belongs to an unrelated package, so never run "npx exorcist".
-export const DEFAULT_BIN = 'npx -y @exorcist-98/cli@0.1.0';
+export const DEFAULT_BIN = 'npx -y @exorcist-98/cli@0.1.1';
 /** The MCP server the reviewer agent starts: the same package and version as the Power's mcp.json. */
-export const DEFAULT_MCP_BIN = 'npx -y @exorcist-98/mcp-server@0.1.0';
+export const DEFAULT_MCP_BIN = 'npx -y @exorcist-98/mcp-server@0.1.1';
 /**
- * Commands the published @exorcist-98/cli@0.1.0 (2026-11-21) does not have.
- * A hook that calls one gets "Unknown command" and exit code 2, and exit 2
- * from a PreToolUse hook blocks the tool: an on-access hook would block every
- * file read. So under the default command that hook is written disabled.
+ * Commands the version in DEFAULT_BIN does not have. A hook that calls one
+ * gets "Unknown command" and exit code 2, and exit 2 from a PreToolUse hook
+ * blocks the tool: an on-access hook would block every file read. So under
+ * the default command such a hook is written disabled. 0.1.0 lacked
+ * on-access; 0.1.1 has every command, so the set is empty. Keep it when
+ * adding a command that is not yet published.
  */
-const MISSING_FROM_DEFAULT_BIN = new Set(['on-access']);
+const MISSING_FROM_DEFAULT_BIN = new Set<string>();
 
 export const INIT_HELP = `Usage: exorcist init [folder] [--kiro] [--shield] [--no-agent] [--force]
                     [--bin <command>] [--mcp-bin <command>]
@@ -166,7 +168,7 @@ export async function initCommand(argv: string[], io: Io): Promise<number> {
     {
       rel: '.kiro/hooks/exorcist-on-access.json',
       summary: onAccessOff
-        ? 'PreToolUse on read tools: WRITTEN DISABLED, because the published @exorcist-98/cli@0.1.0 has no on-access command (pass --bin with a newer build, then set "enabled": true)'
+        ? 'PreToolUse on read tools: WRITTEN DISABLED, because the published version in the default command has no on-access command (pass --bin with a newer build, then set "enabled": true)'
         : 'PreToolUse on read tools: blocks reading a file that hides instructions for the AI',
       body: hook('exorcist-on-access', 'Scan a file for instructions aimed at the AI before the agent reads it. Exit code 2 blocks the read.', {
         trigger: 'PreToolUse', matcher: 'read|readFile|read_file|readCode|fs_read|readMultipleFiles',
@@ -254,7 +256,7 @@ export async function initCommand(argv: string[], io: Io): Promise<number> {
     'then reconnect MCP servers in the MCP panel so they start through the Shield.',
   ];
   if (isDefaultBin) {
-    lines.push('Commands run through npx (@exorcist-98/cli@0.1.0). If Kiro cannot start a wrapped server or a hook cannot find npx,');
+    lines.push('Commands run through npx (@exorcist-98/cli@0.1.1). If Kiro cannot start a wrapped server or a hook cannot find npx,');
     lines.push('rerun with --bin "<absolute path to node> <absolute path to the exorcist CLI>" and --force.');
   }
   io.out(lines.join('\n'));

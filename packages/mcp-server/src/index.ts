@@ -7,7 +7,7 @@ import { RootsListChangedNotificationSchema } from '@modelcontextprotocol/sdk/ty
 import { explainFindingTool, findDefinitionsDir, quarantineTool, scanMcpConfigTool, scanRepoTool, usableRoots } from './tools.js';
 import type { Ctx, ToolText } from './tools.js';
 
-const VERSION = '0.1.0';
+const VERSION = '0.1.1';
 
 const ctx: Ctx = {
   cwd: process.cwd(),
