@@ -245,3 +245,13 @@ describe('passwords containing ":" are masked whole (security review, round 10)'
     expect(b).toContain('ssh:deploy:');
   });
 });
+
+describe('URL passwords: any prefix, empty user (security review, round 11)', () => {
+  it('masks after a backtick or _ prefix, in long query strings, and with an empty user', async () => {
+    const { maskForModel } = await import('../scanner/heuristic-engine.js');
+    expect(maskForModel('run `ssh:deploy:Sup3rS3cret@git.example.invalid`')).not.toContain('Sup3rS3cret');
+    expect(maskForModel('x_ssh:deploy:Sup3rS3cret@git.example.invalid')).not.toContain('Sup3rS3cret');
+    expect(maskForModel(`see ?a=1&b=2&c=3&d=4&e=5&f=6&g=7&h=8&i=9&src=ssh:deploy:Sup3rS3cret@h.invalid`)).not.toContain('Sup3rS3cret');
+    expect(maskForModel('DB=postgres://:Sup3rS3cret@db.example.invalid/app')).not.toContain('Sup3rS3cret');
+  });
+});

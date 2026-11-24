@@ -225,18 +225,19 @@ export function maskUserinfo(text: string): string {
       let sc = b - 3;
       while (sc >= 0 && b - 2 - sc <= 21 && /[a-z0-9+.\-]/i.test(text[sc]!)) sc--;
       const colon = seg.indexOf(':');
-      if (SCHEME_RE.test(text.slice(sc + 1, b - 2)) && colon > 0 && colon < seg.length - 1) mask(segStart + colon + 1, at);
+      if (SCHEME_RE.test(text.slice(sc + 1, b - 2)) && colon >= 0 && colon < seg.length - 1) mask(segStart + colon + 1, at);
     } else {
-      // scheme:user:password@ : try the start of the section and up to 7 points
-      // after = ; & ? # , [ ] { } (the walk may have run through KEY=...), and
-      // take the leftmost that reads scheme:user:..., so a ':' in the password
-      // never shortens it.
-      const starts = [0];
-      for (let i = 0; i < seg.length && starts.length < 8; i++) if ('=;&?#,[]{}'.includes(seg[i]!)) starts.push(i + 1);
-      for (const k of starts) {
-        const c1 = seg.indexOf(':', k);
-        const c2 = c1 === -1 ? -1 : seg.indexOf(':', c1 + 1);
-        if (c1 > k && c2 > c1 + 1 && c2 < seg.length - 1 && SCHEME_RE.test(seg.slice(k, c1))) { mask(segStart + c2 + 1, at); break; }
+      // scheme:user:password@ : for each ':' in the section (left to right),
+      // scan back over scheme characters to find a scheme that starts with a
+      // letter, whatever precedes it. The leftmost one followed by user:password
+      // wins, so a ':' in the password never shortens what is masked.
+      for (let c1 = seg.indexOf(':'); c1 !== -1; c1 = seg.indexOf(':', c1 + 1)) {
+        let k = c1 - 1;
+        while (k >= 0 && c1 - k <= 21 && /[a-z0-9+.\-]/i.test(seg[k]!)) k--;
+        const scheme = seg.slice(k + 1, c1);
+        if (!SCHEME_RE.test(scheme)) continue;
+        const c2 = seg.indexOf(':', c1 + 1);
+        if (c2 > c1 + 1 && c2 < seg.length - 1) { mask(segStart + c2 + 1, at); break; }
       }
     }
     at = text.indexOf('@', at + 1);
