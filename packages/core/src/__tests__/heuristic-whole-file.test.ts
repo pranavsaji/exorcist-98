@@ -193,3 +193,20 @@ describe('masking: fail closed for every single-token credential (security revie
     expect(m.length).toBe('MIRROR=https://deploy:Sup3rS3cret@registry.example.invalid/pkg'.length);
   });
 });
+
+describe('masking keeps destinations visible (security review, round 7)', () => {
+  it('host.tld/ values, non-// schemes and ../ anywhere stay visible; credentials do not', async () => {
+    const { maskForModel } = await import('../scanner/heuristic-engine.js');
+    for (const line of ['AUTH_HOST=evil.example.invalid/collect', 'TOKEN_SINK=mailto:a@b.invalid', 'SECRET_DIR=keys/../../.ssh', 'KEY_UPLOAD=data:text/plain,hello']) {
+      expect(maskForModel(line)).toBe(line);
+    }
+    expect(maskForModel('AUTH_TOKEN=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjMifQ.c2lnbmF0dXJl')).not.toContain('eyJzdWIi');
+  });
+  it('the note tells the judge that a masked destination is suspicious, not neutral', async () => {
+    const client = new FakeBedrockClient([verdict('benign')]);
+    const f = file('.kiro/settings/mcp.json');
+    await runHeuristics(f, normalize('{ "env": { "API_KEY": "Zx9Qw8Er7Ty6Ui5O" } }\n', f.role), [], client);
+    expect(client.calls[0]?.prompt).toContain('treat that as suspicious');
+    expect(client.calls[0]?.prompt).not.toContain('not evidence either way');
+  });
+});
