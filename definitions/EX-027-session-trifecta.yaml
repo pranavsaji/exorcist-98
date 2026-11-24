@@ -1,0 +1,43 @@
+id: EX-027
+title: Lethal trifecta completed in a live session
+severity: critical
+applies_to:
+  - tool-result
+  - mcp-config
+# The Session Guard: EX-023 enforced at run time by the Real-Time Shield
+# (packages/shield/src/session.ts, packages/shield/src/engine.ts). Not a text
+# pattern, so this rule is never run as a signature. The Shield remembers what
+# really happened in one agent session, across every Shield-wrapped server of
+# that session (shared through <state folder>/sessions/<key>/, facts only:
+# kind, tool, server, rule id and time, never text or secrets):
+#   untrusted text  a tool result the Shield flagged as an attack or as
+#                   suspicious, or one from a tool the capability rules
+#                   (capabilities.yaml) label untrusted-input
+#   private data    a result from a tool labelled private-data, a secret or a
+#                   canary token in a result, or a call that read a secrets
+#                   file (.env, ~/.ssh, credentials)
+# Once both have happened, the next call that could send data out (a tool
+# labelled exfiltration, or any call whose arguments name a host) is held for
+# the user's approval (policy `sessionGuard: hold`, the default), refused
+# (`block`, or `hold` when the client cannot show prompts), or only alerted
+# (`monitor`). `exorcist approve session <key>` lets the session send again;
+# a new fact arms the guard again.
+enabled: false
+match:
+  regex: "(?!)"
+owasp:
+  - "LLM01:2025 Prompt Injection"
+  - "LLM02:2025 Sensitive Information Disclosure"
+  - "LLM06:2025 Excessive Agency"
+  - "ASI02 Inadequate Human-in-the-Loop Controls"
+fix: >
+  In this agent session your AI first took in text anyone can write (a web
+  page, an issue, a chat message) and then read private data (a secrets file,
+  a key, a private tool). Each step looks harmless alone, but this is the
+  order a prompt injection uses to steal data, so the Shield held the next
+  call that could send data out. If you asked for that call, allow it in the
+  prompt, or run "exorcist approve session <key>" (the key is in the alert)
+  and ask again. If you did not, decline it, find the page, issue or message
+  that told your AI to send the data, and start a new session. To avoid it,
+  break one leg of the trifecta (EX-023): keep servers that read untrusted
+  text out of sessions that read private data.

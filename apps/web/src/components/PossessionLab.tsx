@@ -8,7 +8,7 @@ import { ByoaLab } from './ByoaLab';
 
 type ScenarioCard = { id: ScenarioId; title: string; summary: string };
 
-const ACTOR: Record<SimEvent['actor'], string> = { agent: 'Your AI agent', server: 'MCP server', shield: 'Exorcist Shield' };
+const ACTOR: Record<SimEvent['actor'], string> = { agent: 'Your AI agent', server: 'MCP server', shield: 'Exorcist Shield', user: 'You' };
 const TONE_LABEL: Record<SimEvent['tone'], string> = { info: '', ok: 'SAFE', warn: 'WARNING', block: 'DANGER' };
 
 function DiffView({ diff }: { diff: string }) {

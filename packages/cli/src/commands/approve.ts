@@ -1,18 +1,21 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { alertsPath, approveHost, approveServer, approveTool, loadState, saveState, statePath } from '@exorcist-98/shield';
+import { alertsPath, approveHost, approveServer, approveTool, grantSession, liveSessions, loadState, saveState, statePath } from '@exorcist-98/shield';
 import { DEFAULT_DIR, stateDir, parse, str } from '../util.js';
 import type { Io } from '../util.js';
 
 export const APPROVE_HELP = `Usage: exorcist approve tool <server> <tool> [--dir <folder>]
        exorcist approve host <server> <host> [--dir <folder>]
        exorcist approve server <server> [--dir <folder>]
+       exorcist approve session <key> [--dir <folder>]
        exorcist alerts [--dir <folder>] [--last <n>]
 
-approve tool   Accept the changed version of a tool the shield hid (re-pins it).
-approve host   Let a server send data to a host (a name like api.example.com, or *.example.com).
-approve server Accept a changed program behind a server (new code or arguments) and pin it.
-alerts         Show recent shield alerts.
+approve tool    Accept the changed version of a tool the shield hid (re-pins it).
+approve host    Let a server send data to a host (a name like api.example.com, or *.example.com).
+approve server  Accept a changed program behind a server (new code or arguments) and pin it.
+approve session Let an agent session the Session Guard (EX-027) is holding send data out again.
+                The key is in the alert. It asks again after new untrusted text or private data.
+alerts          Show recent shield alerts.
 
 The running shield picks the change up on the next request. Your AI client may
 need to refresh its tool list (reconnect the MCP server) to see a restored tool.
@@ -23,6 +26,20 @@ export async function approveCommand(argv: string[], io: Io): Promise<number> {
   if (!p.ok) { io.err(`${p.error}\n\n${APPROVE_HELP}`); return 2; }
   if (p.values['help']) { io.out(APPROVE_HELP); return 0; }
   const [kind, server, name] = p.positionals;
+  if (kind === 'session') {
+    const dir = stateDir(str(p.values['dir']));
+    if (!server) {
+      const live = liveSessions(dir);
+      io.err(live.length > 0
+        ? `Say which session. Sessions with facts in ${dir}: ${live.join(', ')}\n`
+        : `There is no live session in ${dir}.\n`);
+      return 2;
+    }
+    const g = grantSession(dir, server);
+    if (!g.ok) { io.err(g.error); return 1; }
+    io.out(g.message);
+    return 0;
+  }
   const known = kind === 'server' ? Boolean(server) : (kind === 'tool' || kind === 'host') && Boolean(server && name);
   if (!kind || !server || !known) {
     io.err(`Say what to approve.\n\n${APPROVE_HELP}`);

@@ -41,12 +41,26 @@ export const PolicySchema = z
      * it. `plant` sets this itself when the state folder is somewhere else.
      */
     canaries:       z.string().min(1).optional(),
+    /**
+     * Session Guard (EX-027): the lethal trifecta, enforced at run time. Once
+     * this agent session has really taken in untrusted text AND read private
+     * data (on any of its servers), a call that could send data out is:
+     * `hold`: held for your answer in an approval prompt, or refused with how
+     *   to approve when the client cannot show prompts;
+     * `block`: refused, with how to approve;
+     * `monitor`: sent, with an alert;
+     * `off`: not checked.
+     * Default `hold`: it only ever acts after both legs have actually happened,
+     * which ordinary use rarely does, and then a single question is cheap next
+     * to a leaked key. `mode: monitor` makes it monitor too.
+     */
+    sessionGuard:   z.enum(['hold', 'block', 'monitor', 'off']).default('hold'),
   })
   .strict();
 
 export type Policy = z.infer<typeof PolicySchema>;
 
-export const DEFAULT_POLICY: Policy = { allowedHosts: [], mode: 'enforce', autoQuarantine: false, firstUse: 'pin', notify: true, verifyCalls: true, launchPin: 'block', aiReview: false };
+export const DEFAULT_POLICY: Policy = { allowedHosts: [], mode: 'enforce', autoQuarantine: false, firstUse: 'pin', notify: true, verifyCalls: true, launchPin: 'block', aiReview: false, sessionGuard: 'hold' };
 
 export type PolicyResult = { ok: true; policy: Policy } | { ok: false; error: string };
 
