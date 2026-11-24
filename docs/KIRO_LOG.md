@@ -131,14 +131,14 @@ lives. This becomes the Devpost write-up and the blog post.
 
 ---
 
-## Counts (update before submitting)
+## Counts (updated 2026-11-24)
 
-- Specs: 5 here (`m0-foundation`, `m1-engine`, `m2-ui`, `m3-shield`, `m4-polish`) plus 1 in the Crew repo (`crew-app`)
-- Steering docs: 4 (`product`, `tech`, `security`, `ui`)
-- Hooks: 4 in Kiro's JSON format (`definition-save`, `mcp-config-change`, `spec-change`, `pre-commit-secrets`); all 4 seen working in Kiro IDE (the 3 command hooks after the PATH fix of 2026-11-21), plus a git `pre-commit` hook outside Kiro
-- MCP servers: 2 built and tested: `exorcist` (registered in Kiro and used from an agent session, 2026-11-20) and `exorcist-patrol` in the Crew app (registered by Crew and used by the Sentry agent, seen)
-- Custom agents: 0 in this repository; 1 Crew agent (`exorcist-sentry`) in the Crew repo
-- Crew apps: 1 (`exorcist-98-crew`), run in Crew 0.12.2 and 0.13.0: install, page, patrol, notification, rug-pull watch, owner-only quarantine and restore, Sentry agent and skill in chat, agent cron, and the backend's 02:00 patrol on a real clock
-- Property-based tests: 52 `fc.assert` properties (core 30, fixtures 4, shield 9, web 9), plus properties in the Crew repo (PBT-CRW-01 to 05 and later ones; 103 tests there). PBT-HEU-03 is a loop, not a fast-check property, and is not counted.
-- Tests passing: 434 in 38 files (last full run), plus 24 browser steps in `pnpm e2e` (0 accessibility violations)
-- Powers: 1 built (`exorcist`); not installed in Kiro, npm packages not published
+- Specs: 15 here. 5 written and implemented with Kiro IDE (`m0-foundation`, `m1-engine`, `m2-ui`, `m3-shield`, `m4-polish`); 10 M5 specs (`m5-*`) written outside Kiro, 6 of them partly implemented by Kiro CLI before the usage limit (see the M5 rows above). Plus 1 in the Crew repo (`crew-app`).
+- Steering docs: 10. 4 written with Kiro IDE (`product`, `tech`, `security`, `ui`); 6 M5 steering files written outside Kiro (`ai-masking`, `canary`, `git-safety`, `kiro-hooks`, `repo-input`, `untrusted-output`).
+- Hooks: 5 in Kiro's JSON format (`definition-save`, `mcp-config-change`, `spec-change`, `pre-commit-secrets`, `on-access-scan`). The first 4 were seen working in Kiro IDE (the 3 command hooks after the PATH fix of 2026-11-21); `on-access-scan` (started by Kiro CLI, finished outside Kiro) is tested with Kiro's restricted PATH but has not been seen firing in Kiro IDE. Plus a git `pre-commit` hook outside Kiro.
+- MCP servers: 2 built and tested: `exorcist` (registered in Kiro and used from an agent session, 2026-11-20) and `exorcist-patrol` in the Crew app (registered by Crew and used by the Sentry agent, seen).
+- Custom agents: 2 provided configs in `.kiro/agents/` (`exorcist-reviewer`, `exorcist-red-team`), written outside Kiro and not yet loaded in Kiro; 1 Crew agent (`exorcist-sentry`) in the Crew repo, run in Crew.
+- Crew apps: 1 (`exorcist-98-crew`), run in Crew 0.12.2 and 0.13.0: install, page, patrol, notification, rug-pull watch, owner-only quarantine and restore, Sentry agent and skill in chat, agent cron, and the backend's 02:00 patrol on a real clock.
+- Property-based tests: 123 `fc.assert` properties in this repository (fast-check), plus properties in the Crew repo.
+- Tests passing: about 1,570 in 108 files (last full run), plus 44 browser steps in `pnpm e2e` (0 accessibility violations).
+- Powers: 1 built (`exorcist`); not installed through Kiro's Powers panel. npm: `@exorcist-98/cli` and `@exorcist-98/mcp-server` 0.1.0 are published (2026-11-21); the M5 commands are not in a published version yet.
