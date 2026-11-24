@@ -161,9 +161,16 @@ async function classify(
   client: BedrockClient,
   model: "haiku" | "sonnet",
   prompt: string,
+  maskedUpstream = 0,
 ): Promise<Verdict | null> {
-  // The sink: whatever path built the prompt, no secret leaves in it.
-  const r = await client.call({ model, prompt: maskForModel(prompt), maxTokens: 512 });
+  // The sink: whatever path built the prompt, no secret leaves in it, and
+  // the judge is told when values were masked (masking is itself a signal).
+  const masked = maskForModel(prompt);
+  const runs = maskedUpstream + countMaskedRuns(prompt, masked);
+  const note = runs > 0
+    ? `Note from the scanner: ${runs} credential-like value${runs === 1 ? ' was' : 's were'} replaced by asterisks of the same length before you saw this text. Judge the rest as usual; masked values are not evidence either way.\n\n`
+    : '';
+  const r = await client.call({ model, prompt: note + masked, maxTokens: 512 });
   if (!r.ok) return null;
   const parsed = VerdictSchema.safeParse(safeParseJson(r.raw));
   return parsed.success ? parsed.data : null;
@@ -181,11 +188,26 @@ const KEY_TOKEN = /^[A-Za-z0-9_.\-\/:@]{1,128}$/;
  * prose or a command, so masking can never hide an instruction from the judge.
  */
 export function looksLikeSecretValue(v: string): boolean {
-  if (v.length < 4) return false;
-  if (/\s/.test(v)) return false;                                   // prose
-  if (v.includes('://') || v.startsWith('~') || v.startsWith('/') || v.startsWith('./')) return false; // URL or path
-  if (/[|;&$`<>()]/.test(v)) return false;                          // shell syntax
-  return true;
+  if (v.length < 4 || v.length > 4_096) return false;
+  if (/\s/.test(v)) return false;                                              // prose
+  if (/^[a-z][a-z0-9+.\-]*:/i.test(v) && !/^[A-Za-z0-9_\-]+:[A-Za-z0-9_\-]+$/.test(v)) return false; // scheme: URL
+  if (/(^|[^A-Za-z0-9])[a-z0-9\-]+\.[a-z]{2,}(\/|$|:)/i.test(v)) return false;     // domain-like host.tld/
+  if (/^(~|\/|\.\.?\/|[A-Za-z]:\\)/.test(v) || v.includes('../')) return false;   // file paths
+  if (/[|;&$`<>()]/.test(v)) return false;                                     // shell syntax
+  if (decodesToText(v)) return false;                                          // encoded content, not a key
+  // Credential-shaped: a letter-digit/symbol mix, or a long run of letters.
+  return /[0-9!@#%^*+=_\-\/.,~?]/.test(v) || v.length >= 16;
+}
+
+/** True for base64 or hex that decodes to readable words: content the judge must see. */
+function decodesToText(v: string): boolean {
+  let bytes: Buffer | null = null;
+  if (/^[A-Za-z0-9+\/]{16,}={0,2}$/.test(v) && v.length % 4 === 0) bytes = Buffer.from(v, 'base64');
+  else if (/^(?:[0-9a-f]{2}){12,}$/i.test(v)) bytes = Buffer.from(v, 'hex');
+  if (!bytes || bytes.length < 12) return false;
+  let printable = 0;
+  for (const b of bytes) if ((b >= 0x20 && b < 0x7f) || b === 0x0a) printable++;
+  return printable / bytes.length > 0.9 && /[A-Za-z]{3,}\s+[A-Za-z]{2,}/.test(bytes.toString('latin1'));
 }
 
 const isSecretKey = (k: string): boolean => KEY_TOKEN.test(k) && SECRET_KEY_WORD.test(k);
@@ -200,8 +222,13 @@ function unquote(v: string): { value: string; at: number } {
 
 /** Mask every credential-looking assignment on one line, in place and at the same length. Linear. */
 function maskAssignmentLine(line: string): string {
-  const chars = line.split('');
-  const maskRange = (from: number, len: number): void => { for (let i = from; i < from + len; i++) chars[i] = '*'; };
+  // Most lines have nothing to mask: only split into characters when needed.
+  if (!SECRET_KEY_WORD.test(line)) return line;
+  let chars: string[] | null = null;
+  const maskRange = (from: number, len: number): void => {
+    chars ??= line.split('');
+    for (let i = from; i < from + len; i++) chars[i] = '*';
+  };
 
   // 1. "key": "value" pairs (JSON), any number per line, scanned with indexOf.
   let from = 0;
@@ -238,7 +265,8 @@ function maskAssignmentLine(line: string): string {
   const lead = line.length - line.trimStart().length;
   const body = line.slice(lead);
   const colon = body.indexOf(':');
-  if (colon > 0 && !body.includes('=')) {
+  const eqFirst = body.indexOf('=');
+  if (colon > 0 && (eqFirst === -1 || eqFirst > colon)) {
     const key = body.slice(0, colon).replace(/^- /, '');
     let i = colon + 1;
     while (i < body.length && body[i] === ' ') i++;
@@ -246,7 +274,19 @@ function maskAssignmentLine(line: string): string {
     const { value, at } = unquote(raw);
     if (isSecretKey(key) && looksLikeSecretValue(value)) maskRange(lead + i + at, value.length);
   }
-  return chars.join('');
+  return chars ? (chars as string[]).join('') : line;
+}
+
+/** How many separate runs of characters masking replaced. */
+export function countMaskedRuns(before: string, after: string): number {
+  let runs = 0;
+  let inRun = false;
+  for (let i = 0; i < after.length; i++) {
+    const changed = after[i] !== before[i];
+    if (changed && !inRun) runs++;
+    inRun = changed;
+  }
+  return runs;
 }
 
 /**
@@ -273,12 +313,13 @@ export async function runHeuristics(
   // Masked here so spans, context and quotes point into masked text; the
   // prompt itself is masked again at the sink (classify) for every path.
   const norm: NormalizedText = { ...rawNorm, original: maskForModel(rawNorm.original) };
+  const maskedRuns = countMaskedRuns(rawNorm.original, norm.original);
   if (!shouldEscalate(file, norm, sigFindings)) {
     // Layered detection: a file an agent takes instructions or settings from
     // is judged whole even when no signature fired. Reworded attacks trip no
     // pattern; on our 10 reworded attacks signatures caught 0 and the judge 6,
     // with 0 false alarms on 10 look-alikes (docs/AI_JUDGE_EVAL.md).
-    return isAgentFacing(file.rel, file.role) ? judgeWholeFile(file, norm, client) : [];
+    return isAgentFacing(file.rel, file.role) ? judgeWholeFile(file, norm, client, maskedRuns) : [];
   }
   const findings: HeuristicFinding[] = [];
 
@@ -290,6 +331,7 @@ export async function runHeuristics(
       client,
       "haiku",
       buildHeuristicPrompt(span, context, file.rel, generateNonce()),
+      maskedRuns,
     );
     if (!triage || triage.verdict === "benign") continue;
 
@@ -298,6 +340,7 @@ export async function runHeuristics(
       client,
       "sonnet",
       buildHeuristicPrompt(span, context, file.rel, generateNonce(), triage),
+      maskedRuns,
     );
     if (!verdict || verdict.verdict === "benign") continue;
 
@@ -337,12 +380,12 @@ export async function runHeuristics(
 export const MAX_WHOLE_FILE_WINDOWS = 3;
 
 /** Judge an agent-facing file with no signature hit, window by window (bounded). */
-async function judgeWholeFile(file: RepoFile, norm: NormalizedText, client: BedrockClient): Promise<HeuristicFinding[]> {
+async function judgeWholeFile(file: RepoFile, norm: NormalizedText, client: BedrockClient, maskedRuns = 0): Promise<HeuristicFinding[]> {
   const text = norm.original;
   for (let w = 0; w < MAX_WHOLE_FILE_WINDOWS; w++) {
     const start = w * (MAX_JUDGED_CHARS - 200);
     if (start >= text.length) break;
-    const v = await judgeText(text.slice(start, start + MAX_JUDGED_CHARS), file.rel, client);
+    const v = await judgeText(text.slice(start, start + MAX_JUDGED_CHARS), file.rel, client, maskedRuns);
     if (!v) continue;
     const pos = positionOf(text, v.span);
     if (!pos) continue;
@@ -385,12 +428,13 @@ export async function judgeText(
   text: string,
   label: string,
   client: BedrockClient,
+  maskedUpstream = 0,
 ): Promise<TextVerdict | null> {
   const span = text.slice(0, MAX_JUDGED_CHARS);
   if (span.trim().length === 0) return null;
-  const triage = await classify(client, "haiku", buildHeuristicPrompt(span, "", label, generateNonce()));
+  const triage = await classify(client, "haiku", buildHeuristicPrompt(span, "", label, generateNonce()), maskedUpstream);
   if (!triage || triage.verdict === "benign") return null;
-  const verdict = await classify(client, "sonnet", buildHeuristicPrompt(span, "", label, generateNonce(), triage));
+  const verdict = await classify(client, "sonnet", buildHeuristicPrompt(span, "", label, generateNonce(), triage), maskedUpstream);
   if (!verdict || verdict.verdict === "benign") return null;
   if (!span.includes(verdict.quoted_span)) return null;
   return { verdict: verdict.verdict, threatClass: verdict.threat_class, span: verdict.quoted_span, rationale: verdict.rationale };
