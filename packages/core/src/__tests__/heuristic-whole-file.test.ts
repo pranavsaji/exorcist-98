@@ -232,3 +232,16 @@ describe('URL password masking is linear (security review, round 9)', () => {
     expect(Date.now() - t0).toBeLessThan(2_000);
   });
 });
+
+describe('passwords containing ":" are masked whole (security review, round 10)', () => {
+  it('masks every part of the password after the user', async () => {
+    const { maskForModel } = await import('../scanner/heuristic-engine.js');
+    const a = maskForModel('DATABASE=postgres://admin:pa:ss@db.example.invalid/app');
+    expect(a).not.toMatch(/pa|:ss@/);
+    expect(a).toContain('admin:');
+    expect(a).toContain('@db.example.invalid/app');
+    const b = maskForModel('REMOTE=ssh:deploy:pa:ss:word@git.example.invalid');
+    expect(b).not.toMatch(/pa:|ss:|word@/);
+    expect(b).toContain('ssh:deploy:');
+  });
+});

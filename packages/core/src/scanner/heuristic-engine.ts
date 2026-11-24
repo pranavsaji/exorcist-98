@@ -200,46 +200,48 @@ export function looksLikeSecretValue(v: string): boolean {
   return true;                                                            // any other single token: fail closed
 }
 
-/** Characters that end a user or password part when scanning back from '@'. */
-const USERINFO_STOP = new Set([' ', '\t', '\n', '\r', '/', '@', '"', "'", ':']);
+/** Characters that end the userinfo section when scanning back from '@'. A ':' does not: passwords may contain one. */
+const USERINFO_STOP = new Set([' ', '\t', '\n', '\r', '/', '@', '"', "'", '<', '>', '(', ')', ',']);
+const SCHEME_RE = /^[a-z][a-z0-9+.\-]{0,20}$/i;
 
 /**
- * Mask the password in every scheme:user:password@ or scheme://user:password@
- * (same length). Linear: from each '@' it walks back at most 512 + 256 + 23
- * characters and never past the previous '@', so no input can make it slow.
+ * Mask the password in every scheme://user:password@ and scheme:user:password@
+ * (same length). The password is everything after the first ':' of the user
+ * section, so a password that contains ':' is masked whole. Linear: from each
+ * '@' it walks back at most 800 characters and never past the previous '@'.
  */
 export function maskUserinfo(text: string): string {
   if (!text.includes('@')) return text;
   let chars: string[] | null = null;
+  const mask = (from: number, to: number): void => { chars ??= text.split(''); for (let i = from; i < to; i++) chars[i] = '*'; };
   let at = text.indexOf('@');
   while (at !== -1) {
-    // password: back to ':'
-    let p = at - 1;
-    while (p >= 0 && at - p <= 512 && !USERINFO_STOP.has(text[p]!)) p--;
-    if (p >= 0 && text[p] === ':' && p < at - 1) {
-      const passStart = p + 1;
-      // user: back to ':' or '//'
-      let u = p - 1;
-      while (u >= 0 && p - u <= 256 && !USERINFO_STOP.has(text[u]!)) u--;
-      let schemeColon = -1;
-      if (u >= 0 && u < p - 1) {
-        if (text[u] === ':') schemeColon = u;
-        else if (text[u] === '/' && text[u - 1] === '/' && text[u - 2] === ':') schemeColon = u - 2;
-      }
-      if (schemeColon > 0) {
-        // scheme: 1-21 characters, starting with a letter
-        let sc = schemeColon - 1;
-        while (sc >= 0 && schemeColon - sc <= 21 && /[a-z0-9+.\-]/i.test(text[sc]!)) sc--;
-        const scheme = text.slice(sc + 1, schemeColon);
-        if (scheme.length > 0 && /^[a-z]/i.test(scheme)) {
-          chars ??= text.split('');
-          for (let i = passStart; i < at; i++) chars[i] = '*';
-        }
+    let b = at - 1;
+    while (b >= 0 && at - b <= 800 && !USERINFO_STOP.has(text[b]!)) b--;
+    const segStart = b + 1;
+    const seg = text.slice(segStart, at);
+    if (b >= 2 && text[b] === '/' && text[b - 1] === '/' && text[b - 2] === ':') {
+      // scheme://user:password@ : the scheme sits before '://'
+      let sc = b - 3;
+      while (sc >= 0 && b - 2 - sc <= 21 && /[a-z0-9+.\-]/i.test(text[sc]!)) sc--;
+      const colon = seg.indexOf(':');
+      if (SCHEME_RE.test(text.slice(sc + 1, b - 2)) && colon > 0 && colon < seg.length - 1) mask(segStart + colon + 1, at);
+    } else {
+      // scheme:user:password@ : try the start of the section and up to 7 points
+      // after = ; & ? # , [ ] { } (the walk may have run through KEY=...), and
+      // take the leftmost that reads scheme:user:..., so a ':' in the password
+      // never shortens it.
+      const starts = [0];
+      for (let i = 0; i < seg.length && starts.length < 8; i++) if ('=;&?#,[]{}'.includes(seg[i]!)) starts.push(i + 1);
+      for (const k of starts) {
+        const c1 = seg.indexOf(':', k);
+        const c2 = c1 === -1 ? -1 : seg.indexOf(':', c1 + 1);
+        if (c1 > k && c2 > c1 + 1 && c2 < seg.length - 1 && SCHEME_RE.test(seg.slice(k, c1))) { mask(segStart + c2 + 1, at); break; }
       }
     }
     at = text.indexOf('@', at + 1);
   }
-  return chars ? chars.join('') : text;
+  return chars ? (chars as string[]).join('') : text;
 }
 
 /** True for base64 or hex that decodes to readable words: content the judge must see. */
