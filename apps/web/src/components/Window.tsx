@@ -17,19 +17,21 @@ export type WindowProps = {
   onClose:    (id: string) => void;
   onMinimize: (id: string) => void;
   onMove:     (id: string, x: number, y: number) => void;
+  /** False while the desktop is still laying windows out (they are hidden and cannot take focus). */
+  revealed?:  boolean;
   children:   ReactNode;
 };
 
 export function Window(props: WindowProps) {
-  const { id, title, icon, x, y, width, z, active, minimized, onFocus, onClose, onMinimize, onMove, children } = props;
+  const { id, title, icon, x, y, width, z, active, minimized, onFocus, onClose, onMinimize, onMove, revealed = true, children } = props;
   const ref = useRef<HTMLElement>(null);
   const drag = useRef<{ dx: number; dy: number } | null>(null);
   const titleId = `win-${id}-title`;
 
   // Move keyboard focus into a window when it becomes active.
   useEffect(() => {
-    if (active && !minimized) ref.current?.focus({ preventScroll: true });
-  }, [active, minimized]);
+    if (active && !minimized && revealed) ref.current?.focus({ preventScroll: true });
+  }, [active, minimized, revealed]);
 
   function onPointerDown(e: PointerEvent<HTMLDivElement>) {
     if ((e.target as HTMLElement).closest('button')) return;

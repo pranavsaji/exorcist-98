@@ -159,14 +159,29 @@ describe('FindingDetail', () => {
 
 describe('ScanWindow', () => {
   const noop = () => undefined;
-  const base = { onScanUrl: noop, onScanHaunted: noop, onCancel: noop, onShowResults: noop };
+  const base = { onScanUrl: noop, onScanHaunted: noop, onCancel: noop, onShowResults: noop, onScanZip: noop };
 
-  it('has a labelled URL field, both scan buttons and a polite log region', () => {
-    const html = renderToStaticMarkup(<ScanWindow state={initialScanState} {...base} />);
+  it('first screen (hero): one big line, a primary Haunted Repo button, the URL field and a .zip upload, no log yet', () => {
+    const html = renderToStaticMarkup(<ScanWindow state={initialScanState} {...base} hero extras={<p>EXTRAS</p>} />);
+    expect(html).toContain('Your AI agent obeys what it reads.');
+    expect(html).toContain('Exorcist 98 checks it first.');
+    expect(html).toMatch(/<button type="button" class="btn btn-primary btn-hero" data-guide="haunted">.*Scan the Haunted Repo<\/button>/);
+    expect(html).toContain('GitHub repository to scan');
+    expect(html).toMatch(/<label for="[^"]+" class="btn zip-label"[^>]*>Upload a .zip<\/label>/);
+    expect(html).toContain('EXTRAS');
+    expect(html).not.toContain('role="log"');
+    // Exactly one primary action on the first screen.
+    expect(html.match(/btn-primary/g)).toHaveLength(1);
+  });
+
+  it('after a scan starts: a polite log region, Cancel and View results, and no hero', () => {
+    const html = renderToStaticMarkup(<ScanWindow state={{ ...initialScanState, status: 'done' }} {...base} extras={<p>EXTRAS</p>} />);
     expect(html).toContain('GitHub repository to scan');
     expect(html).toContain('Scan the Haunted Repo');
     expect(html).toContain('role="log"');
     expect(html).toContain('aria-live="polite"');
+    expect(html).not.toContain('obeys what it reads');
+    expect(html).not.toContain('EXTRAS');
   });
 
   it('disables Scan while running and enables Cancel', () => {
@@ -174,6 +189,36 @@ describe('ScanWindow', () => {
     const html = renderToStaticMarkup(<ScanWindow state={running} {...base} />);
     expect(html).toMatch(/<button type="submit" class="btn" disabled="">Scan<\/button>/);
     expect(html).not.toMatch(/<button type="button" class="btn" disabled="">Cancel<\/button>/);
+  });
+});
+
+describe('ResultsSummary', () => {
+  it('gives a verdict in words and shape, counts by level and the top three different threats, worst first', async () => {
+    const { ResultsSummary } = await import('@/components/ResultsSummary');
+    const f = [entry(1, 'low', 'EX-010'), entry(2, 'critical', 'EX-001'), entry(3, 'critical', 'EX-001'), entry(4, 'high', 'EX-005'), entry(5, 'medium', 'EX-008')];
+    const html = renderToStaticMarkup(<ResultsSummary findings={f} filesScanned={22} onSelect={() => undefined} />);
+    expect(html).toContain('POSSESSED');
+    expect(html).toMatch(/Infection level: <span class="sev sev-critical" data-severity="critical"><svg[^>]*data-shape="diamond"/);
+    expect(html).toContain('5 threats in 1 file (of 22 scanned)');
+    expect(html).toContain('Top threats');
+    const top = html.slice(html.indexOf('summary-top'));
+    expect(top.match(/<button/g)).toHaveLength(3);
+    // One per rule, worst first: EX-001 (critical), EX-005 (high), EX-008 (medium); never EX-001 twice.
+    expect(top.indexOf('data-severity="critical"')).toBeLessThan(top.indexOf('data-severity="high"'));
+    expect(top.indexOf('data-severity="high"')).toBeLessThan(top.indexOf('data-severity="medium"'));
+    expect(top).not.toContain('data-severity="low"');
+    // The gauge is decoration; the words carry the meaning.
+    expect(html).toMatch(/<div class="gauge" aria-hidden="true" data-level="critical">/);
+  });
+
+  it('says CLEAN, with a check shape, after a clean scan', async () => {
+    const { ResultsSummary, verdictFor } = await import('@/components/ResultsSummary');
+    const html = renderToStaticMarkup(<ResultsSummary findings={[]} filesScanned={3} onSelect={() => undefined} />);
+    expect(html).toContain('CLEAN');
+    expect(html).toContain('data-shape="check"');
+    expect(html).toContain('No threats in 3 files.');
+    expect(html).not.toContain('Top threats');
+    expect(verdictFor('medium').word).toBe('HAUNTED');
   });
 });
 

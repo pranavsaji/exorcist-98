@@ -16,15 +16,16 @@ const plural = (n: number, one: string, many = `${one}s`): string => `${n} ${n =
 export function ExorcismPatch({ patch, target }: Props) {
   const file = patchFile(target, patch.patch);
   return (
-    <section aria-labelledby="exorcise-heading" className="flex flex-col gap-1 border-t border-shade/60 pt-2">
-      <h3 id="exorcise-heading" className="m-0 text-sm font-bold">Disinfect</h3>
+    <section aria-labelledby="exorcise-heading" className="next-item flex flex-col gap-1">
+      <h4 id="exorcise-heading" className="next-title">
+        <span className="next-num" aria-hidden="true">1</span> Disinfect
+      </h4>
       {patch.fixes > 0 ? (
         <>
           <p id="exorcise-desc" className="m-0 text-xs">
             {plural(patch.fixes, 'threat')} in {plural(patch.files, 'file')} {patch.fixes === 1 ? 'has' : 'have'} a
-            safe, mechanical fix: hidden characters removed, smuggled comments deleted, tracking images replaced by their
-            text, MCP servers pinned to an exact version. Everything else needs a human. Apply it in your project
-            with <code>git apply {file.filename}</code>.
+            safe, mechanical fix (hidden characters, smuggled comments, unpinned MCP servers). The rest needs a human.
+            Apply it with <code>git apply {file.filename}</code>.
           </p>
           <div className="flex flex-wrap items-center gap-1">
             <button
@@ -44,8 +45,8 @@ export function ExorcismPatch({ patch, target }: Props) {
           )}
           {patch.skipped > 0 && (
             <p className="m-0 text-xs">
-              {plural(patch.skipped, 'fixable threat')} could not be fixed safely here (for example, a version that could not
-              be looked up) and {patch.skipped === 1 ? 'is' : 'are'} left for a human.
+              {plural(patch.skipped, 'fixable threat')} could not be fixed safely here (a version could not be looked up)
+              and {patch.skipped === 1 ? 'is' : 'are'} left for a human.
             </p>
           )}
         </>
@@ -56,8 +57,7 @@ export function ExorcismPatch({ patch, target }: Props) {
         </p>
       ) : (
         <p className="m-0 text-xs">
-          No threat in this scan has a safe automatic fix. Each one needs a human: open it for the exact line and how to
-          fix it.
+          No threat in this scan has a safe automatic fix. Open each one for the exact line and how to fix it.
         </p>
       )}
     </section>

@@ -54,16 +54,24 @@ function keyMoment(events: SimEvent[]): { tone: SimEvent['tone']; label: string 
   return null;
 }
 
-type LabTab = 'scripted' | 'byoa';
+export type LabTab = 'scripted' | 'byoa';
+
+/** A request from the desktop (Start menu, a shared link): switch tab, pick an attack, maybe play it. */
+export type LabRequest = { tab: LabTab; scenario?: ScenarioId; autoplay?: boolean; seq: number };
 const TABS: Array<{ id: LabTab; label: string }> = [
   { id: 'scripted', label: 'Scripted attacks' },
   { id: 'byoa', label: 'Bring your own attack' },
 ];
 
 /** The Possession Lab: two tabs, the scripted replays and Bring Your Own Attack (m5-byoa). */
-export function PossessionLab({ initial = 'rug-pull', initialTab = 'scripted' }: { initial?: ScenarioId; initialTab?: LabTab }) {
-  const [tab, setTab] = useState<LabTab>(initialTab);
+export function PossessionLab({ initial = 'rug-pull', initialTab = 'scripted', request }: { initial?: ScenarioId; initialTab?: LabTab; request?: LabRequest }) {
+  const [tab, setTab] = useState<LabTab>(request?.tab ?? initialTab);
   const refs = useRef<Record<LabTab, HTMLButtonElement | null>>({ scripted: null, byoa: null });
+
+  useEffect(() => {
+    if (request) setTab(request.tab);
+    // Only a new request (a new seq) switches the tab.
+  }, [request?.seq]);
 
   function onKey(e: KeyboardEvent) {
     const i = TABS.findIndex((t) => t.id === tab);
@@ -100,7 +108,7 @@ export function PossessionLab({ initial = 'rug-pull', initialTab = 'scripted' }:
         ))}
       </div>
       <div role="tabpanel" id="lab-panel-scripted" aria-labelledby="lab-tab-scripted" hidden={tab !== 'scripted'}>
-        <ScriptedLab initial={initial} />
+        <ScriptedLab initial={request?.scenario ?? initial} request={request} />
       </div>
       <div role="tabpanel" id="lab-panel-byoa" aria-labelledby="lab-tab-byoa" hidden={tab !== 'byoa'}>
         {/* Always mounted (it fetches nothing until asked), so a verdict survives switching tabs. */}
@@ -110,7 +118,7 @@ export function PossessionLab({ initial = 'rug-pull', initialTab = 'scripted' }:
   );
 }
 
-function ScriptedLab({ initial }: { initial: ScenarioId }) {
+function ScriptedLab({ initial, request }: { initial: ScenarioId; request?: LabRequest }) {
   const [scenarios, setScenarios] = useState<ScenarioCard[]>([]);
   const [id, setId] = useState<ScenarioId>(initial);
   const [result, setResult] = useState<SimResult | null>(null);
@@ -118,6 +126,8 @@ function ScriptedLab({ initial }: { initial: ScenarioId }) {
   const [error, setError] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Set when a request asks to play an attack that is still loading.
+  const playWhenLoaded = useRef(false);
 
   useEffect(() => {
     fetch('/api/shield-sim')
@@ -142,6 +152,25 @@ function ScriptedLab({ initial }: { initial: ScenarioId }) {
     return () => { live = false; };
   }, [id]);
 
+  useEffect(() => {
+    if (!request || request.tab !== 'scripted') return;
+    const scenario = request.scenario ?? id;
+    if (scenario !== id) {
+      setId(scenario);
+      playWhenLoaded.current = request.autoplay === true;
+    } else if (request.autoplay) {
+      if (result) { setStep(0); setPlaying(true); } else playWhenLoaded.current = true;
+    }
+  }, [request?.seq]);
+
+  useEffect(() => {
+    if (result && playWhenLoaded.current) {
+      playWhenLoaded.current = false;
+      setStep(0);
+      setPlaying(true);
+    }
+  }, [result]);
+
   const total = result?.steps.length ?? 0;
   const finished = result !== null && step >= total - 1;
 
@@ -164,9 +193,8 @@ function ScriptedLab({ initial }: { initial: ScenarioId }) {
   return (
     <div className="flex flex-col gap-2 text-sm">
       <p className="m-0">
-        <strong>Watch the Real-Time Shield stop an attack.</strong> Each run replays the same agent and MCP server
-        twice: once through the <em>real</em> Exorcist 98 Shield engine (the same code that runs on your machine),
-        once with nothing in between. The server and every secret are fake.
+        <strong>Watch the Real-Time Shield stop an attack.</strong> The same attack runs twice: through the{' '}
+        <em>real</em> Shield engine, and with nothing in between. The server and every secret are fake.
       </p>
 
       <div role="group" aria-label="Choose an attack" className="flex flex-wrap gap-1.5">
@@ -243,8 +271,8 @@ function ScriptedLab({ initial }: { initial: ScenarioId }) {
           </div>
 
           <p className="m-0 text-[0.8rem]">
-            Run it yourself with no browser: <code>node scripts/demo-rug-pull.mjs</code> in the repository runs the
-            Shield as a real process between a real MCP client and server.
+            Run it without a browser: <code>node scripts/demo-rug-pull.mjs</code> puts the real Shield between a real
+            MCP client and server.
           </p>
         </>
       )}

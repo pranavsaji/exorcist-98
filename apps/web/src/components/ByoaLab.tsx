@@ -95,10 +95,8 @@ export function ByoaLab() {
   return (
     <div className="flex flex-col gap-2 text-sm">
       <p className="m-0">
-        <strong>Bring your own attack.</strong> Old antivirus came with a harmless test file so you could watch it
-        work. Here, paste any text you are worried about, say where your AI agent would meet it, and the{' '}
-        <em>real</em> scanner and the <em>real</em> Shield engine decide. Your text is checked in memory and thrown
-        away: it is not stored or logged.
+        <strong>Bring your own attack.</strong> Paste any text you are worried about, say where your AI agent would
+        meet it, and the <em>real</em> scanner and Shield decide. Checked in memory, never stored or logged.
       </p>
 
       <div role="group" aria-labelledby="byoa-samples-label" className="flex flex-col gap-1">

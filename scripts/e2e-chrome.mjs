@@ -78,16 +78,94 @@ await step('home loads with heading, taskbar and four desktop icons', async () =
   return `icon-ish controls: ${n}`;
 });
 
-await step('welcome tour shows on first visit; dismissing it sticks', async () => {
-  const tour = page.getByRole('dialog', { name: /Welcome to Exorcist 98/ });
-  await tour.waitFor({ timeout: 5000 });
-  const r = await axe('welcome-tour'); axeReports.push(r);
-  await tour.getByRole('button', { name: /Close and don't show again/ }).click();
-  await tour.waitFor({ state: 'detached', timeout: 3000 });
+await step('first screen: one focused window with the hero line, one primary action and four secondary entries', async () => {
+  await page.waitForSelector('main[data-ready="true"]');
+  const visible = await page.locator('section[role=dialog]:visible').count();
+  if (visible !== 1) throw new Error(`${visible} windows open on the first screen, expected 1`);
+  const hero = page.getByRole('dialog', { name: /Full System Scan/ });
+  const text = await hero.innerText();
+  for (const need of ['Your AI agent obeys what it reads.', 'Exorcist 98 checks it first.', 'GitHub repository to scan', 'Upload a .zip']) {
+    if (!text.includes(need)) throw new Error('hero is missing: ' + need);
+  }
+  const primary = hero.locator('.btn-primary');
+  if ((await primary.count()) !== 1) throw new Error('expected exactly one primary button');
+  if ((await primary.innerText()).trim() !== 'Scan the Haunted Repo') throw new Error('primary: ' + (await primary.innerText()));
+  for (const name of ['Possession Lab', 'Bring your own attack', 'Field report']) await hero.getByRole('button', { name, exact: true }).waitFor();
+  const kiro = hero.getByRole('link', { name: /^How Kiro built it/ });
+  if ((await kiro.getAttribute('href')) !== '/how-kiro') throw new Error('How Kiro link: ' + (await kiro.getAttribute('href')));
+  if ((await page.locator('main .desktop-icons a[href="/how-kiro"]').count()) !== 1) throw new Error('no How Kiro desktop icon');
+  // Focus starts inside the window; the window is clear of the icon column and fits the screen.
+  const focusIn = await hero.evaluate((el) => el.contains(document.activeElement));
+  if (!focusIn) throw new Error('focus is not in the first window');
+  const box = await hero.boundingBox();
+  if (box.x < 104 || box.x + box.width > 1366 || box.y + box.height > 768 - 44) throw new Error('window box ' + JSON.stringify(box));
+  await page.screenshot({ path: `${SHOTS}/01b-hero.png` });
+  return `1 window, 1 primary action, 4 secondary entries; box ${JSON.stringify(box)}`;
+});
+
+await step('guide ghost points at the main action; Next tip moves on; closing it sticks; the Start menu reopens it', async () => {
+  const guide = page.getByTestId('guide');
+  await guide.waitFor({ timeout: 5000 });
+  if (!/Tip 1 of 3/i.test(await guide.innerText()) || !/Start here/.test(await guide.innerText())) throw new Error('first tip: ' + (await guide.innerText()));
+  const g = await guide.boundingBox();
+  const b = await page.locator('[data-guide="haunted"]').boundingBox();
+  if (!(g.y < b.y + b.height && g.y + g.height > b.y)) throw new Error(`guide ${JSON.stringify(g)} is not beside the button ${JSON.stringify(b)}`);
+  const r = await axe('guide-and-hero'); axeReports.push(r);
+  await guide.getByRole('button', { name: 'Next tip' }).click();
+  await guide.getByText('Tip 2 of 3').waitFor();
+  await guide.getByRole('button', { name: 'Close guide' }).click();
+  await guide.waitFor({ state: 'detached', timeout: 3000 });
   await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForSelector('h1');
-  if (await page.getByRole('dialog', { name: /Welcome to Exorcist 98/ }).count()) throw new Error('tour came back after dismissal');
-  return `${r.violations.length} axe violation types; stays dismissed after reload`;
+  await page.waitForSelector('main[data-ready="true"]');
+  await page.waitForTimeout(300);
+  if (await page.getByTestId('guide').count()) throw new Error('guide came back after closing');
+  await page.locator('nav[aria-label="Taskbar"]').getByRole('button', { name: /Start/ }).click();
+  await page.getByRole('menuitem', { name: 'Start here (guide)' }).click();
+  await guide.waitFor({ timeout: 3000 });
+  await guide.getByRole('button', { name: 'Close guide' }).click();
+  await guide.waitFor({ state: 'detached', timeout: 3000 });
+  return `beside the primary button; ${r.violations.length} axe violation types; stays closed after reload; reopens from Start`;
+});
+
+await step('boot moment: shown once per session, skippable by a key, never under reduced motion or for a deep link', async () => {
+  const c = await browser.newContext({ viewport: { width: 1366, height: 768 } });
+  const p = await c.newPage();
+  await p.goto(BASE, { waitUntil: 'domcontentloaded' });
+  const boot = p.getByTestId('boot-screen');
+  await boot.waitFor({ state: 'visible', timeout: 3000 });
+  await p.waitForSelector('main[data-ready="true"]');
+  const t = Date.now();
+  await boot.waitFor({ state: 'detached', timeout: 3000 });
+  const lasted = Date.now() - t;
+  if (lasted > 1600) throw new Error(`boot lasted ${lasted} ms after load`);
+  await p.reload({ waitUntil: 'networkidle' });
+  if ((await p.locator('html[data-boot]').count()) || (await boot.count())) throw new Error('boot shown twice in one session');
+  await c.close();
+  // Skippable: any key ends it at once.
+  const c2 = await browser.newContext({ viewport: { width: 1366, height: 768 } });
+  const p2 = await c2.newPage();
+  await p2.goto(BASE, { waitUntil: 'domcontentloaded' });
+  await p2.waitForSelector('main[data-ready="true"]');
+  const t2 = Date.now();
+  await p2.keyboard.press('Shift');
+  await p2.getByTestId('boot-screen').waitFor({ state: 'detached', timeout: 3000 });
+  const skipped = Date.now() - t2;
+  await c2.close();
+  if (skipped > 700) throw new Error(`a key did not skip the boot (${skipped} ms)`);
+  // Reduced motion and deep links: no boot at all.
+  const c3 = await browser.newContext({ viewport: { width: 1366, height: 768 }, reducedMotion: 'reduce' });
+  const p3 = await c3.newPage();
+  await p3.goto(BASE, { waitUntil: 'domcontentloaded' });
+  const rm = await p3.locator('html[data-boot]').count();
+  await p3.goto(`${BASE}/?open=field`, { waitUntil: 'domcontentloaded' });
+  await c3.close();
+  const c4 = await browser.newContext({ viewport: { width: 1366, height: 768 } });
+  const p4 = await c4.newPage();
+  await p4.goto(`${BASE}/?open=field`, { waitUntil: 'domcontentloaded' });
+  const dl = await p4.locator('html[data-boot]').count();
+  await c4.close();
+  if (rm || dl) throw new Error(`boot shown: reduced motion ${rm}, deep link ${dl}`);
+  return `ended ${lasted} ms after load; a key skipped it in ${skipped} ms; none on reload, reduced motion or a deep link`;
 });
 
 await step('axe scan: home (before scanning)', async () => {
@@ -123,6 +201,51 @@ await step('Haunted Repo scan completes and fills the log', async () => {
   const threats = (log.match(/\[(CRITICAL|HIGH|MEDIUM|LOW)\]/g) || []).length;
   if (files < 20) throw new Error('only ' + files + ' files logged');
   return `${files} files, ${threats} threat lines in log`;
+});
+
+await step('results summary: a verdict in words and shape, counts by level, top 3 threats that open in one click, and What to do next', async () => {
+  const res = page.getByRole('dialog', { name: 'Threats Found' });
+  const sum = res.getByTestId('results-summary');
+  await sum.waitFor();
+  const text = await sum.innerText();
+  if (!/POSSESSED/.test(text)) throw new Error('verdict: ' + text.slice(0, 120));
+  if ((await sum.locator('.sev[data-severity="critical"] svg[data-shape="diamond"]').count()) === 0) throw new Error('infection level has no shape');
+  const counts = await res.getByRole('list', { name: 'Threats by infection level' }).getByRole('listitem').allInnerTexts();
+  if (counts.length !== 4) throw new Error('counts: ' + counts.join(' | '));
+  const total = counts.reduce((n, c) => n + Number(c.match(/(\d+)\s*$/)?.[1] ?? NaN), 0);
+  const line = await res.getByText(/threats found:/).innerText();
+  if (Number(line.match(/^(\d+)/)?.[1]) !== total) throw new Error(`counts add to ${total}, list says ${line}`);
+  const top = res.getByRole('list', { name: 'Top threats' }).getByRole('button');
+  if ((await top.count()) !== 3) throw new Error('top threats: ' + (await top.count()));
+  const tops = await top.allInnerTexts();
+  const heads = tops.map((t) => t.split('\n').find((l) => l.trim() && !/^(CRITICAL|HIGH|MEDIUM|LOW)$/.test(l.trim()))?.trim());
+  await top.first().click();
+  const detail = page.getByRole('dialog', { name: 'Threat Details' });
+  await detail.waitFor();
+  const h = await detail.getByRole('heading', { level: 3 }).innerText();
+  if (h !== heads[0]) throw new Error(`top threat opened "${h}", expected "${heads[0]}"`);
+  const next = res.getByRole('region', { name: 'What to do next' });
+  await next.getByRole('button', { name: 'Download exorcism patch', exact: true }).waitFor({ timeout: 20000 });
+  for (const name of ['SARIF (code scanning)', 'Copy workflow']) await next.getByRole('button', { name, exact: true }).waitFor();
+  // The summary and the actions come before the full list.
+  const order = await page.evaluate(() => {
+    const s = document.querySelector('[data-testid="results-summary"]');
+    const n = document.getElementById('what-next');
+    const l = document.querySelector('ul[aria-label="Threats found, worst first"]');
+    return !!(s && n && l && (s.compareDocumentPosition(n) & 4) && (n.compareDocumentPosition(l) & 4));
+  });
+  if (!order) throw new Error('summary, then What to do next, then the list: wrong order');
+  if (!page.url().endsWith('/?demo=haunted')) throw new Error('address bar not updated: ' + page.url());
+  // Side by side at 1366x768: the scan and results windows do not overlap (measured after the "possessed" shake).
+  await page.waitForSelector('main[data-possessed="false"]', { timeout: 5000 });
+  const a = await page.getByRole('dialog', { name: /Full System Scan/ }).boundingBox();
+  const b = await res.boundingBox();
+  if (a.x + a.width > b.x) throw new Error(`scan ${JSON.stringify(a)} overlaps results ${JSON.stringify(b)}`);
+  await res.locator('.titlebar h2').click();
+  await page.waitForSelector('main[data-possessed="false"]', { timeout: 5000 });
+  await page.screenshot({ path: `${SHOTS}/02b-results-summary.png` });
+  const r = await axe('results-summary'); axeReports.push(r);
+  return `${tops.length} top threats (${heads.join(' / ')}); counts ${counts.join(', ')}; URL ${page.url().replace(BASE, '')}; ${r.violations.length} axe violation types`;
 });
 
 await step('results window lists threats worst first', async () => {
@@ -263,7 +386,8 @@ await step('axe scan: home after scan (results + detail open)', async () => {
 });
 
 await step('keyboard: Tab moves focus and a visible focus ring is drawn', async () => {
-  await page.reload({ waitUntil: 'networkidle' });
+  // A fresh desktop. (Reloading would re-run the scan: the address bar now holds ?demo=haunted.)
+  await page.goto(BASE, { waitUntil: 'networkidle' });
   await page.keyboard.press('Tab');
   await page.keyboard.press('Tab');
   const info = await page.evaluate(() => {
@@ -502,6 +626,7 @@ await step('product page loads, links back to the desktop, and passes axe', asyn
 await step('real GitHub scan through the UI (octocat/Hello-World)', async () => {
   await page.getByLabel('GitHub repository to scan').fill('https://github.com/octocat/Hello-World');
   await page.getByRole('button', { name: 'Scan', exact: true }).click();
+  if (!page.url().endsWith('/?repo=octocat/Hello-World')) throw new Error('address bar not updated: ' + page.url());
   await page.getByText('Scan complete.').first().waitFor({ timeout: 60000 });
   const log = await page.getByRole('log', { name: 'Scan log' }).innerText();
   return log.split('\n').slice(-2).join(' / ');
@@ -520,7 +645,7 @@ await step('upload: a .zip of a project is scanned (L-032)', async () => {
   }
   const cd = Buffer.concat(cens); const end = Buffer.alloc(22);
   end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(2, 8); end.writeUInt16LE(2, 10); end.writeUInt32LE(cd.length, 12); end.writeUInt32LE(off, 16);
-  await page.getByLabel('Or scan a private project: upload a .zip').setInputFiles({ name: 'demo.zip', mimeType: 'application/zip', buffer: Buffer.concat([...locals, cd, end]) });
+  await page.getByLabel('Upload a .zip').setInputFiles({ name: 'demo.zip', mimeType: 'application/zip', buffer: Buffer.concat([...locals, cd, end]) });
   await page.getByText('Scan complete.').first().waitFor({ timeout: 60000 });
   const log = await page.getByRole('log', { name: 'Scan log' }).innerText();
   if (!/EX-002 AGENTS\.md/.test(log)) throw new Error('the planted instruction was not reported: ' + log.split('\n').slice(-3).join(' / '));
@@ -602,6 +727,146 @@ await step('narrow screen (390x844): screenshot only, checks horizontal overflow
   const [l, r] = o.win.split('..').map(Number);
   if (l < 0 || r > o.vw) throw new Error('window does not fit: ' + JSON.stringify(o));
   return 'fits: ' + JSON.stringify(o);
+});
+
+// ── Shareable deep links ─────────────────────────────────────────────────
+async function fresh(path, viewport = { width: 1366, height: 768 }) {
+  const c = await browser.newContext({ viewport });
+  const p = await c.newPage();
+  p.on('pageerror', (e) => consoleErrors.push('pageerror: ' + String(e.message).slice(0, 200)));
+  await p.goto(`${BASE}${path}`, { waitUntil: 'networkidle' });
+  await p.waitForSelector('main[data-ready="true"]');
+  return { c, p };
+}
+
+await step('deep link ?demo=haunted scans the Haunted Repo; at 1440x900 the windows sit side by side', async () => {
+  const { c, p } = await fresh('/?demo=haunted', { width: 1440, height: 900 });
+  await p.getByText('Scan complete.').first().waitFor({ timeout: 20000 });
+  await p.getByTestId('results-summary').waitFor();
+  await p.waitForSelector('main[data-possessed="false"]', { timeout: 5000 });
+  const a = await p.getByRole('dialog', { name: /Full System Scan/ }).boundingBox();
+  const b = await p.getByRole('dialog', { name: 'Threats Found' }).boundingBox();
+  const boot = await p.getByTestId('boot-screen').count();
+  await c.close();
+  if (boot) throw new Error('a deep link showed the boot screen');
+  if (a.x + a.width > b.x || b.x + b.width > 1440) throw new Error(`overlap: scan ${JSON.stringify(a)}, results ${JSON.stringify(b)}`);
+  return `scan ${Math.round(a.x)}..${Math.round(a.x + a.width)}, results ${Math.round(b.x)}..${Math.round(b.x + b.width)}`;
+});
+
+await step('deep link ?repo=owner/name starts that scan and fills the field (network for completion)', async () => {
+  const { c, p } = await fresh('/?repo=octocat/Hello-World');
+  const value = await p.getByLabel('GitHub repository to scan').inputValue();
+  const log = await p.getByRole('log', { name: 'Scan log' }).innerText();
+  const url = p.url();
+  let outcome = 'did not finish in 60 s';
+  try {
+    await p.getByText(/^(Scan complete\.|The scan stopped because of a problem\.)$/).first().waitFor({ timeout: 60000 });
+    outcome = (await p.getByText(/^(Scan complete\.|The scan stopped because of a problem\.)$/).first().innerText());
+  } catch { /* reported below */ }
+  await c.close();
+  if (value !== 'https://github.com/octocat/Hello-World') throw new Error('field: ' + value);
+  if (!/Starting scan of octocat\/Hello-World/.test(log)) throw new Error('scan did not start: ' + log.slice(0, 120));
+  if (!url.endsWith('/?repo=octocat/Hello-World')) throw new Error('url: ' + url);
+  return `started; ${outcome}`;
+});
+
+await step('deep link ?repo=owner/name/tree/ref keeps the branch', async () => {
+  const { c, p } = await fresh('/?repo=octocat/Hello-World/tree/master');
+  const log = await p.getByRole('log', { name: 'Scan log' }).innerText();
+  const url = p.url();
+  await c.close();
+  if (!/Starting scan of octocat\/Hello-World@master/.test(log)) throw new Error('log: ' + log.slice(0, 120));
+  if (!url.endsWith('/?repo=octocat/Hello-World/tree/master')) throw new Error('url: ' + url);
+  return 'octocat/Hello-World@master';
+});
+
+await step('deep links: invalid values are ignored (no scan, no window, address unchanged)', async () => {
+  const bad = ['/?repo=https%3A%2F%2Fevil.example%2Fx', '/?repo=o/r/blob/main/x', '/?repo=../../etc', '/?demo=nope', '/?open=about', '/?demo=haunted&demo=rug-pull', '/?open=%3Cscript%3E'];
+  const seen = [];
+  for (const path of bad) {
+    const { c, p } = await fresh(path);
+    await p.waitForTimeout(300);
+    const wins = await p.locator('section[role=dialog]:visible').count();
+    const heroShown = await p.getByText('Your AI agent obeys what it reads.').count();
+    const scanned = await p.getByRole('log', { name: 'Scan log' }).count();
+    const url = p.url().replace(BASE, '');
+    await c.close();
+    if (wins !== 1 || !heroShown || scanned) throw new Error(`${path}: windows ${wins}, hero ${heroShown}, log ${scanned}`);
+    if (url !== path) throw new Error(`${path}: address changed to ${url}`);
+    seen.push(path);
+  }
+  return `${seen.length} invalid links ignored`;
+});
+
+await step('deep link ?demo=rug-pull opens the Possession Lab and plays the attack by itself', async () => {
+  const { c, p } = await fresh('/?demo=rug-pull');
+  const lab = p.getByRole('dialog', { name: /Possession Lab/ });
+  await lab.waitFor();
+  const pressed = await lab.getByRole('button', { name: 'The Rug Pull', exact: true }).getAttribute('aria-pressed');
+  await lab.getByText('Result: protected.').waitFor({ timeout: 30000 });
+  await lab.getByText('Result: compromised.').waitFor({ timeout: 5000 });
+  await p.waitForFunction(() => [...document.querySelectorAll('.lab-stamp')].every((el) => el.getAnimations().every((a) => a.playState === 'finished')));
+  await p.addScriptTag({ content: axeSource });
+  const v = await p.evaluate(async () => (await window.axe.run(document, { resultTypes: ['violations'] })).violations.map((x) => ({ id: x.id, impact: x.impact, nodes: x.nodes.length, sample: x.nodes[0]?.target?.join(' ').slice(0, 120) })));
+  axeReports.push({ label: 'deep-link-lab', violations: v });
+  await c.close();
+  if (pressed !== 'true') throw new Error('The Rug Pull is not the chosen attack');
+  const { c: c2, p: p2 } = await fresh('/?demo=poisoned-tool');
+  const lab2 = p2.getByRole('dialog', { name: /Possession Lab/ });
+  await lab2.getByRole('button', { name: 'The Poisoned Tool', exact: true }).and(lab2.locator('[aria-pressed="true"]')).waitFor({ timeout: 5000 });
+  await lab2.getByText('Result: protected.').waitFor({ timeout: 30000 });
+  await c2.close();
+  return `rug-pull and poisoned-tool played to the end with no clicks; ${v.length} axe violation types`;
+});
+
+await step('deep links ?open=byoa, ?open=field and ?open=map open those views', async () => {
+  const { c, p } = await fresh('/?open=byoa');
+  const tab = p.getByRole('dialog', { name: /Possession Lab/ }).getByRole('tab', { name: 'Bring your own attack' });
+  await tab.waitFor();
+  const sel = await tab.getAttribute('aria-selected');
+  await c.close();
+  if (sel !== 'true') throw new Error('byoa tab not selected');
+  const { c: c2, p: p2 } = await fresh('/?open=field');
+  await p2.getByRole('dialog', { name: /Field Report/ }).getByText('Measured honestly').waitFor();
+  await c2.close();
+  const { c: c3, p: p3 } = await fresh('/?open=map');
+  const res = p3.getByRole('dialog', { name: 'Threats Found' });
+  await res.locator('svg.map-svg[role="img"]').waitFor({ timeout: 20000 });
+  const mapPressed = await res.getByRole('button', { name: /^Haunted House Map/ }).getAttribute('aria-pressed');
+  const url = p3.url();
+  await c3.close();
+  if (mapPressed !== 'true') throw new Error('map view not selected');
+  if (!url.endsWith('/?open=map')) throw new Error('url: ' + url);
+  return 'byoa tab selected; field report open; map drawn';
+});
+
+await step('narrow screen (390x844): hero and results summary fit with no horizontal scroll', async () => {
+  const { c, p } = await fresh('/', { width: 390, height: 844 });
+  await p.getByTestId('boot-screen').waitFor({ state: 'detached', timeout: 3000 }).catch(() => undefined);
+  const hero = await p.evaluate(() => {
+    const w = document.querySelector('section[role=dialog]').getBoundingClientRect();
+    const btn = document.querySelector('[data-guide="haunted"]').getBoundingClientRect();
+    return { win: [Math.round(w.left), Math.round(w.right)], btnBottom: Math.round(btn.bottom), vw: innerWidth, vh: innerHeight, scroll: document.documentElement.scrollWidth };
+  });
+  await p.screenshot({ path: `${SHOTS}/08b-mobile-hero.png` });
+  await c.close();
+  if (hero.win[0] < 0 || hero.win[1] > hero.vw || hero.scroll > hero.vw) throw new Error('hero does not fit: ' + JSON.stringify(hero));
+  if (hero.btnBottom > hero.vh - 44) throw new Error('primary action is below the fold: ' + JSON.stringify(hero));
+  const { c: c2, p: p2 } = await fresh('/?demo=haunted', { width: 390, height: 844 });
+  await p2.getByTestId('results-summary').waitFor({ timeout: 20000 });
+  await p2.locator('nav[aria-label="Taskbar"]').getByRole('button', { name: /Threats Found/ }).click();
+  await p2.waitForSelector('main[data-possessed="false"]', { timeout: 5000 });
+  const sum = await p2.evaluate(() => {
+    const s = document.querySelector('[data-testid="results-summary"]').getBoundingClientRect();
+    return { s: [Math.round(s.left), Math.round(s.right)], vw: innerWidth, scroll: document.documentElement.scrollWidth };
+  });
+  await p2.screenshot({ path: `${SHOTS}/08c-mobile-results.png` });
+  await p2.addScriptTag({ content: axeSource });
+  const v = await p2.evaluate(async () => (await window.axe.run(document, { resultTypes: ['violations'] })).violations.map((x) => ({ id: x.id, impact: x.impact, nodes: x.nodes.length, sample: x.nodes[0]?.target?.join(' ').slice(0, 120) })));
+  axeReports.push({ label: 'results-summary-390px', violations: v });
+  await c2.close();
+  if (sum.s[0] < 0 || sum.s[1] > sum.vw || sum.scroll > sum.vw) throw new Error('summary does not fit: ' + JSON.stringify(sum));
+  return `hero ${JSON.stringify(hero)}; summary ${JSON.stringify(sum)}; ${v.length} axe violation types`;
 });
 
 await browser.close();

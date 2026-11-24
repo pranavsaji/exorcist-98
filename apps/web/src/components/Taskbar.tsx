@@ -87,12 +87,12 @@ export function Taskbar({ windows, items, onToggle, soundOn, onToggleSound }: Pr
         )}
       </div>
 
-      <ul className="m-0 flex min-w-0 flex-1 list-none gap-1 p-0" aria-label="Open windows">
+      <ul className="taskbar-windows m-0 flex min-w-0 flex-1 list-none gap-1 p-0" aria-label="Open windows">
         {windows.map((w) => (
-          <li key={w.id} className="min-w-0">
+          <li key={w.id} className="shrink-0">
             <button
               type="button"
-              className="btn max-w-[11rem] truncate"
+              className="btn max-w-[8.5rem] truncate sm:max-w-[11rem]"
               aria-pressed={w.active && !w.minimized}
               onClick={() => onToggle(w.id)}
             >

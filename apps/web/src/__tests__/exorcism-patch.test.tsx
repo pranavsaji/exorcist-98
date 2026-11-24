@@ -106,7 +106,7 @@ describe('the exorcism patch on the page', () => {
 
   it('offers an accessible download button that says what it does', () => {
     const html = renderToStaticMarkup(<ExorcismPatch patch={patch({ skipped: 1 })} target="Haunted Repo" />);
-    expect(html).toContain('<h3 id="exorcise-heading"');
+    expect(html).toContain('<h4 id="exorcise-heading"');
     expect(html).toContain('aria-labelledby="exorcise-heading"');
     expect(html).toMatch(/<button type="button" class="btn font-bold" aria-describedby="exorcise-desc">Download exorcism patch<\/button>/);
     expect(html).toContain('id="exorcise-desc"');

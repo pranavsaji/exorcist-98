@@ -5,7 +5,7 @@ import { badgeMarkdown, buildReport } from '@/lib/report';
 import type { ReportKind } from '@/lib/report';
 import type { WebFinding, WebScanStats } from '@/lib/protocol';
 
-type Props = { findings: WebFinding[]; stats: WebScanStats | null; target: string };
+type Props = { findings: WebFinding[]; stats: WebScanStats | null; target: string; step?: number };
 
 const KINDS: Array<{ kind: ReportKind; label: string }> = [
   { kind: 'sarif', label: 'SARIF (code scanning)' },
@@ -26,13 +26,15 @@ export function download(filename: string, mime: string, body: string): void {
 }
 
 /** Save the current scan as a report. Everything is built in the page; nothing is uploaded. */
-export function ReportButtons({ findings, stats, target }: Props) {
+export function ReportButtons({ findings, stats, target, step = 2 }: Props) {
   const [copied, setCopied] = useState(false);
   const snippet = badgeMarkdown(findings);
 
   return (
-    <section aria-labelledby="save-report" className="flex flex-col gap-1 border-t border-shade/60 pt-2">
-      <h3 id="save-report" className="m-0 text-sm font-bold">Save this report</h3>
+    <section aria-labelledby="save-report" className="next-item flex flex-col gap-1">
+      <h4 id="save-report" className="next-title">
+        <span className="next-num" aria-hidden="true">{step}</span> Save this report
+      </h4>
       <div className="flex flex-wrap gap-1">
         {KINDS.map(({ kind, label }) => (
           <button
@@ -49,7 +51,7 @@ export function ReportButtons({ findings, stats, target }: Props) {
         ))}
       </div>
       <p className="m-0 text-xs">
-        Commit the badge file to your repository and add this line to your README:
+        Commit the badge file, then add this line to your README:
       </p>
       <div className="flex flex-wrap items-center gap-1">
         <code className="field min-w-0 flex-1 truncate text-xs" aria-label="Badge Markdown">{snippet}</code>

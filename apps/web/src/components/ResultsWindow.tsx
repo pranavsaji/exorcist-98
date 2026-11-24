@@ -18,14 +18,17 @@ type Props = {
   map?:       HauntedMapMsg | null;
 };
 
-type View = 'list' | 'map';
+export type View = 'list' | 'map';
 
 /**
  * The threats found, worst first. When the scan found MCP configs, a second
  * view shows the Haunted House Map of them.
  */
-export function ResultsWindow({ findings, selectedId, onSelect, scanDone = false, map = null, initialView = 'list' }: Props & { initialView?: View }) {
-  const [view, setView] = useState<View>(initialView);
+export function ResultsWindow({ findings, selectedId, onSelect, scanDone = false, map = null, initialView = 'list', view: viewProp, onViewChange }: Props & { initialView?: View; view?: View; onViewChange?: (v: View) => void }) {
+  const [inner, setInner] = useState<View>(initialView);
+  // Controlled when the desktop passes a view (a ?open=map link), uncontrolled otherwise.
+  const view = viewProp ?? inner;
+  const setView = onViewChange ?? setInner;
   const hasMap = map !== null && map.configs.length > 0;
   if (!hasMap) return <ThreatList findings={findings} selectedId={selectedId} onSelect={onSelect} scanDone={scanDone} />;
   const lethal = map.configs.filter((c) => c.trifecta).length;

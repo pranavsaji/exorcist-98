@@ -16,18 +16,23 @@ jobs:
         with:
           fail-on: high`;
 
-export function NextSteps() {
+export function NextSteps({ step = 3 }: { step?: number }) {
   const [copied, setCopied] = useState(false);
   return (
-    <section aria-labelledby="next-steps" className="bevel-in flex flex-col gap-2 p-2 text-sm">
-      <h3 id="next-steps" className="m-0 text-sm font-extrabold">Protect this repo on every pull request</h3>
-      <p className="m-0">
-        Add this file as <code className="font-mono">.github/workflows/exorcist.yml</code>. Each pull request is
-        scanned and gets a comment listing new threats; the check fails on high or critical ones.
+    <section aria-labelledby="next-steps" className="next-item flex flex-col gap-1 text-sm">
+      <h4 id="next-steps" className="next-title">
+        <span className="next-num" aria-hidden="true">{step}</span> Guard every pull request
+      </h4>
+      <p className="m-0 text-xs">
+        Save as <code className="font-mono">.github/workflows/exorcist.yml</code>. New threats get a comment; high or
+        critical ones fail the check.
       </p>
-      <pre className="log m-0 max-h-48 overflow-auto whitespace-pre text-xs" tabIndex={0} aria-label="GitHub Actions workflow">
-        {ACTION_YAML}
-      </pre>
+      <details className="next-details">
+        <summary>Show the workflow</summary>
+        <pre className="log m-0 mt-1 max-h-40 overflow-auto whitespace-pre text-xs" tabIndex={0} aria-label="GitHub Actions workflow">
+          {ACTION_YAML}
+        </pre>
+      </details>
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
