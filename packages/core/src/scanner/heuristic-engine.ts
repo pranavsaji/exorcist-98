@@ -9,6 +9,7 @@ import type {
 } from "../types.js";
 import type { NormalizedText } from "../normalizer.js";
 import { isAgentFacing } from '../walker.js';
+import { findSecrets, redact } from '../secrets-check.js';
 
 const SUSPICIOUS_PHRASES = [
   "ignore previous",
@@ -167,13 +168,33 @@ async function classify(
   return parsed.success ? parsed.data : null;
 }
 
+/** Files that hold credentials by design: never sent whole to the model. */
+const CREDENTIAL_FILE = /(^|\/)(\.env(\..*)?|[^/]*\.local\.json|claude_desktop_config\.json|\.npmrc|\.netrc|credentials(\.json)?)$/i;
+const SECRET_VALUE = /("[^"\n]*(?:key|token|secret|password|passwd|auth|credential|cookie|session)[^"\n]*"\s*:\s*")([^"\n]{4,})(")/gi;
+
+/**
+ * The text as the model may see it: every known secret format and every value
+ * under a secret-sounding key masked, same length, so line and column numbers
+ * still point at the right place in the file.
+ */
+export function maskForModel(text: string): string {
+  let out = text;
+  for (const h of findSecrets(text)) {
+    out = out.slice(0, h.offset) + redact(h.match).slice(0, h.match.length).padEnd(h.match.length, '*') + out.slice(h.offset + h.match.length);
+  }
+  return out.replace(SECRET_VALUE, (_m, a: string, v: string, z: string) => `${a}${'*'.repeat(v.length)}${z}`);
+}
+
 export async function runHeuristics(
   file: RepoFile,
-  norm: NormalizedText,
+  rawNorm: NormalizedText,
   sigFindings: SignatureFinding[],
   client: BedrockClient,
 ): Promise<HeuristicFinding[]> {
+  // Nothing that looks like a secret ever reaches the model (or the report).
+  const norm: NormalizedText = { ...rawNorm, original: maskForModel(rawNorm.original) };
   if (!shouldEscalate(file, norm, sigFindings)) {
+    if (CREDENTIAL_FILE.test(file.rel)) return [];
     // Layered detection: a file an agent takes instructions or settings from
     // is judged whole even when no signature fired. Reworded attacks trip no
     // pattern; on our 10 reworded attacks signatures caught 0 and the judge 6,

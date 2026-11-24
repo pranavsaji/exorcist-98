@@ -45,3 +45,35 @@ describe('layered AI judging: agent files are judged whole even with no signatur
     expect(await runHeuristics(f, normalize(TEXT, f.role), [], client)).toEqual([]);
   });
 });
+
+describe('secrets never reach the model (security review)', () => {
+  const awsKey = ['AKIA', 'Q7EXAMPLE2DEMO9X'].join('');
+  const apiKey = 'sk' + '9f3a7c1e5b2d8f4a6c0e1b3d5f7a9c2e';
+  const config = JSON.stringify({ mcpServers: { weather: { command: 'npx', args: ['weather-mcp@1.0.0'], env: { WEATHER_API_KEY: apiKey, AWS_ACCESS_KEY_ID: awsKey } } } }, null, 2);
+
+  it('masks known formats and values under secret-sounding keys, keeping positions', async () => {
+    const { maskForModel } = await import('../scanner/heuristic-engine.js');
+    const masked = maskForModel(config);
+    expect(masked).not.toContain(awsKey);
+    expect(masked).not.toContain(apiKey);
+    expect(masked.length).toBe(config.length);
+    expect(masked.split('\n').length).toBe(config.split('\n').length);
+  });
+
+  it('the prompt sent for an MCP config contains no secret', async () => {
+    const client = new FakeBedrockClient([verdict('benign')]);
+    const f = file('.kiro/settings/mcp.json');
+    await runHeuristics(f, normalize(config, f.role), [], client);
+    expect(client.calls.length).toBeGreaterThan(0);
+    for (const c of client.calls) { expect(c.prompt).not.toContain(awsKey); expect(c.prompt).not.toContain(apiKey); }
+  });
+
+  it('credential files are never sent whole', async () => {
+    for (const rel of ['.env', '.env.production', 'mcp.local.json', 'claude_desktop_config.json']) {
+      const client = new FakeBedrockClient([verdict('malicious'), verdict('malicious')]);
+      const f = file(rel);
+      await runHeuristics(f, normalize(TEXT, f.role), [], client);
+      expect(client.calls).toHaveLength(0);
+    }
+  });
+});
