@@ -537,7 +537,7 @@ await step('Possession Lab: the rug pull plays to the end, protected vs compromi
 
 await step('Possession Lab: every attack ends with the shielded side protected', async () => {
   const lab = page.getByRole('dialog', { name: /Possession Lab/ });
-  const names = ['The Rug Pull', 'The Poisoned Tool', 'The Secret Leak', 'The Unknown Host', 'The Poisoned Result'];
+  const names = ['The Rug Pull', 'The Poisoned Tool', 'The Secret Leak', 'The Unknown Host', 'The Poisoned Result', 'The Canary', 'The Lethal Trifecta'];
   const seen = [];
   for (const name of names) {
     await lab.getByRole('button', { name, exact: true }).click();
@@ -551,6 +551,11 @@ await step('Possession Lab: every attack ends with the shielded side protected',
     const harm = await lab.locator('.lab-verdict-harm').innerText();
     if (!/Nothing leaked/.test(safe)) throw new Error(`${name}: shielded side not protected: ${safe}`);
     if (!/compromised/.test(harm)) throw new Error(`${name}: unshielded side not compromised`);
+    // The trifecta is stopped by the Session Guard, and you answer its prompt.
+    if (name === 'The Lethal Trifecta') {
+      if ((await lab.locator('.lab-rule', { hasText: 'EX-027' }).count()) === 0) throw new Error('trifecta: no EX-027 event on the last step');
+      if ((await lab.locator('.lab-event[data-actor="user"]').count()) === 0) throw new Error('trifecta: your answer to the prompt is not shown');
+    }
     seen.push(name);
   }
   return seen.join(', ');

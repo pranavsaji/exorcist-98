@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { loadDefinitions } from '@exorcist-98/core';
-import type { VirusDefinition } from '@exorcist-98/core';
+import { loadCapabilityRules, loadDefinitions } from '@exorcist-98/core';
+import type { CapabilityRule, VirusDefinition } from '@exorcist-98/core';
 import { SCENARIO_IDS, listScenarios, runScenario } from '@exorcist-98/shield/simulator';
 import type { ScenarioId, SimResult } from '@exorcist-98/shield/simulator';
 import { definitionsDir } from '@/lib/paths';
@@ -12,6 +12,14 @@ export const dynamic = 'force-dynamic';
 const QuerySchema = z.enum(SCENARIO_IDS as [ScenarioId, ...ScenarioId[]]);
 
 let defsPromise: Promise<VirusDefinition[]> | null = null;
+/** The capability rules (capabilities.yaml), so the Session Guard (EX-027) knows which tools read issues or send messages. */
+let rulesPromise: Promise<CapabilityRule[]> | null = null;
+
+async function capabilityRules(): Promise<CapabilityRule[]> {
+  const r = await loadCapabilityRules(definitionsDir());
+  if (!r.ok) throw new Error(r.error);
+  return r.rules;
+}
 const cache = new Map<ScenarioId, SimResult>();
 
 /**
@@ -34,12 +42,14 @@ export async function GET(request: Request): Promise<Response> {
     let result = cache.get(parsed.data);
     if (!result) {
       defsPromise ??= loadDefinitions(definitionsDir());
-      result = runScenario(parsed.data, await defsPromise);
+      rulesPromise ??= capabilityRules();
+      result = runScenario(parsed.data, await defsPromise, await rulesPromise);
       cache.set(parsed.data, result);
     }
     return new Response(JSON.stringify(result), { headers });
   } catch (e) {
     defsPromise = null;
+    rulesPromise = null;
     console.error('shield-sim failed:', e instanceof Error ? e.message : String(e));
     return jsonError(500, 'The simulation could not be run.');
   }

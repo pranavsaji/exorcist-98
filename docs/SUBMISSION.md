@@ -52,8 +52,8 @@ a quarantine vault) and pointed it at the files and tools an agent trusts.
 - **Protect a repo in one step:** a GitHub Action that scans every pull
   request and comments on new threats; the web app shows the workflow file to
   copy after each scan.
-- **Possession Lab** (in the web app): five attacks (rug pull, poisoned tool,
-  secret leak, unknown host, poisoned tool result), each replayed twice from
+- **Possession Lab** (in the web app): seven attacks (rug pull, poisoned tool,
+  secret leak, unknown host, poisoned tool result, canary, lethal trifecta), each replayed twice from
   the same script, once through the real Shield engine and once with nothing
   in between, side by side and step by step. It is the Shield code itself
   running in the browser's backend, not an animation.

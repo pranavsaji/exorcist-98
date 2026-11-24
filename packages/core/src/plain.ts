@@ -123,6 +123,11 @@ const ENTRIES: Record<string, PlainEntry> = {
     attack:
       'Each tool server looks harmless alone. But one agent session that can read private data, read text anyone can write (a web page, an issue, an email) and send data somewhere can be told by that text to copy your secrets out. This is the "lethal trifecta".',
   },
+  'EX-027': {
+    headline: 'Your AI read untrusted text and private data, and now wants to send something out',
+    attack:
+      'Earlier in this session your AI read text anyone can write (a web page, an issue, a message) and then private data (a secrets file, a key). Each step looked harmless. Sending data out now is exactly how a prompt injection steals it, so the Shield holds the call until you say yes.',
+  },
   'EX-026': {
     headline: 'A file your AI reads is too big to check',
     attack:

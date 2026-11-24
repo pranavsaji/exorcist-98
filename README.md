@@ -71,8 +71,8 @@ Attackers hide instructions in invisible Unicode, HTML comments, base64 blobs or
 
 | | What it does | Where |
 |---|---|---|
-| **Scan** | 24 open YAML virus definitions plus code checks across the files seven coding agents read. Every finding shows the file, line, the exact text, an infection level (text and shape, never colour alone), the threat class and a plain-language fix. | web app, `exorcist scan`, GitHub Action, MCP server |
-| **Shield** | An MCP firewall between the agent and each MCP server: pins every tool, re-checks it before every call, hides tools that change, blocks secrets, unknown hosts and canary tokens in tool calls, withholds attack-like tool results. | `exorcist shield` / `wrap` |
+| **Scan** | 25 open YAML virus definitions plus code checks across the files seven coding agents read. Every finding shows the file, line, the exact text, an infection level (text and shape, never colour alone), the threat class and a plain-language fix. | web app, `exorcist scan`, GitHub Action, MCP server |
+| **Shield** | An MCP firewall between the agent and each MCP server: pins every tool, re-checks it before every call, hides tools that change, blocks secrets, unknown hosts and canary tokens in tool calls, withholds attack-like tool results, and holds data going out once a session has read untrusted text and private data (EX-027). | `exorcist shield` / `wrap` |
 | **Disinfect** | One patch for every threat with a safe mechanical fix (hidden characters, smuggled comments, remote images, unpinned MCP packages), with an exact backup in the Quarantine Vault. | "Download exorcism patch", `exorcist exorcise` |
 
 Around those three: an **on-access hook** that scans a file *before* Kiro's agent reads it, **canary traps**, a team lockfile for MCP tools (**`exorcist.lock`**), a **Haunted House Map** of risky server combinations, **signed definition updates**, a **Kiro Crew** app that patrols your folders every night, and an optional **AI layer** for reworded attacks no pattern can catch.
@@ -99,7 +99,7 @@ An agent is dangerous when one session combines **private data**, **untrusted in
 
 ### The Possession Lab
 
-Six attacks (rug pull, poisoned tool, secret leak, unknown host, poisoned tool result, canary), each replayed twice from the same script: once through the **real Shield engine** (the code that runs on your machine, not an animation) and once with nothing in between. Step through them side by side and watch one side end *EXORCISED* and the other *POSSESSED*.
+Seven attacks (rug pull, poisoned tool, secret leak, unknown host, poisoned tool result, canary, lethal trifecta), each replayed twice from the same script: once through the **real Shield engine** (the code that runs on your machine, not an animation) and once with nothing in between. Step through them side by side and watch one side end *EXORCISED* and the other *POSSESSED*.
 
 ![The Possession Lab: the rug pull, protected versus compromised](docs/media/possession-lab.png)
 
@@ -137,6 +137,7 @@ It works on a phone too:
 | **Secrets and hosts** | Arguments carrying credentials are blocked; data going to a host that is not on the allowed list is held for approval. |
 | **Canary traps** | `exorcist canary plant` writes unique tokens into trap files. A token in any agent-to-server message (raw, base64, percent-encoded or split) is blocked in every mode, with a critical alert naming the trap. |
 | **Attack-like results** | Tool output that reads like instructions to the AI is withheld; the agent gets a refusal instead. |
+| **Lethal trifecta, at run time (Session Guard, EX-027)** | EX-023 says a config *could* combine untrusted text, private data and a way out. The Session Guard watches what really happens in one agent session, across all its Shield-wrapped servers: once the agent has taken in untrusted text (an issue, a web page, a flagged result) **and** read private data (a secret in a result, a `.env` or `~/.ssh` read, a private-data tool), the next call that could send data out is held for your approval, or refused; only a person can release it, with `exorcist approve session <key>` (it needs an interactive terminal and a click or a one-time code, so the agent being held cannot release itself). Each step alone looks harmless, so each alone is allowed. The Shields share facts only (tool, server, rule, time; never text or secrets) in the state folder. Policy `"sessionGuard": "hold"` (default), `"block"`, `"monitor"` or `"off"`. Limits: [S-027](docs/KNOWN_LIMITATIONS.md). |
 | **Changed programs** | The program behind each server (command, arguments, file contents, environment and loader variables such as `NODE_OPTIONS`) is pinned; a change holds the server until `exorcist approve server`. |
 | **Team lockfile** | `exorcist.lock` records the tool fingerprints a team expects. On a machine that never pinned a tool, drift from the lock is still a rug pull. The lock never approves anything, and `lock --check --static` runs in CI without starting a pull request's servers. |
 | **Quarantine Vault** | Disable an infected MCP server, hook or steering file with a backup, a diff and an exact restore. |
@@ -217,7 +218,7 @@ jobs:
 | `shield`, `wrap`, `unwrap` | Run MCP servers behind the Real-Time Shield |
 | `lock [--check] [--static]` | Write or check `exorcist.lock` |
 | `canary plant|--list|--remove` | Canary traps (EX-022) |
-| `approve`, `alerts`, `vault` | Approve changed tools, hosts or servers; read alerts; quarantine and restore |
+| `approve`, `alerts`, `vault` | Approve changed tools, hosts or servers, or a session the Session Guard holds (EX-027); read alerts; quarantine and restore |
 | `init [--kiro] [--shield]` | Wire a Kiro project |
 | `on-access`, `allow-read` | The on-access hook and its person-only allowance |
 | `update [--status]` | Install signed (Ed25519) definition updates, verified on download and on every load |
@@ -296,6 +297,7 @@ Open YAML in [`definitions/`](definitions/), each with severity, the files it ap
 | EX-024 | Detonated in the chamber (experimental) | critical |
 | EX-025 | An MCP server's environment changes how its program loads (`NODE_OPTIONS`, `LD_PRELOAD`…) | high |
 | EX-026 | An agent file too large to check (never skipped in silence) | medium |
+| EX-027 | Lethal trifecta completed in a live session: after untrusted text and private data, data going out is held (the Shield's Session Guard) | critical |
 
 ## How Exorcist 98 protects itself
 
@@ -330,7 +332,7 @@ flowchart LR
     O[Tool output]
   end
   subgraph Core["@exorcist-98/core"]
-    W[Walker and normalizer<br/>hidden Unicode, decoding] --> S[Signature engine<br/>24 YAML definitions, time-limited]
+    W[Walker and normalizer<br/>hidden Unicode, decoding] --> S[Signature engine<br/>25 YAML definitions, time-limited]
     S --> J[Optional AI judge<br/>Bedrock, masked input]
     S --> T[Trifecta analysis<br/>capabilities.yaml]
     S --> X[Exorcise fixers]

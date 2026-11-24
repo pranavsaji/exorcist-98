@@ -1,6 +1,8 @@
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
-import { loadDefinitions } from '@exorcist-98/core';
+import { loadCapabilityRules, loadDefinitions } from '@exorcist-98/core';
+import type { CapabilityRule, ServerSpec } from '@exorcist-98/core';
+import { FileSessionStore, SessionGuard, isSessionKey, resolveSessionKey } from './session.js';
 import type { Readable, Writable } from 'node:stream';
 import { ShieldEngine } from './engine.js';
 import type { Action } from './engine.js';
@@ -70,6 +72,10 @@ export type ShieldSetupOptions = {
    * project root. `null` turns lock seeding off.
    */
   lockPath?: string | null;
+  /** A remote server's URL (S-005), so the Session Guard can label it from the capability rules. */
+  url?: string;
+  /** The agent session this Shield belongs to (EX-027). Default: resolveSessionKey() (EXORCIST_SESSION, else the agent's process). */
+  sessionKey?: string;
 };
 
 export type ShieldContext = {
@@ -254,8 +260,27 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
     if (typeof judge === 'string') log(`AI review is on in the policy, but ${judge}. The signature checks still run.`);
     else review = new AiReview(judge, { log });
   }
+  // EX-027, the Session Guard: facts about this agent session are shared with
+  // the Shields of its other servers through <state folder>/sessions/<key>/.
+  // Missing or invalid capability rules do not stop the Shield: the guard then
+  // works from what it can see without them (secrets, canaries and attacks in
+  // results, secrets-file reads, hosts in calls).
+  let session: SessionGuard | undefined;
+  let capabilityRules: CapabilityRule[] = [];
+  if (policy.policy.sessionGuard !== 'off') {
+    const caps = await loadCapabilityRules(o.definitionsDir);
+    if (caps.ok) capabilityRules = caps.rules;
+    else log(`${caps.error}. The Session Guard (EX-027) still counts secrets and attacks in results and hosts in calls, but cannot tell which tools read web pages or send messages.`);
+    const wanted = o.sessionKey ?? resolveSessionKey();
+    session = new SessionGuard(new FileSessionStore(o.dir, isSessionKey(wanted) ? wanted : `p${process.ppid}`), { writer: String(process.pid) });
+    log(`Session Guard (EX-027): ${policy.policy.mode === 'monitor' ? 'monitor' : policy.policy.sessionGuard}, session ${session.key}.`);
+  }
+  const serverSpec: ServerSpec | undefined = o.launch ? { command: o.launch.command, args: o.launch.args } : o.url ? { url: o.url } : undefined;
+
   const engine = new ShieldEngine({
     server: o.server, io, policy: policy.policy, defs,
+    ...(session ? { session } : {}),
+    capabilities: { rules: capabilityRules, ...(serverSpec ? { server: serverSpec } : {}) },
     ...(canaries.length > 0 ? { canaries } : {}),
     ...(lockExpected ? { expected: lockExpected } : {}),
     ...(review ? { aiFindings: (fp: string) => (review as AiReview).findings(fp) } : {}),

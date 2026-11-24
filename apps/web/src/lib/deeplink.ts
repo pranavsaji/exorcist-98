@@ -13,7 +13,7 @@ import { parseGithubUrl } from './github';
  */
 
 /** The Possession Lab scenarios a link may name (same ids as the Shield simulator). */
-export const LAB_SCENARIOS = ['rug-pull', 'poisoned-tool', 'secret-leak', 'unknown-host', 'poisoned-result', 'canary'] as const;
+export const LAB_SCENARIOS = ['rug-pull', 'poisoned-tool', 'secret-leak', 'unknown-host', 'poisoned-result', 'canary', 'trifecta'] as const;
 export type LabScenario = (typeof LAB_SCENARIOS)[number];
 
 export const OPEN_TARGETS = ['byoa', 'field', 'map'] as const;

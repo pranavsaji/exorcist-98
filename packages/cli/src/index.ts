@@ -38,7 +38,8 @@ Commands:
   lock               Write exorcist.lock, the team's record of its MCP tools; with
                      --check, exit 1 if a tool changed (see: exorcist lock --help)
   vault <command>    Quarantine and restore MCP servers, hooks and steering files
-  approve <kind>     Approve a changed tool or a host (see: exorcist approve --help)
+  approve <kind>     Approve a changed tool, a host, a server or a held session
+                     (see: exorcist approve --help)
   alerts             Show recent shield alerts
   init [folder]      Add hooks and steering to a Kiro project (--kiro: also the
                      reviewer agent and a summary; --shield: wrap .kiro/settings/mcp.json)
