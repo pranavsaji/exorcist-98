@@ -5,11 +5,16 @@ name: Release to npm
 # commit and workflow that built it, so users can check that what they install
 # came from this repository (npm audit signatures).
 #
-# One-time setup by the owner on npmjs.com, for each of the two packages:
-# Settings -> Trusted publishing -> GitHub Actions, repository
-# pranavsaji/exorcist-98, workflow release.yml. No npm token is stored here.
+# One-time setup by the owner:
+# 1. GitHub: Settings -> Environments -> new environment `npm-release`, with
+#    yourself as a required reviewer and deployments limited to `main` and
+#    `release/*` branches. Every run then waits for your approval.
+# 2. npmjs.com, for each of the two packages: Settings -> Trusted publishing
+#    -> GitHub Actions, repository pranavsaji/exorcist-98, workflow
+#    release.yml, environment npm-release. npm then accepts only OIDC tokens
+#    from that environment. No npm token is stored here.
 #
-# Run it from the Actions tab (Run workflow) on the release commit.
+# Run it from the Actions tab (Run workflow) on the release branch.
 on:
   workflow_dispatch:
     inputs:
@@ -22,7 +27,10 @@ permissions:
 
 jobs:
   publish:
+    # Only from main or a release branch, never from a feature or fork branch.
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
     runs-on: ubuntu-latest
+    environment: npm-release
     permissions:
       contents: read
       id-token: write
