@@ -123,7 +123,7 @@ describe('package', () => {
     expect(manifest.main).toBe('./dist/extension.js');
     expect(manifest.engines.vscode).toMatch(/^\^1\.\d+\.0$/);
     expect(manifest.publisher).toBe('exorcist-98');
-    expect(manifest.license).toBe('MIT');
+    expect(manifest.license).toBe('Apache-2.0');
     expect(manifest.activationEvents).toEqual(['onStartupFinished']);
   });
 

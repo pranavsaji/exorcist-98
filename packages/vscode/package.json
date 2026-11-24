@@ -4,7 +4,7 @@
   "description": "Antivirus for the files AI coding agents obey: live diagnostics for prompt injection, hidden characters made visible, and a one-click exorcism. Works offline and never runs anything.",
   "version": "0.1.0",
   "publisher": "exorcist-98",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "private": true,
   "icon": "icon.png",
   "engines": {

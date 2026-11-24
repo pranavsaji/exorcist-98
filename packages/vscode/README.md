@@ -98,5 +98,5 @@ need a network or local records, so they are not part of the extension. Run
 
 ## License
 
-MIT. Exorcist 98 is a Kiroween 2026 hackathon project:
+Apache-2.0, like the rest of the project. Exorcist 98 is a Kiroween 2026 hackathon project:
 [github.com/pranavsaji/exorcist-98](https://github.com/pranavsaji/exorcist-98).
