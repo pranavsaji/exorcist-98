@@ -162,6 +162,12 @@ This writes Kiro hooks that block `git commit` while secrets or canary tokens ar
 - A ghost count in the status bar and a *Scan workspace* command.
 - Read-only and offline: it never runs anything from the workspace and makes no network request, so it also runs in Restricted Mode, where a repository's own settings cannot switch it off.
 
+Running inside Kiro on a poisoned steering file: the Problems panel, the decoded hidden message on hover, and the *Exorcise* quick fix next to Kiro's own *Ask Kiro to Fix*.
+
+| Findings in Kiro | Hidden message decoded | One-click Exorcise |
+|---|---|---|
+| ![Exorcist 98 findings in Kiro's Problems panel](docs/media/kiro-extension-problems.png) | ![Hover decoding a hidden tag-character message](docs/media/kiro-extension-ouija-hover.png) | ![Exorcise quick fix in Kiro](docs/media/kiro-extension-quickfix.png) |
+
 Not on Open VSX yet. Build and install it from this repository:
 
 ```sh

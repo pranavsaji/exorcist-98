@@ -219,6 +219,7 @@ export const OUTSIDE: string[] = [
   'Four M5 features were built without Kiro: Bring Your Own Attack, the Haunted House Map (lethal trifecta, EX-023), Exorcise, and the Detonation Chamber.',
   'The M5 security-review rounds on what reaches Amazon Bedrock (commits `d16476c` to `2f267bd`) came after the usage limit, outside Kiro.',
   'This page, `docs/HOW_KIRO.md`, the six M5 steering files, the two agent configs in `.kiro/agents/`, `EXORCIST_MCP_NO_QUOTES` and `exorcist init --kiro` were written with Claude Code on 2026-11-23.',
+  'The editor extension Exorcist 98 for Kiro (`packages/vscode`) was written with Claude Code on 2026-11-24. It runs inside Kiro 1.5.11 (screenshots in `docs/media/kiro-extension-*.png`) and uses Kiro\'s editor, not Kiro\'s AI.',
   '`git log --oneline --grep "(Claude Code)"` lists the commits marked as finished outside Kiro.',
 ];
 
