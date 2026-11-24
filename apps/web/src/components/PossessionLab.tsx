@@ -14,7 +14,7 @@ const TONE_LABEL: Record<SimEvent['tone'], string> = { info: '', ok: 'SAFE', war
 function DiffView({ diff }: { diff: string }) {
   const lines = diff.split('\n').filter((l) => !l.startsWith('===') && !l.startsWith('Index'));
   return (
-    <pre className="lab-diff" aria-label="What changed in the tool">
+    <pre tabIndex={0} className="lab-diff" aria-label="What changed in the tool">
       {lines.map((l, i) => {
         const kind = l.startsWith('+') && !l.startsWith('+++') ? 'add' : l.startsWith('-') && !l.startsWith('---') ? 'del' : 'ctx';
         return (
@@ -40,7 +40,7 @@ function EventRow({ e, shielded }: { e: SimEvent; shielded: boolean }) {
         {e.ruleId && e.ruleId !== 'SHIELD' && <span className="lab-rule">{e.ruleId}</span>}
       </div>
       <p className="m-0 mt-0.5 text-[0.85rem] leading-snug">{e.text}</p>
-      {e.quote !== undefined && e.quote !== '' && <pre className="lab-quote">{e.quote}</pre>}
+      {e.quote !== undefined && e.quote !== '' && <pre tabIndex={0} className="lab-quote">{e.quote}</pre>}
       {e.diff && <DiffView diff={e.diff} />}
     </li>
   );

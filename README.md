@@ -49,6 +49,7 @@ No install, no sign-in. Every link below opens the live app on that exact moment
 |---|---|
 | [`/?demo=haunted`](https://exorcist-98.vercel.app/?demo=haunted) | The Haunted Repo (22 defanged attack files) scanned in well under a second: verdict, gauge, top threats, what to do next |
 | [`/?demo=rug-pull`](https://exorcist-98.vercel.app/?demo=rug-pull) | A trusted MCP tool turns malicious. The same attack, through the real Shield and without it, side by side |
+| [`/?demo=trifecta`](https://exorcist-98.vercel.app/?demo=trifecta) | The Lethal Trifecta: three harmless-looking steps across three servers, stopped by the Session Guard (EX-027) |
 | [`/?open=byoa`](https://exorcist-98.vercel.app/?open=byoa) | Bring Your Own Attack: paste any text and get the real scanner's and Shield's verdict |
 | [`/?open=map`](https://exorcist-98.vercel.app/?open=map) | The Haunted House Map of a config that forms the lethal trifecta |
 | [`/?open=field`](https://exorcist-98.vercel.app/?open=field) | What happened when we scanned 421 real public repositories |
@@ -102,6 +103,10 @@ An agent is dangerous when one session combines **private data**, **untrusted in
 Seven attacks (rug pull, poisoned tool, secret leak, unknown host, poisoned tool result, canary, lethal trifecta), each replayed twice from the same script: once through the **real Shield engine** (the code that runs on your machine, not an animation) and once with nothing in between. Step through them side by side and watch one side end *EXORCISED* and the other *POSSESSED*.
 
 ![The Possession Lab: the rug pull, protected versus compromised](docs/media/possession-lab.png)
+
+The newest, **The Lethal Trifecta**, needs the Session Guard (EX-027): an issue comment, a `.env` read and a chat message are each harmless alone, so no single-call check stops them. The Shield remembers that this session already took in untrusted text and read a secret, and holds the base64-encoded post that would close the loop ([watch it](https://exorcist-98.vercel.app/?demo=trifecta)).
+
+![The Lethal Trifecta: the encoded .env is held by EX-027 on the left and reaches the chat server on the right](docs/media/lethal-trifecta.png)
 
 ### Bring Your Own Attack
 
