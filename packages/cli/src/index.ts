@@ -40,7 +40,8 @@ Commands:
   vault <command>    Quarantine and restore MCP servers, hooks and steering files
   approve <kind>     Approve a changed tool or a host (see: exorcist approve --help)
   alerts             Show recent shield alerts
-  init [folder]      Add hooks and steering to a Kiro project
+  init [folder]      Add hooks and steering to a Kiro project (--kiro: also the
+                     reviewer agent and a summary; --shield: wrap .kiro/settings/mcp.json)
   canary <command>   Plant, list (--list) or remove (--remove) canary traps (EX-022)
   on-access          Hook helper: block a read of a file that hides instructions for the AI
   allow-read <file>  Let one file be read once (by its content hash)
