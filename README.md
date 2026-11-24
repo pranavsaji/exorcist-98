@@ -174,14 +174,13 @@ Running inside Kiro on a poisoned steering file: the Problems panel, the decoded
 |---|---|---|
 | ![Exorcist 98 findings in Kiro's Problems panel](docs/media/kiro-extension-problems.png) | ![Hover decoding a hidden tag-character message](docs/media/kiro-extension-ouija-hover.png) | ![Exorcise quick fix in Kiro](docs/media/kiro-extension-quickfix.png) |
 
-Not on Open VSX yet. Build and install it from this repository:
+On Open VSX as [`exorcist-98.exorcist-98-kiro`](https://open-vsx.org/extension/exorcist-98/exorcist-98-kiro): search *Exorcist 98* in Kiro's Extensions view, or run
 
 ```sh
-pnpm install && pnpm --filter exorcist-98-kiro package
-kiro --install-extension packages/vscode/exorcist-98-kiro-0.1.0.vsix   # or: code --install-extension ...
+kiro --install-extension exorcist-98.exorcist-98-kiro
 ```
 
-Details, and how it gets published to Open VSX: [`docs/EXTENSION.md`](docs/EXTENSION.md).
+To build it yourself instead: `pnpm install && pnpm --filter exorcist-98-kiro package`, then `kiro --install-extension packages/vscode/exorcist-98-kiro-0.1.0.vsix`. Details: [`docs/EXTENSION.md`](docs/EXTENSION.md).
 
 **The pieces individually:**
 

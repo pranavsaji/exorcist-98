@@ -80,6 +80,14 @@ character markers with the decoded message on hover, and the lightbulb offers
 `AGENTS.md` needs no setting. The output channel *Exorcist 98* logs what was
 scanned.
 
+## Published
+
+Version 0.1.0 is on Open VSX at
+<https://open-vsx.org/extension/exorcist-98/exorcist-98-kiro> (published
+2026-11-24 from the web upload; the file there is byte-identical to the
+`.vsix` built from `main`). The `exorcist-98` namespace is not verified yet,
+so Open VSX shows it without the verified badge.
+
 ## Publish to Open VSX (owner action)
 
 Publishing is done by the repository owner, not by an agent: it needs an

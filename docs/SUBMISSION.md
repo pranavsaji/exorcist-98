@@ -78,6 +78,7 @@ a quarantine vault) and pointed it at the files and tools an agent trusts.
   fix removes hidden characters. Read-only, no network, works in Restricted
   Mode. Seen running inside Kiro 1.5.11, where Kiro offers its own *Ask Kiro to
   Fix* on our findings (screenshots in the README).
+  On Open VSX: `kiro --install-extension exorcist-98.exorcist-98-kiro`.
 - **Ten more 90s antivirus ideas, brought back:** On-Access Scanning (a Kiro
   hook scans a file before the agent reads it; only the user can allow it, at a
   real terminal), the Ouija Decoder (reads invisible Unicode smuggling back
@@ -221,8 +222,6 @@ running it, and every gap written down (`docs/KNOWN_LIMITATIONS.md`).
   exfiltration instruction no signature caught), but it costs money per call.
 - A bigger benchmark corpus and more well-known MCP packages for the
   typosquat check.
-- Publish the editor extension to Open VSX so Kiro users can install it from
-  the Extensions panel.
 - Confirm Session Guard releases through an OS prompt (for example the
   keychain) instead of a file any program running as the user could write
   (`docs/KNOWN_LIMITATIONS.md`, S-027).
