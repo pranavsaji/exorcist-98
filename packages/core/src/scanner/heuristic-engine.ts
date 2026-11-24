@@ -200,8 +200,47 @@ export function looksLikeSecretValue(v: string): boolean {
   return true;                                                            // any other single token: fail closed
 }
 
-/** user:password@ in any URL, masked wherever it appears (same length). */
-const URL_USERINFO = /\b([a-z][a-z0-9+.\-]{0,20}:(?:\/\/)?)([^\s\/@:"']{1,256}):([^\s\/@"']{1,512})@/gi;
+/** Characters that end a user or password part when scanning back from '@'. */
+const USERINFO_STOP = new Set([' ', '\t', '\n', '\r', '/', '@', '"', "'", ':']);
+
+/**
+ * Mask the password in every scheme:user:password@ or scheme://user:password@
+ * (same length). Linear: from each '@' it walks back at most 512 + 256 + 23
+ * characters and never past the previous '@', so no input can make it slow.
+ */
+export function maskUserinfo(text: string): string {
+  if (!text.includes('@')) return text;
+  let chars: string[] | null = null;
+  let at = text.indexOf('@');
+  while (at !== -1) {
+    // password: back to ':'
+    let p = at - 1;
+    while (p >= 0 && at - p <= 512 && !USERINFO_STOP.has(text[p]!)) p--;
+    if (p >= 0 && text[p] === ':' && p < at - 1) {
+      const passStart = p + 1;
+      // user: back to ':' or '//'
+      let u = p - 1;
+      while (u >= 0 && p - u <= 256 && !USERINFO_STOP.has(text[u]!)) u--;
+      let schemeColon = -1;
+      if (u >= 0 && u < p - 1) {
+        if (text[u] === ':') schemeColon = u;
+        else if (text[u] === '/' && text[u - 1] === '/' && text[u - 2] === ':') schemeColon = u - 2;
+      }
+      if (schemeColon > 0) {
+        // scheme: 1-21 characters, starting with a letter
+        let sc = schemeColon - 1;
+        while (sc >= 0 && schemeColon - sc <= 21 && /[a-z0-9+.\-]/i.test(text[sc]!)) sc--;
+        const scheme = text.slice(sc + 1, schemeColon);
+        if (scheme.length > 0 && /^[a-z]/i.test(scheme)) {
+          chars ??= text.split('');
+          for (let i = passStart; i < at; i++) chars[i] = '*';
+        }
+      }
+    }
+    at = text.indexOf('@', at + 1);
+  }
+  return chars ? chars.join('') : text;
+}
 
 /** True for base64 or hex that decodes to readable words: content the judge must see. */
 function decodesToText(v: string): boolean {
@@ -303,7 +342,7 @@ export function maskForModel(text: string): string {
   for (const h of findSecrets(text)) {
     out = out.slice(0, h.offset) + redact(h.match).slice(0, h.match.length).padEnd(h.match.length, '*') + out.slice(h.offset + h.match.length);
   }
-  if (out.includes('@')) out = out.replace(URL_USERINFO, (_m, scheme: string, user: string, pass: string) => `${scheme}${user}:${'*'.repeat(pass.length)}@`);
+  out = maskUserinfo(out);
   return out.split('\n').map(maskAssignmentLine).join('\n');
 }
 

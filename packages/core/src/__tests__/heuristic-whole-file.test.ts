@@ -220,3 +220,15 @@ describe('passwords inside non-// addresses (security review, round 8)', () => {
     expect(maskForModel('contact mailto:help@example.invalid please')).toBe('contact mailto:help@example.invalid please');
   });
 });
+
+describe('URL password masking is linear (security review, round 9)', () => {
+  it('crafted inputs that made the old pattern slow finish fast', async () => {
+    const { maskUserinfo } = await import('../scanner/heuristic-engine.js');
+    const t0 = Date.now();
+    maskUserinfo('a:'.repeat(400_000) + '@');
+    maskUserinfo('key:' + 'b'.repeat(500_000) + '@');
+    maskUserinfo(('a:b:' + 'p'.repeat(500) + '@').repeat(2_000));
+    maskUserinfo('@'.repeat(1_000_000));
+    expect(Date.now() - t0).toBeLessThan(2_000);
+  });
+});
