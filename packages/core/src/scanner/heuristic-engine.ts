@@ -188,16 +188,17 @@ const KEY_TOKEN = /^[A-Za-z0-9_.\-\/:@]{1,128}$/;
  * prose or a command, so masking can never hide an instruction from the judge.
  */
 export function looksLikeSecretValue(v: string): boolean {
-  if (v.length < 4 || v.length > 4_096) return false;
-  if (/\s/.test(v)) return false;                                              // prose
-  if (/^[a-z][a-z0-9+.\-]*:/i.test(v) && !/^[A-Za-z0-9_\-]+:[A-Za-z0-9_\-]+$/.test(v)) return false; // scheme: URL
-  if (/(^|[^A-Za-z0-9])[a-z0-9\-]+\.[a-z]{2,}(\/|$|:)/i.test(v)) return false;     // domain-like host.tld/
-  if (/^(~|\/|\.\.?\/|[A-Za-z]:\\)/.test(v) || v.includes('../')) return false;   // file paths
-  if (/[|;&$`<>()]/.test(v)) return false;                                     // shell syntax
-  if (decodesToText(v)) return false;                                          // encoded content, not a key
-  // Credential-shaped: a letter-digit/symbol mix, or a long run of letters.
-  return /[0-9!@#%^*+=_\-\/.,~?]/.test(v) || v.length >= 16;
+  if (v.length < 4) return false;
+  if (/\s/.test(v)) return false;                                         // prose: an instruction needs words
+  if (/^[a-z][a-z0-9+.\-]*:\/\//i.test(v)) return false;                   // a URL: its userinfo is masked separately
+  if (/^(~|\/|\.\.?\/|[A-Za-z]:\\)/.test(v)) return false;               // file paths
+  if (/[|;&$`<>()]/.test(v)) return false;                                // shell syntax
+  if (decodesToText(v)) return false;                                     // encoded readable content, not a key
+  return true;                                                            // any other single token: fail closed
 }
+
+/** user:password@ in any URL, masked wherever it appears (same length). */
+const URL_USERINFO = /\b([a-z][a-z0-9+.\-]{0,20}:\/\/)([^\s\/@:"']{1,256}):([^\s\/@"']{1,512})@/gi;
 
 /** True for base64 or hex that decodes to readable words: content the judge must see. */
 function decodesToText(v: string): boolean {
@@ -299,6 +300,7 @@ export function maskForModel(text: string): string {
   for (const h of findSecrets(text)) {
     out = out.slice(0, h.offset) + redact(h.match).slice(0, h.match.length).padEnd(h.match.length, '*') + out.slice(h.offset + h.match.length);
   }
+  if (out.includes('://')) out = out.replace(URL_USERINFO, (_m, scheme: string, user: string, pass: string) => `${scheme}${user}:${'*'.repeat(pass.length)}@`);
   return out.split('\n').map(maskAssignmentLine).join('\n');
 }
 
