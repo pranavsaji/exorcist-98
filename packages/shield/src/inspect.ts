@@ -3,6 +3,7 @@ import type { VirusDefinition } from '@exorcist-98/core';
 import { hostAllowed } from './policy.js';
 import { hostsIn } from './hosts.js';
 import { detectParaphrase } from './paraphrase.js';
+import type { ParaphraseVerdict } from './paraphrase.js';
 import { describeCredential, findCredentials } from './secrets.js';
 
 export { hostsIn };
@@ -94,7 +95,16 @@ export function inspectCall(
 
 // ── tool results (server to agent) ────────────────────────────────────────────
 
-export type ResultVerdict = { action: 'allow' | 'block'; reasons: Reason[] };
+export type ResultVerdict = {
+  action: 'allow' | 'block';
+  reasons: Reason[];
+  /**
+   * Allowed, but suspicious: medium findings or a weak reworded-attack signal.
+   * Not enough to withhold the text; the Session Guard (EX-027) counts it as
+   * untrusted text.
+   */
+  notes?: Reason[];
+};
 
 /** The text parts of an MCP tool result. */
 export function extractResultText(result: unknown): string {
@@ -134,11 +144,27 @@ function paraphraseReasons(text: string): Reason[] {
   return [{ ruleId: 'EX-002', message: `${plainFor('EX-002', '').headline} (reworded or disguised: ${v.signals.join(' + ')})` }];
 }
 
+/** Medium findings and a weak paraphrase signal: worth remembering, not worth withholding. */
+function notesFrom(findings: ReturnType<typeof scanText>, para: ParaphraseVerdict): Reason[] {
+  const notes: Reason[] = [];
+  const f = findings.find((x) => x.severity === 'medium');
+  if (f) notes.push({ ruleId: f.ruleId, message: plainFor(f.ruleId, f.title).headline });
+  if (para.level === 'warn') notes.push({ ruleId: 'EX-002', message: `${plainFor('EX-002', '').headline} (weak signal: ${para.signals.join(' + ')})` });
+  return notes;
+}
+
 export function inspectResult(result: unknown, defs: VirusDefinition[]): ResultVerdict {
   const text = extractResultText(result);
   if (!text) return { action: 'allow', reasons: [] };
-  const reasons = [...reasonsFrom(scanText(text, 'tool-result', defs, '(tool result)')), ...paraphraseReasons(text)];
-  return reasons.length > 0 ? { action: 'block', reasons } : { action: 'allow', reasons: [] };
+  const findings = scanText(text, 'tool-result', defs, '(tool result)');
+  const para = detectParaphrase(text);
+  const reasons = [
+    ...reasonsFrom(findings),
+    ...(para.level === 'block' ? [{ ruleId: 'EX-002', message: `${plainFor('EX-002', '').headline} (reworded or disguised: ${para.signals.join(' + ')})` }] : []),
+  ];
+  if (reasons.length > 0) return { action: 'block', reasons };
+  const notes = notesFrom(findings, para);
+  return notes.length > 0 ? { action: 'allow', reasons: [], notes } : { action: 'allow', reasons: [] };
 }
 
 // ── tool definitions (server to agent, in tools/list) ─────────────────────────

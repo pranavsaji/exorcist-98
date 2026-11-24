@@ -17,6 +17,7 @@ The shield sits between Kiro and each MCP server. It pins every tool the first t
    Add `"aiReview": true` to have the AI judge (Amazon Bedrock; needs AWS_REGION and credentials, and costs a little per new tool) check every new tool description before the agent sees it.
    The shield also pins the program behind each server; set `"launchPin": "warn"` to start a changed program with an alert instead of refusing it.
    If the client supports MCP elicitation, a call to a host that is not allowed shows the user a prompt (allow once, or always allow the host); otherwise the call is refused with the exact `exorcist approve host` command.
+   The Session Guard (EX-027) is on by default (`"sessionGuard": "hold"`): once a session has taken in untrusted text and read private data, on any of its servers, a call that could send data out waits for the user. `"block"` refuses it, `"monitor"` only alerts, `"off"` turns it off.
 5. Tell the user to reconnect their MCP servers so Kiro starts them through the shield.
 
 ## When something is blocked
@@ -24,6 +25,7 @@ The shield sits between Kiro and each MCP server. It pins every tool the first t
 - Do not look for a way around it. Tell the user what was blocked and why.
 - A changed tool: the user reviews the diff in `exorcist alerts`, then runs `exorcist approve tool <server> <tool>` if they trust it.
 - An unknown host: the user runs `exorcist approve host <server> <host>`.
+- A call held by the Session Guard (EX-027): tell the user which page, issue or message you read and what you were about to send. Only the user decides; if they asked for it, they run `exorcist approve session <key>` (the key is in the alert). Never run it yourself.
 - A server that will not start because its program changed (EX-010): the user checks the change in `exorcist alerts`, then runs `exorcist approve server <server>` and reconnects it.
 - Never edit files in `.exorcist/` yourself.
 

@@ -188,7 +188,7 @@ function Verdict({ r }: { r: ByoaResult }) {
           {r.hidden.decoded ? (
             <>
               <p className="m-0 mt-1 font-semibold">The invisible text says:</p>
-              <pre className="lab-quote byoa-ouija">{r.hidden.decoded}</pre>
+              <pre tabIndex={0} className="lab-quote byoa-ouija">{r.hidden.decoded}</pre>
               <p className="m-0 mt-1 text-[0.8rem]">This is attacker text. It is only shown here, never followed.</p>
             </>
           ) : (
@@ -213,7 +213,7 @@ function Verdict({ r }: { r: ByoaResult }) {
                     <span className="text-[0.78rem]">line {f.line}, column {f.col}</span>
                   </div>
                   <p className="m-0 mt-1 text-[0.78rem] font-semibold">Quoted text:</p>
-                  <pre className="lab-quote">{revealHidden(f.span)}</pre>
+                  <pre tabIndex={0} className="lab-quote">{revealHidden(f.span)}</pre>
                   <p className="m-0 mt-1 text-[0.82rem]"><strong>How to fix it:</strong> {f.fix.trim()}</p>
                 </li>
               ))}
@@ -247,7 +247,7 @@ function Verdict({ r }: { r: ByoaResult }) {
               {r.shield.agentReceived && (
                 <>
                   <p className="m-0 mt-1 text-[0.78rem] font-semibold">What your AI got instead:</p>
-                  <pre className="lab-quote">{r.shield.agentReceived}</pre>
+                  <pre tabIndex={0} className="lab-quote">{r.shield.agentReceived}</pre>
                 </>
               )}
             </>

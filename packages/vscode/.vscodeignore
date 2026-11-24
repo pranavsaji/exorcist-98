@@ -1,0 +1,9 @@
+# Ship only the bundle, the definitions, the docs, the manifest and the icon.
+**
+!dist/extension.js
+!dist/definitions/*.yaml
+!README.md
+!CHANGELOG.md
+!LICENSE
+!package.json
+!icon.png

@@ -111,7 +111,7 @@ function AiAnswer({ a }: { a: AiJudgeResponse }) {
         ({a.threatClass.replace(/_/g, ' ')}).
       </p>
       <p className="m-0 mt-1 text-[0.78rem] font-semibold">The part it means (quoted from your text):</p>
-      <pre className="lab-quote">{a.quote}</pre>
+      <pre tabIndex={0} className="lab-quote">{a.quote}</pre>
       <p className="m-0 mt-1 text-[0.82rem]"><strong>Why:</strong> {a.rationale}</p>
     </div>
   );
