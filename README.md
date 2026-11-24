@@ -109,6 +109,12 @@ The 90s gave everyone the EICAR test file. Paste any text, say where your agent 
 
 ![Bring Your Own Attack: a booby-trapped web page, EXORCISED](docs/media/bring-your-own-attack.png)
 
+**Patterns are not enough, and the app says so.** Pick the *Polite request* sample: an attack written in ordinary words, asking the agent to post every environment variable to an issue tracker. The signatures honestly say CLEAN. Underneath, the **AI judge** gives a second opinion and catches it, quoting the exact sentence:
+
+![Signatures say CLEAN; the AI judge calls it credential exfiltration and quotes the sentence](docs/media/ai-judge.png)
+
+The AI judge on the public site is off unless the operator turns it on, with per-visitor limits and a daily call budget ([`docs/WEB_AI.md`](docs/WEB_AI.md)); when it is off, the panel says so and how to run it yourself.
+
 ### Field Report
 
 We pointed the scanner at **421 public MCP servers and agent-config repositories** in two held-out rounds and read every serious alert by hand. Round 1 exposed too many false alarms; every pattern got a general fix, measured on a fresh set of repositories. Serious false alarms fell from **4.0 to 0.24 per repository**. Real finds include a jailbreak hidden in base64 and a leaked GitHub token (repository withheld until it is revoked). Full method, every false alarm and the limits: [`docs/FIELD_REPORT.md`](docs/FIELD_REPORT.md).
@@ -368,7 +374,7 @@ Open, in plain words:
 
 - The newer CLI commands (on-access, exorcise, map, origin, lock, canary, update, detonate) are not in a published npm version yet; `init` installs the on-access hook disabled until they are.
 - The Shield's check-before-every-call fix and the on-access hook are tested with real processes and Kiro's restricted PATH, but have not yet been re-run inside Kiro IDE. The Power has not been installed through Kiro's Powers panel, and the two custom agents have not been loaded in Kiro.
-- Detection is mostly signatures; the AI judge caught 10 of 10 reworded attacks on each of our two small test sets, but it needs your AWS account and costs money to run. The website runs signatures only.
+- Detection is mostly signatures; the AI judge caught 10 of 10 reworded attacks on each of our two small test sets, but it needs an AWS account and costs money to run. On the public website it is off until the operator turns it on ([`docs/WEB_AI.md`](docs/WEB_AI.md)).
 
 Every known gap, with how sure we are of it, is in [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) and the `NOTES.md` of each `.kiro/specs/m5-*` spec.
 

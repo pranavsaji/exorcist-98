@@ -13,7 +13,7 @@
  * missing, every request shares one bucket: stricter, never looser.
  */
 
-export type ScanKind = 'github' | 'haunted-repo' | 'upload' | 'byoa';
+export type ScanKind = 'github' | 'haunted-repo' | 'upload' | 'byoa' | 'ai';
 
 type Bucket = { tokens: number; updated: number };
 type Policy = { capacity: number; refillPerMs: number };
@@ -28,8 +28,10 @@ export const POLICIES: Record<ScanKind, Policy> = {
   upload: { capacity: 6, refillPerMs: 1 / (2 * MINUTE) },
   // Bring Your Own Attack (m5-byoa): in memory and fast, like the Haunted Repo.
   byoa: { capacity: 20, refillPerMs: 1 / 6_000 },
+  // The AI judge costs money per check: 3 at once, then 1 every 3 minutes.
+  ai: { capacity: 3, refillPerMs: 1 / (3 * MINUTE) },
 };
-export const MAX_CONCURRENT: Record<ScanKind, number> = { github: 3, 'haunted-repo': 8, upload: 3, byoa: 8 };
+export const MAX_CONCURRENT: Record<ScanKind, number> = { github: 3, 'haunted-repo': 8, upload: 3, byoa: 8, ai: 2 };
 const MAX_BUCKETS = 10_000;
 
 export type Decision =
@@ -41,7 +43,7 @@ export function createLimiter(o: { policies?: Partial<Record<ScanKind, Policy>>;
   const maxConcurrent: Record<ScanKind, number> = { ...MAX_CONCURRENT, ...o.maxConcurrent };
   const now = o.now ?? (() => Date.now());
   const buckets = new Map<string, Bucket>();
-  const running: Record<ScanKind, number> = { github: 0, 'haunted-repo': 0, upload: 0, byoa: 0 };
+  const running: Record<ScanKind, number> = { github: 0, 'haunted-repo': 0, upload: 0, byoa: 0, ai: 0 };
 
   function take(key: string, p: Policy, t: number): number {
     let b = buckets.get(key);
@@ -74,6 +76,8 @@ export function createLimiter(o: { policies?: Partial<Record<ScanKind, Policy>>;
             ? `You have scanned a lot of repositories in a short time. Try again in ${mins} minute${mins === 1 ? '' : 's'}, or run the Exorcist 98 CLI on your own machine.`
             : kind === 'byoa'
               ? `Too many attacks checked in a short time. Try again in ${wait} seconds.`
+              : kind === 'ai'
+                ? `The AI judge costs money per check, so each visitor gets a few at a time. Try again in ${mins} minute${mins === 1 ? '' : 's'}, or run exorcist scan --ai with your own AWS account.`
               : `Too many scans in a short time. Try again in ${wait} seconds.`,
         };
       }

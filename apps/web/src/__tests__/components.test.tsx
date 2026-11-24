@@ -232,14 +232,14 @@ describe('Possession Lab: Bring Your Own Attack tab (m5-byoa)', () => {
     expect(html).toMatch(/id="lab-panel-byoa"[^>]*hidden/);
   });
 
-  it('the form has a labelled textarea capped at 20,000 characters, four placements and five samples', async () => {
+  it('the form has a labelled textarea capped at 20,000 characters, four placements and six samples', async () => {
     const { ByoaLab } = await import('@/components/ByoaLab');
     const html = renderToStaticMarkup(<ByoaLab />);
     expect(html).toMatch(/<label for="byoa-text"[^>]*>Text to check \(up to 20,000 characters\)<\/label>/);
     expect(html).toMatch(/<textarea id="byoa-text"[^>]*maxLength="20000"/);
     expect((html.match(/type="radio"/g) ?? []).length).toBe(4);
     for (const label of ['A README / rules file the agent reads', 'An MCP tool description', 'A tool result', 'Tool call arguments (JSON)']) expect(html).toContain(label);
-    expect((html.match(/byoa-sample"/g) ?? []).length).toBe(5);
+    expect((html.match(/byoa-sample"/g) ?? []).length).toBe(6);
     expect(html).toContain('<legend');
   });
 });

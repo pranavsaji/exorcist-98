@@ -605,11 +605,34 @@ await step('Possession Lab: Bring your own attack gives a real verdict for paste
   // Let the verdict stamp finish animating in: axe measures contrast mid-fade otherwise.
   await page.waitForFunction(() => [...document.querySelectorAll('.byoa-stamp')].every((el) => el.getAnimations().every((a) => a.playState === 'finished')));
   const r2 = await axe('byoa-clean'); axeReports.push(r2);
+  // A reworded attack that patterns miss: the signatures say CLEAN, and the AI judge panel offers a second opinion.
+  await lab.getByRole('button', { name: /^Polite request/ }).click();
+  await lab.locator('.byoa-verdict-clean').waitFor({ timeout: 10000 });
+  const ai = lab.getByTestId('ai-judge');
+  await ai.waitFor({ timeout: 10000 });
+  const aiText = await ai.innerText();
+  const askBtn = ai.getByRole('button', { name: 'Ask the AI judge' });
+  let aiNote;
+  if (await askBtn.count()) {
+    if (process.env.E2E_AI === '1') {
+      // One real model call (two at most), only when asked for.
+      await askBtn.click();
+      await ai.locator('[data-ai-verdict]').waitFor({ timeout: 60000 });
+      const v = await ai.locator('[data-ai-verdict]').getAttribute('data-ai-verdict');
+      if (v !== 'malicious' && v !== 'suspicious') throw new Error('AI judge said ' + v + ' about the polite request');
+      await page.screenshot({ path: `${SHOTS}/14b-ai-judge.png` });
+      aiNote = `AI judge on: ${v}`;
+    } else aiNote = 'AI judge on (not clicked; set E2E_AI=1 to spend one check)';
+  } else {
+    if (!/Off on this public site/.test(aiText) || !/exorcist scan --ai/.test(aiText)) throw new Error('AI judge panel: ' + aiText.slice(0, 200));
+    aiNote = 'AI judge off, explained';
+  }
+  const r3 = await axe('byoa-ai-judge'); axeReports.push(r3);
   // Arrow keys move between tabs.
   await lab.getByRole('tab', { name: 'Bring your own attack' }).focus();
   await page.keyboard.press('ArrowLeft');
   if ((await lab.getByRole('tab', { name: 'Scripted attacks' }).getAttribute('aria-selected')) !== 'true') throw new Error('ArrowLeft did not switch tabs');
-  return `pasted -> EXORCISED; hidden whisper decoded; honest -> CLEAN; ${r1.violations.length + r2.violations.length} axe violation types`;
+  return `pasted -> EXORCISED; hidden whisper decoded; honest -> CLEAN; polite request -> CLEAN by patterns, ${aiNote}; ${r1.violations.length + r2.violations.length + r3.violations.length} axe violation types`;
 });
 
 await step('product page loads, links back to the desktop, and passes axe', async () => {

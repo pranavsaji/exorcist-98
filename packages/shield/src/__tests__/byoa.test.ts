@@ -72,10 +72,10 @@ const placement = fc.constantFrom<ByoaPlacement>(...BYOA_PLACEMENTS);
 // ── samples ──────────────────────────────────────────────────────────────────
 
 describe('BYOA samples (REQ-01.2)', () => {
-  it('has four or five defanged samples, one benign, one with hidden Unicode tag characters', () => {
+  it('has four to six defanged samples, one benign, one with hidden Unicode tag characters', () => {
     const samples = byoaSamples();
     expect(samples.length).toBeGreaterThanOrEqual(4);
-    expect(samples.length).toBeLessThanOrEqual(5);
+    expect(samples.length).toBeLessThanOrEqual(6);
     expect(samples.filter((s) => s.expect === 'clean').length).toBeGreaterThanOrEqual(1);
     expect(samples.some((s) => [...s.text].some((c) => (c.codePointAt(0) ?? 0) >= 0xe0000))).toBe(true);
     for (const s of samples) {

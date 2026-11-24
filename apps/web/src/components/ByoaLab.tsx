@@ -6,6 +6,7 @@ import { BYOA_MAX_CHARS, BYOA_PLACEMENTS, PLACEMENT_LABELS, byoaSamples } from '
 import type { ByoaPlacement, ByoaSample } from '@exorcist-98/shield/byoa-samples';
 import type { ByoaResult, ShieldAction } from '@exorcist-98/shield/byoa';
 import { SeverityBadge } from './SeverityBadge';
+import { AiJudgePanel } from './AiJudgePanel';
 import { revealHidden } from '@/lib/snippet';
 import { play } from '@/lib/sound';
 
@@ -39,6 +40,7 @@ export function ByoaLab() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ByoaResult | null>(null);
+  const [checked, setChecked] = useState<{ placement: ByoaPlacement; text: string; n: number } | null>(null);
   const [announce, setAnnounce] = useState('');
   const abort = useRef<AbortController | null>(null);
 
@@ -69,6 +71,7 @@ export function ByoaLab() {
       if (!res.ok || !body.verdict) throw new Error(body.error ?? 'The attack could not be checked. Try again.');
       const r = body as ByoaResult;
       setResult(r);
+      setChecked((c) => ({ placement: p, text: t, n: (c?.n ?? 0) + 1 }));
       setAnnounce(`Verdict: ${r.headline}`);
       play(r.verdict === 'clean' ? 'done-clean' : 'threat');
     } catch (e) {
@@ -160,6 +163,7 @@ export function ByoaLab() {
       <p className="sr-only" aria-live="polite">{announce}</p>
       {error && <p role="alert" className="m-0 font-semibold">{error}</p>}
       {result && <Verdict r={result} />}
+      {result && checked && <AiJudgePanel key={checked.n} placement={checked.placement} text={checked.text} />}
     </div>
   );
 }

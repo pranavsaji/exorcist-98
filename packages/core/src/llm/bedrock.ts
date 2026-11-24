@@ -48,17 +48,24 @@ export type CallCounts = { haiku: number; sonnet: number; failed: number };
  * so programs that bundle this module (the CLI) start and work without it
  * installed until AI analysis is actually asked for.
  */
+/** Explicit settings, for hosts that reserve the standard AWS variable names (Vercel). */
+export type BedrockClientOptions = {
+  region?: string;
+  credentials?: { accessKeyId: string; secretAccessKey: string; sessionToken?: string };
+};
+
 export class BedrockClientImpl implements BedrockClient, ChamberClient {
+  constructor(private readonly opts: BedrockClientOptions = {}) {}
   private client: BedrockRuntimeClient | null = null;
   private sdk: typeof import('@aws-sdk/client-bedrock-runtime') | null = null;
   readonly counts: CallCounts = { haiku: 0, sonnet: 0, failed: 0 };
 
   private async getClient(): Promise<BedrockRuntimeClient> {
     if (!this.client) {
-      const region = process.env['AWS_REGION'] ?? process.env['AWS_DEFAULT_REGION'];
+      const region = this.opts.region ?? process.env['AWS_REGION'] ?? process.env['AWS_DEFAULT_REGION'];
       if (!region) throw new Error('AWS_REGION environment variable is not set');
       this.sdk = await import('@aws-sdk/client-bedrock-runtime');
-      this.client = new this.sdk.BedrockRuntimeClient({ region });
+      this.client = new this.sdk.BedrockRuntimeClient(this.opts.credentials ? { region, credentials: this.opts.credentials } : { region });
     }
     return this.client;
   }
@@ -67,7 +74,7 @@ export class BedrockClientImpl implements BedrockClient, ChamberClient {
     try {
       const client  = await this.getClient();
       const sdk     = this.sdk as typeof import('@aws-sdk/client-bedrock-runtime');
-      const modelId = modelIdFor(params.model);
+      const modelId = modelIdFor(params.model, this.opts.region ? { ...process.env, AWS_REGION: this.opts.region } : process.env);
 
       const body = JSON.stringify({
         anthropic_version: 'bedrock-2023-05-31',
