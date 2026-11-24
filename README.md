@@ -154,6 +154,23 @@ npx @exorcist-98/cli init --kiro --shield # also run every local MCP server thro
 
 This writes Kiro hooks that block `git commit` while secrets or canary tokens are staged, scan an MCP config the moment it is saved, and (once a version with `on-access` is published) scan a file before the agent reads it; steering that tells the agent how to treat tool output; and an `exorcist-reviewer` custom agent that may only use the read-only tools of the Exorcist MCP server.
 
+**Editor extension: Exorcist 98 for Kiro** ([`packages/vscode`](packages/vscode/README.md), works in VS Code too):
+
+- Live diagnostics on the files agents obey (Kiro steering, specs, hooks and MCP configs, `AGENTS.md`, `CLAUDE.md`, `.cursorrules`, Copilot instructions, READMEs, any config with `mcpServers`), on open, edit, save and when an agent changes them on disk; each rule id links to its encyclopedia page.
+- Hidden characters drawn as visible markers (`ZWSP×2`, `RLO`, `TAG×51`); hover one to see the decoded hidden message (the Ouija board).
+- Quick fix *Exorcise: remove hidden characters*, the CLI's exorcise logic as one undoable edit; also fixes for hidden HTML comments and data-leaking images.
+- A ghost count in the status bar and a *Scan workspace* command.
+- Read-only and offline: it never runs anything from the workspace and makes no network request, so it also runs in Restricted Mode, where a repository's own settings cannot switch it off.
+
+Not on Open VSX yet. Build and install it from this repository:
+
+```sh
+pnpm install && pnpm --filter exorcist-98-kiro package
+kiro --install-extension packages/vscode/exorcist-98-kiro-0.1.0.vsix   # or: code --install-extension ...
+```
+
+Details, and how it gets published to Open VSX: [`docs/EXTENSION.md`](docs/EXTENSION.md).
+
 **The pieces individually:**
 
 | | |

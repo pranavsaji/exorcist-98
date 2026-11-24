@@ -1,0 +1,156 @@
+{
+  "name": "exorcist-98-kiro",
+  "displayName": "Exorcist 98 for Kiro",
+  "description": "Antivirus for the files AI coding agents obey: live diagnostics for prompt injection, hidden characters made visible, and a one-click exorcism. Works offline and never runs anything.",
+  "version": "0.1.0",
+  "publisher": "exorcist-98",
+  "license": "MIT",
+  "private": true,
+  "icon": "icon.png",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Linters",
+    "Other"
+  ],
+  "keywords": [
+    "kiro",
+    "security",
+    "prompt injection",
+    "mcp",
+    "ai agents",
+    "unicode",
+    "steering"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pranavsaji/exorcist-98.git",
+    "directory": "packages/vscode"
+  },
+  "homepage": "https://exorcist-98.vercel.app",
+  "bugs": {
+    "url": "https://github.com/pranavsaji/exorcist-98/issues"
+  },
+  "galleryBanner": {
+    "color": "#23163d",
+    "theme": "dark"
+  },
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true,
+      "description": "Exorcist 98 only reads files and never runs anything from the workspace, so it also scans folders you have not trusted (that is where hostile files are most likely). In Restricted Mode, workspace settings that could switch it off or hide findings are ignored.",
+      "restrictedConfigurations": [
+        "exorcist98.enable",
+        "exorcist98.minimumSeverity",
+        "exorcist98.showHiddenCharacters"
+      ]
+    },
+    "virtualWorkspaces": {
+      "supported": "limited",
+      "description": "Open files are scanned; the workspace scan reads files through the editor and may be slower on remote file systems."
+    }
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "exorcist98.scanWorkspace",
+        "title": "Scan workspace",
+        "category": "Exorcist 98"
+      },
+      {
+        "command": "exorcist98.exorciseFile",
+        "title": "Exorcise: remove hidden characters from this file",
+        "category": "Exorcist 98"
+      },
+      {
+        "command": "exorcist98.showProblems",
+        "title": "Show ghosts in the Problems view",
+        "category": "Exorcist 98"
+      }
+    ],
+    "configuration": {
+      "title": "Exorcist 98",
+      "properties": {
+        "exorcist98.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Scan the files AI agents read (steering, specs, hooks, MCP configs, AGENTS.md, CLAUDE.md, rules files, READMEs) and show what is hidden in them."
+        },
+        "exorcist98.extraGlobs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "More files to scan, as workspace-relative globs (for example `docs/agents/**` or `**/*.prompt.md`). The built-in list follows the Exorcist 98 scanner's own file roles."
+        },
+        "exorcist98.minimumSeverity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ],
+          "enumDescriptions": [
+            "Show every finding.",
+            "Hide low findings.",
+            "Show only high and critical findings.",
+            "Show only critical findings."
+          ],
+          "default": "low",
+          "description": "The lowest severity shown in the Problems view and counted in the status bar."
+        },
+        "exorcist98.showHiddenCharacters": {
+          "type": "boolean",
+          "default": true,
+          "description": "Draw a visible marker where a scanned file has invisible, direction-changing or smuggling characters."
+        },
+        "exorcist98.scanWorkspaceOnStartup": {
+          "type": "boolean",
+          "default": true,
+          "description": "Scan the agent files of the whole workspace when the editor starts, not only the files you open."
+        }
+      }
+    },
+    "colors": [
+      {
+        "id": "exorcist98.hiddenCharacterForeground",
+        "description": "Text color of the marker drawn where a hidden character is.",
+        "defaults": {
+          "dark": "#ff9de2",
+          "light": "#8a1a6b",
+          "highContrast": "#ffffff",
+          "highContrastLight": "#000000"
+        }
+      },
+      {
+        "id": "exorcist98.hiddenCharacterBackground",
+        "description": "Background of the marker drawn where a hidden character is.",
+        "defaults": {
+          "dark": "#5a1d4c",
+          "light": "#ffd6f2",
+          "highContrast": "#8a1a6b",
+          "highContrastLight": "#ffd6f2"
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "package": "vsce package --no-dependencies",
+    "vscode:prepublish": "node build.mjs"
+  },
+  "devDependencies": {
+    "@exorcist-98/core": "workspace:*",
+    "@types/vscode": "~1.90.0",
+    "@vscode/vsce": "^3.2.0",
+    "esbuild": "^0.25.0"
+  }
+}
