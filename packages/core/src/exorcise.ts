@@ -353,8 +353,13 @@ export function exorciseFile(input: ExorciseFileInput): FileExorcism {
   //    zero-width character can never leave a new run of selectors behind.
   let text = original;
   let shift = (o: number): number => o;
-  const fix001 = only.has('EX-001') && signatureFindings(findings, 'EX-001').length > 0;
-  const fix021 = only.has('EX-021') && (signatureFindings(findings, 'EX-021').length > 0 || fix001);
+  // Taking out a smuggled run of selectors can also leave a zero-width
+  // character next to an emoji that the scan had let pass, so it then counts
+  // as hidden. Both rules on: either finding clears both kinds.
+  const has001 = signatureFindings(findings, 'EX-001').length > 0;
+  const has021 = signatureFindings(findings, 'EX-021').length > 0;
+  const fix001 = only.has('EX-001') && (has001 || (has021 && only.has('EX-021')));
+  const fix021 = only.has('EX-021') && (has021 || fix001);
   const hiddenClasses = new Set<UnicodeClass>([...(fix001 ? RULE_CLASSES['EX-001'] : []), ...(fix021 ? RULE_CLASSES['EX-021'] : [])]);
   if (hiddenClasses.size > 0) {
     const r = removeHiddenUnicode(original, hiddenClasses);

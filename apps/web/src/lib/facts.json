@@ -1,0 +1,26 @@
+{
+  "note": "Written by scripts/facts.mjs. Do not edit by hand. Test and browser numbers come from the last run given to the script (--run-tests, --tests, --e2e); everything else is counted from the repository.",
+  "tests": 2042,
+  "testFiles": 137,
+  "benchmarkAttacksCaught": 21,
+  "benchmarkBenignClean": 21,
+  "browserSteps": 44,
+  "browserAxeViolationTypes": 0,
+  "propertyTests": 139,
+  "definitions": 25,
+  "specs": 17,
+  "steering": 10,
+  "hooks": 5,
+  "agents": 2,
+  "hauntedRepoFindings": 47,
+  "benchmarkAttacks": 21,
+  "benchmarkBenign": 21,
+  "fieldReport": {
+    "rounds": 3,
+    "round1Repos": 224,
+    "round2Repos": 197,
+    "round3Repos": 62,
+    "repos": 483,
+    "files": 405709
+  }
+}

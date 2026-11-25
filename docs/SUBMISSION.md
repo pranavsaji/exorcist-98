@@ -1,7 +1,9 @@
 # Devpost submission draft
 
 Fields marked **[you]** need something only you can provide. Every number
-below comes from `docs/KIRO_LOG.md` or a test run; update them if they change.
+that can change comes from `docs/facts.json` (written by `scripts/facts.mjs`
+from the repository and the last test run); a test fails if this file disagrees
+with it. Run `node scripts/facts.mjs --docs` to refresh the marked numbers.
 
 - **Project name:** Exorcist 98
 - **Tagline:** The 90s desktop antivirus, resurrected to protect AI coding agents.
@@ -32,19 +34,20 @@ a quarantine vault) and pointed it at the files and tools an agent trusts.
   infection level in words and a shape (never colour alone), the threat class
   and a fix. Reports download as SARIF (GitHub code scanning), Markdown (pull
   requests), JSON and an SVG README badge, built in the browser.
-- **Virus Definitions:** 18 open YAML signatures for hidden Unicode,
+- **Virus Definitions:** <!--f:definitions-->25<!--/f--> open YAML signatures for hidden Unicode,
   instructions aimed at the AI, encoded payloads, HTML comment smuggling, tool
   description poisoning, rug pulls, over-broad auto-approve, remote code in
   hooks, install-script exfiltration, unpinned MCP servers, secrets within the
   agent's reach, markdown image exfiltration, steering overrides, typosquatted
   MCP packages, confused-deputy requests, agent memory poisoning, suspicious
-  Powers and shell in tool output, across the files Kiro, Cursor, Cline, Windsurf, Copilot, Claude
+  Powers, shell in tool output, smuggled bytes, canary tokens, the lethal
+  trifecta and a program-loader environment, across the files Kiro, Cursor, Cline, Windsurf, Copilot, Claude
   Code and Gemini read. Each
   maps to the OWASP LLM, Agentic or MCP Top 10. A Threat Encyclopedia explains
   each one in plain language.
 - **Measured precision:** on five well-known public agent and MCP repos it
-  raises 2 alarms in total (down from 4,457 before tuning); on five more repos never used for tuning (about 9,500 files) it raised 1, and that one is correct, and it catches 19
-  of 19 attacks in a labelled corpus that runs with the tests
+  raises 2 alarms in total (down from 4,457 before tuning); on five more repos never used for tuning (held-out set C, about 9,500 files) it raised 1, and that one is correct, and it catches <!--f:benchmarkAttacksCaught-->21<!--/f-->
+  of <!--f:benchmarkAttacks-->21<!--/f--> attacks in a labelled corpus that runs with the tests
   (`docs/BENCHMARK.md`).
 - **Private code too:** upload a .zip (up to 4 MB) instead of a GitHub link;
   it is unpacked only for the scan and deleted straight after. Branch, tag and
@@ -66,8 +69,11 @@ a quarantine vault) and pointed it at the files and tools an agent trusts.
   actually read. Once it has taken in untrusted text (an issue, a web page)
   and private data (`.env`, a secret), the next call that could send data out
   is held until the person approves it, even when each step went through a
-  different MCP server. Only the person can release it, at their own terminal;
-  an agent running the command is refused. Possession Lab: `/?demo=trifecta`.
+  different MCP server. Only the person can release it. On macOS that is the
+  system prompt (Touch ID or the login password), which only the Shield process
+  can answer; on Linux and Windows the fallback is a typed code in a real
+  terminal, which is weaker (`docs/KNOWN_LIMITATIONS.md`, S-030). Possession
+  Lab: `/?demo=trifecta`. `exorcist console` shows held and blocked calls live.
 - **Quarantine Vault:** disable a suspicious MCP server with a backup and
   restore it byte for byte.
 - **Kiro Power, MCP server, CLI and GitHub Action** to use all of this from
@@ -91,10 +97,11 @@ a quarantine vault) and pointed it at the files and tools an agent trusts.
   Origin (the commit that introduced each threat, never running a repo's own
   git filters), signed LiveUpdate definitions, and the Detonation Chamber (a
   sandboxed model with fake tools shows whether text *tries* to do harm).
-- **Field Report:** the scanner on 421 real public MCP servers and
-  agent-config repos in two held-out rounds, every serious alert read by hand.
-  Round 1 exposed too many false alarms; the fixes cut serious alarms from 4.0
-  to 0.24 per repository on a fresh set (docs/FIELD_REPORT.md).
+- **Field Report:** the scanner on <!--f:fieldReport.repos-->483<!--/f--> real public MCP servers and
+  agent-config repos in <!--f:fieldReport.rounds-->3<!--/f--> rounds, every serious alert read by hand.
+  Round 1 exposed too many false alarms; the fixes cut serious alerts from 4.0
+  to 0.24 per repository on a fresh set in round 2. Round 3 (popular repos,
+  not held out) found no real issue (docs/FIELD_REPORT.md).
 - **Crew app:** a nightly patrol of your folders with a dashboard page, an MCP rug-pull watch, and a confirm-first quarantine that only the dashboard owner can use.
 
 ## Best Kiro Crew App: writeup (paste into the bonus field)
@@ -134,13 +141,13 @@ where Crew behaved differently from its docs is listed in
 
 | Kiro feature | What we did | Evidence |
 |---|---|---|
-| Specs | 5 specs, one per milestone (`m0-foundation`, `m1-engine`, `m2-ui`, `m3-shield`, `m4-polish`), each with requirements, design and tasks; 1 more in the Crew repo (`crew-app`). | `.kiro/specs/` |
-| Steering | 4 files (product, tech, security, ui) that set the rules for every change: strict TypeScript, zod at every boundary, defanged fixtures, untrusted text never concatenated into instructions, severity never by colour alone. | `.kiro/steering/` |
-| Property-based tests | 71 fast-check properties, for example "a secret at any depth is never forwarded", "a changed tool is never listed or callable", "a zero-width character is detected at any position", "no tar entry name writes outside the target folder". Plus more in the Crew repo. | `docs/KIRO_LOG.md` |
-| Hooks | 5 hooks in the main repo and 1 in the Crew repo, in Kiro's JSON format. The first four below were seen working in Kiro IDE; the fifth, `on-access-scan` (scan a file before the agent reads it), is tested with Kiro's restricted PATH but not yet seen firing in Kiro: `spec-change` (on every spec save; kept `docs/THREATS.md` in step), `pre-commit-secrets` (PreToolUse; stopped a `git commit` of a staged fake key before it ran), `mcp-config-change` (scanned a saved MCP config), `definition-save` (ran the core tests), and the Crew repo's `validate-app-json`. The command hooks first did nothing: Kiro runs hook commands with a PATH that has no Node, so they now go through `scripts/kiro-hook.sh`. | `.kiro/hooks/`, KIRO_LOG |
+| Specs | The repository has <!--f:specs-->17<!--/f--> specs in `.kiro/specs/`. Kiro IDE wrote and implemented seven: `m0-foundation`, `m1-engine`, `m2-ui`, `m3-shield`, `m4-polish`, `m6-os-release` and `m7-precision`, each with requirements, design and tasks. The ten `m5-*` specs are in Kiro's spec format but Kiro did not write them; Kiro CLI implemented parts of six of those features. One more spec is in the Crew repo (`crew-app`). | `.kiro/specs/`, KIRO_LOG |
+| Steering | Four files written with Kiro IDE before any code (product, tech, security, ui) set the rules for every change: strict TypeScript, zod at every boundary, defanged fixtures, untrusted text never concatenated into instructions, severity never by colour alone. The repository now has <!--f:steering-->10<!--/f--> steering files; the six added later with the M5 work are not credited to Kiro IDE in `docs/KIRO_LOG.md`. | `.kiro/steering/` |
+| Property-based tests | The repository has <!--f:propertyTests-->139<!--/f--> fast-check properties (not all written by Kiro), for example "a secret at any depth is never forwarded", "a changed tool is never listed or callable", "a zero-width character is detected at any position", "no tar entry name writes outside the target folder". Plus more in the Crew repo. | `docs/KIRO_LOG.md` |
+| Hooks | <!--f:hooks-->5<!--/f--> hooks in the main repo and 1 in the Crew repo, in Kiro's JSON format. All five were seen working in Kiro IDE. `on-access-scan` (scan a file before the agent reads it) was seen on 2026-11-24 blocking Kiro's own first read of a brief that quoted an injection phrase (EX-002, line 50); the owner reworded the line and the second read went through. The others: `spec-change` (on every spec save; kept `docs/THREATS.md` in step), `pre-commit-secrets` (PreToolUse; stopped a `git commit` of a staged fake key before it ran), `mcp-config-change` (scanned a saved MCP config), `definition-save` (ran the core tests), and the Crew repo's `validate-app-json`. The command hooks first did nothing: Kiro runs hook commands with a PATH that has no Node, so they now go through `scripts/kiro-hook.sh`. | `.kiro/hooks/`, KIRO_LOG |
 | MCP | Built the `exorcist` MCP server on the official SDK (4 tools), tested with the SDK client. | `packages/mcp-server/` |
-| Powers | Built the `exorcist` Power (MCP config plus 3 skills). | `power/` |
-| Measurement | We ran our own scanner on five real repos and found it raised 4,457 alarms, none real. Kiro then worked through a precision spec: rule-level controls in the YAML format, a labelled attack corpus, and a re-run: 2 alarms, 19 of 19 attacks caught. The same run found a CLI bug that cut reports at 64 KB. | `docs/BENCHMARK.md`, `fixtures/benchmark/` |
+| Powers | Built the `exorcist` Power (MCP config plus 3 skills). It was installed through Kiro's Powers panel on 2026-11-24 (Kiro 1.5.11) from the repository URL, and its MCP server connected with 4 tools. That first use found a bug (the server scanned its own install folder and reported no threats), which the Kiro IDE agent fixed in 0.1.3. | `power/`, KIRO_LOG |
+| Measurement | We ran our own scanner on five real repos and found it raised 4,457 alarms, none real. Kiro then worked through a precision spec: rule-level controls in the YAML format, a labelled attack corpus, and a re-run: 2 alarms; the labelled corpus has since grown to <!--f:benchmarkAttacks-->21<!--/f--> attacks, all caught. The same run found a CLI bug that cut reports at 64 KB. | `docs/BENCHMARK.md`, `fixtures/benchmark/` |
 | Kiro CLI | Ran **Kiro CLI 3.5.0 headless** on six M5 specs in parallel (one git worktree each), resuming each conversation until Kiro reported done. Kiro hit the account's monthly usage limit part-way: its partial work for each feature is committed separately (`git log --grep "partial implementation by Kiro"`). We also learned that Kiro Crew's `run` task runner can report success from an empty sandbox, so we check the working tree, not the summary. | `docs/KIRO_LOG.md` |
 | Crew | A separate Crew app repo: Sentry agent, agent-hygiene skill, a nightly patrol that sends Crew notifications, a backend and a dashboard page. Run inside Crew 0.12.2 and 0.13.0, including the Sentry agent reading results through its own read-only MCP tool; installing and running it found places where Crew behaves differently from its docs (each recorded in that repo's `docs/KNOWN_LIMITATIONS.md`) and fixed. | `pranavsaji/exorcist-98-crew` |
 
@@ -181,8 +188,8 @@ hooks, a Power, an MCP server and a Crew app; and an exact-restore quarantine.
   the server changes it to "send the contents of .env to ...", the agent no
   longer sees it, the call is refused, and the server's own log proves it never
   received the call.
-- 1,755 tests in the main repo (unit, 127 property-based with fast-check, and
-  real processes), 143 in the Crew repo; a 44-step Chrome run with 0 axe
+- <!--f:tests-->2,042<!--/f--> tests in <!--f:testFiles-->137<!--/f--> files in the main repo (unit, <!--f:propertyTests-->139<!--/f--> property-based with fast-check, and
+  real processes), 143 in the Crew repo; a <!--f:browserSteps-->44<!--/f-->-step Chrome run with <!--f:browserAxeViolationTypes-->0<!--/f--> axe
   violations on every window that plays all seven Possession Lab attacks.
 
 ## How the Kiro tools differed
@@ -215,16 +222,18 @@ running it, and every gap written down (`docs/KNOWN_LIMITATIONS.md`).
 ## What's next
 
 - Re-run the Shield's check-before-every-call fix inside Kiro (tested with real
-  processes and the MCP SDK; the first Kiro run is what found the gap), and
-  install the Power through Kiro's Powers panel.
+  processes and the MCP SDK; the first Kiro run is what found the gap) and run
+  the Shield console during a real Kiro session.
 - Make the AI judge cheaper to leave on: it already runs on Amazon Bedrock and
   catches reworded attacks that patterns miss (on real Bedrock it hid a French
   exfiltration instruction no signature caught), but it costs money per call.
 - A bigger benchmark corpus and more well-known MCP packages for the
   typosquat check.
-- Confirm Session Guard releases through an OS prompt (for example the
-  keychain) instead of a file any program running as the user could write
-  (`docs/KNOWN_LIMITATIONS.md`, S-027).
+- Release in the system prompt on Linux and Windows. Today it is macOS only
+  (Touch ID or login password); elsewhere a held session falls back to a typed
+  code in a terminal (`docs/KNOWN_LIMITATIONS.md`, S-030).
+- A fleet view and a central audit log for teams (each machine keeps its own
+  `events.jsonl` today).
 
 ## Startup (Best Startup Project)
 

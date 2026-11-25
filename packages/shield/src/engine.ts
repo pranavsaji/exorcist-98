@@ -154,8 +154,15 @@ function advertiseListChanged(msg: JsonRpcMessage): JsonRpcMessage {
   };
 }
 
+/** Each reason once: a rule that matched twice (a signature and the reworded-attack check) is named once. */
 function joinReasons(reasons: Reason[]): string {
-  return reasons.map((r) => `${r.message} (${r.ruleId})`).join(' ');
+  const seen = new Set<string>();
+  const once = reasons.filter((r) => {
+    if (seen.has(r.ruleId)) return false;
+    seen.add(r.ruleId);
+    return true;
+  });
+  return once.map((r) => `${r.message} (${r.ruleId})`).join(' ');
 }
 
 /**

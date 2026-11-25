@@ -13,8 +13,11 @@ Shield allowed, held or blocked (and why), the servers it protects, its alerts,
 and what the Session Guard (EX-027) has seen in each agent session.
 
 It reads the state folder's event log (events.jsonl) and session records. It
-is read-only: nothing on the page can approve or release anything; use
-"exorcist approve ..." in your own terminal for that.
+is read-only: nothing on the page can approve or release anything. A held
+call is answered in your agent's approval prompt. A held session is released
+in the system prompt (Touch ID or your login password) when the Shield uses
+sessionRelease "os" (macOS only), and otherwise with "exorcist approve
+session <key>" in your own terminal.
 
 The page is served on 127.0.0.1 only, at a URL with a secret token. Stop with
 Ctrl+C.
@@ -73,6 +76,7 @@ export async function consoleCommand(argv: string[], io: Io, deps: ConsoleDeps =
   io.out(`Exorcist 98 Shield console (read-only) for ${dir}`);
   io.out(`  ${server.url}`);
   io.out('Only this machine can open it, and only with the token in the URL. Press Ctrl+C to stop.');
+  io.out('Read-only. A held session is released in the system prompt when the Shield uses OS release (macOS), otherwise with "exorcist approve session <key>" in your own terminal.');
   if (p.values['no-open'] !== true) {
     const opener = deps.open ?? ((url: string) => {
       const c = openCommand(process.platform, url);

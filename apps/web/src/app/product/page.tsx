@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import facts from '@/lib/facts.json';
 import { BookIcon, GhostIcon, ShieldIcon, SkullIcon } from '@/components/Icons';
 
 export const metadata: Metadata = {
@@ -13,7 +14,7 @@ const FOUNDER = { name: 'Pranav Saji', github: 'https://github.com/pranavsaji', 
 
 function Panel({ title, icon, children }: { title: string; icon?: ReactNode; children: ReactNode }) {
   return (
-    <section className="win relative !max-h-none !max-w-full" aria-labelledby={`panel-${title}`}>
+    <section className="win win-flow relative !max-h-none !max-w-full" aria-labelledby={`panel-${title}`}>
       <div className="titlebar" data-active="true">
         {icon}
         <h2 id={`panel-${title}`} className="m-0 flex-1 truncate text-sm font-bold">{title}</h2>
@@ -32,12 +33,12 @@ const PARTS = [
   {
     title: 'Virus Definitions',
     icon: <BookIcon size={28} />,
-    text: 'Open, readable signatures for hidden Unicode, instructions aimed at the agent, poisoned tool descriptions, remote code in hooks and leaky install scripts. Each maps to the OWASP lists for LLM, agentic and MCP risks.',
+    text: `${facts.definitions} open, readable signatures for hidden Unicode, instructions aimed at the agent, poisoned tool descriptions, remote code in hooks and leaky install scripts. Each maps to the OWASP lists for LLM, agentic and MCP risks.`,
   },
   {
     title: 'Real-Time Shield',
     icon: <ShieldIcon size={28} />,
-    text: 'A small firewall between your agent and its MCP servers. It pins every tool, hides one that changes after you approved it, stops secrets leaving in tool calls, and withholds tool results that try to give your agent orders.',
+    text: 'A small firewall between your agent and its MCP servers. It pins every tool, hides one that changes after you approved it, stops secrets leaving in tool calls, withholds tool results that try to give your agent orders, and holds data going out once a session has read untrusted text and a secret (the Session Guard). On macOS a held call is released in the system prompt (Touch ID or your login password), which only the Shield can answer.',
   },
   {
     title: 'Quarantine Vault',
@@ -97,6 +98,32 @@ export default function ProductPage() {
         </ul>
       </Panel>
 
+      <Panel title="What is in the box">
+        <ul className="m-0 list-disc pl-5">
+          <li>
+            <strong>Session Guard with OS release.</strong> Run the Lethal Trifecta demo and see an outgoing message held
+            until you answer in the system prompt. macOS only. On Linux and Windows a held session is released with a typed
+            code in a terminal, which is weaker.
+          </li>
+          <li>
+            <strong>Shield console</strong> (<code>exorcist console</code>): a read-only local page that shows every call
+            allowed, held or blocked as it happens. It is also the audit log you can read: each Shield writes its decisions
+            to <code>events.jsonl</code> in its state folder.
+          </li>
+          <li>
+            <strong>Editor extension</strong> for Kiro and VS Code (Open VSX): hidden characters drawn as markers, the hidden
+            message decoded on hover, and an Exorcise quick fix.
+          </li>
+          <li>
+            <strong>Kiro Power</strong> and an MCP server, so an agent can ask for a scan. <strong>Kiro Crew app</strong>:
+            a nightly patrol of your folders.
+          </li>
+          <li>
+            <strong>AI judge</strong> for reworded attacks no pattern catches. It needs your own AWS account, and on this
+            site it is off unless the operator turns it on.
+          </li>
+        </ul>
+      </Panel>
       <Panel title="Plans">
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="bevel-in p-3">
@@ -105,23 +132,22 @@ export default function ProductPage() {
             <ul className="mb-0 mt-2 list-disc pl-5">
               <li>Full System Scan, web and command line</li>
               <li>Open virus definitions</li>
-              <li>Real-Time Shield and Quarantine Vault</li>
+              <li>Real-Time Shield, Session Guard and Quarantine Vault</li>
               <li>GitHub Action with SARIF and pull-request comments</li>
+              <li>A team lockfile (<code>exorcist.lock</code>) that shares approved tool fingerprints through git</li>
             </ul>
           </div>
           <div className="bevel-in p-3">
             <h3 className="m-0 text-base font-extrabold">Team</h3>
             <p className="m-0 text-xs font-semibold">Planned, not built yet</p>
             <ul className="mb-0 mt-2 list-disc pl-5">
-              <li>Shared shield policies and approved-tool lists for a whole team</li>
               <li>A fleet view of every agent workspace and its infection level</li>
-              <li>Faster definition updates and an AI judge for paraphrased attacks</li>
-              <li>Audit log of blocked calls and approvals</li>
+              <li>Shield policies managed in one place for a whole team</li>
+              <li>A central audit log across machines (today each machine keeps its own)</li>
             </ul>
           </div>
         </div>
       </Panel>
-
       <Panel title="Built with Kiro">
         <p className="mt-0">
           Exorcist 98 was built for Kiroween 2026 with Kiro specs (one per milestone), steering, hooks and

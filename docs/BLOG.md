@@ -38,7 +38,7 @@ repo itself is safe to clone.
    when it finds something). Each finding opens to the exact line and quoted
    text, says how bad it is in words and a shape, never colour alone, and says
    how to fix it.
-2. **Virus Definitions.** Thirteen open YAML signatures, each mapped to the
+2. **Virus Definitions.** <!--f:definitions-->25<!--/f--> open YAML signatures, each mapped to the
    OWASP LLM, Agentic or MCP Top 10.
 3. **Real-Time Shield.** An MCP firewall. It fingerprints every tool when you
    approve it. If the tool changes, the agent stops seeing it, calls are
@@ -61,7 +61,7 @@ that is reading it.
 polish), each with requirements, design and tasks. Each requirement maps to a
 test, and the specs caught design problems before code did.
 
-**Property-based tests.** 52 fast-check properties. These say things like "for
+**Property-based tests.** <!--f:propertyTests-->139<!--/f--> fast-check properties. These say things like "for
 any tool definition, a changed fingerprint is never listed or callable" and "a
 secret at any depth in the arguments is never forwarded" and check them
 against thousands of generated inputs. That's how a security tool should be
@@ -90,10 +90,13 @@ never the quoted text.
 
 ## What's not done
 
-I keep a public list of limitations in the repo. The biggest gaps: the Shield
-hasn't yet run inside Kiro itself (it's tested with real processes and the
-official MCP SDK), the AI judge on Amazon Bedrock is wired but has never called
-the real service, and the packages aren't on npm yet.
+I keep a public list of limitations in the repo. The biggest gaps: Kiro caches
+the MCP tool list, which let a rug pull through the first time I ran the Shield
+inside Kiro, so the Shield now checks every call (tested with real processes
+and the official MCP SDK, not yet re-run inside Kiro). Releasing a held session
+in the system prompt (Touch ID) is macOS only. The AI judge on Amazon Bedrock
+has run against the real service, but it costs money per call, so it is off
+unless you turn it on. The CLI and MCP server are on npm (0.1.2).
 
 Try it: **[web app URL]**. Code: https://github.com/pranavsaji/exorcist-98.
 

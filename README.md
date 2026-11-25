@@ -4,399 +4,69 @@
 
 [![Kiroween 2026: Resurrection](https://img.shields.io/badge/Kiroween_2026-Resurrection-8a3fb0)](https://kiroween.devpost.com/)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-1%2C500%2B_passing-2ea44f)](#measured-not-claimed)
 [![Used Kiro](https://img.shields.io/badge/used-Kiro-6b3fd4)](docs/HOW_KIRO.md)
 
-**[Open the live app](https://exorcist-98.vercel.app)** ·
-**[Watch the Shield stop a rug pull](https://exorcist-98.vercel.app/?demo=rug-pull)** ·
-**[How we used Kiro](https://exorcist-98.vercel.app/how-kiro)** ·
-**[Field report](docs/FIELD_REPORT.md)** ·
-**[Kiro Crew app](https://github.com/pranavsaji/exorcist-98-crew)**
+AI coding agents obey what they read (READMEs, rules files, tool descriptions), and anyone can write those files.
+Exorcist 98 scans a repository for hidden instructions and risky agent settings, and runs a Shield between your agent and its MCP servers that stops a tool from turning on you.
 
-Your AI coding agent obeys what it reads: READMEs, rules and steering files, MCP tool descriptions, hooks, tool output. Anyone can write those. **Exorcist 98 checks them first.** It scans a repository for hidden instructions, poisoned or changed MCP tools and risky agent settings, and runs a real-time shield between your agent and its MCP servers.
+## Try it in 30 seconds
 
-![The Exorcist 98 desktop: one scan window, a guide ghost and the Haunted Repo button](docs/media/home.png)
+- **In the browser, nothing to install:** **[exorcist-98.vercel.app](https://exorcist-98.vercel.app)**, then click *Scan the Haunted Repo*. Or watch [a trusted tool turn bad and get blocked](https://exorcist-98.vercel.app/?demo=rug-pull), or [the Lethal Trifecta demo](https://exorcist-98.vercel.app/?demo=trifecta).
+- **On your own project:** `npx -y @exorcist-98/cli scan .`
 
-**Who it is for:** developers and teams who let Kiro, Cursor, Claude Code, Copilot, Cline, Windsurf or Gemini work in repositories and with MCP servers they did not write.
+<!-- PLACEHOLDER FOR THE OWNER: record a short GIF of `node scripts/demo-touchid.mjs` on a Mac, with the
+     Touch ID prompt open and the call held, and save it as docs/media/session-guard-touchid.gif.
+     Then replace the image below with ![...](docs/media/session-guard-touchid.gif). -->
+![The Shield console while the Session Guard holds a message after a GitHub issue and a .env read](docs/media/shield-console-desktop.png)
 
----
+*The Shield console during the Lethal Trifecta demo: an outgoing message is held after an issue and a `.env` read. The Touch ID prompt itself is not in this image, and this capture was taken with terminal release. A GIF with the prompt open is still to be recorded.*
 
-## Contents
+## What it protects you from
 
-- [Try it in one minute](#try-it-in-one-minute)
-- [Install](#install)
-- [The problem](#the-problem)
-- [What Exorcist 98 does: Scan, Shield, Disinfect](#what-exorcist-98-does-scan-shield-disinfect)
-- [A tour of the app](#a-tour-of-the-app)
-- [The Real-Time Shield](#the-real-time-shield)
-- [In your editor and your CI](#in-your-editor-and-your-ci)
-- [The optional AI layer](#the-optional-ai-layer)
-- [Measured, not claimed](#measured-not-claimed)
-- [How it compares to other MCP scanners](#how-it-compares-to-other-mcp-scanners)
-- [Virus definitions](#virus-definitions)
-- [How Exorcist 98 protects itself](#how-exorcist-98-protects-itself)
-- [How we used Kiro](#how-we-used-kiro)
-- [Architecture](#architecture)
-- [Run it locally](#run-it-locally)
-- [Status and known limits](#status-and-known-limits)
+Two plain-words terms used below:
 
----
-
-## Try it in one minute
-
-No install, no sign-in. Every link below opens the live app on that exact moment:
-
-| Link | What you see |
-|---|---|
-| [`/?demo=haunted`](https://exorcist-98.vercel.app/?demo=haunted) | The Haunted Repo (22 defanged attack files) scanned in well under a second: verdict, gauge, top threats, what to do next |
-| [`/?demo=rug-pull`](https://exorcist-98.vercel.app/?demo=rug-pull) | A trusted MCP tool turns malicious. The same attack, through the real Shield and without it, side by side |
-| [`/?demo=trifecta`](https://exorcist-98.vercel.app/?demo=trifecta) | The Lethal Trifecta: three harmless-looking steps across three servers, stopped by the Session Guard (EX-027) |
-| [`/?open=byoa`](https://exorcist-98.vercel.app/?open=byoa) | Bring Your Own Attack: paste any text and get the real scanner's and Shield's verdict |
-| [`/?open=map`](https://exorcist-98.vercel.app/?open=map) | The Haunted House Map of a config that forms the lethal trifecta |
-| [`/?open=field`](https://exorcist-98.vercel.app/?open=field) | What happened when we scanned 421 real public repositories |
-| [`/?repo=owner/name`](https://exorcist-98.vercel.app/?repo=modelcontextprotocol/servers) | Any public GitHub repository (branch, tag and commit links work too). The address bar is a shareable link to the scan |
-
-Private project? Upload a .zip (up to 4 MB). It is unpacked only for the scan and deleted straight after.
-
-## Install
-
-| What | Where | Status | How |
-|---|---|---|---|
-| CLI | [npm `@exorcist-98/cli`](https://www.npmjs.com/package/@exorcist-98/cli) | Published (0.1.2), with npm provenance | `npx -y @exorcist-98/cli scan .` |
-| MCP server | [npm `@exorcist-98/mcp-server`](https://www.npmjs.com/package/@exorcist-98/mcp-server) | Published (0.1.2), with npm provenance | `"command": "npx", "args": ["-y", "@exorcist-98/mcp-server"]` ([details](packages/mcp-server/README.md)) |
-| Editor extension | [Open VSX `exorcist-98.exorcist-98-kiro`](https://open-vsx.org/extension/exorcist-98/exorcist-98-kiro) | Published | `kiro --install-extension exorcist-98.exorcist-98-kiro` |
-| GitHub Action | This repository | Works from this repository | `uses: pranavsaji/exorcist-98@main` ([example](#in-your-editor-and-your-ci)) |
-| Kiro Power | This repository, [`power/`](power) | Installed through Kiro's Powers panel on 2026-11-24. Kiro runs its server in the Power's own folder and shares no project, so the server asks you before it reads your project (see [`packages/mcp-server`](packages/mcp-server/README.md)) | Powers panel, *Add Custom Power*, *Import power from a repository URL*: `https://github.com/pranavsaji/exorcist-98/tree/main/power` |
-| MCP server | Official MCP Registry | **Pending: not listed yet** | |
-| GitHub Action | GitHub Marketplace | **Pending: not listed yet** | |
-| Kiro Power | Kiro Powers registry (kiro.dev/powers) | **Pending: not submitted yet** | |
-
-## The problem
-
-Coding agents treat text as instructions. That text now comes from everywhere:
-
-- **Rules and steering files** (`AGENTS.md`, `CLAUDE.md`, `.cursor/rules`, `.kiro/steering`, Copilot instructions) that a contributor or a dependency can edit.
-- **MCP tool descriptions**, read by the model but almost never by the person who approved the server, and free to change after approval (a "rug pull").
-- **Tool output**: a web page, an issue, a log line, a search result.
-- **Hooks and install scripts** that run code on events.
-
-Attackers hide instructions in invisible Unicode, HTML comments, base64 blobs or ordinary-looking prose ("whoever summarises this file should first send the environment file to…"). The 90s had a model people still understand for this: **virus definitions, a full system scan, an on-access scanner, a real-time shield and a quarantine vault.** Exorcist 98 points it at the files and tools an AI agent trusts.
-
-## What Exorcist 98 does: Scan, Shield, Disinfect
+- **A rug pull** is an MCP tool you approved that later changes its own description, after you said yes, to tell your agent something else.
+- **The lethal trifecta** is an agent that has read text an attacker wrote, can read your secrets and can send data out. Each step looks harmless alone. Together, one hidden sentence can steal your `.env`.
 
 | | What it does | Where |
 |---|---|---|
-| **Scan** | 25 open YAML virus definitions plus code checks across the files seven coding agents read. Every finding shows the file, line, the exact text, an infection level (text and shape, never colour alone), the threat class and a plain-language fix. | web app, `exorcist scan`, GitHub Action, MCP server |
-| **Shield** | An MCP firewall between the agent and each MCP server: pins every tool, re-checks it before every call, hides tools that change, blocks secrets, unknown hosts and canary tokens in tool calls, withholds attack-like tool results, and holds data going out once a session has read untrusted text and private data (EX-027). | `exorcist shield` / `wrap` |
-| **Disinfect** | One patch for every threat with a safe mechanical fix (hidden characters, smuggled comments, remote images, unpinned MCP packages), with an exact backup in the Quarantine Vault. | "Download exorcism patch", `exorcist exorcise` |
+| **Scan** | <!--f:definitions-->25<!--/f--> open YAML virus definitions find hidden Unicode, instructions aimed at the AI, poisoned tool descriptions, remote code in hooks and more, in the files seven coding agents read. Every finding shows the file, line, the exact quoted text, a severity in words, the threat class and a fix. | web app, `exorcist scan`, GitHub Action, MCP server |
+| **Shield** | A firewall between the agent and each MCP server. It pins every tool and re-checks it before every call, hides a tool that changed, blocks secrets and canary tokens in tool calls, withholds attack-like tool results, and holds data going out once a session has read untrusted text and private data (the Session Guard). | `exorcist shield` / `wrap` |
+| **Disinfect** | One patch for every safe mechanical fix, with an exact backup in the Quarantine Vault. | `exorcist exorcise` |
 
-Around those three: an **on-access hook** that scans a file *before* Kiro's agent reads it, **canary traps**, a team lockfile for MCP tools (**`exorcist.lock`**), a **Haunted House Map** of risky server combinations, **signed definition updates**, a **Kiro Crew** app that patrols your folders every night, and an optional **AI layer** for reworded attacks no pattern can catch.
+Around those: an on-access hook that scans a file before Kiro's agent reads it, canary traps, a team lockfile for MCP tools, a map of risky server combinations, signed definition updates, a Kiro Crew app that patrols your folders nightly, and an optional AI judge for reworded attacks.
 
-## A tour of the app
+## Install
 
-### Full System Scan and results
+Only what is published today:
 
-Scan the Haunted Repo, any public GitHub repository, or a .zip. The results window opens with a verdict (POSSESSED, HAUNTED or CLEAN), a five-step infection gauge, counts by level, the top three threats in plain words, and three next steps: disinfect, save a report (SARIF for GitHub code scanning, Markdown for a pull request, JSON, an SVG README badge), and guard every pull request with the GitHub Action.
-
-![Results: verdict POSSESSED, infection gauge, top threats and what to do next](docs/media/results.png)
-
-### The Ouija board
-
-Invisible-text smuggling hides a whole message from people while the model reads it. Open any hidden-Unicode finding (EX-001) or variation-selector "emoji smuggling" finding (EX-021) and the Ouija board reads the hidden message back as plain text. It is shown as text, never as HTML, and the CLI escapes any terminal control characters in it.
-
-![The Ouija board reading a message hidden in Unicode tag characters](docs/media/ouija-board.png)
-
-### The Haunted House Map
-
-An agent is dangerous when one session combines **private data**, **untrusted input** and **a way out** (the "lethal trifecta"). Each MCP server looks harmless alone. The map puts every enabled server from a Kiro, Cursor, Claude Code, VS Code, Gemini or Cline config into its rooms and flags the configs that complete the trifecta (EX-023, critical when any server on a leg is auto-approved). Capability rules are data (`definitions/capabilities.yaml`), each with tested examples.
-
-![The Haunted House Map: Vault of Secrets, Open Door and Escape Tunnel](docs/media/haunted-house-map.png)
-
-### The Possession Lab
-
-Seven attacks (rug pull, poisoned tool, secret leak, unknown host, poisoned tool result, canary, lethal trifecta), each replayed twice from the same script: once through the **real Shield engine** (the code that runs on your machine, not an animation) and once with nothing in between. Step through them side by side and watch one side end *EXORCISED* and the other *POSSESSED*.
-
-![The Possession Lab: the rug pull, protected versus compromised](docs/media/possession-lab.png)
-
-The newest, **The Lethal Trifecta**, needs the Session Guard (EX-027): an issue comment, a `.env` read and a chat message are each harmless alone, so no single-call check stops them. The Shield remembers that this session already took in untrusted text and read a secret, and holds the base64-encoded post that would close the loop ([watch it](https://exorcist-98.vercel.app/?demo=trifecta)).
-
-![The Lethal Trifecta: the encoded .env is held by EX-027 on the left and reaches the chat server on the right](docs/media/lethal-trifecta.png)
-
-### Bring Your Own Attack
-
-The 90s gave everyone the EICAR test file. Paste any text, say where your agent meets it (a README, an MCP tool description, a tool result, tool-call arguments), and see what the real scanner and the real Shield do with it. The text is judged in memory and never stored or logged, and the response quotes at most 200 characters of it. A clean result comes with an honest caveat: patterns miss reworded attacks.
-
-![Bring Your Own Attack: a booby-trapped web page, EXORCISED](docs/media/bring-your-own-attack.png)
-
-**Patterns are not enough, and the app says so.** Pick the *Polite request* sample: an attack written in ordinary words, asking the agent to post every environment variable to an issue tracker. The signatures honestly say CLEAN. Underneath, the **AI judge** gives a second opinion and catches it, quoting the exact sentence:
-
-![Signatures say CLEAN; the AI judge calls it credential exfiltration and quotes the sentence](docs/media/ai-judge.png)
-
-The AI judge on the public site is off unless the operator turns it on, with per-visitor limits and a daily call budget ([`docs/WEB_AI.md`](docs/WEB_AI.md)); when it is off, the panel says so and how to run it yourself.
-
-### Field Report
-
-We pointed the scanner at **421 public MCP servers and agent-config repositories** in two held-out rounds and read every serious alert by hand. Round 1 exposed too many false alarms; every pattern got a general fix, measured on a fresh set of repositories. Serious false alarms fell from **4.0 to 0.24 per repository**. Real finds include a jailbreak hidden in base64 and a leaked GitHub token (repository withheld until it is revoked). Full method, every false alarm and the limits: [`docs/FIELD_REPORT.md`](docs/FIELD_REPORT.md).
-
-![The Field Report window](docs/media/field-report.png)
-
-It works on a phone too:
-
-<img src="docs/media/mobile.png" alt="Exorcist 98 at 390 pixels wide" width="300">
-
-## The Real-Time Shield
-
-`exorcist wrap .kiro/settings/mcp.json` runs every local MCP server in a Kiro (or Cursor, Claude Code, VS Code) config through the Shield; `exorcist unwrap` restores the file byte for byte.
-
-| Protection | How |
-|---|---|
-| **Rug pulls** | Every tool's name, description and input schema is pinned (SHA-256) on first use. A tool that changes is hidden from the agent and calls to it are refused, with a diff, until `exorcist approve tool`. |
-| **Cached tool lists** | Found by running the Shield inside Kiro: Kiro caches the tool list, so a changed tool was called with no alert. The Shield now holds each call, re-reads the server's tool list and refuses the call if the tool no longer matches its pin. |
-| **Poisoned tools** | New tool descriptions are checked against the definitions (and, if enabled, the AI judge) before the agent ever sees them. |
-| **Secrets and hosts** | Arguments carrying credentials are blocked; data going to a host that is not on the allowed list is held for approval. |
-| **Canary traps** | `exorcist canary plant` writes unique tokens into trap files. A token in any agent-to-server message (raw, base64, percent-encoded or split) is blocked in every mode, with a critical alert naming the trap. |
-| **Attack-like results** | Tool output that reads like instructions to the AI is withheld; the agent gets a refusal instead. |
-| **Lethal trifecta, at run time (Session Guard, EX-027)** | EX-023 says a config *could* combine untrusted text, private data and a way out. The Session Guard watches what really happens in one agent session, across all its Shield-wrapped servers: once the agent has taken in untrusted text (an issue, a web page, a flagged result) **and** read private data (a secret in a result, a `.env` or `~/.ssh` read, a private-data tool), the next call that could send data out is held for your approval, or refused; only a person should release it, with `exorcist approve session <key>`. On macOS the release is verified by the operating system (Touch ID or your login password) in a prompt only the Shield process can answer, so a forged `cli.json` no longer releases a call; policy `"sessionRelease"` chooses `"os"` or `"terminal"`. Elsewhere it is unchanged: the command refuses to run without an interactive terminal and asks for a typed one-time code (weaker: an agent driving a real terminal could read it). Each step alone looks harmless, so each alone is allowed. The Shields share facts only (tool, server, rule, time; never text or secrets) in the state folder. Policy `"sessionGuard": "hold"` (default), `"block"`, `"monitor"` or `"off"`. Limits: [S-027](docs/KNOWN_LIMITATIONS.md). |
-| **Changed programs** | The program behind each server (command, arguments, file contents, environment and loader variables such as `NODE_OPTIONS`) is pinned; a change holds the server until `exorcist approve server`. |
-| **Team lockfile** | `exorcist.lock` records the tool fingerprints a team expects. On a machine that never pinned a tool, drift from the lock is still a rug pull. The lock never approves anything, and `lock --check --static` runs in CI without starting a pull request's servers. |
-| **Quarantine Vault** | Disable an infected MCP server, hook or steering file with a backup, a diff and an exact restore. |
-
-**Watch it live: `exorcist console`.** Opens a local page that shows, as they happen, every tool call the Shields of a state folder allowed, held or blocked, the rule and the reason (EX-006 rug pull, EX-022 canary, EX-027 Session Guard...), which server, and what the Session Guard has seen in each agent session (untrusted text, private data, calls waiting for your answer). Each Shield appends its decisions to `.exorcist/events.jsonl` (bounded, names and rule ids only, never arguments or results); the console tails it. It is a **read-only** view: it cannot approve or release anything, which stays with you: in `exorcist approve ...` in your own terminal, or, when the Shield uses OS release (`sessionRelease: os`, macOS), in the system prompt (Touch ID or your login password). It listens on 127.0.0.1 only, behind a random token in the URL, with a Host check and a strict CSP. Limits: [S-028](docs/KNOWN_LIMITATIONS.md).
-
-**Try it (macOS, with you at the keyboard).** `pnpm --filter @exorcist-98/cli build && node scripts/demo-touchid.mjs` makes a temporary project with a fake `.env`, starts real Shields in front of fake servers, and plays the trifecta: an issue that hides an instruction, the `.env` read, then an email to an allowed host. The email is held and the system prompt asks for Touch ID (or your login password); Cancel it to see the call refused. It prints the `exorcist console` command to watch it live, and refuses to run in tests, in CI or off macOS.
-
-<img src="docs/media/shield-console-desktop.png" alt="The Shield console: tool calls allowed, held and blocked with rule ids, and an armed Session Guard holding a Slack message after a GitHub issue and a .env read" width="800">
-
-## In your editor and your CI
-
-**Kiro, in one command:**
-
-```sh
-npx @exorcist-98/cli init --kiro          # hooks, steering, the hook PATH wrapper and the reviewer agent
-npx @exorcist-98/cli init --kiro --shield # also run every local MCP server through the Shield
-```
-
-This writes Kiro hooks that block `git commit` while secrets or canary tokens are staged, scan an MCP config the moment it is saved, and scan a file before the agent reads it; steering that tells the agent how to treat tool output; and an `exorcist-reviewer` custom agent that may only use the read-only tools of the Exorcist MCP server.
-
-**Editor extension: Exorcist 98 for Kiro** ([`packages/vscode`](packages/vscode/README.md), works in VS Code too):
-
-- Live diagnostics on the files agents obey (Kiro steering, specs, hooks and MCP configs, `AGENTS.md`, `CLAUDE.md`, `.cursorrules`, Copilot instructions, READMEs, any config with `mcpServers`), on open, edit, save and when an agent changes them on disk; each rule id links to its encyclopedia page.
-- Hidden characters drawn as visible markers (`ZWSP×2`, `RLO`, `TAG×51`); hover one to see the decoded hidden message (the Ouija board).
-- Quick fix *Exorcise: remove hidden characters*, the CLI's exorcise logic as one undoable edit; also fixes for hidden HTML comments and data-leaking images.
-- A ghost count in the status bar and a *Scan workspace* command.
-- Read-only and offline: it never runs anything from the workspace and makes no network request, so it also runs in Restricted Mode, where a repository's own settings cannot switch it off.
-
-Running inside Kiro on a poisoned steering file: the Problems panel, the decoded hidden message on hover, and the *Exorcise* quick fix next to Kiro's own *Ask Kiro to Fix*.
-
-| Findings in Kiro | Hidden message decoded | One-click Exorcise |
+| What | Where | How |
 |---|---|---|
-| ![Exorcist 98 findings in Kiro's Problems panel](docs/media/kiro-extension-problems.png) | ![Hover decoding a hidden tag-character message](docs/media/kiro-extension-ouija-hover.png) | ![Exorcise quick fix in Kiro](docs/media/kiro-extension-quickfix.png) |
+| CLI | [npm `@exorcist-98/cli`](https://www.npmjs.com/package/@exorcist-98/cli), 0.1.2 | `npx -y @exorcist-98/cli scan .` |
+| MCP server | [npm `@exorcist-98/mcp-server`](https://www.npmjs.com/package/@exorcist-98/mcp-server), 0.1.2 | `"command": "npx", "args": ["-y", "@exorcist-98/mcp-server"]` |
+| Editor extension | [Open VSX `exorcist-98.exorcist-98-kiro`](https://open-vsx.org/extension/exorcist-98/exorcist-98-kiro) | `kiro --install-extension exorcist-98.exorcist-98-kiro` |
+| GitHub Action | this repository | `uses: pranavsaji/exorcist-98@main` |
+| Kiro Power | this repository, [`power/`](power) | Powers panel, *Add Custom Power*, *Import power from a repository URL*: `https://github.com/pranavsaji/exorcist-98/tree/main/power` |
 
-On Open VSX as [`exorcist-98.exorcist-98-kiro`](https://open-vsx.org/extension/exorcist-98/exorcist-98-kiro): search *Exorcist 98* in Kiro's Extensions view, or run
+The repository is at 0.1.3 (a Power fix); npm still has 0.1.2. Kiro setup in one command: `npx @exorcist-98/cli init --kiro`.
 
-```sh
-kiro --install-extension exorcist-98.exorcist-98-kiro
-```
+## Built with Kiro
 
-To build it yourself instead: `pnpm install && pnpm --filter exorcist-98-kiro package`, then `kiro --install-extension packages/vscode/exorcist-98-kiro-0.1.0.vsix`. Details: [`docs/EXTENSION.md`](docs/EXTENSION.md).
+- **Kiro IDE** wrote and implemented seven specs (requirements, design, tasks), among them the OS release and the precision work. Four steering files set the security rules before any code. The repository has <!--f:specs-->17<!--/f--> specs, <!--f:steering-->10<!--/f--> steering files and <!--f:hooks-->5<!--/f--> hooks.
+- **Seen working in Kiro:** the Power was installed through Kiro's Powers panel, and the on-access hook was seen firing in Kiro IDE: it blocked the agent's read of a brief that quoted an injection phrase ([`docs/KIRO_LOG.md`](docs/KIRO_LOG.md)).
+- **Kiro CLI** implemented parts of six features in headless runs. **Kiro Crew** runs the [nightly patrol app](https://github.com/pranavsaji/exorcist-98-crew).
+- Not everything is Kiro's work. The dated record of what Kiro did and did not do is [`docs/KIRO_LOG.md`](docs/KIRO_LOG.md); the feature-by-feature map is [How we used Kiro](https://exorcist-98.vercel.app/how-kiro).
 
-**The pieces individually:**
+## Measured
 
-| | |
-|---|---|
-| **On-access hook** | A Kiro `PreToolUse` hook (`exorcist on-access`) scans a file before the agent reads it and blocks the read if it carries high or critical threats. Only a person can allow a blocked file: `exorcist allow-read` needs a real terminal and, on macOS, a click in a system dialog, so an agent cannot approve its own read. Allowances live outside the repository, bound to the path and the content hash. |
-| **MCP server** | `@exorcist-98/mcp-server`: `scan_repo`, `scan_mcp_config`, `explain_finding`, `quarantine`. It returns plain-language findings without quoting file text by default, so it cannot become an injection channel itself. |
-| **Kiro Power** | `power/`, in the Agent Plugins layout, pointing at the MCP server. |
-| **Custom agents** | `.kiro/agents/exorcist-reviewer.json` (read-only Exorcist tools) and `exorcist-red-team.json` (writes defanged samples into the benchmark, runs only the benchmark test). |
-| **Kiro Crew app** | [`pranavsaji/exorcist-98-crew`](https://github.com/pranavsaji/exorcist-98-crew): a nightly patrol of your folders, a dashboard page, an MCP rug-pull watch, an owner-only quarantine and a read-only Sentry agent. Run inside Kiro Crew 0.12.2 and 0.13.0. |
+- <!--f:tests-->2,042<!--/f--> tests in <!--f:testFiles-->137<!--/f--> files (<!--f:propertyTests-->139<!--/f--> fast-check properties), and a <!--f:browserSteps-->44<!--/f-->-step Chrome run with an accessibility scan.
+- A corpus we wrote: <!--f:benchmarkAttacksCaught-->21<!--/f--> of <!--f:benchmarkAttacks-->21<!--/f--> attacks caught, <!--f:benchmarkBenignClean-->21<!--/f--> of <!--f:benchmarkBenign-->21<!--/f--> ordinary look-alikes left alone. It shows coverage of known patterns, not real-world recall.
+- On 5 public repositories never used for tuning (about 9,500 files) the scanner raised 1 finding, and it was correct ([`docs/BENCHMARK.md`](docs/BENCHMARK.md)).
+- A field report on <!--f:fieldReport.repos-->483<!--/f--> public repositories in <!--f:fieldReport.rounds-->3<!--/f--> rounds. The first round was noisy; after the fixes, serious alerts fell from 4.0 to 0.24 per repository on a fresh set. That set had no real threats, so it shows how quiet the scanner is, not how often an alert is right ([`docs/FIELD_REPORT.md`](docs/FIELD_REPORT.md)).
 
-**GitHub Action.** Every pull request is scanned and gets a comment; the check fails on high or critical threats:
+## Windows and Linux
 
-```yaml
-name: Exorcist 98
-on: [pull_request]
-permissions:
-  contents: read
-  pull-requests: write
-jobs:
-  scan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pranavsaji/exorcist-98@main
-        with:
-          fail-on: high
-          lock-check: true   # optional: fail if MCP tools drift from exorcist.lock (never starts a PR's servers)
-```
-
-**CLI.** `npx @exorcist-98/cli <command>`:
-
-| Command | What it does |
-|---|---|
-| `scan <path>` | Scan a folder or file (`--format text|json|sarif|markdown|badge`, `--fail-on`, `--ai`) |
-| `exorcise [path]` | Disinfect: print a patch for every safe mechanical fix; `--write` applies it with a vault backup |
-| `map [dir]` | Draw the Haunted House Map (EX-023) |
-| `origin [dir]` | Trace each threat to the commit and author that introduced it |
-| `shield`, `wrap`, `unwrap` | Run MCP servers behind the Real-Time Shield |
-| `lock [--check] [--static]` | Write or check `exorcist.lock` |
-| `canary plant|--list|--remove` | Canary traps (EX-022) |
-| `console` | Open the live, read-only Shield console in your browser (new in 0.1.2) |
-| `approve`, `alerts`, `vault` | Approve changed tools, hosts or servers, or a session the Session Guard holds (EX-027); read alerts; quarantine and restore |
-| `init [--kiro] [--shield]` | Wire a Kiro project |
-| `on-access`, `allow-read` | The on-access hook and its person-only allowance |
-| `update [--status]` | Install signed (Ed25519) definition updates, verified on download and on every load |
-| `detonate <file>` | The Detonation Chamber (experimental, needs AWS) |
-
-Every command above is in the published npm version, `@exorcist-98/cli@0.1.2`.
-
-## The optional AI layer
-
-Signatures are fast, free, deterministic and cannot be prompt-injected, so they screen everything. Reworded attacks get past patterns, so with `--ai` (your own Amazon Bedrock account) an **AI judge** reads every agent-facing file whole, even when no signature fired: Claude Haiku triages, Claude Sonnet confirms, and a verdict counts only if its quoted text is really in the file.
-
-Measured on reworded attacks that no signature catches, each with a benign look-alike ([`docs/AI_JUDGE_EVAL.md`](docs/AI_JUDGE_EVAL.md), [`docs/DETONATION.md`](docs/DETONATION.md)):
-
-| Layer | First set (10 attacks, 10 look-alikes) | Held-out set, never tuned on (10 + 10) |
-|---|---|---|
-| Signatures | 0 of 10 (by construction) | 0 of 10 (by construction) |
-| **AI judge** | **10 of 10 caught, 0 false alarms** | **10 of 10 caught, 0 false alarms** |
-| Detonation Chamber (a sandboxed model with fake tools) | 1 of 10, 0 false alarms | not run |
-
-The judge used to score 6 of 10. Tracing the misses showed the models had caught all four; our own check that the quoted text is really in the file threw the verdicts away when a quoted sentence wrapped across a line. That check now ignores whitespace differences and still requires the quoted words, in order. One run per set, 40 texts written by us: this shows the judge is not fooled by plain rewording, not real-world recall. The chamber scores low because a safety-trained model refuses to play a gullible agent; it stays available as an experiment.
-
-Before any text reaches a model, every credential-shaped value is masked at the same length (known key formats, values under secret-named keys, passwords inside URLs), credential files are never sent, and the model is told when values were masked. Destinations and instructions are never masked, so masking cannot hide an attack from the judge.
-
-## Measured, not claimed
-
-- **Tests:** about 1,600 unit, property-based (123 fast-check properties) and real-process tests, plus a 44-step Chrome run with an axe accessibility scan on every window: 0 violations.
-- **Labelled corpus** (`fixtures/benchmark/`): 19 of 19 defanged attacks caught, 19 of 19 look-alike ordinary files left alone. We wrote this corpus, so it shows coverage of known patterns, not real-world recall.
-- **Held-out public repositories** ([`docs/BENCHMARK.md`](docs/BENCHMARK.md)): on 5 repos never used for tuning (about 9,500 files) the scanner raised 1 finding, and it is correct.
-- **Field report** ([`docs/FIELD_REPORT.md`](docs/FIELD_REPORT.md)): 421 public repositories in two held-out rounds; serious false alarms from 4.0 to 0.24 per repository after the fixes. Round 2 contained no real threats, so it shows how quiet the scanner is, not how often an alert is right.
-- **Inside Kiro:** the Shield and MCP server ran inside Kiro IDE; four of the five Kiro hooks were seen firing there; the Crew app ran inside Kiro Crew.
-
-## How it compares to other MCP scanners
-
-Exorcist 98 is not the first tool to look at MCP servers. Open-source scanners such as Invariant Labs' **mcp-scan**, **mcp-security-guard**, **mcp-audit-scanner** and **trustmcp** already detect tool poisoning, and several pin tool descriptions by hash to catch rug pulls (mcp-scan also has a proxy mode). If you already run one of them, keep it.
-
-What Exorcist 98 adds, as far as we can tell from those projects' public documentation in November 2026:
-
-| | Exorcist 98 |
-|---|---|
-| **Checks a tool before every call** | Not only when the list is fetched: needed because agents such as Kiro cache the tool list. |
-| **The whole repository, not just MCP config** | READMEs, rules and steering files, hooks, install scripts, Powers, skills and memory files across seven agents. |
-| **Scans before the agent reads** | The on-access hook stops a poisoned file at the moment of reading, inside Kiro. |
-| **Measured false-alarm rate on repositories it was never tuned on** | Most tools publish detection counts; we publish both sides. |
-| **Disinfect, not just detect** | A patch for every safe mechanical fix, with an exact restore. |
-| **Lives where Kiro users work** | Hooks, steering, a Power, an MCP server, custom agents and a Crew app. |
-| **Runs on your machine** | The scanner and Shield send nothing anywhere. The AI layer is off unless you turn it on with your own AWS account. |
-
-## Virus definitions
-
-Open YAML in [`definitions/`](definitions/), each with severity, the files it applies to, per-rule precision controls, an OWASP mapping (LLM, Agentic or MCP Top 10) and a plain-language fix. Browse them in the app's [Threat Encyclopedia](https://exorcist-98.vercel.app/encyclopedia).
-
-| ID | Threat | Level |
-|---|---|---|
-| EX-001 | Hidden Unicode instructions (with the Ouija decoder) | critical |
-| EX-002 | Instructions addressed to an AI | high |
-| EX-003 | Encoded payload (base64, hex) | high |
-| EX-004 | HTML comment smuggling | high |
-| EX-005 | Tool description poisoning | critical |
-| EX-006 | MCP rug pull | critical |
-| EX-007 | Over-broad auto-approve | high |
-| EX-008 | Remote code in a hook (`curl … \| sh`) | critical |
-| EX-009 | Install-script exfiltration | critical |
-| EX-010 | Unpinned MCP server | medium |
-| EX-011 | Secrets within an agent's reach | high |
-| EX-012 | Markdown image exfiltration | high |
-| EX-013 | Typosquatted MCP package | high |
-| EX-014 | Steering override (approvals switched off) | high |
-| EX-015 | Shell commands in tool output | high |
-| EX-016, EX-017 | Unknown hosts and secrets in tool calls (enforced by the Shield) | high, critical |
-| EX-018 | Confused-deputy request | high |
-| EX-019 | Agent memory poisoning | high |
-| EX-020 | Suspicious Kiro Power | critical |
-| EX-021 | Smuggled bytes in variation selectors | critical |
-| EX-022 | Canary token out of its trap | critical |
-| EX-023 | Lethal trifecta across MCP servers | high or critical |
-| EX-024 | Detonated in the chamber (experimental) | critical |
-| EX-025 | An MCP server's environment changes how its program loads (`NODE_OPTIONS`, `LD_PRELOAD`…) | high |
-| EX-026 | An agent file too large to check (never skipped in silence) | medium |
-| EX-027 | Lethal trifecta completed in a live session: after untrusted text and private data, data going out is held (the Shield's Session Guard) | critical |
-
-## How Exorcist 98 protects itself
-
-A scanner reads attacker text all day, so it is built to be attacked:
-
-- Scanned text is never concatenated into instructions; AI prompts fence it with a per-call random nonce, and an AI verdict counts only if its quote is really in the file.
-- The web page inserts quoted text as text, never HTML; the CLI escapes terminal control, bidi and hidden characters in everything it prints.
-- Every regular expression runs under a time limit per file; a rule that runs out of time is reported, never silently clean.
-- Agent files are never skipped for size in silence (EX-026).
-- Tar and zip uploads refuse links, `..` paths and control characters in names; nothing is kept after a scan.
-- `exorcist origin` refuses to run git in a repository whose own config could run commands (filters, fsmonitor and similar), and reads only committed history.
-- Credentials are masked before any text reaches a model; credential files are never sent.
-- `allow-read` and `canary --remove` cannot be driven by an agent or turned against files outside their folders.
-
-The Detonation Chamber, canaries and every Haunted Repo sample use fake secrets built at run time and `.invalid` hosts.
-
-Releases and the repository itself:
-
-- npm releases are built and published from CI ([`release.yml`](.github/workflows/release.yml)) with **npm provenance**, so `npm audit signatures` proves a package came from this repository and commit. No npm token is stored anywhere.
-- CodeQL (security-extended queries) runs on every change and weekly; Dependabot groups dependency and Actions updates weekly.
-- The repository scans itself with its own GitHub Action on every pull request.
-- Found a way past the Shield or the scanner? See [`SECURITY.md`](SECURITY.md) for private reporting.
-
-## How we used Kiro
-
-Milestones M0 to M4 were specified spec by spec in **Kiro IDE**: five specs (requirements, design, tasks), four steering files that every change followed, property-based tests for the requirements, and hooks on file save and before commits. **Kiro CLI** implemented parts of six M5 features in headless runs, one git worktree per feature, until the account's monthly usage limit. The **Kiro Crew** app was built for Crew and run inside it.
-
-Kiro surprised us more than once, and each surprise made the product better: Kiro caches the MCP tool list (so the Shield now re-checks every call), Kiro runs hook commands with a PATH that has no Node (so every hook now finds Node first), and Kiro Crew's task runner reported "8/8 tasks passed" from an empty sandbox.
-
-The full, honest map of every Kiro feature, the exact files, the evidence and where Kiro surprised us: **[How we used Kiro](https://exorcist-98.vercel.app/how-kiro)** ([`docs/HOW_KIRO.md`](docs/HOW_KIRO.md)), with the dated record in [`docs/KIRO_LOG.md`](docs/KIRO_LOG.md).
-
-## Architecture
-
-```mermaid
-flowchart LR
-  subgraph Sources["What an agent reads"]
-    R[Repository files<br/>rules, steering, hooks, READMEs]
-    M[MCP tool descriptions]
-    O[Tool output]
-  end
-  subgraph Core["@exorcist-98/core"]
-    W[Walker and normalizer<br/>hidden Unicode, decoding] --> S[Signature engine<br/>25 YAML definitions, time-limited]
-    S --> J[Optional AI judge<br/>Bedrock, masked input]
-    S --> T[Trifecta analysis<br/>capabilities.yaml]
-    S --> X[Exorcise fixers]
-  end
-  subgraph Shield["@exorcist-98/shield"]
-    P[Pins and lockfile] --> E[Shield engine<br/>verify every call]
-    C[Canaries] --> E
-    E --> V[Quarantine Vault]
-  end
-  R --> W
-  M --> E
-  O --> E
-  Core --> Web[Web app<br/>Next.js desktop]
-  Core --> CLI[exorcist CLI]
-  Core --> MCPS[MCP server]
-  Core --> GA[GitHub Action]
-  CLI --> Hooks[Kiro hooks<br/>on-access, secrets, MCP config]
-  Shield --> CLI
-  Core --> Crew[Kiro Crew app<br/>nightly patrol]
-```
-
-```
-apps/web/            Next.js retro desktop, scan API, Possession Lab, /how-kiro
-packages/core/       scan engine, definitions loader, AI judge, trifecta, exorcise, origin, LiveUpdate
-packages/shield/     MCP firewall, pins, lockfile, canaries, Quarantine Vault, attack simulator
-packages/cli/        the `exorcist` command (bundled with esbuild)
-packages/mcp-server/ the `exorcist` MCP server
-definitions/         YAML virus definitions and capability rules
-fixtures/            the Haunted Repo, the labelled benchmark, the detonation set, field-scan data (all defanged)
-power/               Kiro Power
-action.yml           GitHub Action
-.kiro/               specs, steering, hooks, custom agents
-docs/                how we used Kiro, Kiro log, field report, benchmark, AI evaluations, known limitations
-```
+The one feature that is macOS-only by design: **releasing a held Session Guard call in the system prompt (Touch ID or login password) is macOS only.** Everything else is written to run on all three. CI runs on Linux, and the hands-on checks were done on a Mac. On Linux and Windows the Shield says so, sends nothing, and a person releases the session with `exorcist approve session <key>` in a real terminal, which asks for a typed code. That is weaker, because an agent that drives a real terminal could read the code. Details: [S-030](docs/KNOWN_LIMITATIONS.md).
 
 ## Run it locally
 
@@ -404,38 +74,25 @@ Needs Node 20+ and pnpm.
 
 ```sh
 pnpm install
-
-# Scan the Haunted Repo (defanged planted attacks)
 pnpm --filter @exorcist-98/cli build
-node packages/cli/dist/index.mjs scan fixtures/haunted-repo
-
-# Watch the Shield stop a rug pull with real processes (20 seconds, no Kiro needed)
-node scripts/demo-rug-pull.mjs
-
-# The web app
-pnpm --filter @exorcist-98/web build
-pnpm --filter @exorcist-98/web exec next start
-
-# Everything
-pnpm test        # unit, property-based and real-process tests
-pnpm e2e         # drives Chrome against a running web app, with an axe accessibility scan
+node packages/cli/dist/index.mjs scan fixtures/haunted-repo   # the defanged Haunted Repo
+node scripts/demo-rug-pull.mjs                                 # a rug pull blocked, real processes, no Kiro needed
+node scripts/demo-touchid.mjs                                  # the Lethal Trifecta, macOS only, you at the keyboard
+pnpm vitest run                                                # all tests
+node scripts/facts.mjs                                         # recount the numbers in docs/facts.json
 ```
 
-## Status and known limits
+## Where the detail is
 
-Working and tested: everything described above runs from this repository and the live app passes the full Chrome suite.
+| | |
+|---|---|
+| [`docs/REFERENCE.md`](docs/REFERENCE.md) | Every feature, the Shield table, CLI commands, definitions list, architecture, how the scanner protects itself |
+| [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) | Every known gap and how sure we are of it |
+| [`docs/FIELD_REPORT.md`](docs/FIELD_REPORT.md), [`docs/BENCHMARK.md`](docs/BENCHMARK.md) | The measurements and how to repeat them |
+| [`docs/EXTENSION.md`](docs/EXTENSION.md), [`docs/WEB_AI.md`](docs/WEB_AI.md) | The editor extension and the optional AI layer |
+| [`docs/SUBMISSION.md`](docs/SUBMISSION.md), [`docs/VIDEO_SCRIPT.md`](docs/VIDEO_SCRIPT.md) | The hackathon submission text and video script |
+| [`SECURITY.md`](SECURITY.md) | Reporting a way past the Shield or the scanner |
 
-Open, in plain words:
+All attack samples in `fixtures/` are defanged: `.invalid` hosts, placeholder secrets, no real malware.
 
-- The Shield's check-before-every-call fix and the on-access hook are tested with real processes and Kiro's restricted PATH, but have not yet been re-run inside Kiro IDE. The Power was installed through Kiro's Powers panel on 2026-11-24 (a start-folder bug found there is fixed in 0.1.3, not yet published), and the two custom agents have not been loaded in Kiro.
-- Detection is mostly signatures; the AI judge caught 10 of 10 reworded attacks on each of our two small test sets, but it needs an AWS account and costs money to run. On the public website it is off until the operator turns it on ([`docs/WEB_AI.md`](docs/WEB_AI.md)).
-
-Every known gap, with how sure we are of it, is in [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) and the `NOTES.md` of each `.kiro/specs/m5-*` spec.
-
-## Safety
-
-All attack samples in `fixtures/`, the Possession Lab and the Detonation Chamber are defanged: no working endpoints (`example.invalid`), fake secrets built at run time, no real malware. The one deliberate exception to "no control characters" is the hidden-Unicode sample, which carries only a placeholder string.
-
-## License
-
-Apache-2.0
+Apache-2.0. See [`LICENSE`](LICENSE).

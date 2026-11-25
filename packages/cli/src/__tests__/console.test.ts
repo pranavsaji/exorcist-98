@@ -358,6 +358,17 @@ describe('exorcist console command', () => {
     expect(await consoleCommand(['--port', '70000'], io, { until: async () => {} })).toBe(2);
   });
 
+  it('the banner and --help say that under OS release a held session is released in the system prompt', async () => {
+    const out: string[] = [];
+    const io = { out: (s: string) => out.push(s), err: (s: string) => out.push(s) };
+    expect(await consoleCommand(['--dir', tmp(), '--no-open'], io, { until: async () => {} })).toBe(0);
+    expect(await consoleCommand(['--help'], io)).toBe(0);
+    const text = out.join('\n');
+    expect(text.match(/system prompt/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(text).toContain('macOS');
+    expect(text).toContain('exorcist approve session');
+    expect(text).not.toMatch(/use "exorcist approve \.\.\." in your own terminal for that/);
+  });
   it('opens only its own URL, without a shell', () => {
     expect(openCommand('darwin', `http://127.0.0.1:5000/${TOKEN}/`)).toEqual({ file: 'open', args: [`http://127.0.0.1:5000/${TOKEN}/`] });
     expect(openCommand('linux', 'http://evil.example/')).toBeNull();
