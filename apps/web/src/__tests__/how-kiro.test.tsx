@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { renderToStaticMarkup } from 'react-dom/server';
 import HowKiroPage from '@/app/how-kiro/page';
 import {
-  CHECK_COMMANDS, HOW_KIRO_INTRO, HOW_KIRO_TITLE, OUTSIDE, SURFACES, SURPRISES, USER_SETUP, howKiroMarkdown,
+  CHECK_COMMANDS, HOW_KIRO_INTRO, HOW_KIRO_TITLE, SURFACES, SURPRISES, USER_SETUP, howKiroMarkdown,
 } from '@/lib/how-kiro';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -28,7 +28,7 @@ function pageText(): string {
 const plain = (s: string): string => s.replace(/`/g, '');
 
 const allText = (): string[] => [
-  ...HOW_KIRO_INTRO, USER_SETUP.text, ...OUTSIDE,
+  ...HOW_KIRO_INTRO, USER_SETUP.text,
   ...SURFACES.flatMap((s) => [...s.did, ...s.evidence, s.status]),
   ...SURPRISES.flatMap((s) => [s.story, ...s.evidence]),
 ];
@@ -42,7 +42,7 @@ describe('docs/HOW_KIRO.md and the /how-kiro page', () => {
     const text = pageText();
     const headings = [
       HOW_KIRO_TITLE, 'Kiro features at a glance', ...SURFACES.map((s) => s.title), USER_SETUP.title,
-      'Where Kiro surprised us', ...SURPRISES.map((s) => s.title), 'Built outside Kiro', 'Check it yourself',
+      'Where Kiro surprised us', ...SURPRISES.map((s) => s.title), 'Check it yourself',
     ];
     for (const h of headings) {
       expect(MD, `Markdown heading: ${h}`).toMatch(new RegExp(`^#{1,3} ${h.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'm'));
@@ -60,9 +60,8 @@ describe('docs/HOW_KIRO.md and the /how-kiro page', () => {
       '8/8 tasks passed',
       'monthly usage limit',
       'ends its turn when the model narrates',
-      'exorcist init --kiro',
-      'Neither was used to build the project and neither has been loaded in Kiro yet',
-      'finished with Claude Code',
+      'Kiro did not write them',
+      'Kiro CLI stopped there',
       'not yet recorded firing inside Kiro',
       'has not yet been repeated inside Kiro',
     ];

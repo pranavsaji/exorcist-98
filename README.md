@@ -5,11 +5,11 @@
 [![Kiroween 2026: Resurrection](https://img.shields.io/badge/Kiroween_2026-Resurrection-8a3fb0)](https://kiroween.devpost.com/)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-1%2C500%2B_passing-2ea44f)](#measured-not-claimed)
-[![Built with Kiro](https://img.shields.io/badge/built_with-Kiro-6b3fd4)](docs/HOW_KIRO.md)
+[![Used Kiro](https://img.shields.io/badge/used-Kiro-6b3fd4)](docs/HOW_KIRO.md)
 
 **[Open the live app](https://exorcist-98.vercel.app)** ·
 **[Watch the Shield stop a rug pull](https://exorcist-98.vercel.app/?demo=rug-pull)** ·
-**[How Kiro built it](https://exorcist-98.vercel.app/how-kiro)** ·
+**[How we used Kiro](https://exorcist-98.vercel.app/how-kiro)** ·
 **[Field report](docs/FIELD_REPORT.md)** ·
 **[Kiro Crew app](https://github.com/pranavsaji/exorcist-98-crew)**
 
@@ -35,7 +35,7 @@ Your AI coding agent obeys what it reads: READMEs, rules and steering files, MCP
 - [How it compares to other MCP scanners](#how-it-compares-to-other-mcp-scanners)
 - [Virus definitions](#virus-definitions)
 - [How Exorcist 98 protects itself](#how-exorcist-98-protects-itself)
-- [Built with Kiro](#built-with-kiro)
+- [How we used Kiro](#how-we-used-kiro)
 - [Architecture](#architecture)
 - [Run it locally](#run-it-locally)
 - [Status and known limits](#status-and-known-limits)
@@ -344,13 +344,13 @@ Releases and the repository itself:
 - The repository scans itself with its own GitHub Action on every pull request.
 - Found a way past the Shield or the scanner? See [`SECURITY.md`](SECURITY.md) for private reporting.
 
-## Built with Kiro
+## How we used Kiro
 
-Milestones M0 to M4 were built spec by spec in **Kiro IDE**: five specs (requirements, design, tasks), four steering files that every change followed, property-based tests for the requirements, and hooks on file save and before commits. The last stretch (M5) was started by **Kiro CLI** in headless runs, one git worktree per feature, until the account's monthly usage limit; it was finished outside Kiro. The **Kiro Crew** app was built for Crew and run inside it.
+Milestones M0 to M4 were specified spec by spec in **Kiro IDE**: five specs (requirements, design, tasks), four steering files that every change followed, property-based tests for the requirements, and hooks on file save and before commits. **Kiro CLI** implemented parts of six M5 features in headless runs, one git worktree per feature, until the account's monthly usage limit. The **Kiro Crew** app was built for Crew and run inside it.
 
 Kiro surprised us more than once, and each surprise made the product better: Kiro caches the MCP tool list (so the Shield now re-checks every call), Kiro runs hook commands with a PATH that has no Node (so every hook now finds Node first), and Kiro Crew's task runner reported "8/8 tasks passed" from an empty sandbox.
 
-The full, honest map of every Kiro feature, the exact files, the evidence and what was built outside Kiro: **[How Kiro built it](https://exorcist-98.vercel.app/how-kiro)** ([`docs/HOW_KIRO.md`](docs/HOW_KIRO.md)), with the dated record in [`docs/KIRO_LOG.md`](docs/KIRO_LOG.md).
+The full, honest map of every Kiro feature, the exact files, the evidence and where Kiro surprised us: **[How we used Kiro](https://exorcist-98.vercel.app/how-kiro)** ([`docs/HOW_KIRO.md`](docs/HOW_KIRO.md)), with the dated record in [`docs/KIRO_LOG.md`](docs/KIRO_LOG.md).
 
 ## Architecture
 
@@ -395,7 +395,7 @@ fixtures/            the Haunted Repo, the labelled benchmark, the detonation se
 power/               Kiro Power
 action.yml           GitHub Action
 .kiro/               specs, steering, hooks, custom agents
-docs/                how Kiro built it, Kiro log, field report, benchmark, AI evaluations, known limitations
+docs/                how we used Kiro, Kiro log, field report, benchmark, AI evaluations, known limitations
 ```
 
 ## Run it locally

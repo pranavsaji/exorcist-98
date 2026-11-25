@@ -91,7 +91,7 @@ await step('first screen: one focused window with the hero line, one primary act
   if ((await primary.count()) !== 1) throw new Error('expected exactly one primary button');
   if ((await primary.innerText()).trim() !== 'Scan the Haunted Repo') throw new Error('primary: ' + (await primary.innerText()));
   for (const name of ['Possession Lab', 'Bring your own attack', 'Field report']) await hero.getByRole('button', { name, exact: true }).waitFor();
-  const kiro = hero.getByRole('link', { name: /^How Kiro built it/ });
+  const kiro = hero.getByRole('link', { name: /^How we used Kiro/ });
   if ((await kiro.getAttribute('href')) !== '/how-kiro') throw new Error('How Kiro link: ' + (await kiro.getAttribute('href')));
   if ((await page.locator('main .desktop-icons a[href="/how-kiro"]').count()) !== 1) throw new Error('no How Kiro desktop icon');
   // Focus starts inside the window; the window is clear of the icon column and fits the screen.
@@ -741,7 +741,7 @@ await step('unknown encyclopedia id gives a 404 page', async () => {
   return '404';
 });
 
-await step('How Kiro built it (/how-kiro): every Kiro feature, the surprises, built outside Kiro; passes axe, fits 390px', async () => {
+await step('How we used Kiro (/how-kiro): every Kiro feature, the surprises, built outside Kiro; passes axe, fits 390px', async () => {
   await page.goto(`${BASE}/how-kiro`, { waitUntil: 'networkidle' });
   const h1 = await page.locator('h1').innerText();
   const sections = await page.locator('main section h2').allInnerTexts();

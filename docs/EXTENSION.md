@@ -6,8 +6,6 @@ that installs extensions from [Open VSX](https://open-vsx.org); the same
 [`packages/vscode/README.md`](../packages/vscode/README.md), which is also its
 marketplace page.
 
-How it was made: the extension was written with Claude Code, outside Kiro, and
-then installed into Kiro (see `docs/KIRO_LOG.md`, 2026-11-24).
 
 ## Design in one paragraph
 
