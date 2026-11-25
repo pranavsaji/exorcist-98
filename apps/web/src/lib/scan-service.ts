@@ -3,8 +3,8 @@ import { readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { mkdir } from "node:fs/promises";
-import { exorciseRepo, fetchGithubRepo, readZip, redactFinding, redactSecretLines, registryLookup, scanRepo, toUnifiedDiff, walkRepo, writeEntries } from "@exorcist-98/core";
-import type { ConfigMap, Finding, HauntedMap, VersionAnswer, VersionLookup } from "@exorcist-98/core";
+import { exorciseRepo, fetchGithubRepo, readZip, redactFinding, redactPatchKeyLines, redactSecretLines, registryLookup, scanRepo, toUnifiedDiff, walkRepo, writeEntries } from "@exorcist-98/core";
+import type { ConfigMap, Finding, HauntedMap, PatchSource, VersionAnswer, VersionLookup } from "@exorcist-98/core";
 import { definitionsDir, hauntedRepoDir } from "./paths";
 import { buildSnippet, redactSnippet } from "./snippet";
 import { PATCH_MAX_BYTES } from "./protocol";
@@ -39,9 +39,14 @@ function defaultLookup(): VersionLookup | null {
   return process.env["EXORCIST_OFFLINE"] === "1" ? null : sharedLookup;
 }
 
-/** The patch with any secret on a diff line replaced by a marker. */
-export function redactPatch(patch: string): string {
-  return redactSecretLines(patch, { diff: true });
+/**
+ * The patch with any secret on a diff line replaced by a marker. Key blocks are
+ * located in the original file text (`sources`) and blanked by line number, so a
+ * hunk that opens inside a block, with its BEGIN line outside the hunk, is
+ * covered. The diff text alone is searched afterwards as a second layer.
+ */
+export function redactPatch(patch: string, sources: readonly PatchSource[] = []): string {
+  return redactSecretLines(redactPatchKeyLines(patch, sources), { diff: true });
 }
 
 /** The exorcism patch for a scanned folder, capped at PATCH_MAX_BYTES. */
@@ -54,7 +59,7 @@ export async function buildPatchEvent(
   const p = toUnifiedDiff(results, { maxBytes: PATCH_MAX_BYTES });
   const skipped = results.reduce((n, r) => n + r.notes.length, 0);
   // Secrets are never sent in full, not even as diff context (m7-precision).
-  return { type: "patch", patch: redactPatch(p.patch), files: p.files, fixes: p.fixes, omitted: p.omitted, skipped };
+  return { type: "patch", patch: redactPatch(p.patch, results.map((r) => ({ file: r.file, before: r.before, after: r.after }))), files: p.files, fixes: p.fixes, omitted: p.omitted, skipped };
 }
 
 const DEFAULT_MAX_FINDINGS = 500;
