@@ -2,15 +2,15 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { BookIcon, GhostIcon, ShieldIcon, SkullIcon } from '@/components/Icons';
 import {
-  CHECK_COMMANDS, HOW_KIRO_INTRO, HOW_KIRO_TITLE, OUTSIDE, SURFACES, SURPRISES, USER_SETUP,
+  CHECK_COMMANDS, HOW_KIRO_INTRO, HOW_KIRO_TITLE, SURFACES, SURPRISES, USER_SETUP,
 } from '@/lib/how-kiro';
 
 // Static content (apps/web/src/lib/how-kiro.ts, the same source as docs/HOW_KIRO.md):
 // nothing is read from disk at run time.
 export const metadata: Metadata = {
-  title: 'How Kiro built it | Exorcist 98',
+  title: 'How we used Kiro | Exorcist 98',
   description:
-    'Each Kiro feature used to build Exorcist 98 (specs, steering, hooks, MCP, Powers, custom agents, Kiro CLI, Kiro Crew), the files, the evidence, where Kiro surprised us, and what was built outside Kiro.',
+    'Each Kiro feature we used on Exorcist 98 (specs, steering, hooks, MCP, Powers, custom agents, Kiro CLI, Kiro Crew), the files, the evidence, and where Kiro surprised us.',
 };
 
 const REPO = 'https://github.com/pranavsaji/exorcist-98';
@@ -140,11 +140,6 @@ export default function HowKiroPage() {
           </ol>
         </Panel>
 
-        <Panel id="outside" title="Built outside Kiro" icon={<SkullIcon size={18} />}>
-          <ul className="m-0 list-disc pl-5">
-            {OUTSIDE.map((o) => <li key={o.slice(0, 40)} className="mb-1"><Rich text={o} /></li>)}
-          </ul>
-        </Panel>
 
         <Panel id="check" title="Check it yourself" icon={<BookIcon size={18} />}>
           <p className="mt-0">Run these from a clone of the repository.</p>

@@ -289,7 +289,7 @@ export function Desktop() {
         </li>
         <li>
           <a className="chip" href={HOW_KIRO} target="_blank" rel="noopener noreferrer">
-            <GhostIcon size={18} /> How Kiro built it<span className="sr-only"> (opens in a new tab)</span>
+            <GhostIcon size={18} /> How we used Kiro<span className="sr-only"> (opens in a new tab)</span>
           </a>
         </li>
       </ul>
@@ -318,7 +318,7 @@ export function Desktop() {
         <DesktopIcon label="Possession Lab" icon={<ShieldIcon />} onOpen={() => openLab()} />
         <DesktopIcon label="Field Report" icon={<BookIcon />} onOpen={() => open('field')} />
         <DesktopIcon label="Virus Definitions" icon={<BookIcon />} href="/encyclopedia" />
-        <DesktopIcon label="How Kiro built it" icon={<GhostIcon />} href={HOW_KIRO} />
+        <DesktopIcon label="How we used Kiro" icon={<GhostIcon />} href={HOW_KIRO} />
         <DesktopIcon label="About" icon={<GhostIcon />} onOpen={() => open('about')} />
       </div>
 
@@ -411,7 +411,7 @@ export function Desktop() {
                     What Exorcist 98 is for
                   </a>
                   <a className="font-semibold underline" href={HOW_KIRO} target="_blank" rel="noopener noreferrer">
-                    How Kiro built it (opens in a new tab)
+                    How we used Kiro (opens in a new tab)
                   </a>
                 </p>
               </div>
@@ -445,7 +445,7 @@ export function Desktop() {
           { label: 'Field Report (real repos)', icon: <BookIcon size={18} />, onSelect: () => open('field') },
           { label: 'Start here (guide)', icon: <GhostIcon size={18} />, onSelect: showGuide },
           { label: 'Virus Definitions', icon: <BookIcon size={18} />, href: '/encyclopedia' },
-          { label: 'How Kiro built it', icon: <GhostIcon size={18} />, href: HOW_KIRO },
+          { label: 'How we used Kiro', icon: <GhostIcon size={18} />, href: HOW_KIRO },
           { label: 'About Exorcist 98', icon: <GhostIcon size={18} />, onSelect: () => open('about') },
           { label: 'Product and plans', icon: <ShieldIcon size={18} />, href: '/product' },
         ]}
