@@ -9,8 +9,10 @@
  * itself; it never parses data as HTML. The server puts no data in the HTML.
  *
  * The page is a read-only view: it has no form, no button that changes
- * anything and no endpoint to call. Releasing a held session stays
- * `exorcist approve session <key>`, run by a person in a real terminal.
+ * anything and no endpoint to call. A held session is released by a person:
+ * in the system prompt (Touch ID or login password) when a Shield runs with
+ * `sessionRelease: os`, otherwise with `exorcist approve session <key>` in a
+ * real terminal. The page only says which.
  */
 
 /** Short names for the rules the console shows most, next to the rule id. */
@@ -381,14 +383,15 @@ const SCRIPT = String.raw`
         kids(li, el('strong', null, w.tool), document.createTextNode(' on '), el('strong', null, w.server), ruleChip(w.ruleId), el('span', 'when', ago(w.time)));
         ul.append(li);
       }
-      box.append(ul, el('p', 'why', "Answer in your agent's approval prompt. This page cannot answer it."));
+      box.append(ul, el('p', 'why', s.waiting.some((w) => w.via === 'os') ? 'Answer in the system prompt on this computer (Touch ID or your login password). This page cannot answer it.' : "Answer in your agent's approval prompt. This page cannot answer it."));
       card.append(box);
     }
     if (s.releasedAt) card.append(el('p', 'why', 'Last released from a terminal ' + ago(s.releasedAt) + '. Newer facts arm it again.'));
     for (const p of s.problems) card.append(el('p', 'problem', 'Could not read: ' + p));
     if (s.armed || s.cautious) {
       const r = el('p', 'release');
-      kids(r, document.createTextNode('Only you can release it: run '), el('code', null, 'exorcist approve session ' + s.key), document.createTextNode(' in your own terminal. It asks you to confirm. A release given in one server\'s prompt counts for that server only.'));
+      if (s.release === 'os') kids(r, document.createTextNode('Only you can release it: the Shield opens a system prompt on this computer (Touch ID or your login password) for each held call, and one verification releases that one call only. Nothing is released from a terminal or from this page.'));
+      else kids(r, document.createTextNode('Only you can release it: run '), el('code', null, 'exorcist approve session ' + s.key), document.createTextNode(' in your own terminal. It asks you to confirm. A release given in one server\'s prompt counts for that server only.'));
       card.append(r);
     }
     return card;
@@ -417,6 +420,11 @@ const SCRIPT = String.raw`
     $('n-shields').textContent = n;
   }
 
+  const RELEASE_TEXT = {
+    terminal: 'a held session is released only by running exorcist approve session <key> in your own terminal.',
+    os: 'a held session is released only in the system prompt on this computer (Touch ID or your login password), never from a terminal command or from this page.',
+    mixed: 'a held session is released in the system prompt (Touch ID or your login password) for Shields set to sessionRelease os, and by running exorcist approve session <key> in your own terminal for the others.',
+  };
   let state = null;
   function renderState(s) {
     state = s;
@@ -424,6 +432,7 @@ const SCRIPT = String.raw`
     renderSessions(s.sessions);
     renderShields(s.shields);
     $('where').textContent = s.stateDir;
+    $('release-how').textContent = RELEASE_TEXT[s.release] || RELEASE_TEXT.terminal;
     $('skipped').textContent = s.skipped > 0 ? ' · ' + s.skipped + ' damaged log line' + (s.skipped === 1 ? '' : 's') + ' skipped' : '';
   }
 
@@ -514,7 +523,7 @@ export function consolePage(nonce: string): string {
     <div class="body head-body">
       <p class="lede">What the Shield is doing right now with your agent's MCP tool calls: allowed, held or blocked, by which rule, on which server, and what the Session Guard has seen.</p>
       <span class="conn" id="conn" data-live="false" role="status"><span class="dot" aria-hidden="true"></span><span id="conn-text">CONNECTING</span></span>
-      <div class="readonly" role="note"><strong>Read-only view.</strong><span>Nothing on this page can approve, allow or release anything. Held calls are answered in your agent's approval prompt; a held session is released only by running <code>exorcist approve session &lt;key&gt;</code> in your own terminal.</span></div>
+      <div class="readonly" role="note"><strong>Read-only view.</strong><span>Nothing on this page can approve, allow or release anything. Calls held for a host are answered in your agent's approval prompt; <span id="release-how">a held session is released only by running exorcist approve session &lt;key&gt; in your own terminal.</span></span></div>
       <p class="where">State folder: <span class="mono" id="where"></span><span id="skipped"></span></p>
     </div>
   </header>

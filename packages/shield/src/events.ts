@@ -75,6 +75,8 @@ const StartEvent = z.object({
   mode:   z.enum(['enforce', 'monitor']),
   guard:  z.enum(['hold', 'block', 'monitor', 'off']),
   remote: z.boolean(),
+  /** How a held Session Guard call is released: in the system prompt (`os`) or with `exorcist approve session` (`terminal`). Absent in older logs. */
+  release: z.enum(['os', 'terminal']).optional(),
 }).strict();
 
 /**
@@ -94,6 +96,8 @@ const CallEvent = z.object({
   monitor:  z.literal(true).optional(),
   prompt:   z.number().int().positive().optional(),
   by:       z.literal('user').optional(),
+  /** The hold is answered in the system prompt (Touch ID or login password), not in the agent's approval prompt. `prompt` then numbers the system prompt. */
+  via:      z.literal('os').optional(),
 }).strict();
 
 /** A tool result that looked like an attack on the AI: withheld (enforce) or flagged (monitor). */
@@ -122,7 +126,7 @@ export type CallShieldEvent = z.infer<typeof CallEvent>;
 
 /** What the engine reports; the log adds time, pid, server and session. */
 export type EngineEvent =
-  | { kind: 'call'; tool: string; decision: 'allowed' | 'held' | 'blocked'; ruleId?: string; why?: string; monitor?: boolean; prompt?: number; by?: 'user' }
+  | { kind: 'call'; tool: string; decision: 'allowed' | 'held' | 'blocked'; ruleId?: string; why?: string; monitor?: boolean; prompt?: number; by?: 'user'; via?: 'os' }
   | { kind: 'result'; tool: string; decision: 'withheld' | 'flagged'; ruleId: string; why?: string };
 
 type Omitted = 'v' | 'time' | 'pid' | 'server' | 'session';
@@ -142,6 +146,7 @@ function sanitize(body: Record<string, unknown>): Record<string, unknown> {
     else if (k === 'ruleId') out[k] = rule(typeof val === 'string' ? val : undefined);
     else if (k === 'monitor') { if (val === true) out[k] = true; }
     else if (k === 'prompt') { if (typeof val === 'number' && Number.isInteger(val) && val > 0) out[k] = val; }
+    else if (k === 'via') { if (val === 'os') out[k] = 'os'; }
     else out[k] = val;
   }
   return out;

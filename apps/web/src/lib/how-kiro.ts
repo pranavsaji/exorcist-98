@@ -42,9 +42,10 @@ export const SURFACES: Surface[] = [
       'One spec per milestone, each with `requirements.md`, `design.md` and `tasks.md`: `m0-foundation`, `m1-engine`, `m2-ui`, `m3-shield`, `m4-polish`. The `tech.md` steering asks for every requirement to map to at least one test, and property-based tests are numbered per spec (PBT-SEC, PBT-SHD, PBT-WEB...).',
       'When the engine needed accuracy fixes, they went into `m1-engine` as REQ-10 and TASK-13 instead of a new spec, keeping one spec per milestone.',
       'Ten M5 specs (`.kiro/specs/m5-*`) are in Kiro\'s spec format but were written outside Kiro, by Claude Code, for Kiro CLI to implement. Each `NOTES.md` records where the build departed from the spec and why (for example, on-access allowances moved out of the repository because a repo could ship its own allow list).',
+      'A sixth spec written and implemented with the Kiro IDE agent: `m6-os-release` (OS-verified release for the Session Guard with Touch ID). The live console (`exorcist console`) and the registry listings of release 0.1.2 were built with Claude Code outside Kiro.',
       'One more spec in the Crew repository: `crew-app`.',
     ],
-    files: ['.kiro/specs/m0-foundation/requirements.md', '.kiro/specs/m1-engine/design.md', '.kiro/specs/m3-shield/tasks.md', '.kiro/specs/m4-polish/requirements.md', '.kiro/specs/m5-on-access/NOTES.md', 'exorcist-98-crew/.kiro/specs/crew-app/'],
+    files: ['.kiro/specs/m0-foundation/requirements.md', '.kiro/specs/m1-engine/design.md', '.kiro/specs/m3-shield/tasks.md', '.kiro/specs/m4-polish/requirements.md', '.kiro/specs/m5-on-access/NOTES.md', '.kiro/specs/m6-os-release/design.md', 'exorcist-98-crew/.kiro/specs/crew-app/'],
     evidence: ['`docs/KIRO_LOG.md` rows dated 2026-11-15 to 2026-11-18 (Specs)', 'Commit `785aaf9`: the ten M5 specs, marked as written outside Kiro in KIRO_LOG'],
   },
   {

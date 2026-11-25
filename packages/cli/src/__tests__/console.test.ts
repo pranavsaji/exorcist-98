@@ -286,6 +286,31 @@ describe('console model', () => {
     expect(after.releasedAt).toBe(t(1000));
   });
 
+  it('says where a held call is released: the system prompt under OS release, the terminal otherwise', () => {
+    const dir = tmp();
+    const os = new EventLog(dir, { server: 'mail', pid: 601, session: 'osdemo' });
+    os.write({ kind: 'start', mode: 'enforce', guard: 'hold', remote: false, release: 'os' });
+    os.write({ kind: 'call', tool: 'send_message', decision: 'held', ruleId: 'EX-027', via: 'os', prompt: 1 });
+    const term = new EventLog(dir, { server: 'chat', pid: 602, session: 'termdemo' });
+    term.write({ kind: 'start', mode: 'enforce', guard: 'hold', remote: false });
+    term.write({ kind: 'call', tool: 'post', decision: 'held', ruleId: 'EX-027', prompt: 1 });
+    const m = new ConsoleModel(dir, { alive });
+    m.poll();
+    const s = m.state();
+    expect(s.release).toBe('mixed');
+    expect(s.sessions.find((x) => x.key === 'osdemo')?.release).toBe('os');
+    expect(s.sessions.find((x) => x.key === 'termdemo')?.release).toBe('terminal');
+    // A system-prompt hold is answered with the same system prompt number: it stops waiting.
+    os.write({ kind: 'call', tool: 'send_message', decision: 'allowed', ruleId: 'EX-027', via: 'os', prompt: 1, by: 'user' });
+    m.poll();
+    expect(m.state().sessions.find((x) => x.key === 'osdemo')).toBeUndefined();
+  });
+  it('the page text names the system prompt for OS release and the terminal command for terminal mode', () => {
+    const html = consolePage('abcdefghijklmnop1234');
+    expect(html).toContain('Touch ID');
+    expect(html).toContain('exorcist approve session');
+    expect(html).toContain('release-how');
+  });
   it('a damaged session file is reported, not fatal', () => {
     const dir = tmp();
     mkdirSync(join(dir, 'sessions', 'demo'), { recursive: true });

@@ -30,6 +30,8 @@ export type SessionView = {
   /** When `exorcist approve session` last released this session, if it did. */
   releasedAt?: string;
   problems: string[];
+  /** How a held call of this session is released: `os` when a running Shield of it uses the system prompt, else `terminal`. */
+  release: 'os' | 'terminal';
   /** Calls held for an answer in the agent's approval prompt, not answered yet, from Shields still running. */
   waiting: CallShieldEvent[];
 };
@@ -41,6 +43,8 @@ export type ShieldView = {
   mode: 'enforce' | 'monitor';
   guard: 'hold' | 'block' | 'monitor' | 'off';
   remote: boolean;
+  /** How this Shield releases a held Session Guard call (absent in logs from older versions: terminal). */
+  release: 'os' | 'terminal';
   started: string;
   lastSeen: string;
   /** The process is still alive (checked with signal 0; a reused pid would also look alive). */
@@ -53,6 +57,8 @@ export type ConsoleState = {
   stateDir: string;
   shields: ShieldView[];
   sessions: SessionView[];
+  /** `os` if any running Shield releases in the system prompt, `terminal` if all do in a terminal, `mixed` if both. */
+  release: 'os' | 'terminal' | 'mixed';
   counts: Counts;
   /** Lines of the event log that were not valid events (damaged, edited, or from a newer version). */
   skipped: number;
@@ -115,7 +121,7 @@ export class ConsoleModel {
   private take(e: ShieldEvent): void {
     const id = `${e.pid}:${e.server}`;
     if (e.kind === 'start') {
-      this.shields.set(id, { pid: e.pid, server: e.server, ...(e.session ? { session: e.session } : {}), mode: e.mode, guard: e.guard, remote: e.remote, started: e.time, lastSeen: e.time, running: true });
+      this.shields.set(id, { pid: e.pid, server: e.server, ...(e.session ? { session: e.session } : {}), mode: e.mode, guard: e.guard, remote: e.remote, release: e.release ?? 'terminal', started: e.time, lastSeen: e.time, running: true });
       while (this.shields.size > MAX_SHIELDS) this.shields.delete(this.shields.keys().next().value as string);
     } else {
       const s = this.shields.get(id);
@@ -123,7 +129,7 @@ export class ConsoleModel {
     }
     if (e.kind === 'call') {
       this.counts[e.decision]++;
-      const key = e.prompt !== undefined ? `${e.pid}:${e.prompt}` : null;
+      const key = e.prompt !== undefined ? `${e.pid}:${e.via ?? 'agent'}:${e.prompt}` : null;
       if (key && e.decision === 'held') this.held.set(key, e);
       else if (key && e.by === 'user') this.held.delete(key);
       while (this.held.size > 256) this.held.delete(this.held.keys().next().value as string);
@@ -146,17 +152,19 @@ export class ConsoleModel {
       .map((s) => ({ ...s, running: isAlive(s.pid) }))
       .sort((a, b) => Number(b.running) - Number(a.running) || b.lastSeen.localeCompare(a.lastSeen));
     const waiting = [...this.held.values()].filter((e) => isAlive(e.pid));
+    const modes = new Set(shields.filter((s) => s.running).map((s) => s.release));
     return {
       stateDir: this.dir,
       shields,
-      sessions: this.sessions(waiting),
+      sessions: this.sessions(waiting, shields),
+      release: modes.size > 1 ? 'mixed' : modes.has('os') ? 'os' : 'terminal',
       counts: { ...this.counts },
       skipped: this.tail.skipped,
     };
   }
 
   /** Every session with live facts or a held call, newest first. */
-  private sessions(waiting: CallShieldEvent[]): SessionView[] {
+  private sessions(waiting: CallShieldEvent[], shields: readonly ShieldView[]): SessionView[] {
     const now = this.now();
     const n = now.getTime();
     const rules = this.o.rules ?? [];
@@ -194,6 +202,7 @@ export class ConsoleModel {
         private: facts.filter((f) => f.kind === 'private').slice(0, MAX_FACTS_SHOWN).map(show),
         ...(released ? { releasedAt: released } : {}),
         problems: a.problems.slice(0, 5).map((p) => cleanText(p, 300)),
+        release: shields.some((s) => s.running && s.session === key && s.release === 'os') || held.some((h) => h.via === 'os') ? 'os' : 'terminal',
         waiting: held,
         newest: Math.max(0, ...facts.map((f) => Date.parse(f.time)), ...held.map((h) => Date.parse(h.time))),
       });

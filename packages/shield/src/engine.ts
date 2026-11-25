@@ -90,7 +90,7 @@ export type EngineOptions = {
 };
 
 /** What a call carries to the moment it is really sent: the rule that matched on the way, and who let it through. */
-type SendMeta = { ruleId?: string; why?: string; monitor?: boolean; prompt?: number; by?: 'user' };
+type SendMeta = { ruleId?: string; why?: string; monitor?: boolean; prompt?: number; by?: 'user'; via?: 'os' };
 
 /** A tool hidden from the agent. `fingerprint` is the version that was hidden (rug pulls only). */
 type Withheld = { ruleId: string; reason: string; fingerprint?: string };
@@ -553,7 +553,7 @@ export class ShieldEngine {
       }
       const ticket = `${OWNER_PREFIX}${++this.ownerSeq}`;
       this.heldCalls.set(ticket, { call, id, tool, hosts: [], kind: 'os', askedAt: this.now() });
-      this.callEvent(tool, 'held', { ruleId: SESSION_RULE_ID, why: `Lethal trifecta in this session: ${out}. Held while the system prompt is open (Touch ID or login password).` });
+      this.callEvent(tool, 'held', { ruleId: SESSION_RULE_ID, via: 'os', prompt: this.ownerSeq, why: `Lethal trifecta in this session: ${out}. Held while the system prompt is open (Touch ID or login password).` });
       const facts = [a.untrusted, a.private].filter((f): f is Fact => f !== null && f !== undefined);
       const reason = buildReason(this.o.server, tool, facts);
       return { stop: true, actions: [...actions, { type: 'verify-owner', ticket, reason }] };
@@ -585,15 +585,16 @@ export class ShieldEngine {
     const held = this.heldCalls.get(ticket);
     if (!held || held.kind !== 'os') return [];
     this.heldCalls.delete(ticket);
+    const ownerNo = Number(ticket.slice(OWNER_PREFIX.length)) || undefined;
     const shown = cleanText(held.tool, 80);
     if (verdict === 'ok') {
       return [
         this.alert({ ruleId: SESSION_RULE_ID, severity: 'medium', tool: shown, message: `You verified with your device; one call to "${shown}" that the Session Guard held was allowed. Nothing was granted: the next one is held again.` }),
-        ...this.sendCall(held.call, held.id, held.tool, { ruleId: SESSION_RULE_ID, by: 'user', why: 'Released by the operating system check (Touch ID or login password), once. Nothing was granted.' }),
+        ...this.sendCall(held.call, held.id, held.tool, { ruleId: SESSION_RULE_ID, by: 'user', via: 'os', ...(ownerNo ? { prompt: ownerNo } : {}), why: 'Released by the operating system check (Touch ID or login password), once. Nothing was granted.' }),
       ];
     }
     this.callEvent(held.tool, 'blocked', {
-      ruleId: SESSION_RULE_ID,
+      ruleId: SESSION_RULE_ID, by: 'user', via: 'os', ...(ownerNo ? { prompt: ownerNo } : {}),
       why: verdict === 'denied' ? 'Refused: the system prompt was declined or failed. Nothing was sent.'
         : verdict === 'timeout' ? 'Refused: nobody verified in the system prompt in time. Nothing was sent.'
         : 'Refused: the operating system check could not run. Nothing was sent.',

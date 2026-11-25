@@ -318,7 +318,7 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
     ...(review ? { aiFindings: (fp: string) => (review as AiReview).findings(fp) } : {}),
     ...(events ? { onEvent: (e: Parameters<EventLog['write']>[0]) => { events.write(e); eventProblem(); } } : {}),
   });
-  events?.write({ kind: 'start', mode: policy.policy.mode, guard: policy.policy.sessionGuard ?? 'hold', remote: o.launch === undefined });
+  events?.write({ kind: 'start', mode: policy.policy.mode, guard: policy.policy.sessionGuard ?? 'hold', remote: o.launch === undefined, ...(release ? { release: release.mode } : {}) });
   const notifier = policy.policy.notify ? o.notify : undefined;
   const allowNotice = throttle();
   log(`Protecting "${o.server}". State folder: ${o.dir}`);
