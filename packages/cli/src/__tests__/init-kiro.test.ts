@@ -52,11 +52,11 @@ describe('exorcist init --kiro', () => {
     expect(hookOf(d, 'exorcist-secrets').trigger).toBe('PreToolUse');
     expect(hookOf(d, 'exorcist-mcp-scan').trigger).toBe('PostFileSave');
     expect(hookOf(d, 'exorcist-on-access').trigger).toBe('PreToolUse');
-    // m10-kiro-gate 2.4, 2.5: a Stop hook; disabled under the default command, which has no gate command.
+    // m10-kiro-gate 2.4, 2.5: a Stop hook; on under the default command, since 0.2.0 has the gate command.
     expect(hookOf(d, 'exorcist-gate').trigger).toBe('Stop');
     expect(hookOf(d, 'exorcist-gate').action.command).toBe(`sh .exorcist/kiro-hook.sh ${DEFAULT_BIN} gate`);
-    expect(hookOf(d, 'exorcist-gate').enabled).toBe(false);
-    expect(io.all()).toContain('WRITTEN DISABLED');
+    expect(hookOf(d, 'exorcist-gate').enabled).toBeUndefined();
+    expect(io.all()).not.toContain('WRITTEN DISABLED');
     for (const n of ['exorcist-secrets', 'exorcist-mcp-scan', 'exorcist-on-access']) {
       expect(hookOf(d, n).action.command.startsWith('sh .exorcist/kiro-hook.sh ')).toBe(true);
     }
@@ -84,15 +84,16 @@ describe('exorcist init --kiro', () => {
     }
   });
 
-  it('under the default command (0.1.3, which has on-access but not gate) every hook is on except the gate', async () => {
+  it('under the default command (0.2.0, which has every command) every hook is on', async () => {
     const d = tmp();
     const io = capture();
     expect(await initCommand([d, '--kiro'], io)).toBe(0);
     expect(hookOf(d, 'exorcist-on-access').enabled).toBeUndefined();
     expect(hookOf(d, 'exorcist-on-access').action.command).toContain(DEFAULT_BIN);
-    // The gate and the MCP write guard are written disabled: 0.1.3 predates both commands, and an unknown command exits non-zero.
-    expect(io.all().match(/WRITTEN DISABLED/g)).toHaveLength(2);
-    expect(hookOf(d, 'exorcist-gate').enabled).toBe(false);
+    // 0.1.3 lacked gate and guard-mcp-write, so those hooks were written disabled; 0.2.0 has both.
+    expect(io.all()).not.toContain('WRITTEN DISABLED');
+    expect(hookOf(d, 'exorcist-gate').enabled).toBeUndefined();
+    expect(hookOf(d, 'exorcist-mcp-write-guard').enabled).toBeUndefined();
     expect(hookOf(d, 'exorcist-secrets').enabled).toBeUndefined();
     expect(hookOf(d, 'exorcist-mcp-scan').enabled).toBeUndefined();
 
@@ -104,15 +105,15 @@ describe('exorcist init --kiro', () => {
     expect(hookOf(local, 'exorcist-on-access').action.command).toBe('sh .exorcist/kiro-hook.sh "/opt/node 22/bin/node" /opt/x98/cli.mjs on-access');
   });
 
-  it('the MCP write guard is written disabled under the default command, enabled under a local --bin', async () => {
+  it('the MCP write guard is on under the default command and under a local --bin', async () => {
     const d = tmp();
     const io = capture();
     expect(await initCommand([d, '--kiro'], io)).toBe(0);
     const h = hookOf(d, 'exorcist-mcp-write-guard');
     expect(h.trigger).toBe('PreToolUse');
-    expect(h.enabled).toBe(false);
+    expect(h.enabled).toBeUndefined();
     expect(h.action.command).toBe(`sh .exorcist/kiro-hook.sh ${DEFAULT_BIN} guard-mcp-write`);
-    expect(io.all()).toContain('WRITTEN DISABLED');
+    expect(io.all()).not.toContain('WRITTEN DISABLED');
     const local = tmp();
     expect(await initCommand([local, '--kiro', '--bin', '/opt/x98/cli.mjs'], capture())).toBe(0);
     expect(hookOf(local, 'exorcist-mcp-write-guard').enabled).toBeUndefined();
@@ -265,7 +266,7 @@ describe('init --kiro summary (m9 6.3, 6.4)', () => {
 });
 describe('splitCommand (how --bin and --mcp-bin become a command and its arguments)', () => {
   it('splits on whitespace and groups quotes', () => {
-    expect(splitCommand(DEFAULT_BIN)).toEqual(['npx', '-y', '@exorcist-98/cli@0.1.3']);
+    expect(splitCommand(DEFAULT_BIN)).toEqual(['npx', '-y', '@exorcist-98/cli@0.2.0']);
     expect(splitCommand(`"/a b/node" '/c d/cli.mjs'  x`)).toEqual(['/a b/node', '/c d/cli.mjs', 'x']);
     expect(splitCommand('""')).toEqual(['']);
     expect(splitCommand('  ')).toBeNull();

@@ -48,7 +48,7 @@ describe('the built bundle', () => {
   });
 
   it('prints its version and help', () => {
-    expect(run(['--version']).out.trim()).toBe('0.1.3');
+    expect(run(['--version']).out.trim()).toBe('0.2.0');
     const help = run(['--help']);
     expect(help.code).toBe(0);
     for (const c of ['scan', 'exorcise', 'shield', 'wrap', 'vault', 'approve', 'init', 'lock', 'map', 'detonate']) expect(help.out).toContain(c);

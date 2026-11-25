@@ -117,7 +117,7 @@ export async function listTools(o: {
   timeoutMs: number;
 }): Promise<ListResult> {
   const transport = new StdioClientTransport({ command: o.command, args: o.args, env: o.env, cwd: o.cwd, stderr: 'ignore' });
-  const client = new Client({ name: 'exorcist-lock', version: '0.1.3' }, { capabilities: {} });
+  const client = new Client({ name: 'exorcist-lock', version: '0.2.0' }, { capabilities: {} });
   let timer: NodeJS.Timeout | undefined;
   const timedOut = new Promise<ListResult>((res) => {
     timer = setTimeout(() => res({ ok: false, error: `it did not list its tools within ${o.timeoutMs} ms.` }), o.timeoutMs);

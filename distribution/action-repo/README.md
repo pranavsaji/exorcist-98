@@ -6,7 +6,7 @@ hooks and install scripts, and leaked secrets. Every pull request gets a
 summary comment, and the check fails on threats at or above the level you set.
 
 This action runs the published [`@exorcist-98/cli`](https://www.npmjs.com/package/@exorcist-98/cli)
-at one pinned version, `0.1.3`. Before it runs, `npm audit signatures` checks
+at one pinned version, `0.2.0`. Before it runs, `npm audit signatures` checks
 the package's npm provenance, which ties it to the commit and workflow in
 [pranavsaji/exorcist-98](https://github.com/pranavsaji/exorcist-98) that built
 it. Nothing is built and no install scripts run. The source, the rules and the
@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pranavsaji/exorcist-98-action@v0.1.3
+      - uses: pranavsaji/exorcist-98-action@v0.2.0
         with:
           fail-on: high
 ```

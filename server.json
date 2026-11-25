@@ -3,7 +3,7 @@
   "name": "io.github.pranavsaji/exorcist-98",
   "title": "Exorcist 98",
   "description": "Antivirus for AI coding agents: scan repos and MCP configs for prompt injection and poisoned tools.",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "websiteUrl": "https://github.com/pranavsaji/exorcist-98#readme",
   "repository": {
     "url": "https://github.com/pranavsaji/exorcist-98",
@@ -16,7 +16,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "@exorcist-98/mcp-server",
-      "version": "0.1.3",
+      "version": "0.2.0",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"

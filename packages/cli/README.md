@@ -11,7 +11,7 @@ Needs Node 20 or newer.
 ## Scan a project
 
 ```sh
-npx -y @exorcist-98/cli@0.1.3 scan .
+npx -y @exorcist-98/cli@0.2.0 scan .
 ```
 
 Every finding shows the file, line, the exact text, how serious it is and how
@@ -39,7 +39,7 @@ request.
 ## Map the haunted house
 
 ```sh
-npx -y @exorcist-98/cli@0.1.3 map .
+npx -y @exorcist-98/cli@0.2.0 map .
 ```
 
 For every MCP config in the folder, lists which servers sit in the three rooms
@@ -52,8 +52,8 @@ data. The rules are in `definitions/capabilities.yaml`.
 ## Disinfect (exorcise)
 
 ```sh
-npx -y @exorcist-98/cli@0.1.3 exorcise .           # dry run: prints a unified diff
-npx -y @exorcist-98/cli@0.1.3 exorcise . --write   # apply, with a vault backup first
+npx -y @exorcist-98/cli@0.2.0 exorcise .           # dry run: prints a unified diff
+npx -y @exorcist-98/cli@0.2.0 exorcise . --write   # apply, with a vault backup first
 ```
 
 Only threats with one safe, mechanical fix are repaired: hidden characters
@@ -67,7 +67,7 @@ human"), and `exorcist vault restore <id>` puts every file back byte for byte.
 ## Protect your MCP servers
 
 ```sh
-npx -y @exorcist-98/cli@0.1.3 wrap .kiro/settings/mcp.json
+npx -y @exorcist-98/cli@0.2.0 wrap .kiro/settings/mcp.json
 ```
 
 `wrap` puts every server in the file, local or remote, behind the Real-Time
@@ -79,9 +79,9 @@ instruct your agent. `unwrap` restores the file exactly. See
 ## Share approved tools with your team: exorcist.lock
 
 ```sh
-npx -y @exorcist-98/cli@0.1.3 lock           # write exorcist.lock, then commit it
-npx -y @exorcist-98/cli@0.1.3 lock --check   # exit 1 if any tool or program changed
-npx -y @exorcist-98/cli@0.1.3 lock --check --static   # starts nothing: names, programs, URLs only
+npx -y @exorcist-98/cli@0.2.0 lock           # write exorcist.lock, then commit it
+npx -y @exorcist-98/cli@0.2.0 lock --check   # exit 1 if any tool or program changed
+npx -y @exorcist-98/cli@0.2.0 lock --check --static   # starts nothing: names, programs, URLs only
 ```
 
 `exorcist.lock` records the fingerprint of every tool your MCP servers list,

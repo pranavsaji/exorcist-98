@@ -1,6 +1,6 @@
 {
   "name": "@exorcist-98/mcp-server",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "private": false,
   "type": "module",
   "description": "MCP server for Exorcist 98: scan repos and MCP configs, explain findings, quarantine servers.",
