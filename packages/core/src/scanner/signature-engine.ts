@@ -4,6 +4,7 @@ import type { RepoFile, SignatureFinding, Severity } from '../types.js';
 import type { NormalizedText, UnicodeHit } from '../normalizer.js';
 import type { VirusDefinition } from '../definitions/schema.js';
 import { decodeHidden, MAX_HIDDEN_RUNS } from '../ouija.js';
+import { findHiddenText } from '../hidden-text.js';
 import { lowersSeverity } from '../severity-paths.js';
 import { typosquatOf } from '../known-packages.js';
 import { benignPayloadKind, COMMAND_LIKE, decodeBlob, embeddedDocumentKind, fencedRanges, inExecContext, inMarkdownCode, isCredibleSecret, isNegated, isQuotedExample } from './context.js';
@@ -299,6 +300,14 @@ export function runSignatures(
           mineOut.push({ ...base, line, col, span: truncateSpan(first.text) });
         }
         findings.push(...capPerFile(def, mineOut));
+      }
+    }
+    // ── hidden_text (EX-028) ─────────────────────────────────────────────────
+    if (match.hidden_text) {
+      for (const h of findHiddenText(norm.plain)) {
+        if (!ctx.allows(def, h.text, h.index, norm.plain, h.index)) continue;
+        const { line, col } = offsetToPosition(norm.original, norm.plainMap?.[h.index] ?? h.index);
+        findings.push({ ...base, line, col, span: truncateSpan(h.text) });
       }
     }
     // ── unicode_class ────────────────────────────────────────────────────────

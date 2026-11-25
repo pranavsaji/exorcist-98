@@ -537,7 +537,7 @@ await step('Possession Lab: the rug pull plays to the end, protected vs compromi
 
 await step('Possession Lab: every attack ends with the shielded side protected', async () => {
   const lab = page.getByRole('dialog', { name: /Possession Lab/ });
-  const names = ['The Rug Pull', 'The Poisoned Tool', 'The Secret Leak', 'The Unknown Host', 'The Poisoned Result', 'The Canary', 'The Lethal Trifecta'];
+  const names = ['The Rug Pull', 'The Poisoned Tool', 'The Secret Leak', 'The Unknown Host', 'The Poisoned Result', 'The Canary', 'The Lethal Trifecta', 'The Hidden Page'];
   const seen = [];
   for (const name of names) {
     await lab.getByRole('button', { name, exact: true }).click();
@@ -862,7 +862,12 @@ await step('deep link ?demo=rug-pull opens the Possession Lab and plays the atta
   await lab2.getByRole('button', { name: 'The Poisoned Tool', exact: true }).and(lab2.locator('[aria-pressed="true"]')).waitFor({ timeout: 5000 });
   await lab2.getByText('Result: protected.').waitFor({ timeout: 30000 });
   await c2.close();
-  return `rug-pull and poisoned-tool played to the end with no clicks; ${v.length} axe violation types`;
+  const { c: c3, p: p3 } = await fresh('/?demo=hidden-web-text');
+  const lab3 = p3.getByRole('dialog', { name: /Possession Lab/ });
+  await lab3.getByRole('button', { name: 'The Hidden Page', exact: true }).and(lab3.locator('[aria-pressed="true"]')).waitFor({ timeout: 5000 });
+  await lab3.getByText('Result: protected.').waitFor({ timeout: 30000 });
+  await c3.close();
+  return `rug-pull, poisoned-tool and hidden-web-text played to the end with no clicks; ${v.length} axe violation types`;
 });
 
 await step('deep links ?open=byoa, ?open=field and ?open=map open those views', async () => {

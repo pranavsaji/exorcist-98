@@ -6,6 +6,7 @@ import { checkStagedCommand } from './commands/check-staged.js';
 import { consoleCommand } from './commands/console.js';
 import { exorciseCommand } from './commands/exorcise.js';
 import { detonateCommand } from './commands/detonate.js';
+import { GUARD_MCP_WRITE_HELP, guardMcpWriteCommand } from './commands/guard-mcp-write.js';
 import { hookScanCommand } from './commands/hook-scan.js';
 import { initCommand } from './commands/init.js';
 import { lockCommand } from './commands/lock.js';
@@ -49,6 +50,7 @@ Commands:
   on-access          Hook helper: block a read of a file that hides instructions for the AI
   allow-read <file>  Let one file be read once (by its content hash)
   origin [dir]       Scan, then trace each threat to the commit that added it
+  guard-mcp-write    Hook helper: a person must confirm any agent write to an MCP config
   guard-commit       Hook helper: block git commit while secrets are staged
   hook-scan          Hook helper: scan the file named in a Kiro "file saved" event
   check-staged       Git pre-commit helper: exit 1 if staged files contain secrets or canary tokens
@@ -94,6 +96,9 @@ export async function main(argv: string[]): Promise<number> {
     case 'hook-scan': return await hookScanCommand(await readStdin(), stdio);
     case 'on-access': return await onAccessCommand(await readStdin(), stdio);
     case 'allow-read': return await allowReadCommand(rest, stdio);
+    case 'guard-mcp-write':
+      if (rest.includes('--help') || rest.includes('-h')) { stdio.out(GUARD_MCP_WRITE_HELP); return 0; }
+      return await guardMcpWriteCommand(await readStdin(), stdio);
     case 'check-staged': return await checkStagedCommand(stdio);
     case 'guard-commit': {
       const d = decideCommitGuard(await readStdin());

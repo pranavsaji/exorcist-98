@@ -150,14 +150,14 @@ Every false alarm fixed in rounds 1 and 2 is now a case in
 
 ## Labelled attack corpus (missed attacks)
 
-`fixtures/benchmark/` holds 19 defanged attacks and 19 ordinary files that
+`fixtures/benchmark/` holds 24 defanged attacks and 24 ordinary files that
 look like attacks to a naive scanner. `packages/core/src/__tests__/benchmark.test.ts`
 runs them on every test run.
 
 | | Cases | Result |
 |---|---:|---|
-| Attacks caught | 19 | 19 caught |
-| Ordinary files with no findings | 19 | 19 clean |
+| Attacks caught | 24 | 24 caught |
+| Ordinary files with no findings | 24 | 24 clean |
 
 The attacks include five that the scanner missed before this round:
 - a Cursor rules file (`.cursor/rules/*.mdc`) whose instruction is split by a

@@ -64,6 +64,16 @@
     ],
     "lethal-trifecta-claude": [
       "EX-023"
+    ],
+    "cve-2026-10591-hidden-page": [
+      "EX-028"
+    ],
+    "mindgard-possessed-filenames": [
+      "EX-029",
+      "EX-002"
+    ],
+    "mindgard-steering-image-url": [
+      "EX-012"
     ]
   },
   "benign": [
@@ -87,6 +97,9 @@
     "shell-env-setup",
     "defensive-rules",
     "project-scoped-mcp",
-    "claude-allow-safe"
+    "claude-allow-safe",
+    "hidden-ui-text",
+    "long-odd-filenames",
+    "negated-exfil-docs"
   ]
 }

@@ -27,3 +27,19 @@ describe('GET /api/shield-sim', () => {
     expect(parseDeepLink('?demo=trifecta')).toEqual({ kind: 'lab', scenario: 'trifecta' });
   });
 });
+describe('GET /api/shield-sim, The Hidden Page (m8-incidents, requirement 6)', () => {
+  it('is listed as the eighth attack', async () => {
+    const r = (await (await get('')).json()) as { scenarios: Array<{ id: string; title: string }> };
+    expect(r.scenarios).toHaveLength(8);
+    expect(r.scenarios.find((s) => s.id === 'hidden-web-text')?.title).toBe('The Hidden Page');
+  });
+  it('replays it: the config is written without the Shield, and EX-028 withholds the page with it', async () => {
+    const r = (await (await get('?scenario=hidden-web-text')).json()) as SimResult;
+    expect(r.unshielded.poisonReachedAgent).toBe(true);
+    expect(r.shielded.poisonReachedAgent).toBe(false);
+    expect(r.shielded.alerts).toBeGreaterThan(0);
+    expect(r.summary).toContain('Shield layer');
+    expect(r.realWorld).toContain('0.11.130');
+  });
+});
+

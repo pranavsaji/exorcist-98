@@ -243,3 +243,12 @@ describe('Possession Lab: Bring Your Own Attack tab (m5-byoa)', () => {
     expect(html).toContain('<legend');
   });
 });
+
+describe('Possession Lab: The Hidden Page (m8-incidents)', () => {
+  it('opens on the hidden-web-text attack from a deep link, with the attack group labelled', async () => {
+    const { PossessionLab } = await import('@/components/PossessionLab');
+    const html = renderToStaticMarkup(<PossessionLab initial="hidden-web-text" request={{ tab: 'scripted', scenario: 'hidden-web-text', seq: 1 }} />);
+    expect(html).toContain('role="group" aria-label="Choose an attack"');
+    expect(html).toContain('Summoning the attack');
+  });
+});

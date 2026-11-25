@@ -1,0 +1,25 @@
+id: EX-028
+title: Hidden text that instructs the AI
+severity: high
+applies_to:
+  - instruction
+  - docs
+  - memory
+  - tool-result
+  - unknown
+match:
+  # Code check (packages/core/src/hidden-text.ts): an HTML element hidden by its
+  # style (white or near-background colour, font size at or under 2px,
+  # display:none, visibility:hidden, opacity:0, off-screen position, zero-size
+  # box) whose text names the AI or asks for an action. Hidden text that does
+  # neither (a closed modal, a screen-reader label, a collapsed menu) is quiet.
+  hidden_text: true
+  # Hidden markup shown inside Markdown code is displayed, not hidden.
+  skip_in_code: true
+owasp:
+  - "LLM01:2025 Prompt Injection"
+  - "ASI03 Prompt Injection via External Content"
+fix: >
+  Remove the hidden element, or make its text visible. Text a person cannot
+  see but a model reads can give an agent orders. Do not let an agent act on a
+  page or file that contains it.

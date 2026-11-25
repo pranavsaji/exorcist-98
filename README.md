@@ -176,7 +176,7 @@ npx @exorcist-98/cli init --kiro          # hooks, steering, the hook PATH wrapp
 npx @exorcist-98/cli init --kiro --shield # also run every local MCP server through the Shield
 ```
 
-This writes Kiro hooks that block `git commit` while secrets or canary tokens are staged, scan an MCP config the moment it is saved, and scan a file before the agent reads it; steering that tells the agent how to treat tool output; and an `exorcist-reviewer` custom agent that may only use the read-only tools of the Exorcist MCP server.
+This writes Kiro hooks that block `git commit` while secrets or canary tokens are staged, scan an MCP config the moment it is saved, scan a file before the agent reads it, and ask a person before the agent writes to an MCP config (`mcp-config-write-guard`); steering that tells the agent how to treat tool output; and an `exorcist-reviewer` custom agent that may only use the read-only tools of the Exorcist MCP server.
 
 **Editor extension: Exorcist 98 for Kiro** ([`packages/vscode`](packages/vscode/README.md), works in VS Code too):
 
@@ -205,6 +205,7 @@ To build it yourself instead: `pnpm install && pnpm --filter exorcist-98-kiro pa
 | | |
 |---|---|
 | **On-access hook** | A Kiro `PreToolUse` hook (`exorcist on-access`) scans a file before the agent reads it and blocks the read if it carries high or critical threats. Only a person can allow a blocked file: `exorcist allow-read` needs a real terminal and, on macOS, a click in a system dialog, so an agent cannot approve its own read. Allowances live outside the repository, bound to the path and the content hash. |
+| **MCP config write guard** | A Kiro `PreToolUse` hook (`exorcist guard-mcp-write`) asks a person before an agent writes to `.kiro/settings/mcp.json`, the step of the published CVE-2026-10591 attack. With nobody to ask, the write is blocked. See [`docs/INCIDENTS.md`](docs/INCIDENTS.md). |
 | **MCP server** | `@exorcist-98/mcp-server`: `scan_repo`, `scan_mcp_config`, `explain_finding`, `quarantine`. It returns plain-language findings without quoting file text by default, so it cannot become an injection channel itself. |
 | **Kiro Power** | `power/`, in the Agent Plugins layout, pointing at the MCP server. |
 | **Custom agents** | `.kiro/agents/exorcist-reviewer.json` (read-only Exorcist tools) and `exorcist-red-team.json` (writes defanged samples into the benchmark, runs only the benchmark test). |
@@ -268,10 +269,11 @@ Before any text reaches a model, every credential-shaped value is masked at the 
 ## Measured, not claimed
 
 - **Tests:** about 1,600 unit, property-based (123 fast-check properties) and real-process tests, plus a 44-step Chrome run with an axe accessibility scan on every window: 0 violations.
-- **Labelled corpus** (`fixtures/benchmark/`): 19 of 19 defanged attacks caught, 19 of 19 look-alike ordinary files left alone. We wrote this corpus, so it shows coverage of known patterns, not real-world recall.
+- **Labelled corpus** (`fixtures/benchmark/`): 24 of 24 defanged attacks caught, 24 of 24 look-alike ordinary files left alone. We wrote this corpus, so it shows coverage of known patterns, not real-world recall.
+- **Published Kiro attacks** ([`docs/INCIDENTS.md`](docs/INCIDENTS.md)): defanged replicas of CVE-2026-10591 (hidden web text rewrites the MCP config) and the Mindgard file-name attack are in the corpus, with the rule, Shield or hook layer that stops each and what is not covered.
 - **Held-out public repositories** ([`docs/BENCHMARK.md`](docs/BENCHMARK.md)): on 5 repos never used for tuning (about 9,500 files) the scanner raised 1 finding, and it is correct.
 - **Field report** ([`docs/FIELD_REPORT.md`](docs/FIELD_REPORT.md)): 421 public repositories in two held-out rounds; serious false alarms from 4.0 to 0.24 per repository after the fixes. Round 2 contained no real threats, so it shows how quiet the scanner is, not how often an alert is right.
-- **Inside Kiro:** the Shield and MCP server ran inside Kiro IDE; four of the five Kiro hooks were seen firing there; the Crew app ran inside Kiro Crew.
+- **Inside Kiro:** the Shield and MCP server ran inside Kiro IDE; four of the first five Kiro hooks were seen firing there (the sixth, the MCP config write guard, is built and tested but not yet seen firing in Kiro); the Crew app ran inside Kiro Crew.
 
 ## How it compares to other MCP scanners
 
@@ -321,6 +323,8 @@ Open YAML in [`definitions/`](definitions/), each with severity, the files it ap
 | EX-025 | An MCP server's environment changes how its program loads (`NODE_OPTIONS`, `LD_PRELOAD`…) | high |
 | EX-026 | An agent file too large to check (never skipped in silence) | medium |
 | EX-027 | Lethal trifecta completed in a live session: after untrusted text and private data, data going out is held (the Shield's Session Guard) | critical |
+| EX-028 | Hidden text that instructs the AI (white, tiny, `display:none`, off-screen) | high |
+| EX-029 | File or folder name that instructs the AI, or hides characters | high |
 
 ## How Exorcist 98 protects itself
 
@@ -362,7 +366,7 @@ flowchart LR
     O[Tool output]
   end
   subgraph Core["@exorcist-98/core"]
-    W[Walker and normalizer<br/>hidden Unicode, decoding] --> S[Signature engine<br/>25 YAML definitions, time-limited]
+    W[Walker and normalizer<br/>hidden Unicode, decoding] --> S[Signature engine<br/>27 YAML definitions, time-limited]
     S --> J[Optional AI judge<br/>Bedrock, masked input]
     S --> T[Trifecta analysis<br/>capabilities.yaml]
     S --> X[Exorcise fixers]
