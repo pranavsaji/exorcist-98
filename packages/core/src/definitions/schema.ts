@@ -128,6 +128,10 @@ export const VirusDefinitionSchema = z.object({
   enabled:     z.boolean().optional().default(true),
   // Repo-relative paths (regexes) this rule never looks at, e.g. lockfiles.
   skip_paths:  z.array(z.string().refine(compiles, 'skip_paths entries must be valid regular expressions')).optional(),
+  // Repo-relative paths (regexes) where this rule reports at low severity
+  // instead of its own (test and eval folders). Never applied to a file an
+  // agent reads: see keepsFullSeverity in walker.ts.
+  low_severity_paths: z.array(z.string().refine(compiles, 'low_severity_paths entries must be valid regular expressions')).optional(),
   // Rules in the same group that report the same line of the same file are
   // one problem: only the most severe of them is kept.
   same_line_group: z.string().min(1).optional(),

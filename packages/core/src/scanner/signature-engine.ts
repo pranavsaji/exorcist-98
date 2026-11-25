@@ -4,6 +4,7 @@ import type { RepoFile, SignatureFinding, Severity } from '../types.js';
 import type { NormalizedText, UnicodeHit } from '../normalizer.js';
 import type { VirusDefinition } from '../definitions/schema.js';
 import { decodeHidden, MAX_HIDDEN_RUNS } from '../ouija.js';
+import { lowersSeverity } from '../severity-paths.js';
 import { typosquatOf } from '../known-packages.js';
 import { benignPayloadKind, COMMAND_LIKE, decodeBlob, embeddedDocumentKind, fencedRanges, inExecContext, inMarkdownCode, isCredibleSecret, isNegated, isQuotedExample } from './context.js';
 
@@ -204,11 +205,14 @@ export function runSignatures(
   const active: Active[] = [];
   const jobs: Job[] = [];
   const vis = norm.visible;
+  const lowered = new Set<string>();
   const ctx = makeContext(file, norm, defs, limitMs);
   for (const def of defs) {
     if (def.enabled === false) continue;
     if (!def.applies_to.includes(file.role)) continue;
     if (def.skip_paths?.some((p) => getRegex(p, 'i').test(file.rel))) continue;
+    // Test and eval folders: report at low severity instead of dropping (never for agent-facing files).
+    if (lowersSeverity(def, file.rel, file.role)) lowered.add(def.id);
     const { match } = def;
     // A whole-config analysis (EX-023) is run by the orchestrator, not here.
     if (match.analysis) continue;
@@ -400,7 +404,8 @@ export function runSignatures(
     }
   }
 
-  return sameLineGroups(findings, defs);
+  const out = lowered.size === 0 ? findings : findings.map((f) => (lowered.has(f.ruleId) ? { ...f, severity: 'low' as const } : f));
+  return sameLineGroups(out, defs);
 }
 
 // ── Precision round 2 helpers ──────────────────────────────────────────────────

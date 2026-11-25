@@ -15,8 +15,11 @@ match:
   # Well-known badge services take query strings by design. So do the image
   # links Google Docs (googleusercontent, ?key=) and GitBook (alt=media&token=)
   # make for pictures that were pasted into a document: the key or token is
-  # the picture's own address, issued by the host that serves it.
-  exclude_regex: "\\]\\(https?://(?:(?:img\\.shields\\.io|shields\\.io|badgen\\.net|badge\\.fury\\.io|(?:app\\.)?codecov\\.io|coveralls\\.io|(?:api\\.)?travis-ci\\.(?:org|com)|(?:dl\\.)?circleci\\.com|api\\.netlify\\.com|deepwiki\\.com/badge|www\\.bestpractices\\.dev|api\\.securityscorecards\\.dev|(?:static\\.)?pepy\\.tech|sonarcloud\\.io|readthedocs\\.org|img\\.badgesize\\.io|snyk\\.io/test|discord(?:app)?\\.com/api/guilds|camo\\.githubusercontent\\.com|vercel\\.com/button|deploy\\.workers\\.cloudflare\\.com)/|github\\.com/[^)]*/(?:badge\\.svg|actions/workflows/))|\\]\\(https?://(?:github\\.com/[^)?]+\\?raw=true\\)|raw\\.githubusercontent\\.com/)|\\]\\(https?://[a-z0-9.-]*googleusercontent\\.com/(?:docsz|d)/[^)\\s]*[?&]key=[A-Za-z0-9_-]+\\)|\\]\\(https?://(?:[a-z0-9-]+-)?files\\.gitbook\\.io/~/files/v0/b/gitbook-x-prod\\.appspot\\.com/o/[^)\\s]*[?&]alt=media\\\\?&token=[A-Za-z0-9-]+\\)"
+  # the picture's own address, issued by the host that serves it. Both are
+  # anchored: the host is whole dot-separated labels (so attacker-googleusercontent.com
+  # is not exempt), and the query is exactly ?key=... or ?alt=media&token=...
+  # with nothing before, between or after (so data cannot ride along).
+  exclude_regex: "\\]\\(https?://(?:(?:img\\.shields\\.io|shields\\.io|badgen\\.net|badge\\.fury\\.io|(?:app\\.)?codecov\\.io|coveralls\\.io|(?:api\\.)?travis-ci\\.(?:org|com)|(?:dl\\.)?circleci\\.com|api\\.netlify\\.com|deepwiki\\.com/badge|www\\.bestpractices\\.dev|api\\.securityscorecards\\.dev|(?:static\\.)?pepy\\.tech|sonarcloud\\.io|readthedocs\\.org|img\\.badgesize\\.io|snyk\\.io/test|discord(?:app)?\\.com/api/guilds|camo\\.githubusercontent\\.com|vercel\\.com/button|deploy\\.workers\\.cloudflare\\.com)/|github\\.com/[^)]*/(?:badge\\.svg|actions/workflows/))|\\]\\(https?://(?:github\\.com/[^)?]+\\?raw=true\\)|raw\\.githubusercontent\\.com/)|\\]\\(https?://(?:[a-z0-9-]+\\.)*googleusercontent\\.com/(?:docsz|d)/[^)\\s?]*\\?key=[A-Za-z0-9_-]+\\)|\\]\\(https?://(?:[a-z0-9-]+-)?files\\.gitbook\\.io/~/files/v0/b/gitbook-x-prod\\.appspot\\.com/o/[^)\\s?]*\\?alt=media\\\\?&token=[A-Za-z0-9-]+\\)"
   # An image inside Markdown code (backticks or a fenced block) is shown as
   # text and never loaded, so it cannot send anything (security docs quote
   # defanged examples that way).

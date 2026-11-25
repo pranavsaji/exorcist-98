@@ -1,4 +1,4 @@
-import { redactSecretText } from '@exorcist-98/core/browser';
+import { PRIVATE_KEY_LINE_MARKER, privateKeyLines, redactSecretText } from '@exorcist-98/core/browser';
 import type { Snippet, SnippetLine } from './protocol';
 
 // Same classes the engine detects: zero-width, bidi override, tag block, and
@@ -130,10 +130,14 @@ export function buildSnippet(
  * line is redacted on its own. When a secret straddles two parts, the whole
  * line is redacted and put in `before`, and the highlight is dropped for it.
  */
-export function redactSnippet(snippet: Snippet): Snippet {
+export function redactSnippet(snippet: Snippet, original?: string): Snippet {
+  // Lines inside a private-key block are blanked whole: only the BEGIN and END
+  // lines carry a marker a per-line redaction can see (m7-exemption-bypasses).
+  const key = original === undefined ? null : privateKeyLines(original);
   return {
     ...snippet,
     lines: snippet.lines.map((l) => {
+      if (key?.has(l.n)) return { n: l.n, before: PRIVATE_KEY_LINE_MARKER, match: '', after: '' };
       const whole = l.before + l.match + l.after;
       const safe = redactSecretText(whole);
       if (safe === whole) return l;

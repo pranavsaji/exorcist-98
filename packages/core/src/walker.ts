@@ -20,6 +20,7 @@ export function isAgentFacing(rel: string, role: FileRole): boolean {
   if (!AGENT_FACING_ROLES.has(role)) return false;
   return !(role === 'config' && LOCKFILE_NAMES.has(rel.split('/').pop() ?? ''));
 }
+export { keepsFullSeverity, lowersSeverity } from './severity-paths.js';
 const BINARY_PROBE  = 512;       // bytes to read for binary detection
 
 const SKIP_DIRS = new Set([

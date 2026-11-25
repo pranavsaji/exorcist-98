@@ -6,6 +6,7 @@ export type { SarifLog } from './reporters/sarif-reporter.js';
 export { toMarkdown } from './reporters/markdown-reporter.js';
 export { toBadgeSvg, badgeStatus } from './reporters/badge.js';
 export type { BadgeStatus } from './reporters/badge.js';
+export { redactSecretLines, privateKeyLines, PRIVATE_KEY_LINE_MARKER } from './redact-secrets.js';
 export { redactSecretText, redactFinding, redactFindings, redactionMarker, containsSecret } from './redact-secrets.js';
 export { plainFor, hasPlainEntry } from './plain.js';
 export type { PlainEntry } from './plain.js';

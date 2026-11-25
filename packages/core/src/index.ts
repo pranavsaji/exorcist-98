@@ -14,6 +14,7 @@ export { toMarkdown } from './reporters/markdown-reporter.js';
 export { toBadgeSvg, badgeStatus } from './reporters/badge.js';
 export { loadDefinitions } from './definitions/loader.js';
 export { DefinitionLoadError } from './definitions/schema.js';
+export { redactSecretLines, privateKeyLines, PRIVATE_KEY_LINE_MARKER } from './redact-secrets.js';
 export { redactSecretText, redactFinding, redactFindings, redactionMarker, containsSecret, MIN_LENGTH_FOR_PREFIX } from './redact-secrets.js';
 export { findSecrets, findStagedSecrets, findPrivateKeyBlocks, redact } from './secrets-check.js';
 export {

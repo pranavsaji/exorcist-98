@@ -3,7 +3,7 @@ import { readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { mkdir } from "node:fs/promises";
-import { exorciseRepo, fetchGithubRepo, readZip, redactFinding, redactSecretText, registryLookup, scanRepo, toUnifiedDiff, walkRepo, writeEntries } from "@exorcist-98/core";
+import { exorciseRepo, fetchGithubRepo, readZip, redactFinding, redactSecretLines, registryLookup, scanRepo, toUnifiedDiff, walkRepo, writeEntries } from "@exorcist-98/core";
 import type { ConfigMap, Finding, HauntedMap, VersionAnswer, VersionLookup } from "@exorcist-98/core";
 import { definitionsDir, hauntedRepoDir } from "./paths";
 import { buildSnippet, redactSnippet } from "./snippet";
@@ -40,8 +40,8 @@ function defaultLookup(): VersionLookup | null {
 }
 
 /** The patch with any secret on a diff line replaced by a marker. */
-function redactPatch(patch: string): string {
-  return patch.split("\n").map(redactSecretText).join("\n");
+export function redactPatch(patch: string): string {
+  return redactSecretLines(patch, { diff: true });
 }
 
 /** The exorcism patch for a scanned folder, capped at PATCH_MAX_BYTES. */
@@ -218,7 +218,7 @@ export async function* scanTarget(
         yield {
           type: "finding",
           finding: toWebFinding(f),
-          snippet: redactSnippet(buildSnippet(cachedText, f.line, f.col, f.span)),
+          snippet: redactSnippet(buildSnippet(cachedText, f.line, f.col, f.span), cachedText),
         };
       } else if (ev.type === "error") {
         if (!include(ev.file)) continue;

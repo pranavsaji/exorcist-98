@@ -26,8 +26,10 @@ match:
   # attack (m7-precision, packages/core/src/scanner/context.ts isNegated).
   negated_cues: '\b(?:(?:must|should|shall|will|would|may|might|can|could)\s*(?:not|never)|(?:must|should|shall|would|could|do|does|did|is|are|was|were|has|have|ca|wo)n[''’]t|cannot|do(?:es)?\s+not|did\s+not|never|refus(?:e|es|ed|ing)\s+to|(?:is|are)\s+not\s+(?:to|allowed\s+to|permitted\s+to|able\s+to)|unable\s+to)\s+(?:(?:ever|simply|just|even|actually|knowingly)\s+)*$|\b(?:(?:must|should|shall|will|would|may|might|can|could)\s*(?:not|never)|(?:must|should|shall|would|could|do|does|did|is|are|was|were|has|have|ca|wo)n[''’]t|cannot)\s+(?:attempt|try|seek)\s+to\b[^.!?\n]*?\b(?:tell|instruct|ask|cause|make|persuade|trick|convince|get|force|let|allow)\w*\s+(?:(?:the|an?|your|any)\s+)?(?:(?:agent|model|assistant|ai|llm|bot|claude)s?\s+)?(?:to\s+)?$|\b(?:(?:must|should|shall|will|would|may|might|can|could)\s*(?:not|never)|(?:must|should|shall|would|could|do|does|did|is|are|was|were|has|have|ca|wo)n[''’]t|cannot|do(?:es)?\s+not|did\s+not|never|refus(?:e|es|ed|ing)\s+to|(?:is|are)\s+not\s+(?:to|allowed\s+to|permitted\s+to|able\s+to)|unable\s+to)\s+(?:follow|obey|comply\s+with|act\s+on|honou?r|accept|execute|run)\s+(?:(?:any|an?|the|such|these|those|that|text|instructions?|requests?|commands?|messages?|content|tool\s+output|it)\s+)*(?:(?:that|which)\s+)?(?:(?:say|says|saying|tell|tells|telling|ask|asks|asking)\s+(?:you\s+)?(?:to\s+)?)?$'
 # Test and eval fixtures hold attack samples on purpose (a security scanner's
-# own tests, adversarial evals). Attacks in any other path are still reported.
-skip_paths:
+# own tests, adversarial evals). Findings there are reported at low severity,
+# not dropped. A file an agent reads (instructions, hooks, MCP configs, .kiro,
+# .claude, .cursor) is never lowered, wherever it sits.
+low_severity_paths:
   - "(^|/)(tests?|__tests__|__mocks__|spec|specs|fixtures?|testdata|test-data|e2e|evals?)/|[._-](test|spec)s?\\.[A-Za-z0-9]+$|_tests?\\.(rs|go|py)$"
 owasp:
   - "LLM01:2025 Prompt Injection"

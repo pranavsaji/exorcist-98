@@ -71,6 +71,36 @@ export function redactSecretText(text: string): string {
   return out;
 }
 
+/** 1-based numbers of the lines that belong to a private-key block (its BEGIN and END lines and everything between). */
+export function privateKeyLines(text: string): Set<number> {
+  const out = new Set<number>();
+  const re = new RegExp(PRIVATE_KEY.source, 'g');
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    let line = 1;
+    for (let i = text.indexOf('\n'); i !== -1 && i < m.index; i = text.indexOf('\n', i + 1)) line++;
+    const last = line + (m[0].match(/\n/g)?.length ?? 0);
+    for (let n = line; n <= last; n++) out.add(n);
+  }
+  return out;
+}
+/** The marker for one line of a private-key block. */
+export const PRIVATE_KEY_LINE_MARKER = '[redacted private-key line]';
+/**
+ * `redactSecretText` for text shown line by line (a diff, a snippet): the line
+ * count is kept, every line inside a private-key block is replaced by a marker
+ * (with `diff`, after its one-character diff prefix), and each other line is
+ * redacted on its own. Redacting line by line alone leaves the body of a key
+ * block in the clear, because only its BEGIN and END lines carry the marker.
+ */
+export function redactSecretLines(text: string, opts: { diff?: boolean } = {}): string {
+  const key = privateKeyLines(text);
+  return text.split('\n').map((line, i) => {
+    if (!key.has(i + 1)) return redactSecretText(line);
+    const prefix = opts.diff && /^[-+ ]/.test(line) ? line.slice(0, 1) : '';
+    return `${prefix}${PRIVATE_KEY_LINE_MARKER}`;
+  }).join('\n');
+}
 /** True when `text` holds a secret that `redactSecretText` would replace. */
 export function containsSecret(text: string): boolean {
   return redactSecretText(text) !== text;

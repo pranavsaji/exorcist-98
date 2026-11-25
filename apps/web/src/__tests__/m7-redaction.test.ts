@@ -61,3 +61,37 @@ describe('redactSnippet', () => {
     expect(redactSnippet(s)).toEqual(s);
   });
 });
+
+// m7-exemption-bypasses, item 4: the body of a multi-line private key is not
+// shown. The markers are built at run time so this file holds no PEM header.
+describe('private key blocks are blanked on every line', () => {
+  const PEM = ['PRIVATE', 'KEY'].join(' ');
+  const begin = `-----BEGIN RSA ${PEM}-----`;
+  const end = `-----END RSA ${PEM}-----`;
+  const body = ['EXAMPLEBODYLINEONEDONOTUSE0000', 'EXAMPLEBODYLINETWODONOTUSE1111'];
+  const file = ['# notes', begin, ...body, end, 'after'].join('\n');
+
+  it('redactSnippet blanks body lines that do not carry the BEGIN or END marker', async () => {
+    const { buildSnippet } = await import('@/lib/snippet');
+    const snip = redactSnippet(buildSnippet(file, 3, 1, body[0] ?? ''), file);
+    const text = JSON.stringify(snip);
+    for (const b of body) expect(text).not.toContain(b);
+    expect(snip.lines.map((l) => l.n)).toEqual([1, 2, 3, 4, 5]);
+    expect(snip.lines[0]?.before).toBe('# notes');
+  });
+
+  it('redactSnippet without the file text still works for a single line', () => {
+    const s = { lines: [{ n: 1, before: 'a', match: 'b', after: 'c' }] };
+    expect(redactSnippet(s)).toEqual(s);
+  });
+
+  it('the patch keeps its lines and hides the key body', async () => {
+    const { redactPatch } = await import('@/lib/scan-service');
+    const patch = ['--- a/k', '+++ b/k', '@@ -1,4 +1,4 @@', ` ${begin}`, `-${body[0]}`, `+${body[1]}`, ` ${end}`, ' tail'].join('\n');
+    const out = redactPatch(patch);
+    for (const b of body) expect(out).not.toContain(b);
+    expect(out.split('\n')).toHaveLength(patch.split('\n').length);
+    expect(out).toContain('--- a/k');
+    expect(out.split('\n').at(-1)).toBe(' tail');
+  });
+});
