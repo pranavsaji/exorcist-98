@@ -62,8 +62,8 @@ Private project? Upload a .zip (up to 4 MB). It is unpacked only for the scan an
 
 | What | Where | Status | How |
 |---|---|---|---|
-| CLI | [npm `@exorcist-98/cli`](https://www.npmjs.com/package/@exorcist-98/cli) | Published, with npm provenance | `npx -y @exorcist-98/cli scan .` |
-| MCP server | [npm `@exorcist-98/mcp-server`](https://www.npmjs.com/package/@exorcist-98/mcp-server) | Published, with npm provenance | `"command": "npx", "args": ["-y", "@exorcist-98/mcp-server"]` ([details](packages/mcp-server/README.md)) |
+| CLI | [npm `@exorcist-98/cli`](https://www.npmjs.com/package/@exorcist-98/cli) | Published (0.1.2), with npm provenance | `npx -y @exorcist-98/cli scan .` |
+| MCP server | [npm `@exorcist-98/mcp-server`](https://www.npmjs.com/package/@exorcist-98/mcp-server) | Published (0.1.2), with npm provenance | `"command": "npx", "args": ["-y", "@exorcist-98/mcp-server"]` ([details](packages/mcp-server/README.md)) |
 | Editor extension | [Open VSX `exorcist-98.exorcist-98-kiro`](https://open-vsx.org/extension/exorcist-98/exorcist-98-kiro) | Published | `kiro --install-extension exorcist-98.exorcist-98-kiro` |
 | GitHub Action | This repository | Works from this repository | `uses: pranavsaji/exorcist-98@main` ([example](#in-your-editor-and-your-ci)) |
 | Kiro Power | This repository, [`power/`](power) | Installable by URL; not yet tried through Kiro's Powers panel | Powers panel, *Add Custom Power*, *Import power from a repository URL*: `https://github.com/pranavsaji/exorcist-98/tree/main/power` |
@@ -240,14 +240,14 @@ jobs:
 | `shield`, `wrap`, `unwrap` | Run MCP servers behind the Real-Time Shield |
 | `lock [--check] [--static]` | Write or check `exorcist.lock` |
 | `canary plant|--list|--remove` | Canary traps (EX-022) |
-| `console` | Open the live, read-only Shield console in your browser (not in 0.1.1 yet) |
+| `console` | Open the live, read-only Shield console in your browser (new in 0.1.2) |
 | `approve`, `alerts`, `vault` | Approve changed tools, hosts or servers, or a session the Session Guard holds (EX-027); read alerts; quarantine and restore |
 | `init [--kiro] [--shield]` | Wire a Kiro project |
 | `on-access`, `allow-read` | The on-access hook and its person-only allowance |
 | `update [--status]` | Install signed (Ed25519) definition updates, verified on download and on every load |
 | `detonate <file>` | The Detonation Chamber (experimental, needs AWS) |
 
-Every command above except `console` is in the published npm version, `@exorcist-98/cli@0.1.1`.
+Every command above is in the published npm version, `@exorcist-98/cli@0.1.2`.
 
 ## The optional AI layer
 

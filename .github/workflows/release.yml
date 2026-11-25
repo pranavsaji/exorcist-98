@@ -74,11 +74,17 @@ jobs:
           CONFIRM: ${{ inputs.confirm }}
         run: |
           # npm now processes a new version before serving it ("may take a few
-          # minutes"); 0.1.1 took about 3. Wait up to 10 minutes.
+          # minutes"); 0.1.1 took about 3. Wait up to 10 minutes until npm
+          # serves the version of BOTH packages (the provenance step installs both).
           for i in $(seq 1 30); do
-            npx -y "@exorcist-98/cli@$CONFIRM" --version && exit 0
+            ready=1
+            for p in cli mcp-server; do
+              [ "$(npm view "@exorcist-98/$p@$CONFIRM" version 2>/dev/null)" = "$CONFIRM" ] || ready=0
+            done
+            if [ "$ready" = 1 ] && npx -y "@exorcist-98/cli@$CONFIRM" --version; then exit 0; fi
             sleep 20
           done
+          echo "npm did not serve $CONFIRM for both packages within 10 minutes" >&2
           exit 1
       - name: Provenance verifies
         run: |
