@@ -305,6 +305,18 @@ describe('console model', () => {
     m.poll();
     expect(m.state().sessions.find((x) => x.key === 'osdemo')).toBeUndefined();
   });
+  it('a system-prompt hold closed by a verified answer that goes on to the host check stops waiting, and is counted once', () => {
+    const dir = tmp();
+    const log = new EventLog(dir, { server: 'mail', pid: 701, session: 'hostdemo' });
+    log.write({ kind: 'call', tool: 'send', decision: 'held', ruleId: 'EX-027', via: 'os', prompt: 1 });
+    log.write({ kind: 'call', tool: 'send', decision: 'held', ruleId: 'EX-027', via: 'os', prompt: 1, by: 'user' });
+    log.write({ kind: 'call', tool: 'send', decision: 'held', ruleId: 'EX-016', prompt: 1 });
+    const m = new ConsoleModel(dir, { alive });
+    m.poll();
+    const s = m.state();
+    expect(s.counts.held).toBe(2);
+    expect(s.sessions[0]!.waiting.map((w) => w.ruleId)).toEqual(['EX-016']);
+  });
   it('the page text names the system prompt for OS release and the terminal command for terminal mode', () => {
     const html = consolePage('abcdefghijklmnop1234');
     expect(html).toContain('Touch ID');

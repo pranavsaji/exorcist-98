@@ -51,10 +51,11 @@ export function sanitizeReason(text: string): string {
 }
 
 /** The text of the OS prompt: names the tool, the server and the facts that armed the guard. */
-export function buildReason(server: string, tool: string, facts: readonly Fact[]): string {
+export function buildReason(server: string, tool: string, facts: readonly Fact[], hosts: readonly string[] = []): string {
   const what = facts.map((f) => describeFact(f)).join('; ');
   const quote = (s: string): string => `"${s.replace(/"/gu, "'")}"`;
-  const head = `Exorcist 98 holds ${quote(tool)} on ${quote(server)}`;
+  const to = hosts.length === 0 ? '' : ` (also to ${hosts.slice(0, 3).map((h) => quote(h.slice(0, 40))).join(', ')}${hosts.length > 3 ? ' and more' : ''}, not on the allowed list)`;
+  const head = `Exorcist 98 holds ${quote(tool)} on ${quote(server)}${to}`;
   const body = what === '' ? '' : `: ${what}`;
   return sanitizeReason(`${head}${body}. Verify to release this one call.`);
 }

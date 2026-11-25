@@ -128,10 +128,11 @@ export class ConsoleModel {
       if (s) s.lastSeen = e.time;
     }
     if (e.kind === 'call') {
-      this.counts[e.decision]++;
+      // A held event answered by the user only closes an earlier hold (system prompt, then the host check); it is not a new hold.
+      if (!(e.decision === 'held' && e.by === 'user')) this.counts[e.decision]++;
       const key = e.prompt !== undefined ? `${e.pid}:${e.via ?? 'agent'}:${e.prompt}` : null;
-      if (key && e.decision === 'held') this.held.set(key, e);
-      else if (key && e.by === 'user') this.held.delete(key);
+      if (key && e.by === 'user') this.held.delete(key);
+      else if (key && e.decision === 'held') this.held.set(key, e);
       while (this.held.size > 256) this.held.delete(this.held.keys().next().value as string);
     } else if (e.kind === 'result') {
       this.counts[e.decision]++;
