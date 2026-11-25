@@ -1,0 +1,362 @@
+{
+  "pbtResults": {
+    "8. Test the pure helpers (`m6-os-release.test.ts`)": {
+      "status": "passed",
+      "lastRunTimestamp": 1795569477390
+    },
+    "9. Test the real implementation with a fake spawner": {
+      "status": "passed",
+      "lastRunTimestamp": 1795569655163
+    },
+    "10. Test that a successful prompt releases exactly one call": {
+      "status": "passed",
+      "lastRunTimestamp": 1795569771526
+    },
+    "13. Test terminal mode, fallback text and policy": {
+      "status": "passed",
+      "lastRunTimestamp": 1795569971342
+    }
+  },
+  "executionHistory": {
+    "1. Create `packages/shield/src/os-auth.ts` with the types and pure helpers": [
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568522559
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568528593
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568606454
+      }
+    ],
+    "2. Add `macOsAuth()` and `resolveRelease()` to `os-auth.ts`": [
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568522755
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568606648
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568708257
+      }
+    ],
+    "3. Add `sessionRelease` to the policy": [
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568522843
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568708402
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568752676
+      }
+    ],
+    "4. Let the Session Guard ignore grants": [
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568522942
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568753027
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568866036
+      }
+    ],
+    "5. Add the OS release path to the engine": [
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568523053
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568866403
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568966412
+      }
+    ],
+    "6. Wire the Shield process": [
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568523220
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568966680
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795569171779
+      }
+    ],
+    "7. Update `exorcist approve session` for OS release": [
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568523376
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795569171957
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795569410145
+      }
+    ],
+    "8. Test the pure helpers (`m6-os-release.test.ts`)": [
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568523608
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795569410510
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795569485594
+      }
+    ],
+    "9. Test the real implementation with a fake spawner": [
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568523690
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795569485180
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795569665350
+      }
+    ],
+    "10. Test that a successful prompt releases exactly one call": [
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568523796
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795569665699
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795569781184
+      }
+    ],
+    "11. Test that denied, error and timeout refuse": [
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568523932
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795569780756
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795569857209
+      }
+    ],
+    "12. Test that forged grants are ignored under `os`": [
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568524042
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795569857699
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795569913347
+      }
+    ],
+    "13. Test terminal mode, fallback text and policy": [
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568524096
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795569913073
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795569980424
+      }
+    ],
+    "14. Test the proxy wiring": [
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568524160
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795569979885
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795570071142
+      }
+    ],
+    "15. Test the CLI": [
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568524302
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795570070599
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795570230095
+      }
+    ],
+    "16. Test that no reason text or file content is logged": [
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568524356
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795570230848
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795570331120
+      }
+    ],
+    "17. Update README and docs/KNOWN_LIMITATIONS.md": [
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568524421
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795570330934
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795570387233
+      }
+    ],
+    "18. Add the row to docs/KIRO_LOG.md": [
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568524492
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795570386913
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795570430431
+      }
+    ],
+    "19. Run `pnpm -r typecheck` from the repository root": [
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568524572
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795570430930
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795570540447
+      }
+    ],
+    "20. Run `pnpm vitest run` from the repository root": [
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795568524643
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795570540597
+      },
+      {
+        "executionId": "cf43ad21-ca18-4d1b-9449-0b070e7fdfe6",
+        "chatSessionId": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+        "timestamp": 1795570768341
+      }
+    ]
+  }
+}

@@ -170,7 +170,8 @@ export function describeFact(f: Fact, rules: ReadonlyArray<{ id: string; label: 
  * Shield's file is not believed: any file in the folder could have been
  * written by something other than that Shield.
  */
-export function assessSession(records: readonly SessionRecord[], problems: readonly string[], now: Date, ttlMs = SESSION_TTL_MS, self?: string): Assessment {
+export function assessSession(records: readonly SessionRecord[], problems: readonly string[], now: Date, ttlMs = SESSION_TTL_MS, self?: string, opts?: { ignoreGrants?: boolean }): Assessment {
+  const ignoreGrants = opts?.ignoreGrants === true;
   const n = now.getTime();
   const issues = [...problems];
   const live: Fact[] = [];
@@ -182,7 +183,7 @@ export function assessSession(records: readonly SessionRecord[], problems: reado
       if (t > n + MAX_SKEW_MS) { future = true; continue; }
       if (n - t <= ttlMs) live.push(f);
     }
-    const trusted = r.writer === 'cli' || (self !== undefined && r.writer === self);
+    const trusted = !ignoreGrants && (r.writer === 'cli' || (self !== undefined && r.writer === self));
     for (const g of r.grants) {
       const t = timeOf(g.time);
       if (t > n + MAX_SKEW_MS) { future = true; continue; }
@@ -275,12 +276,12 @@ export class SessionGuard {
     return this.save(now);
   }
 
-  assess(): Assessment {
+  assess(opts?: { ignoreGrants?: boolean }): Assessment {
     const now = this.now();
     const view = this.store.read(now);
     // This process's own record always counts, read or not.
     const records = [...view.records.filter((r) => r.writer !== this.record.writer), this.record];
-    return assessSession(records, view.problems, now, this.ttlMs, this.record.writer);
+    return assessSession(records, view.problems, now, this.ttlMs, this.record.writer, opts);
   }
 
   /** This process's own facts (for tests and the Possession Lab). */
