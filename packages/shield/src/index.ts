@@ -17,6 +17,8 @@ export {
 } from './session.js';
 export type { Fact, FactKind, Grant, SessionRecord, SessionRead, SessionStore, Assessment, ProcInfo, ProcLookup } from './session.js';
 export type { Action, EngineOptions, StateIO } from './engine.js';
+export { blockedReason, sanitizeReason, buildReason, macOsAuth, resolveRelease, AVAILABLE_SCRIPT, VERIFY_SCRIPT } from './os-auth.js';
+export type { OsVerdict, OsAuth, Release, Spawner, MacOsAuthOptions } from './os-auth.js';
 export { runProxy } from './proxy.js';
 export { AiReview, findingsFor } from './ai-review.js';
 export type { AiJudge, AiLabel, AiFindings } from './ai-review.js';

@@ -20,6 +20,8 @@ import { checkLaunch, configLabel, launchEntryOf, launchFingerprint, loaderEnvKe
 import type { LaunchCheck, LaunchEntry, LaunchEntryResult, LaunchPin } from './launch.js';
 import { AiReview } from './ai-review.js';
 import type { AiJudge } from './ai-review.js';
+import { macOsAuth, resolveRelease } from './os-auth.js';
+import type { OsAuth, OsVerdict } from './os-auth.js';
 import { throttle } from './notify.js';
 import type { Notifier } from './notify.js';
 
@@ -49,6 +51,8 @@ export type ProxyOptions = {
    * project root. `null` turns lock seeding off.
    */
   lockPath?: string | null;
+  /** How a held Session Guard call is released (EX-027). Default: macOsAuth(), which never prompts under tests or CI. Tests pass a fake. */
+  osAuth?: OsAuth;
 };
 
 export const FAIL_CLOSED_EXIT = 78;
@@ -76,6 +80,8 @@ export type ShieldSetupOptions = {
   url?: string;
   /** The agent session this Shield belongs to (EX-027). Default: resolveSessionKey() (EXORCIST_SESSION, else the agent's process). */
   sessionKey?: string;
+  /** How a held Session Guard call is released (EX-027). Default: macOsAuth(), which never prompts under tests or CI. Tests pass a fake. */
+  osAuth?: OsAuth;
 };
 
 export type ShieldContext = {
@@ -90,6 +96,11 @@ export type ShieldContext = {
   prepareServerLine?: (line: string) => Promise<void>;
   /** Start watching the pin file for approvals; returns a stop function. */
   watch: (deliver: (actions: Action[]) => void) => () => void;
+  /**
+   * Give the Shield the function that delivers actions (the one the caller
+   * already uses). The answers to device-owner checks are delivered through it.
+   */
+  attach: (deliver: (actions: Action[]) => void) => void;
 };
 
 /** Load and check everything the Shield needs; a number is a fail-closed exit code. */
@@ -277,8 +288,17 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
   }
   const serverSpec: ServerSpec | undefined = o.launch ? { command: o.launch.command, args: o.launch.args } : o.url ? { url: o.url } : undefined;
 
+  // Release of held calls (m6): chosen once. Only the mode and a plain note are logged.
+  const osAuth = o.osAuth ?? macOsAuth();
+  let release: { mode: 'os' | 'terminal'; note?: string } | undefined;
+  if (session) {
+    release = await resolveRelease(policy.policy.sessionRelease, osAuth);
+    log(`Session Guard release: ${release.mode}${release.note ? ` (${release.note})` : ''}.`);
+  }
+
   const engine = new ShieldEngine({
     server: o.server, io, policy: policy.policy, defs,
+    ...(release ? { release } : {}),
     ...(session ? { session } : {}),
     capabilities: { rules: capabilityRules, ...(serverSpec ? { server: serverSpec } : {}) },
     ...(canaries.length > 0 ? { canaries } : {}),
@@ -299,12 +319,27 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
     try { appendAlert(alertsPath(o.dir), a); } catch { /* the console line above is enough */ }
   };
 
+  // One OS prompt at a time: checks run through a single promise chain.
+  let attached: ((actions: Action[]) => void) | undefined;
+  let ownerQueue: Promise<void> = Promise.resolve();
+  const verifyOwner = (ticket: string, reason: string): void => {
+    ownerQueue = ownerQueue
+      .then(async () => {
+        let verdict: OsVerdict;
+        try { verdict = await osAuth.verify(reason); } catch { verdict = 'error'; }
+        attached?.(engine.onOwnerVerified(ticket, verdict));
+      })
+      .catch(() => undefined);
+  };
+  const attach = (deliver: (actions: Action[]) => void): void => { attached = deliver; };
+
   const handle = (actions: Action[]): Array<{ to: 'server' | 'client'; message: unknown }> => {
     const out: Array<{ to: 'server' | 'client'; message: unknown }> = [];
     for (const a of actions) {
       if (a.type === 'forward') out.push({ to: a.to, message: a.message });
       else if (a.type === 'log') log(a.text);
       else if (a.type === 'alert') recordAlert(a.alert);
+      else if (a.type === 'verify-owner') verifyOwner(a.ticket, a.reason);
       else if (o.configPath) {
         const r = quarantineServer({ configPath: o.configPath, serverName: o.server, reason: a.reason, vaultDir: vaultPath(o.dir) });
         log(r.ok ? `Quarantined "${o.server}" (vault entry ${r.value.id}). Restore with: exorcist vault restore ${r.value.id}` : `Could not quarantine: ${r.error}`);
@@ -331,7 +366,7 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
   const prepareServerLine = review
     ? (line: string): Promise<void> => (review as AiReview).prepare(line, (name) => Boolean(io.load().servers[o.server]?.tools[name]))
     : undefined;
-  return { engine, log, handle, watch, ...(prepareServerLine ? { prepareServerLine } : {}) };
+  return { engine, log, handle, watch, attach, ...(prepareServerLine ? { prepareServerLine } : {}) };
 }
 
 /**
@@ -417,6 +452,7 @@ export async function runProxy(o: ProxyOptions): Promise<number> {
   stdin.on('data', (chunk: Buffer) => { for (const l of fromClient.push(chunk)) run(engine.onClientLine(l)); });
   stdin.on('end', () => {
     for (const l of fromClient.flush()) run(engine.onClientLine(l));
+    engine.abandon();
     child.stdin.end();
   });
   // With AI review on, server lines wait in order while new tool descriptions are judged.
@@ -430,6 +466,7 @@ export async function runProxy(o: ProxyOptions): Promise<number> {
   child.stderr.on('data', (chunk: Buffer) => void stderr.write(chunk));
   child.stdin.on('error', () => { /* the child went away; its exit is handled below */ });
 
+  prepared.attach(run);
   const stopWatch = prepared.watch(run);
 
   return await new Promise<number>((resolve) => {

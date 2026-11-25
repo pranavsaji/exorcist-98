@@ -1,10 +1,11 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { alertsPath, approveHost, approveServer, approveTool, grantSession, liveSessions, sessionSummary, loadState, saveState, statePath } from '@exorcist-98/shield';
+import { alertsPath, loadPolicy, macOsAuth, policyPath, resolveRelease, approveHost, approveServer, approveTool, grantSession, liveSessions, sessionSummary, loadState, saveState, statePath } from '@exorcist-98/shield';
 import { DEFAULT_DIR, stateDir, parse, str } from '../util.js';
 import type { Io } from '../util.js';
 import { personConfirms, processTerminal } from './on-access.js';
 import type { Terminal } from './on-access.js';
+import type { OsAuth } from '@exorcist-98/shield';
 
 export const APPROVE_HELP = `Usage: exorcist approve tool <server> <tool> [--dir <folder>]
        exorcist approve host <server> <host> [--dir <folder>]
@@ -17,16 +18,19 @@ approve host    Let a server send data to a host (a name like api.example.com, o
 approve server  Accept a changed program behind a server (new code or arguments) and pin it.
 approve session Let an agent session the Session Guard (EX-027) is holding send data out again.
                 The key is in the alert. It asks again after new untrusted text or private data.
-                Only a person should run it: it needs an interactive terminal, then a
-                native dialog to click (macOS). Elsewhere it falls back to a typed one-time
-                code, which an agent driving a real terminal could read: weaker.
+                On macOS the Shield releases it itself, in a system prompt (Touch ID or your
+                login password), so this command writes nothing then. If the policy sets
+                "sessionRelease": "terminal", or the system prompt is unavailable, a person
+                runs it in an interactive terminal, then clicks a native dialog (macOS).
+                Elsewhere it falls back to a typed one-time code, which an agent driving a
+                real terminal could read: weaker.
 alerts          Show recent shield alerts.
 
 The running shield picks the change up on the next request. Your AI client may
 need to refresh its tool list (reconnect the MCP server) to see a restored tool.
 `;
 
-export async function approveCommand(argv: string[], io: Io, term: Terminal = processTerminal()): Promise<number> {
+export async function approveCommand(argv: string[], io: Io, term: Terminal = processTerminal(), osAuth: OsAuth = macOsAuth()): Promise<number> {
   const p = parse(argv, { dir: { type: 'string' }, help: { type: 'boolean', short: 'h' } });
   if (!p.ok) { io.err(`${p.error}\n\n${APPROVE_HELP}`); return 2; }
   if (p.values['help']) { io.out(APPROVE_HELP); return 0; }
@@ -39,6 +43,15 @@ export async function approveCommand(argv: string[], io: Io, term: Terminal = pr
         ? `Say which session. Sessions with facts in ${dir}: ${live.join(', ')}\n`
         : `There is no live session in ${dir}.\n`);
       return 2;
+    }
+    // With OS release the Shield asks the system itself. A file written here
+    // could be forged by any program, so nothing is written.
+    const policy = loadPolicy(policyPath(dir));
+    if (!policy.ok) { io.err(policy.error); return 1; }
+    const release = await resolveRelease(policy.policy.sessionRelease, osAuth);
+    if (release.mode === 'os') {
+      io.out("This session is released in the system prompt (Touch ID or your login password) that the Shield shows when the agent's call is held. Nothing was written here.");
+      return 1;
     }
     // The agent the guard is holding has a shell tool too, and the refusal it
     // got names this command, so only a person may complete it.

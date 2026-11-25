@@ -252,12 +252,14 @@ export async function runRemoteProxy(o: RemoteProxyOptions): Promise<number> {
   };
 
   const fromClient = new LineSplitter();
+  prepared.attach(deliver);
   const stopWatch = prepared.watch(deliver);
 
   return await new Promise<number>((resolve) => {
     stdin.on('data', (chunk: Buffer) => { for (const l of fromClient.push(chunk)) deliver(engine.onClientLine(l)); });
     stdin.on('end', () => {
       for (const l of fromClient.flush()) deliver(engine.onClientLine(l));
+      engine.abandon();
       closing = true;
       stopWatch();
       void (async () => {

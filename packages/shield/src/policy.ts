@@ -55,6 +55,17 @@ export const PolicySchema = z
      * to a leaked key. `mode: monitor` makes it monitor too.
      */
     sessionGuard:   z.enum(['hold', 'block', 'monitor', 'off']).default('hold'),
+    /**
+     * Who may release a call that Session Guard (EX-027) is holding:
+     * `os`: the operating system confirms the owner (Touch ID or login
+     *   password on macOS). A forged `cli.json` release no longer works.
+     *   Falls back to `terminal` when the OS check is unavailable;
+     * `terminal`: a release recorded by `exorcist approve` from a terminal,
+     *   as before.
+     * Optional with no default: when absent the Shield picks `os` if it is
+     * available, else `terminal`. Older Shields reject this key.
+     */
+    sessionRelease: z.enum(['os', 'terminal']).optional(),
   })
   .strict();
 
