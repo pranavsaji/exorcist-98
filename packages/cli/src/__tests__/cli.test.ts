@@ -448,7 +448,7 @@ describe('on-access (the read hook helper)', () => {
   const readEvent = (cwd: string, path: string): string =>
     JSON.stringify({ hook_event_name: 'PreToolUse', cwd, tool_name: 'read', tool_input: { path } });
 
-  it('exits 2 on the Haunted Repo EX-002 sample and 0 on this repo\'s README.md', () => {
+  it('exits 2 on the Haunted Repo EX-002 sample and 0 on a clean repo doc (SECURITY.md); README.md is reported', () => {
     const d = tmp();
     writeFileSync(join(d, 'CONTRIBUTING.md'), readFileSync(join(FIXTURES, 'EX-002-ai-instructions.md'), 'utf8'));
     const blocked = run(['on-access'], { input: readEvent(d, 'CONTRIBUTING.md') });
@@ -456,7 +456,9 @@ describe('on-access (the read hook helper)', () => {
     expect(blocked.err).toContain('EX-002');
     expect(blocked.err).toContain('exorcist allow-read');
     expect(blocked.err).not.toContain('Ignore previous instructions'); // never quote the attacker
-    expect(run(['on-access'], { input: readEvent(ROOT, 'README.md') }).code).toBe(0);
+    expect(run(['on-access'], { input: readEvent(ROOT, 'SECURITY.md') }).code).toBe(0);
+    // README.md documents the exfiltration sentence, so the new EX-002 alternative reports it.
+    expect(run(['on-access'], { input: readEvent(ROOT, 'README.md') }).code).toBe(2);
   });
 
   it('never bricks the agent: bad JSON, no path and a missing file all exit 0', () => {

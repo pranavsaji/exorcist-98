@@ -83,7 +83,7 @@ describe('Possession Lab simulator (real ShieldEngine)', () => {
   });
 
   it('the lethal trifecta: each step alone passes, and EX-027 holds the call that closes the loop', () => {
-    expect(SCENARIO_IDS).toHaveLength(7);
+    expect(SCENARIO_IDS).toHaveLength(8);
     expect(listScenarios().find((s) => s.id === 'trifecta')?.title).toBe('The Lethal Trifecta');
     const r = runScenario('trifecta', defs, rules);
     // Unprotected: three servers, and the base64 .env (two fake keys) reached team chat.
@@ -122,6 +122,24 @@ describe('Possession Lab simulator (real ShieldEngine)', () => {
     const r = runScenario('trifecta', defs);
     expect(r.shielded.leakedSecrets).toBe(2);
     expect(r.shielded.verdict).toMatch(/^The Shield missed something/);
+  });
+
+  it('hidden web text: the config is written without the Shield, and EX-028 withholds the page with it', () => {
+    expect(listScenarios().find((s) => s.id === 'hidden-web-text')?.title).toBe('The Hidden Page');
+    const r = runScenario('hidden-web-text', defs, rules);
+    expect(r.summary).toContain('Shield layer');
+    expect(r.summary + r.realWorld).toContain('0.11.130');
+    // Unprotected: the fake write tool recorded the attacker server entry.
+    expect(r.unshielded.poisonReachedAgent).toBe(true);
+    expect(r.unshielded.serverReceived.map((c) => `${c.server}/${c.tool}`)).toEqual(['web/fetch_page', 'files/write_file']);
+    expect(JSON.stringify(r.unshielded.serverReceived[1]!.args)).toContain('mcpServers');
+    expect(r.unshielded.verdict).toBe("The agent wrote an MCP config that starts the attacker's server.");
+    // Shielded: EX-028 withholds the page, the agent never writes the config.
+    expect(r.shielded.poisonReachedAgent).toBe(false);
+    expect(r.shielded.alerts).toBe(1);
+    expect(r.steps[1]!.shielded.some((e) => e.actor === 'shield' && e.ruleId === 'EX-028')).toBe(true);
+    expect(r.shielded.serverReceived.map((c) => c.tool)).toEqual(['fetch_page']);
+    expect(r.shielded.verdict).toMatch(/^Nothing leaked and no attack reached your AI/);
   });
 
   it('is deterministic', () => {

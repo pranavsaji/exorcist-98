@@ -71,7 +71,11 @@ const MatchSchema = z
     // capabilities.yaml). The signature engine skips such rules.
     // `detonation` is the Detonation Chamber (EX-024, m5-detonation): a
     // sandboxed model run, only with `--detonate`.
-    analysis: z.enum(['trifecta', 'detonation']).optional(),
+    // `path-names` checks the names of every walked path (EX-029, path-names.ts).
+    analysis: z.enum(['trifecta', 'detonation', 'path-names']).optional(),
+    // Text an element hides from a person by its style (EX-028, hidden-text.ts):
+    // reported only when the hidden text addresses the AI or asks for actions.
+    hidden_text: z.boolean().optional(),
     // unicode_class only: a single U+200B directly after `@` and before a name
     // is the way changelogs stop GitHub from notifying the person. Reported at
     // `severity` and not counted toward the escalation of many short runs.
@@ -89,12 +93,13 @@ const MatchSchema = z
       val.regex !== undefined ||
       (val.unicode_class !== undefined && val.unicode_class.length > 0) ||
       val.json_path !== undefined ||
+      val.hidden_text === true ||
       val.analysis !== undefined;
     if (!hasAny) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message:
-          'match must contain at least one of: regex, unicode_class, json_path, analysis',
+          'match must contain at least one of: regex, unicode_class, json_path, analysis, hidden_text',
       });
     }
     if (val.value_regex !== undefined && val.json_path === undefined) {

@@ -73,6 +73,16 @@
     ],
     "mcp-source-poison-go": [
       "EX-005"
+    ],
+    "cve-2026-10591-hidden-page": [
+      "EX-028"
+    ],
+    "mindgard-possessed-filenames": [
+      "EX-029",
+      "EX-002"
+    ],
+    "mindgard-steering-image-url": [
+      "EX-012"
     ]
   },
   "benign": [
@@ -99,6 +109,9 @@
     "claude-allow-safe",
     "mcp-source-hints-ts",
     "mcp-source-hints-py",
-    "mcp-source-hints-go"
+    "mcp-source-hints-go",
+    "hidden-ui-text",
+    "long-odd-filenames",
+    "negated-exfil-docs"
   ]
 }

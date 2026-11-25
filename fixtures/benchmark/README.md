@@ -15,3 +15,9 @@ A labelled corpus for the signature engine, run by
 
 Every host is `example.invalid` and every token is fake. Results on real
 public repositories are in `docs/BENCHMARK.md`.
+
+The incident replicas (`cve-2026-10591-hidden-page`, `mindgard-possessed-filenames`,
+`mindgard-steering-image-url`) are original wording, not researcher payloads.
+Names with hidden characters are built by tests from code points, not stored
+here, because git and editors alter them. The corpus has 24 attacks and 24
+look-alikes.

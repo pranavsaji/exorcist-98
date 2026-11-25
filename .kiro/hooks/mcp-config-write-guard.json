@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "mcp-config-write-guard",
+      "description": "A person must confirm any agent write to an MCP config (.kiro/settings/mcp.json, in a project or in the home folder). On macOS a native dialog asks, elsewhere a code typed on the terminal. Exit code 2 blocks the write. The dialog never shows what the agent wanted to write. Runs through scripts/kiro-hook.sh because Kiro gives hook commands a PATH without Node.",
+      "trigger": "PreToolUse",
+      "matcher": "write|shell",
+      "action": {
+        "type": "command",
+        "command": "sh scripts/kiro-hook.sh node_modules/.bin/tsx packages/cli/src/index.ts guard-mcp-write"
+      },
+      "timeout": 150
+    }
+  ]
+}

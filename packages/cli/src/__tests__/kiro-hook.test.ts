@@ -65,7 +65,7 @@ describe('scripts/kiro-hook.sh', () => {
   });
 
   it('every command hook in this repo goes through it, never a bare pnpm, npx or node', () => {
-    for (const f of ['pre-commit-secrets', 'definition-save', 'mcp-config-change', 'on-access-scan']) {
+    for (const f of ['pre-commit-secrets', 'definition-save', 'mcp-config-change', 'on-access-scan', 'mcp-config-write-guard']) {
       const cmd = hookCommand(join(ROOT, `.kiro/hooks/${f}.json`));
       expect(cmd.startsWith('sh scripts/kiro-hook.sh ')).toBe(true);
       expect(cmd).not.toMatch(/(^|\s)(pnpm|npx|node)(\s|$)/);

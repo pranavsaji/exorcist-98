@@ -48,7 +48,7 @@ describe('.kiro/hooks follow the documented v1 format', () => {
   const files = readdirSync(join(ROOT, '.kiro/hooks')).sort();
 
   it('there are exactly six hook files and no leftover YAML', () => {
-    expect(files).toEqual(['definition-save.json', 'exorcist-gate.json', 'mcp-config-change.json', 'on-access-scan.json', 'pre-commit-secrets.json', 'spec-change.json']);
+    expect(files).toEqual(['definition-save.json', 'exorcist-gate.json', 'mcp-config-change.json', 'mcp-config-write-guard.json', 'on-access-scan.json', 'pre-commit-secrets.json', 'spec-change.json']);
   });
 
   for (const f of files) {
@@ -100,6 +100,16 @@ describe('.kiro/hooks follow the documented v1 format', () => {
     expect(existsSync(join(ROOT, 'scripts/hook-on-access.ts'))).toBe(true);
   });
 
+  it('the MCP config write guard runs before write and shell tools, with a timeout above the dialog\'s', () => {
+    const h = HookFile.parse(readJson('.kiro/hooks/mcp-config-write-guard.json')).hooks[0];
+    expect(h?.trigger).toBe('PreToolUse');
+    expect(h?.timeout).toBe(150);
+    expect(h?.enabled).toBeUndefined();
+    const m = new RegExp(h?.matcher ?? '');
+    for (const id of ['write', 'shell']) expect(m.test(id), id).toBe(true);
+    for (const id of ['read', 'web_fetch', 'web_search']) expect(m.test(id), id).toBe(false);
+    expect(h?.action.type === 'command' && h.action.command).toBe('sh scripts/kiro-hook.sh node_modules/.bin/tsx packages/cli/src/index.ts guard-mcp-write');
+  });
   it('the spec-change hook still tells the agent to touch only THREATS.md', () => {
     const h = HookFile.parse(readJson('.kiro/hooks/spec-change.json')).hooks[0];
     expect(h?.action.type === 'agent' && h.action.prompt).toContain('Do not modify any file other than docs/THREATS.md');

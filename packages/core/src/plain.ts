@@ -123,6 +123,16 @@ const ENTRIES: Record<string, PlainEntry> = {
     attack:
       'Each tool server looks harmless alone. But one agent session that can read private data, read text anyone can write (a web page, an issue, an email) and send data somewhere can be told by that text to copy your secrets out. This is the "lethal trifecta".',
   },
+  'EX-028': {
+    headline: 'Text you cannot see is giving your AI orders',
+    attack:
+      'A page or file contains text that is styled to be invisible (white, tiny, off-screen or hidden) but a model still reads it. Here it talks to the AI or tells it to write, run, fetch or send something. This is how a web page can try to steer an agent that was only asked to summarise it.',
+  },
+  'EX-029': {
+    headline: 'A file or folder name is giving your AI orders',
+    attack:
+      'The name of a file or folder reads like an instruction ("ignore previous instructions...") or hides invisible characters. An agent that lists the project reads every name, so a name alone can steer it.',
+  },
   'EX-027': {
     headline: 'Your AI read untrusted text and private data, and now wants to send something out',
     attack:

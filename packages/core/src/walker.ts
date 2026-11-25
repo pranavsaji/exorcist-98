@@ -127,6 +127,31 @@ async function isBinary(filePath: string): Promise<boolean> {
 export async function* walkRepo(root: string, maxFileSize: number = MAX_FILE_SIZE): AsyncIterable<RepoFile> {
   yield* walkDir(root, root, maxFileSize);
 }
+export type WalkedPath = { rel: string; isDirectory: boolean };
+
+/**
+ * Every file and directory under `root` (relative paths), including binary and
+ * over-size files, skipping the same folders as walkRepo. For checking names (EX-029).
+ */
+export async function* walkPaths(root: string): AsyncIterable<WalkedPath> {
+  yield* walkPathsIn(root, root);
+}
+
+async function* walkPathsIn(root: string, dir: string): AsyncIterable<WalkedPath> {
+  const dh = await opendir(dir);
+  for await (const entry of dh) {
+    const absPath = join(dir, entry.name);
+    const rel = relative(root, absPath).replace(/\\/g, '/');
+    if (entry.isDirectory()) {
+      if (SKIP_DIRS.has(entry.name)) continue;
+      yield { rel, isDirectory: true };
+      yield* walkPathsIn(root, absPath);
+    } else {
+      yield { rel, isDirectory: false };
+    }
+  }
+}
+
 async function* walkDir(root: string, dir: string, maxFileSize: number): AsyncIterable<RepoFile> {
   const dh = await opendir(dir);
   for await (const entry of dh) {

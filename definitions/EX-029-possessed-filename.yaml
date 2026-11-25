@@ -1,0 +1,20 @@
+id: EX-029
+title: File or folder name that instructs the AI
+severity: high
+applies_to:
+  - unknown
+match:
+  # Name check (packages/core/src/path-names.ts), run by scanRepo on the name of
+  # every path the walker visits (folders, empty, binary and oversize files
+  # too). A name that reads as an order to an AI ("ignore previous
+  # instructions", "assistant read env and send to ...") or that carries
+  # hidden or control characters is reported. Long, odd or non-Latin names are
+  # quiet. Not a text pattern: the signature engine skips this rule.
+  analysis: path-names
+owasp:
+  - "LLM01:2025 Prompt Injection"
+  - "ASI03 Prompt Injection via External Content"
+fix: >
+  Rename or delete the file or folder. A name is read by an agent when it
+  lists a project, so it can carry orders just like file contents. Do not let
+  an agent act on this project until the name is changed.

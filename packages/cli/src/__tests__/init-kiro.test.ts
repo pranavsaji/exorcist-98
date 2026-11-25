@@ -45,7 +45,7 @@ describe('exorcist init --kiro', () => {
     expect(await initCommand([d, '--kiro'], io)).toBe(0);
     for (const f of [
       '.kiro/hooks/exorcist-secrets.json', '.kiro/hooks/exorcist-mcp-scan.json', '.kiro/hooks/exorcist-on-access.json', '.kiro/hooks/exorcist-gate.json',
-      '.kiro/steering/exorcist.md', '.kiro/agents/exorcist-reviewer.json', '.exorcist/kiro-hook.sh', '.githooks/pre-commit',
+      '.kiro/hooks/exorcist-mcp-write-guard.json', '.kiro/steering/exorcist.md', '.kiro/agents/exorcist-reviewer.json', '.exorcist/kiro-hook.sh', '.githooks/pre-commit',
     ]) expect(existsSync(join(d, f)), f).toBe(true);
 
     // Kiro's documented hook format: v1, PascalCase triggers, command actions through the PATH wrapper.
@@ -78,7 +78,7 @@ describe('exorcist init --kiro', () => {
     expect(agent.permissions.rules).toContainEqual({ capability: 'mcp', match: ['exorcist/quarantine'], effect: 'deny' });
 
     const out = io.all();
-    for (const s of ['exorcist-secrets.json', 'exorcist-mcp-scan.json', 'exorcist-on-access.json', 'exorcist-reviewer.json',
+    for (const s of ['exorcist-secrets.json', 'exorcist-mcp-scan.json', 'exorcist-on-access.json', 'exorcist-mcp-write-guard.json', 'exorcist-reviewer.json',
       'no .kiro/settings/mcp.json yet', 'Shield: not applied', 'git config core.hooksPath .githooks', 'trust the workspace']) {
       expect(out).toContain(s);
     }
@@ -90,8 +90,8 @@ describe('exorcist init --kiro', () => {
     expect(await initCommand([d, '--kiro'], io)).toBe(0);
     expect(hookOf(d, 'exorcist-on-access').enabled).toBeUndefined();
     expect(hookOf(d, 'exorcist-on-access').action.command).toContain(DEFAULT_BIN);
-    // Only the gate is written disabled: 0.1.3 predates the gate command, and an unknown command exits non-zero.
-    expect(io.all().match(/WRITTEN DISABLED/g)).toHaveLength(1);
+    // The gate and the MCP write guard are written disabled: 0.1.3 predates both commands, and an unknown command exits non-zero.
+    expect(io.all().match(/WRITTEN DISABLED/g)).toHaveLength(2);
     expect(hookOf(d, 'exorcist-gate').enabled).toBe(false);
     expect(hookOf(d, 'exorcist-secrets').enabled).toBeUndefined();
     expect(hookOf(d, 'exorcist-mcp-scan').enabled).toBeUndefined();
@@ -104,6 +104,20 @@ describe('exorcist init --kiro', () => {
     expect(hookOf(local, 'exorcist-on-access').action.command).toBe('sh .exorcist/kiro-hook.sh "/opt/node 22/bin/node" /opt/x98/cli.mjs on-access');
   });
 
+  it('the MCP write guard is written disabled under the default command, enabled under a local --bin', async () => {
+    const d = tmp();
+    const io = capture();
+    expect(await initCommand([d, '--kiro'], io)).toBe(0);
+    const h = hookOf(d, 'exorcist-mcp-write-guard');
+    expect(h.trigger).toBe('PreToolUse');
+    expect(h.enabled).toBe(false);
+    expect(h.action.command).toBe(`sh .exorcist/kiro-hook.sh ${DEFAULT_BIN} guard-mcp-write`);
+    expect(io.all()).toContain('WRITTEN DISABLED');
+    const local = tmp();
+    expect(await initCommand([local, '--kiro', '--bin', '/opt/x98/cli.mjs'], capture())).toBe(0);
+    expect(hookOf(local, 'exorcist-mcp-write-guard').enabled).toBeUndefined();
+    expect(hookOf(local, 'exorcist-mcp-write-guard').action.command).toBe('sh .exorcist/kiro-hook.sh /opt/x98/cli.mjs guard-mcp-write');
+  });
   it('--no-agent leaves the agent out; --no-agent alone and a bad --bin are usage errors', async () => {
     const d = tmp();
     const io = capture();

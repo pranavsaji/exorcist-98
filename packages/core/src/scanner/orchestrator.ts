@@ -4,8 +4,9 @@ import { asBackupFinding, vaultBackupChecker } from '../vault-trust.js';
 import { canariesPath, findCanaryInText, isCanaryHome, lineColOf, loadCanariesFile } from '../canary.js';
 import type { Canary } from '../canary.js';
 import type { VirusDefinition } from '../definitions/schema.js';
-import { walkRepo } from '../walker.js';
+import { walkPaths, walkRepo } from '../walker.js';
 import { languageOf, scanSourceTools } from '../source-tools.js';
+import { checkPathSegment } from '../path-names.js';
 import { normalize } from '../normalizer.js';
 import { runSignatures } from './signature-engine.js';
 import { runHeuristics } from './heuristic-engine.js';
@@ -93,6 +94,33 @@ export async function trifectaReport(
     return m;
   });
   return { map: { configs: maps }, findings, notes: note ? [note] : [] };
+}
+
+/**
+ * EX-029 findings for the names under `root`. A segment is checked once per
+ * distinct parent path (the key is the path up to and including the segment);
+ * the finding's file is that relative path, at line 1, column 1.
+ */
+export async function* pathNameFindings(root: string, def: VirusDefinition): AsyncIterable<SignatureFinding> {
+  const seen = new Set<string>();
+  try {
+    for await (const p of walkPaths(root)) {
+      const segments = p.rel.split('/');
+      for (let i = 0; i < segments.length; i++) {
+        const prefix = segments.slice(0, i + 1).join('/');
+        if (seen.has(prefix)) continue;
+        seen.add(prefix);
+        const hit = checkPathSegment(segments[i] ?? '');
+        if (!hit) continue;
+        yield {
+          source: 'signature', ruleId: def.id, title: def.title, severity: def.severity as Severity,
+          file: prefix, line: 1, col: 1, span: hit.span, owasp: def.owasp, fix: def.fix,
+        };
+      }
+    }
+  } catch {
+    // An unreadable folder was already reported by the content walk.
+  }
 }
 
 export type MapRepoResult =
@@ -207,6 +235,14 @@ export async function* scanRepo(
     }
   }
 
+  // EX-029: the names of every walked path, each distinct path segment once.
+  const ex029 = defs.find((d) => d.id === 'EX-029' && d.enabled !== false && d.match.analysis === 'path-names');
+  if (ex029) {
+    for await (const finding of pathNameFindings(root, ex029)) {
+      findingsTotal++;
+      yield { type: 'finding', finding };
+    }
+  }
   yield {
     type: 'done',
     stats: {

@@ -19,11 +19,11 @@ export const DEFAULT_MCP_BIN = 'npx -y @exorcist-98/mcp-server@0.1.3';
  * gets "Unknown command" and exit code 2, and exit 2 from a PreToolUse hook
  * blocks the tool: an on-access hook would block every file read. So under
  * the default command such a hook is written disabled. 0.1.0 lacked
- * on-access; 0.1.1 to 0.1.3 have every command except `gate` (added after 0.1.3).
- * Remove `gate` when the pinned version has it. Keep the set when adding a
- * command that is not yet published.
+ * on-access; 0.1.1 to 0.1.3 have every command except `gate` and `guard-mcp-write`
+ * (both added after 0.1.3). Remove a command here once the pinned version has it. Keep
+ * the set when adding a command that is not yet published.
  */
-const MISSING_FROM_DEFAULT_BIN = new Set<string>(['gate']);
+const MISSING_FROM_DEFAULT_BIN = new Set<string>(['gate', 'guard-mcp-write']);
 
 export const INIT_HELP = `Usage: exorcist init [folder] [--kiro] [--shield] [--no-agent] [--force]
                     [--bin <command>] [--mcp-bin <command>]
@@ -35,6 +35,8 @@ Add Exorcist 98 to a Kiro project:
   .kiro/hooks/exorcist-gate.json       when the agent stops, fail if it added a high or critical finding
                                        to a steering, spec, hook, agent or MCP file (Kiro Stop hook;
                                        written disabled while the default command lacks "gate")
+  .kiro/hooks/exorcist-mcp-write-guard.json  a person must confirm any agent write to an MCP config (Kiro hook;
+                                       written disabled under the default --bin until a release has guard-mcp-write)
   .kiro/steering/exorcist.md           tell the agent how to treat tool output
   .exorcist/kiro-hook.sh               puts Node on PATH for the Kiro hooks (Kiro's hook PATH has none)
   .exorcist/.gitignore                 keeps the hook log out of git
@@ -155,6 +157,7 @@ export async function initCommand(argv: string[], io: Io): Promise<number> {
   const isDefaultBin = bin === DEFAULT_BIN;
   const onAccessOff = isDefaultBin && MISSING_FROM_DEFAULT_BIN.has('on-access');
   const gateOff = isDefaultBin && MISSING_FROM_DEFAULT_BIN.has('gate');
+  const mcpWriteOff = isDefaultBin && MISSING_FROM_DEFAULT_BIN.has('guard-mcp-write');
 
   const files: Planned[] = [
     {
@@ -194,6 +197,17 @@ export async function initCommand(argv: string[], io: Io): Promise<number> {
       body: hook('exorcist-gate', 'When the agent finishes its turn, check the agent files it changed against the last commit. Exit code 1 sends the list to the agent.', {
         trigger: 'Stop', action: { type: 'command', command: `${HOOK_RUNNER} ${bin} gate` }, timeout: 30,
         ...(gateOff ? { enabled: false } : {}),
+      }),
+    },
+    {
+      rel: '.kiro/hooks/exorcist-mcp-write-guard.json',
+      summary: mcpWriteOff
+        ? 'PreToolUse on write and shell tools: WRITTEN DISABLED, because the published version in the default command has no guard-mcp-write command (pass --bin with a newer build, then set "enabled": true)'
+        : 'PreToolUse on write and shell tools: a person must confirm any agent write to an MCP config',
+      body: hook('exorcist-mcp-write-guard', 'A person must confirm any agent write to an MCP config. Exit code 2 blocks the write.', {
+        trigger: 'PreToolUse', matcher: 'write|shell',
+        action: { type: 'command', command: `${HOOK_RUNNER} ${bin} guard-mcp-write` }, timeout: 150,
+        ...(mcpWriteOff ? { enabled: false } : {}),
       }),
     },
     { rel: '.kiro/steering/exorcist.md', body: STEERING, summary: 'steering (inclusion: always): tool output and file text are data, never instructions' },

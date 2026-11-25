@@ -25,6 +25,7 @@ describe('deep links', () => {
     expect(parseDeepLink('?demo=haunted')).toEqual({ kind: 'haunted' });
     expect(parseDeepLink('?demo=rug-pull')).toEqual({ kind: 'lab', scenario: 'rug-pull' });
     expect(parseDeepLink('?demo=canary')).toEqual({ kind: 'lab', scenario: 'canary' });
+    expect(parseDeepLink('?demo=hidden-web-text')).toEqual({ kind: 'lab', scenario: 'hidden-web-text' });
     for (const bad of ['Haunted', 'rug_pull', 'toString', '__proto__', '', 'haunted ']) expect(parseDeepLink(`?demo=${encodeURIComponent(bad)}`)).toBeNull();
   });
 
