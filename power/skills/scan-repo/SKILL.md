@@ -1,6 +1,6 @@
 ---
 name: scan-repo
-description: Scan a project for attacks on AI agents (hidden instructions, poisoned MCP tools, dangerous hooks, leaked secrets) and explain what was found in plain language.
+description: Scan a project for attacks on AI agents (hidden instructions, poisoned MCP tools, dangerous hooks, leaked secrets) and explain what was found in plain language. Use when the user asks whether a repository, MCP config, steering file or hook is safe.
 ---
 
 # Scan a project with Exorcist 98

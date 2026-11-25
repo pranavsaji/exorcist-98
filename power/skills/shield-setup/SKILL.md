@@ -1,11 +1,15 @@
 ---
 name: shield-setup
-description: Put the Exorcist 98 shield in front of MCP servers so a tool that changes after approval, a leaked secret, or an injected tool result is stopped.
+description: Put the Exorcist 98 shield in front of MCP servers so a tool that changes after approval, a leaked secret, or an injected tool result is stopped. Use when the user wants their MCP servers protected at run time.
 ---
 
 # Set up the Real-Time Shield
 
 The shield sits between Kiro and each MCP server. It pins every tool the first time it sees it, hides a tool that later changes (a rug pull), blocks secrets and unknown hosts in tool calls, and withholds tool results that look like attacks.
+
+## Before you start
+
+The Power installs only the MCP server. The `exorcist` commands below come from the CLI. If `exorcist --version` fails, run each one as `npx -y @exorcist-98/cli@0.1.2 <command>`. A wrapped server must also find the shield, so in that case use `npx -y @exorcist-98/cli@0.1.2 init --kiro --shield` for steps 2 and 3: it wraps every server with that same pinned npx command.
 
 ## Steps
 

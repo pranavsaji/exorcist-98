@@ -1,9 +1,10 @@
 {
   "name": "@exorcist-98/mcp-server",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": false,
   "type": "module",
   "description": "MCP server for Exorcist 98: scan repos and MCP configs, explain findings, quarantine servers.",
+  "mcpName": "io.github.pranavsaji/exorcist-98",
   "license": "Apache-2.0",
   "bin": {
     "exorcist-mcp": "./dist/index.mjs"

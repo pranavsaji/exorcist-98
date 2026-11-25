@@ -96,7 +96,7 @@ export const SURFACES: Surface[] = [
     tool: 'Kiro Powers',
     status: 'Built; not yet installed through Kiro\'s Powers panel',
     did: [
-      'The `exorcist` Power in the Agent Plugins layout that kiro.dev/docs/powers documents: `plugin.json` (manifest and activation keywords), `mcp.json` (the MCP server, pinned to `@exorcist-98/mcp-server@0.1.1`) and three skills: scan a repo, set up the Shield, quarantine.',
+      'The `exorcist` Power in the Agent Plugins layout that kiro.dev/docs/powers documents: `plugin.json` (manifest and activation keywords), `mcp.json` (the MCP server, pinned to `@exorcist-98/mcp-server@0.1.2`) and three skills: scan a repo, set up the Shield, quarantine.',
       'The npm packages it points at are published (`@exorcist-98/cli` and `@exorcist-98/mcp-server`: 0.1.0 on 2026-11-21, 0.1.1 with every M5 command on 2026-11-25, published from CI with npm provenance (`npm audit signatures` verifies both)). Installing the Power through Kiro\'s Powers panel has not been done yet.',
     ],
     files: ['power/plugin.json', 'power/mcp.json', 'power/skills/scan-repo/SKILL.md', 'power/skills/shield-setup/SKILL.md', 'power/skills/quarantine/SKILL.md'],

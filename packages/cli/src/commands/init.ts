@@ -10,15 +10,15 @@ import { wrapCommand } from './config.js';
 
 // The CLI is published as @exorcist-98/cli. The unscoped npm name "exorcist"
 // belongs to an unrelated package, so never run "npx exorcist".
-export const DEFAULT_BIN = 'npx -y @exorcist-98/cli@0.1.1';
+export const DEFAULT_BIN = 'npx -y @exorcist-98/cli@0.1.2';
 /** The MCP server the reviewer agent starts: the same package and version as the Power's mcp.json. */
-export const DEFAULT_MCP_BIN = 'npx -y @exorcist-98/mcp-server@0.1.1';
+export const DEFAULT_MCP_BIN = 'npx -y @exorcist-98/mcp-server@0.1.2';
 /**
  * Commands the version in DEFAULT_BIN does not have. A hook that calls one
  * gets "Unknown command" and exit code 2, and exit 2 from a PreToolUse hook
  * blocks the tool: an on-access hook would block every file read. So under
  * the default command such a hook is written disabled. 0.1.0 lacked
- * on-access; 0.1.1 has every command, so the set is empty. Keep it when
+ * on-access; 0.1.1 and later have every command, so the set is empty. Keep it when
  * adding a command that is not yet published.
  */
 const MISSING_FROM_DEFAULT_BIN = new Set<string>();
@@ -256,7 +256,7 @@ export async function initCommand(argv: string[], io: Io): Promise<number> {
     'then reconnect MCP servers in the MCP panel so they start through the Shield.',
   ];
   if (isDefaultBin) {
-    lines.push('Commands run through npx (@exorcist-98/cli@0.1.1). If Kiro cannot start a wrapped server or a hook cannot find npx,');
+    lines.push('Commands run through npx (@exorcist-98/cli@0.1.2). If Kiro cannot start a wrapped server or a hook cannot find npx,');
     lines.push('rerun with --bin "<absolute path to node> <absolute path to the exorcist CLI>" and --force.');
   }
   io.out(lines.join('\n'));

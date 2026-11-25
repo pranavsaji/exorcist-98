@@ -1,11 +1,15 @@
 ---
 name: quarantine
-description: Disable an infected MCP server, hook or steering file, keep a backup and a diff, and restore it later.
+description: Disable an infected MCP server, hook or steering file, keep a backup and a diff, and restore it later. Use after a scan or a shield alert shows something is dangerous.
 ---
 
 # Quarantine and restore
 
 Use this after a scan or a shield alert shows that an MCP server, a hook or a steering file is dangerous.
+
+## Before you start
+
+The `quarantine` tool comes with this Power. The `exorcist vault` commands come from the CLI: if `exorcist --version` fails, give the user `npx -y @exorcist-98/cli@0.1.2 vault <command>` instead.
 
 ## Steps
 
