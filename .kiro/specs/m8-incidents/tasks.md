@@ -24,7 +24,7 @@ Rules first, then the guard, then corpus and Lab, then docs and the full run.
 - [x] 7. Documentation (requirements 7.1 to 7.5)
   - [x] 7.1 `docs/INCIDENTS.md` with the traceability table
   - [x] 7.2 Definition counts in README, THREATS and tests, `KNOWN_LIMITATIONS.md`, `KIRO_LOG.md`
-- [-] 8. `pnpm -r typecheck` and `pnpm vitest run` pass from the repository root, then commit (requirements 8.1 to 8.4)
+- [x] 8. `pnpm -r typecheck` and `pnpm vitest run` pass from the repository root, then commit (requirements 8.1 to 8.4)
 
 ## Task Dependency Graph
 
