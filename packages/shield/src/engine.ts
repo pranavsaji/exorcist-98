@@ -19,6 +19,7 @@ import { MemorySessionStore, SESSION_RULE_ID, SessionGuard, describeFact } from 
 import type { Assessment, Fact, FactKind } from './session.js';
 import { buildReason } from './os-auth.js';
 import type { OsVerdict } from './os-auth.js';
+import type { EngineEvent } from './events.js';
 
 const SHAPE_TEXT: Record<CanaryShape, string> = {
   'raw': 'as plain text',
@@ -80,7 +81,16 @@ export type EngineOptions = {
    * when OS verification is unavailable; absent when the policy chose it.
    */
   release?: { mode: 'os' | 'terminal'; note?: string };
+  /**
+   * Told what happened to each tool call (allowed, held, blocked) and to each
+   * result that was withheld or flagged, for the event log the live console
+   * reads (events.ts). Never given arguments or result text.
+   */
+  onEvent?: (e: EngineEvent) => void;
 };
+
+/** What a call carries to the moment it is really sent: the rule that matched on the way, and who let it through. */
+type SendMeta = { ruleId?: string; why?: string; monitor?: boolean; prompt?: number; by?: 'user' };
 
 /** A tool hidden from the agent. `fingerprint` is the version that was hidden (rug pulls only). */
 type Withheld = { ruleId: string; reason: string; fingerprint?: string };
@@ -169,7 +179,7 @@ export class ShieldEngine {
   private readonly heldCalls = new Map<string, { call: JsonRpcMessage; id: JsonRpcId; tool: string; hosts: string[]; kind: 'host' | 'session' | 'os'; askedAt?: Date }>();
   private ownerSeq = 0;
   /** Calls waiting while the Shield re-reads the tool list (S-026), by the Shield's request id. */
-  private readonly verifying = new Map<string, { call: JsonRpcMessage; id: JsonRpcId; tool: string; pages: number; seen: boolean }>();
+  private readonly verifying = new Map<string, { call: JsonRpcMessage; id: JsonRpcId; tool: string; pages: number; seen: boolean; meta?: SendMeta }>();
   private verifySeq = 0;
   /** Session Guard (EX-027). */
   private readonly session: SessionGuard;
@@ -192,6 +202,16 @@ export class ShieldEngine {
 
   private now(): Date {
     return this.o.now ? this.o.now() : new Date();
+  }
+
+  /** Report an event; a failing listener never changes what the Shield does. */
+  private emit(e: EngineEvent): void {
+    if (!this.o.onEvent) return;
+    try { this.o.onEvent(e); } catch { /* the event log is best effort */ }
+  }
+
+  private callEvent(tool: string, decision: 'allowed' | 'held' | 'blocked', meta: SendMeta = {}): void {
+    this.emit({ kind: 'call', tool, decision, ...meta });
   }
 
   private alert(a: Omit<Alert, 'time' | 'server'>): Action {
@@ -301,11 +321,12 @@ export class ShieldEngine {
     if (name === null) return [{ type: 'forward', to: 'server', message: msg }];
 
     const actions: Action[] = [];
-    const forward = (): Action[] => [...actions, ...this.sendCall(msg, id, name)];
+    const forward = (meta?: SendMeta): Action[] => [...actions, ...this.sendCall(msg, id, name, meta)];
 
     // 1. A tool that was withheld (rug pull or poisoned): never call it.
     const held = this.withheld.get(name);
     if (held && this.enforcing()) {
+      this.callEvent(name, 'blocked', { ruleId: held.ruleId, why: `It is withheld: ${held.reason}` });
       return [
         { type: 'forward', to: 'client', message: toolErrorResult(id, `Exorcist 98 blocked "${name}": ${held.reason} Nothing was sent to the tool.`) },
         this.alert({ ruleId: held.ruleId, severity: 'high', tool: name, message: `Refused a call to the withheld tool "${name}".` }),
@@ -320,18 +341,22 @@ export class ShieldEngine {
     // 3. Session Guard (EX-027): once this session has taken in untrusted text
     // and read private data, data going out waits for the user. A call that
     // carries a secret is refused for that below, whatever the session did.
+    let flag: SendMeta | undefined;
     if (verdict.action !== 'block') {
       const guard = this.sessionCheck(msg, id, name, params.arguments, verdict);
       if (guard.stop) return [...actions, ...guard.actions];
       actions.push(...guard.actions);
+      flag = guard.flag;
     }
-    if (verdict.action === 'allow') return forward();
+    if (verdict.action === 'allow') return forward(flag);
 
     const sev = verdict.action === 'block' ? 'critical' : 'high';
-    actions.push(this.alert({ ruleId: verdict.reasons[0]?.ruleId ?? 'SHIELD', severity: sev, tool: name, message: joinReasons(verdict.reasons) }));
-    if (!this.enforcing()) return forward();
+    const ruleId = verdict.reasons[0]?.ruleId ?? 'SHIELD';
+    actions.push(this.alert({ ruleId, severity: sev, tool: name, message: joinReasons(verdict.reasons) }));
+    if (!this.enforcing()) return forward({ ruleId, why: `Monitor mode, so it was sent: ${joinReasons(verdict.reasons)}`, monitor: true });
 
     if (verdict.action === 'ask' && this.clientElicits) return [...actions, ...this.askUser(msg, id, name, verdict.hosts)];
+    this.callEvent(name, 'blocked', { ruleId, why: joinReasons(verdict.reasons) });
 
     const how =
       verdict.action === 'ask'
@@ -390,6 +415,7 @@ export class ShieldEngine {
   private askUser(call: JsonRpcMessage, id: JsonRpcId, tool: string, hosts: string[]): Action[] {
     if (this.heldCalls.size >= MAX_OPEN_PROMPTS) {
       // Too many unanswered prompts: refuse instead of piling up more.
+      this.callEvent(tool, 'blocked', { ruleId: 'EX-016', why: `${MAX_OPEN_PROMPTS} approval prompts were already waiting for an answer.` });
       return [
         this.alert({ ruleId: 'EX-016', severity: 'high', tool, message: `Refused a call to ${hosts.map((h) => cleanText(h, 80)).join(', ')}: ${MAX_OPEN_PROMPTS} approval prompts are already waiting for your answer.` }),
         { type: 'forward', to: 'client', message: toolErrorResult(id, `Exorcist 98 stopped this call because ${MAX_OPEN_PROMPTS} approval prompts are already waiting. Answer them first, then try again.`) },
@@ -397,6 +423,7 @@ export class ShieldEngine {
     }
     const promptId = `${PROMPT_PREFIX}${++this.elicitSeq}`;
     this.heldCalls.set(promptId, { call, id, tool, hosts, kind: 'host' });
+    this.callEvent(tool, 'held', { ruleId: 'EX-016', why: `It would send data to ${hosts.map((h) => cleanText(h, 80)).join(', ')}, which is not on the allowed list. Waiting for your answer in the agent's approval prompt.`, prompt: this.elicitSeq });
     // The tool name and hosts come from the server: show them with hidden and
     // direction-changing characters removed, so they cannot mislead the user.
     const shownTool = cleanText(tool, 80);
@@ -483,7 +510,7 @@ export class ShieldEngine {
    * took in untrusted text and read private data. `stop` means the actions
    * end the call (refused, or waiting for the user's answer).
    */
-  private sessionCheck(call: JsonRpcMessage, id: JsonRpcId, tool: string, args: unknown, verdict: CallVerdict): { stop: boolean; actions: Action[] } {
+  private sessionCheck(call: JsonRpcMessage, id: JsonRpcId, tool: string, args: unknown, verdict: CallVerdict): { stop: boolean; actions: Action[]; flag?: SendMeta } {
     const mode = this.guardMode();
     if (mode === 'off') return { stop: false, actions: [] };
     const out = this.outboundWhy(tool, args);
@@ -512,9 +539,10 @@ export class ShieldEngine {
       tool: shownTool,
       message: `EX-027 Lethal trifecta in this session. ${Story} Now ${here} would send data out: ${out}. Each step looked harmless alone; together they are how a prompt injection steals data. ${outcome}`,
     }));
-    if (mode === 'monitor') return { stop: false, actions };
+    if (mode === 'monitor') return { stop: false, actions, flag: { ruleId: SESSION_RULE_ID, why: `Lethal trifecta in this session; monitor mode, so it was sent: ${out}.`, monitor: true } };
     if (osRelease) {
       if (this.heldCalls.size >= MAX_OPEN_PROMPTS) {
+        this.callEvent(tool, 'blocked', { ruleId: SESSION_RULE_ID, why: `Lethal trifecta in this session, and ${MAX_OPEN_PROMPTS} approval prompts were already waiting.` });
         return {
           stop: true,
           actions: [...actions,
@@ -525,11 +553,13 @@ export class ShieldEngine {
       }
       const ticket = `${OWNER_PREFIX}${++this.ownerSeq}`;
       this.heldCalls.set(ticket, { call, id, tool, hosts: [], kind: 'os', askedAt: this.now() });
+      this.callEvent(tool, 'held', { ruleId: SESSION_RULE_ID, why: `Lethal trifecta in this session: ${out}. Held while the system prompt is open (Touch ID or login password).` });
       const facts = [a.untrusted, a.private].filter((f): f is Fact => f !== null && f !== undefined);
       const reason = buildReason(this.o.server, tool, facts);
       return { stop: true, actions: [...actions, { type: 'verify-owner', ticket, reason }] };
     }
     if (asking) return { stop: true, actions: [...actions, ...this.askSession(call, id, tool, out, Story, verdict.action === 'ask' ? verdict.hosts : [])] };
+    this.callEvent(tool, 'blocked', { ruleId: SESSION_RULE_ID, why: `Lethal trifecta in this session: ${out}. Not sent. Only you can release the session, with exorcist approve session ${this.session.key} in your own terminal.` });
     return {
       stop: true,
       actions: [...actions, {
@@ -559,9 +589,15 @@ export class ShieldEngine {
     if (verdict === 'ok') {
       return [
         this.alert({ ruleId: SESSION_RULE_ID, severity: 'medium', tool: shown, message: `You verified with your device; one call to "${shown}" that the Session Guard held was allowed. Nothing was granted: the next one is held again.` }),
-        ...this.sendCall(held.call, held.id, held.tool),
+        ...this.sendCall(held.call, held.id, held.tool, { ruleId: SESSION_RULE_ID, by: 'user', why: 'Released by the operating system check (Touch ID or login password), once. Nothing was granted.' }),
       ];
     }
+    this.callEvent(held.tool, 'blocked', {
+      ruleId: SESSION_RULE_ID,
+      why: verdict === 'denied' ? 'Refused: the system prompt was declined or failed. Nothing was sent.'
+        : verdict === 'timeout' ? 'Refused: nobody verified in the system prompt in time. Nothing was sent.'
+        : 'Refused: the operating system check could not run. Nothing was sent.',
+    });
     const what = verdict === 'denied'
       ? { alert: 'was declined', text: 'The user did not verify (cancelled or failed), so' }
       : verdict === 'timeout'
@@ -588,6 +624,7 @@ export class ShieldEngine {
   private askSession(call: JsonRpcMessage, id: JsonRpcId, tool: string, out: string, story: string, hosts: string[]): Action[] {
     const shownTool = cleanText(tool, 80);
     if (this.heldCalls.size >= MAX_OPEN_PROMPTS) {
+      this.callEvent(tool, 'blocked', { ruleId: SESSION_RULE_ID, why: `Lethal trifecta in this session, and ${MAX_OPEN_PROMPTS} approval prompts were already waiting.` });
       return [
         this.alert({ ruleId: SESSION_RULE_ID, severity: 'high', tool: shownTool, message: `Refused a call the Session Guard held: ${MAX_OPEN_PROMPTS} approval prompts are already waiting for your answer.` }),
         { type: 'forward', to: 'client', message: toolErrorResult(id, `Exorcist 98 stopped this call because ${MAX_OPEN_PROMPTS} approval prompts are already waiting. Answer them first, then try again.`) },
@@ -595,6 +632,7 @@ export class ShieldEngine {
     }
     const promptId = `${PROMPT_PREFIX}${++this.elicitSeq}`;
     this.heldCalls.set(promptId, { call, id, tool, hosts, kind: 'session', askedAt: this.now() });
+    this.callEvent(tool, 'held', { ruleId: SESSION_RULE_ID, why: `Lethal trifecta in this session: ${out}. Waiting for your answer in the agent's approval prompt.`, prompt: this.elicitSeq });
     const list = hosts.map((h) => cleanText(h, 80)).join(', ');
     const also = hosts.length > 0 ? ` It would also reach ${list}, which is not on your allowed list.` : '';
     return [{
@@ -618,10 +656,12 @@ export class ShieldEngine {
   }
 
   /** The user's answer to a Session Guard prompt. */
-  private onSessionAnswer(msg: JsonRpcMessage, held: { call: JsonRpcMessage; id: JsonRpcId; tool: string; askedAt?: Date }): Action[] {
+  private onSessionAnswer(msg: JsonRpcMessage, held: { call: JsonRpcMessage; id: JsonRpcId; tool: string; askedAt?: Date }, prompt: number | undefined): Action[] {
     const r = (msg.result ?? {}) as { action?: unknown; content?: { session?: unknown } };
     const shown = cleanText(held.tool, 80);
+    const answered = { ruleId: SESSION_RULE_ID, by: 'user' as const, ...(prompt ? { prompt } : {}) };
     if (msg.error !== undefined || r.action !== 'accept') {
+      this.callEvent(held.tool, 'blocked', { ...answered, why: 'You declined it in the approval prompt. Nothing was sent.' });
       return [
         this.alert({ ruleId: SESSION_RULE_ID, severity: 'high', tool: shown, message: `You declined the call to "${shown}" that the Session Guard held. Nothing was sent.` }),
         { type: 'forward', to: 'client', message: toolErrorResult(held.id, `You declined this call to "${shown}", so nothing was sent.`) },
@@ -641,7 +681,7 @@ export class ShieldEngine {
       tool: shown,
       message: `You allowed the call to "${shown}" that the Session Guard held, ${rest ? 'and data going out for the rest of this session (it asks again after new untrusted text or private data)' : 'only this once'}.`,
     }));
-    actions.push(...this.sendCall(held.call, held.id, held.tool));
+    actions.push(...this.sendCall(held.call, held.id, held.tool, { ...answered, why: `You allowed it in the approval prompt${rest ? ', for the rest of this session' : ', once'}.` }));
     return actions;
   }
 
@@ -690,9 +730,13 @@ export class ShieldEngine {
     const held = this.heldCalls.get(promptId);
     this.heldCalls.delete(promptId);
     if (!held) return [];
-    if (held.kind === 'session') return this.onSessionAnswer(msg, held);
+    const seq = Number(promptId.slice(PROMPT_PREFIX.length));
+    const prompt = Number.isInteger(seq) && seq > 0 ? seq : undefined;
+    if (held.kind === 'session') return this.onSessionAnswer(msg, held, prompt);
+    const answered = { ruleId: 'EX-016', by: 'user' as const, ...(prompt ? { prompt } : {}) };
     const r = (msg.result ?? {}) as { action?: unknown; content?: { remember?: unknown } };
     if (msg.error !== undefined || r.action !== 'accept') {
+      this.callEvent(held.tool, 'blocked', { ...answered, why: 'You declined it in the approval prompt. Nothing was sent.' });
       return [
         this.alert({ ruleId: 'EX-016', severity: 'high', tool: held.tool, message: `You declined a call that would send data to ${held.hosts.join(', ')}.` }),
         { type: 'forward', to: 'client', message: toolErrorResult(held.id, `You declined this call to "${held.tool}", so nothing was sent.`) },
@@ -716,7 +760,7 @@ export class ShieldEngine {
       tool: cleanText(held.tool, 80),
       message: `You allowed a call to ${held.hosts.map((h) => cleanText(h, 80)).join(', ')}${saved}${caveat}.`,
     }));
-    actions.push(...this.sendCall(held.call, held.id, held.tool));
+    actions.push(...this.sendCall(held.call, held.id, held.tool, { ...answered, why: `You allowed it in the approval prompt${remembered ? ' and added the host to the allowed list' : ', once'}.` }));
     return actions;
   }
 
@@ -773,6 +817,7 @@ export class ShieldEngine {
 
     if (msg.method === 'tools/call' && msg.id !== undefined) {
       const name = typeof params.name === 'string' ? shown(params.name, '(a tool whose name holds the token)') : 'a tool';
+      this.callEvent(name, 'blocked', { ruleId: 'EX-022', why: `It held the canary token planted in ${file} (${how}). Canary calls are blocked in every mode.` });
       return [
         this.alert({
           ruleId: 'EX-022',
@@ -844,6 +889,7 @@ export class ShieldEngine {
       ...(tool ? { tool } : {}),
       message: `A tool result was ${this.enforcing() ? 'withheld' : 'flagged'}: ${joinReasons(verdict.reasons)}`,
     });
+    this.emit({ kind: 'result', tool: tool ?? 'a tool', decision: this.enforcing() && msg.id !== undefined ? 'withheld' : 'flagged', ruleId: verdict.reasons[0]?.ruleId ?? 'SHIELD', why: joinReasons(verdict.reasons) });
     if (!this.enforcing() || msg.id === undefined) return [...pre, alert, { type: 'forward', to: 'client', message: msg }];
 
     const text =
@@ -865,13 +911,14 @@ export class ShieldEngine {
    * offers right now is still the one that was pinned. The call waits for the
    * Shield's own tools/list; nothing reaches the server's tool before that.
    */
-  private sendCall(call: JsonRpcMessage, id: JsonRpcId, tool: string): Action[] {
+  private sendCall(call: JsonRpcMessage, id: JsonRpcId, tool: string, meta?: SendMeta): Action[] {
     if (!this.o.policy.verifyCalls || !this.enforcing()) {
       boundedSet(this.pending, id, this.callContext(call, tool));
+      this.callEvent(tool, 'allowed', meta);
       return [{ type: 'forward', to: 'server', message: call }];
     }
     const verifyId = `${VERIFY_PREFIX}${++this.verifySeq}`;
-    boundedSet(this.verifying, verifyId, { call, id, tool, pages: 1, seen: false });
+    boundedSet(this.verifying, verifyId, { call, id, tool, pages: 1, seen: false, ...(meta ? { meta } : {}) });
     return [{ type: 'forward', to: 'server', message: { jsonrpc: '2.0', id: verifyId, method: 'tools/list', params: {} } }];
   }
 
@@ -892,6 +939,7 @@ export class ShieldEngine {
       // Fail closed: the tool cannot be checked, so it is not called.
       const why = msg.error && typeof msg.error === 'object' && typeof (msg.error as { message?: unknown }).message === 'string'
         ? ` (${cleanText((msg.error as { message: string }).message, 200)})` : '';
+      this.callEvent(v.tool, 'blocked', { ruleId: 'SHIELD', why: 'The server did not return its tool list, so the tool could not be checked before the call.' });
       return [
         this.alert({ ruleId: 'SHIELD', severity: 'high', tool: v.tool, message: `Could not check "${cleanText(v.tool, 80)}" before calling it: the server did not return its tool list.` }),
         { type: 'forward', to: 'client', message: toolErrorResult(v.id, `Exorcist 98 did not call "${cleanText(v.tool, 80)}": the server did not return its tool list, so the tool could not be checked${why}.`) },
@@ -908,6 +956,7 @@ export class ShieldEngine {
     }
     const held = this.withheld.get(v.tool);
     if (held) {
+      this.callEvent(v.tool, 'blocked', { ruleId: held.ruleId, why: `Checked just before the call: ${held.reason}` });
       const refuse: Action[] = [
         ...actions,
         { type: 'forward', to: 'client', message: toolErrorResult(v.id, `Exorcist 98 blocked "${cleanText(v.tool, 80)}": ${held.reason} Nothing was sent to the tool.`) },
@@ -917,6 +966,7 @@ export class ShieldEngine {
       return refuse;
     }
     boundedSet(this.pending, v.id, this.callContext(v.call, v.tool));
+    this.callEvent(v.tool, 'allowed', v.meta);
     return [...actions, { type: 'forward', to: 'server', message: v.call }];
   }
 

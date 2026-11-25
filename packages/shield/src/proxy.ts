@@ -16,6 +16,7 @@ import type { LockExpectations } from './lockfile.js';
 import { alertsPath, appendAlert, loadState, policyPath, saveState, serverState, statePath, vaultPath } from './state.js';
 import type { Alert, ServerState, State } from './state.js';
 import { quarantineServer } from './vault.js';
+import { EventLog } from './events.js';
 import { checkLaunch, configLabel, launchEntryOf, launchFingerprint, loaderEnvKeys, packageSpec, specIsPinned } from './launch.js';
 import type { LaunchCheck, LaunchEntry, LaunchEntryResult, LaunchPin } from './launch.js';
 import { AiReview } from './ai-review.js';
@@ -101,6 +102,8 @@ export type ShieldContext = {
    * already uses). The answers to device-owner checks are delivered through it.
    */
   attach: (deliver: (actions: Action[]) => void) => void;
+  /** The event log the live console reads (`exorcist console`); null when EXORCIST_EVENTS=0. */
+  events: EventLog | null;
 };
 
 /** Load and check everything the Shield needs; a number is a fail-closed exit code. */
@@ -112,6 +115,13 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
   mkdirSync(o.dir, { recursive: true });
   const policy = loadPolicy(policyPath(o.dir));
   if (!policy.ok) { log(policy.error); return FAIL_CLOSED_EXIT; }
+  // What this Shield decides, for `exorcist console` (events.ts): decisions,
+  // rule ids, names and the Shield's own reasons, never arguments or results.
+  const events = process.env['EXORCIST_EVENTS'] === '0' ? null : new EventLog(o.dir, { server: o.server });
+  let eventProblemShown = false;
+  const eventProblem = (): void => {
+    if (events?.problem && !eventProblemShown) { eventProblemShown = true; log(`The console event log: ${events.problem}. The Shield keeps protecting; only the live console misses events.`); }
+  };
   const first = loadState(statePath(o.dir));
   if (!first.ok) { log(first.error); return FAIL_CLOSED_EXIT; }
   let defs;
@@ -239,6 +249,7 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
     log(`${a.severity.toUpperCase()} ${a.ruleId}: ${a.message}`);
     if (a.detail) log(a.detail.split('\n').map((l) => `    ${l}`).join('\n'));
     try { appendAlert(alertsPath(o.dir), a); } catch { /* the console line above is enough */ }
+    events?.write({ kind: 'alert', severity: a.severity, ruleId: a.ruleId, ...(a.tool ? { tool: a.tool } : {}), message: a.message });
     if (o.notify && policy.ok && policy.policy.notify && a.severity === 'high') o.notify(`Exorcist 98: warning (${o.server})`, a.message);
   }
   // State is re-read when the file changes, so `exorcist approve` takes effect
@@ -284,6 +295,7 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
     else log(`${caps.error}. The Session Guard (EX-027) still counts secrets and attacks in results and hosts in calls, but cannot tell which tools read web pages or send messages.`);
     const wanted = o.sessionKey ?? resolveSessionKey();
     session = new SessionGuard(new FileSessionStore(o.dir, isSessionKey(wanted) ? wanted : `p${process.ppid}`), { writer: String(process.pid) });
+    if (events) events.session = session.key;
     log(`Session Guard (EX-027): ${policy.policy.mode === 'monitor' ? 'monitor' : policy.policy.sessionGuard}, session ${session.key}.`);
   }
   const serverSpec: ServerSpec | undefined = o.launch ? { command: o.launch.command, args: o.launch.args } : o.url ? { url: o.url } : undefined;
@@ -304,7 +316,9 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
     ...(canaries.length > 0 ? { canaries } : {}),
     ...(lockExpected ? { expected: lockExpected } : {}),
     ...(review ? { aiFindings: (fp: string) => (review as AiReview).findings(fp) } : {}),
+    ...(events ? { onEvent: (e: Parameters<EventLog['write']>[0]) => { events.write(e); eventProblem(); } } : {}),
   });
+  events?.write({ kind: 'start', mode: policy.policy.mode, guard: policy.policy.sessionGuard ?? 'hold', remote: o.launch === undefined });
   const notifier = policy.policy.notify ? o.notify : undefined;
   const allowNotice = throttle();
   log(`Protecting "${o.server}". State folder: ${o.dir}`);
@@ -317,6 +331,8 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
     }
     if (a.detail) log(a.detail.trimEnd().split('\n').map((l) => `    ${l}`).join('\n'));
     try { appendAlert(alertsPath(o.dir), a); } catch { /* the console line above is enough */ }
+    events?.write({ kind: 'alert', severity: a.severity, ruleId: a.ruleId, ...(a.tool ? { tool: a.tool } : {}), message: a.message });
+    eventProblem();
   };
 
   // One OS prompt at a time: checks run through a single promise chain.
@@ -366,7 +382,7 @@ export async function prepareShield(o: ShieldSetupOptions): Promise<ShieldContex
   const prepareServerLine = review
     ? (line: string): Promise<void> => (review as AiReview).prepare(line, (name) => Boolean(io.load().servers[o.server]?.tools[name]))
     : undefined;
-  return { engine, log, handle, watch, attach, ...(prepareServerLine ? { prepareServerLine } : {}) };
+  return { engine, log, handle, watch, attach, events, ...(prepareServerLine ? { prepareServerLine } : {}) };
 }
 
 /**

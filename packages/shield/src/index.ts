@@ -20,6 +20,8 @@ export type { Action, EngineOptions, StateIO } from './engine.js';
 export { blockedReason, sanitizeReason, buildReason, macOsAuth, resolveRelease, AVAILABLE_SCRIPT, VERIFY_SCRIPT } from './os-auth.js';
 export type { OsVerdict, OsAuth, Release, Spawner, MacOsAuthOptions } from './os-auth.js';
 export { runProxy } from './proxy.js';
+export { EventLog, EventTail, ShieldEventSchema, parseEventLines, eventsPath, oldEventsPath, MAX_EVENT_BYTES, MAX_LINE_BYTES } from './events.js';
+export type { ShieldEvent, CallShieldEvent, EngineEvent, EventBody, EventLogOptions, ParsedLines } from './events.js';
 export { AiReview, findingsFor } from './ai-review.js';
 export type { AiJudge, AiLabel, AiFindings } from './ai-review.js';
 export { launchFingerprint, checkLaunch, packageSpec, specIsPinned, launchEntryOf, loaderEnvKeys, configLabel, LOADER_ENV } from './launch.js';
