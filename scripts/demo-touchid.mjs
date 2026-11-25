@@ -36,7 +36,9 @@ const bundle = join(root, 'packages/cli/dist/index.mjs');
 const fake = join(root, 'packages/shield/src/__tests__/fake-mcp-server.mjs');
 if (!existsSync(bundle)) { console.error('Build the CLI first: pnpm --filter @exorcist-98/cli build'); process.exit(2); }
 
+// Every line of output goes through this one writer, in the order the demo reaches it.
 const say = (s = '') => console.log(s);
+let holdMayShow = false; // set when step 3 starts, so the Shield's start-up lines never trigger the hold message
 const step = (n, s) => say(`\nStep ${n}. ${s}`);
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -119,7 +121,8 @@ try {
   });
   let promptShown = false;
   const mail = shield('mail', { tools: [tool('send_email', 'Send an email.', { to: { type: 'string' }, url: { type: 'string' }, body: { type: 'string' } })] }, (s) => {
-    if (!promptShown && /EX-027/u.test(s)) {
+    // The Shield's start-up line also names EX-027; only the hold alert counts, and only during step 3.
+    if (!promptShown && holdMayShow && /Lethal trifecta in this session/u.test(s)) {
       promptShown = true;
       say('  The Shield held this call because both earlier steps happened in this session.');
       say('  A system prompt should appear now: verify with Touch ID or press Cancel.');
@@ -147,6 +150,7 @@ try {
 
     step(3, `The agent emails someone at ${MAIL_HOST}, a host on the allowed list.`);
     say('  Sending data out now would complete the lethal trifecta: untrusted text, private data, a way out.');
+    holdMayShow = true;
     const reply = await mail.call('send_email', { to: `ops@${MAIL_HOST}`, url: `https://${MAIL_HOST}/send`, body: 'the config you asked for' }, 90000);
     const sent = mail.sent() > 0;
     say(`\n${sent ? 'SENT' : 'REFUSED'}: ${sent ? 'the call reached the mail server.' : 'the call never reached the mail server.'}`);
