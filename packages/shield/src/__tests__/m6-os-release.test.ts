@@ -1258,3 +1258,61 @@ describe('m6-os-release: nothing private is logged or stored', () => {
     });
   }
 });
+
+// ---------------------------------------------------------------------------
+// Security review finding: verifying for the Session Guard is not a host approval (EX-016).
+// ---------------------------------------------------------------------------
+describe('m6-os-release: an unknown host still needs EX-016 after the owner verified', () => {
+  const toUnknown = () => ({ channel: '#ops', text: `report-${++sendSeq}`, url: 'https://unknown.example.invalid/hook' });
+
+  it('names the host in the OS prompt reason', () => {
+    const s = osShield();
+    s.arm();
+    const ask = verifyActions(s.raw('send_message', toUnknown()).first)[0];
+    expect(ask?.reason).toContain('unknown.example.invalid');
+  });
+
+  it('without client prompts: OS ok sends nothing and tells how to approve the host', () => {
+    const s = osShield();
+    s.arm();
+    const { cid, first } = s.raw('send_message', toUnknown());
+    const ask = verifyActions(first)[0];
+    const out = s.engine.onOwnerVerified(ask?.ticket ?? '', 'ok');
+    expect(osFwd(out, 'server')).toEqual([]);
+    const reply = osFwd(out, 'client').find((m) => m['id'] === cid);
+    expect(reply?.['result']?.content?.[0]?.text).toContain('exorcist approve host mail unknown.example.invalid');
+    expect(osAlerts(out).some((a) => a.ruleId === 'EX-016')).toBe(true);
+    expect(s.grants()).toEqual([]);
+  });
+
+  it('with client prompts: OS ok asks about the host and sends only after the user accepts', () => {
+    const s = osShield({ elicits: true });
+    s.arm();
+    const { cid, first } = s.raw('send_message', toUnknown());
+    const ask = verifyActions(first)[0];
+    const out = s.engine.onOwnerVerified(ask?.ticket ?? '', 'ok');
+    expect(osFwd(out, 'server')).toEqual([]);
+    const prompt = osFwd(out, 'client').find((m) => m['method'] === 'elicitation/create');
+    expect(prompt?.['params']?.message).toContain('unknown.example.invalid');
+    const answered = s.engine.onClient({ jsonrpc: '2.0', id: prompt?.['id'], result: { action: 'accept', content: {} } });
+    expect(osFwd(answered, 'server').map((m) => m['id'])).toEqual([cid]);
+  });
+
+  it('with client prompts: declining the host prompt sends nothing', () => {
+    const s = osShield({ elicits: true });
+    s.arm();
+    const ask = verifyActions(s.raw('send_message', toUnknown()).first)[0];
+    const out = s.engine.onOwnerVerified(ask?.ticket ?? '', 'ok');
+    const prompt = osFwd(out, 'client').find((m) => m['method'] === 'elicitation/create');
+    const answered = s.engine.onClient({ jsonrpc: '2.0', id: prompt?.['id'], result: { action: 'decline' } });
+    expect(osFwd(answered, 'server')).toEqual([]);
+  });
+
+  it('a host on the allowed list is sent right after OS ok', () => {
+    const s = osShield();
+    s.arm();
+    const args = { channel: '#ops', url: 'https://collector.example.invalid/x' };
+    const ask = verifyActions(s.raw('send_message', args).first)[0];
+    expect(osFwd(s.engine.onOwnerVerified(ask?.ticket ?? '', 'ok'), 'server')).toHaveLength(1);
+  });
+});
