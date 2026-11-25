@@ -266,6 +266,11 @@
         "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
         "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
         "timestamp": 1795599703122
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795599769749
       }
     ],
     "1. Shared helpers in `packages/core` (requirements 6.2, 6.5, 5.1, 5.2)": [
@@ -294,6 +299,13 @@
         "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
         "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
         "timestamp": 1795599391085
+      }
+    ],
+    "6. Docs and checks (requirements 7.3 to 7.5)": [
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795599769788
       }
     ]
   }

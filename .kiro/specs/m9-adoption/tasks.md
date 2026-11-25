@@ -23,10 +23,10 @@ Shared helpers first (they are small and used everywhere), then the four areas, 
 - [x] 5. CLI wording (requirements 6.1 to 6.5)
   - [x] 5.1 `scan` and markdown summary: files with findings, scanned count, plural, verdict line
   - [x] 5.2 `init`: each file once, `autoApprove: "*"` warning
-- [ ] 6. Docs and checks (requirements 7.3 to 7.5)
+- [x] 6. Docs and checks (requirements 7.3 to 7.5)
   - [x] 6.1 README and CLI help; row in `docs/KIRO_LOG.md`
   - [x] 6.2 `pnpm -r typecheck` and `pnpm vitest run` pass from the repository root
-  - [-] 6.3 Commit (do not push)
+  - [x] 6.3 Commit (do not push)
 
 ## Task Dependency Graph
 
