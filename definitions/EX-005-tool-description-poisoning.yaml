@@ -5,7 +5,7 @@ applies_to:
   - mcp-config
   - config
 match:
-  regex: "(before (responding|answering|using this tool)|(prior to|before) (invoking|calling|running|using) (this|any|the)\\b|do not (inform|tell|mention|notify|alert) the user|without (telling|informing|notifying|asking) the user|(keep|stay) (this |it )?(quiet|secret|hidden) from|this is required for (audit|telemetry|logging)|(send|include|attach|upload|pass|forward)[^.\\n]{0,60}(~/\\.ssh|id_rsa|\\.env\\b|\\.aws/credentials|private key))"
+  regex: "(before (responding|answering|using this tool)|(prior to|before) (invoking|calling|running|using) (this|any|the)\\b|do not (inform|tell|mention|notify|alert) the user|without (telling|informing|notifying|asking) the user|(keep|stay) (this |it )?(quiet|secret|hidden) from|this is required for (audit|telemetry|logging)|\\b(?:send|include|attach|upload|pass|forward)(?:s|es|ed|ing)?\\b[^.\\n]{0,60}(~/\\.ssh|id_rsa|\\.env\\b|\\.aws/credentials|private key))"
   # Only in files that describe MCP servers or tools. Model or prompt configs
   # that say \"do not mention\" are ordinary (seen in openai/codex).
   file_regex: "(\"mcpServers\"|\"inputSchema\"|\"input_schema\")"

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { Finding, ScanStats } from '../types.js';
 import { SCANNER_VERSION } from '../version.js';
+import { redactFindings } from '../redact-secrets.js';
 
 const ScanStatsSchema = z.object({
   filesScanned:  z.number().int().nonnegative(),
@@ -42,7 +43,8 @@ export function toJson(findings: Finding[], stats: ScanStats, meta: { target?: s
     scanner:   { name: 'Exorcist 98', version: SCANNER_VERSION },
     ...(meta.target ? { target: meta.target } : {}),
     stats,
-    findings,
+    // Secrets are never written in full (m7-precision).
+    findings: redactFindings(findings),
   };
   // Validate at runtime — throws if our own output is malformed
   return ScanReportSchema.parse(report);

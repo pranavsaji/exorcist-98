@@ -44,6 +44,13 @@ const MatchSchema = z
     // matching this regex (words such as "never", "such as", "injection"), is
     // being quoted as an example or warned against, not given as an order.
     quoted_example_cues: z.string().optional(),
+    // A phrase that the text itself forbids is a defence, not an attack ("it
+    // must not attempt to tell the agent to ignore earlier instructions",
+    // "users cannot bypass the prompt"). Checked against the text from the
+    // start of the sentence up to the match (at most 200 characters), anchored
+    // at its end with `$`, so the negation has to govern the phrase and not
+    // merely appear somewhere before it (m7-precision).
+    negated_cues: z.string().optional(),
     // Matches separated only by line breaks, quotes, commas or `+` are one
     // encoded blob: one finding, checked as a whole.
     merge_adjacent: z.boolean().optional(),
@@ -65,6 +72,12 @@ const MatchSchema = z
     // `detonation` is the Detonation Chamber (EX-024, m5-detonation): a
     // sandboxed model run, only with `--detonate`.
     analysis: z.enum(['trifecta', 'detonation']).optional(),
+    // unicode_class only: a single U+200B directly after `@` and before a name
+    // is the way changelogs stop GitHub from notifying the person. Reported at
+    // `severity` and not counted toward the escalation of many short runs.
+    mention_guard: z.object({
+      severity: z.enum(['critical', 'high', 'medium', 'low']),
+    }).optional(),
     minor_run: z.object({
       max_length: z.number().int().min(1),
       classes:    z.array(z.string()).min(1),
@@ -93,7 +106,7 @@ const MatchSchema = z
     if ((val.exclude_regex !== undefined || val.validate !== undefined) && val.regex === undefined && val.json_path === undefined) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'match.exclude_regex and match.validate need match.regex or match.json_path' });
     }
-    for (const key of ['regex', 'value_regex', 'exclude_regex', 'file_regex', 'quoted_example_cues', 'decoded_flag_regex'] as const) {
+    for (const key of ['regex', 'value_regex', 'exclude_regex', 'file_regex', 'quoted_example_cues', 'negated_cues', 'decoded_flag_regex'] as const) {
       const pattern = val[key];
       if (pattern !== undefined && !compiles(pattern)) {
         ctx.addIssue({

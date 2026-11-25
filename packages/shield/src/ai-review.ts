@@ -11,6 +11,7 @@
  * call changes nothing (the signature checks still run) and is retried the
  * next time the tool list is read.
  */
+import { redactSecretText } from '@exorcist-98/core';
 import { toolFingerprint } from './hash.js';
 import type { ToolDef } from './hash.js';
 import type { Reason } from './inspect.js';
@@ -46,7 +47,7 @@ export function findingsFor(tool: ToolDef, label: AiLabel | null): AiFindings {
   if (!description.includes(label.span)) return NONE; // security rule: drop a span not found verbatim
   const reason: Reason = {
     ruleId: 'AI-JUDGE',
-    message: `An AI review found instructions for your AI in its description: "${label.span.slice(0, 160)}" (${label.threatClass.replace(/[^\w ,./-]/g, '').slice(0, 60)}).`,
+    message: `An AI review found instructions for your AI in its description: "${redactSecretText(label.span).slice(0, 160)}" (${label.threatClass.replace(/[^\w ,./-]/g, '').slice(0, 60)}).`,
   };
   return label.verdict === 'malicious' ? { block: [reason], warn: [] } : { block: [], warn: [reason] };
 }

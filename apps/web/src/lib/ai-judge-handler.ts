@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { judgeText, MAX_JUDGED_CHARS } from '@exorcist-98/core';
+import { judgeText, MAX_JUDGED_CHARS, redactSecretText } from '@exorcist-98/core';
 import type { BedrockClient, BedrockParams, BedrockResult } from '@exorcist-98/core';
 import { BedrockClientImpl } from '@exorcist-98/core/llm';
 import { BYOA_PLACEMENTS } from '@exorcist-98/shield/byoa';
@@ -97,8 +97,9 @@ export async function handleAiJudgePost(request: Request): Promise<Response> {
       return json({
         verdict: v.verdict === 'malicious' ? 'malicious' : 'suspicious',
         threatClass: v.threatClass.slice(0, 80),
-        quote: clip(v.span, 200),
-        rationale: v.rationale.slice(0, 300),
+        quote: clip(redactSecretText(v.span), 200),
+
+        rationale: redactSecretText(v.rationale).slice(0, 300),
         checkedChars,
       } satisfies AiJudgeResponse);
     } catch (e) {

@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
-import { displayMessage, loadDefinitions, plainFor, scanRepo, toBadgeSvg, toJson, toMarkdown, toSarif } from '@exorcist-98/core';
+import { displayMessage, loadDefinitions, plainFor, redactFinding, scanRepo, toBadgeSvg, toJson, toMarkdown, toSarif } from '@exorcist-98/core';
 import type { Finding, ScanStats } from '@exorcist-98/core';
 import { MAX_SPANS_PER_FILE } from '@exorcist-98/core/llm';
 import type { BedrockClient, ChamberClient } from '@exorcist-98/core/llm';
@@ -65,7 +65,9 @@ function renderText(findings: Finding[], stats: ScanStats): string {
     (a, b) => (RANK[a.severity] ?? 9) - (RANK[b.severity] ?? 9) || a.file.localeCompare(b.file) || a.line - b.line,
   );
   const lines: string[] = [];
-  for (const f of sorted) {
+  for (const raw of sorted) {
+    // Secrets are never printed in full (m7-precision).
+    const f = redactFinding(raw);
     lines.push(`${f.severity.toUpperCase().padEnd(8)} ${f.file}:${f.line}:${f.col}  ${plainFor(f.ruleId, f.title).headline} (${f.ruleId})`);
     lines.push(`         found: ${f.span}`);
     // Ouija decoder: what the invisible text says. Attacker text, so control

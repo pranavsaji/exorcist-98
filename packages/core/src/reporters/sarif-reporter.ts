@@ -1,5 +1,6 @@
 import { SCANNER_VERSION } from '../version.js';
 import type { Finding } from '../types.js';
+import { redactFinding } from '../redact-secrets.js';
 
 // Browser-safe: no Node imports, so the web app can build SARIF in the page.
 
@@ -68,7 +69,8 @@ export function toSarif(findings: Finding[], repoRoot: string): SarifLog {
     return {
       ruleId: f.ruleId,
       level:  severityToLevel(f.severity),
-      message: { text: `${f.title}: ${f.span}` },
+      // Secrets are never written in full: SARIF can be uploaded to code scanning.
+      message: { text: `${f.title}: ${redactFinding(f).span}` },
       locations: [{
         physicalLocation: {
           artifactLocation: { uri, uriBaseId: '%SRCROOT%' },

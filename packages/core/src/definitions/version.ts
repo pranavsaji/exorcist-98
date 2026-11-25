@@ -8,5 +8,5 @@
  * when `definitions/` changes in a release. No Node imports: the web app reads
  * this to show the version on the Virus Definitions page.
  */
-export const BUNDLED_DEFINITIONS_VERSION = '20261123.0';
-export const BUNDLED_DEFINITIONS_DATE = '2026-11-23';
+export const BUNDLED_DEFINITIONS_VERSION = '20261124.0';
+export const BUNDLED_DEFINITIONS_DATE = '2026-11-24';

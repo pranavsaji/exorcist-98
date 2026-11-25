@@ -3,10 +3,10 @@ import { readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { mkdir } from "node:fs/promises";
-import { exorciseRepo, fetchGithubRepo, readZip, registryLookup, scanRepo, toUnifiedDiff, walkRepo, writeEntries } from "@exorcist-98/core";
+import { exorciseRepo, fetchGithubRepo, readZip, redactFinding, redactSecretText, registryLookup, scanRepo, toUnifiedDiff, walkRepo, writeEntries } from "@exorcist-98/core";
 import type { ConfigMap, Finding, HauntedMap, VersionAnswer, VersionLookup } from "@exorcist-98/core";
 import { definitionsDir, hauntedRepoDir } from "./paths";
-import { buildSnippet } from "./snippet";
+import { buildSnippet, redactSnippet } from "./snippet";
 import { PATCH_MAX_BYTES } from "./protocol";
 import type { ConfigMapMsg, HauntedMapMsg, PatchEvent, ScanEventMsg, WebFinding } from "./protocol";
 
@@ -39,6 +39,11 @@ function defaultLookup(): VersionLookup | null {
   return process.env["EXORCIST_OFFLINE"] === "1" ? null : sharedLookup;
 }
 
+/** The patch with any secret on a diff line replaced by a marker. */
+function redactPatch(patch: string): string {
+  return patch.split("\n").map(redactSecretText).join("\n");
+}
+
 /** The exorcism patch for a scanned folder, capped at PATCH_MAX_BYTES. */
 export async function buildPatchEvent(
   root: string,
@@ -48,7 +53,8 @@ export async function buildPatchEvent(
   const results = await exorciseRepo(root, findings, { lookup, maxLookups: 20 });
   const p = toUnifiedDiff(results, { maxBytes: PATCH_MAX_BYTES });
   const skipped = results.reduce((n, r) => n + r.notes.length, 0);
-  return { type: "patch", patch: p.patch, files: p.files, fixes: p.fixes, omitted: p.omitted, skipped };
+  // Secrets are never sent in full, not even as diff context (m7-precision).
+  return { type: "patch", patch: redactPatch(p.patch), files: p.files, fixes: p.fixes, omitted: p.omitted, skipped };
 }
 
 const DEFAULT_MAX_FINDINGS = 500;
@@ -67,7 +73,9 @@ async function defaultClone(t: { owner: string; repo: string; ref?: string }, di
 /** An error whose message is safe and useful to show to the user. */
 export class UserFacingError extends Error {}
 
-function toWebFinding(f: Finding): WebFinding {
+function toWebFinding(raw: Finding): WebFinding {
+  // Secrets are never sent in full (m7-precision).
+  const f = redactFinding(raw);
   const base: WebFinding = {
     source: f.source,
     ruleId: f.ruleId,
@@ -210,7 +218,7 @@ export async function* scanTarget(
         yield {
           type: "finding",
           finding: toWebFinding(f),
-          snippet: buildSnippet(cachedText, f.line, f.col, f.span),
+          snippet: redactSnippet(buildSnippet(cachedText, f.line, f.col, f.span)),
         };
       } else if (ev.type === "error") {
         if (!include(ev.file)) continue;

@@ -275,6 +275,8 @@ export function trifectaFinding(config: ParsedMcpConfig, map: ConfigMap, defs: r
   if (!map.trifecta || map.severity === null) return null;
   const def = defs.find((d) => d.id === TRIFECTA_RULE_ID && d.enabled !== false && d.match.analysis === 'trifecta');
   if (!def) return null;
+  // Test and eval fixtures are not a user's agent setup (skip_paths, as for the text rules).
+  if (def.skip_paths?.some((p) => new RegExp(p, 'i').test(config.file))) return null;
   const legs = CAPABILITIES.map((c) => `${LEG_WORDS[c]} ${map.legs[c].join(', ')}`).join('; ');
   const auto = map.ghosts.filter((g) => g.autoApproved && g.capabilities.length > 0).map((g) => g.name);
   const autoText = auto.length > 0 ? ` Tools on ${auto.join(', ')} are auto-approved, so nothing asks you first.` : '';

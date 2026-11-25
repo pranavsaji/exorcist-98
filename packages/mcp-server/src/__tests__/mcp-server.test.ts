@@ -200,3 +200,17 @@ describe('the exorcist MCP server (official SDK client, real stdio)', () => {
     expect(JSON.parse(readFileSync(join(outside, 'mcp.json'), 'utf8')).mcpServers.a.disabled).toBeUndefined();
   });
 });
+
+describe('m7-precision: the MCP tools never quote a secret in full', () => {
+  it('scan_repo with includeQuotes redacts the quoted span', async () => {
+    const dir = tmp();
+    const key = `ghp_${'aB3dE5gH7jK9mN1pQ3sT5vW7yZ9bD1fH3jL5'}`;
+    writeFileSync(join(dir, 'README.md'), `# Setup\n\nGITHUB_TOKEN=${key}\n`);
+    const out = await scanRepoTool({ cwd: dir, definitionsDir: DEFS }, { path: '.', includeQuotes: true, maxFindings: 20 });
+    expect(out.text).toContain('README.md:3');
+    expect(out.text).toContain('quoted:');
+    expect(out.text).not.toContain(key);
+    expect(out.text).not.toContain(key.slice(0, 14));
+    expect(out.text).toContain('[redacted ');
+  });
+});
