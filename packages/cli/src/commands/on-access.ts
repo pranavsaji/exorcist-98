@@ -3,6 +3,8 @@ import { execFile } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createInterface } from 'node:readline';
+import { macOsAuth, sanitizeReason } from '@exorcist-98/shield';
+import type { OsAuth } from '@exorcist-98/shield';
 import { addAllowedRead, decideRead, loadDefinitions, readAllowedReads, realPath, sha256File, shownName } from '@exorcist-98/core';
 import type { VirusDefinition } from '@exorcist-98/core';
 import { findDefinitionsDir, parse } from '../util.js';
@@ -30,8 +32,10 @@ The list is kept outside the project, per user:
 A list inside the project folder is never used: the project could plant it.
 
 Only a person can allow a file. The command runs only in an interactive
-terminal. On macOS it then asks through a native dialog you click (Deny is the
-default), which an agent's shell tool cannot answer. Elsewhere it shows a
+terminal. On a Mac with Touch ID or a login password it then asks the system
+(LocalAuthentication), which no other program can answer; without that it uses
+a native dialog you click (Deny is the default), which an agent's shell tool
+cannot answer. Elsewhere it shows a
 random code to type back: that stops ordinary non-interactive agent tools, but
 an agent that fully drives a terminal could still read it.
 `;
@@ -52,6 +56,12 @@ export type Terminal = {
   dialog?: (message: string) => Promise<DialogAnswer>;
   /** A fresh random confirmation code (injectable for tests). */
   nonce?: () => string;
+  /**
+   * The operating system's own verification (Touch ID or login password).
+   * Tried before `dialog`. Default: macOsAuth(), which is never available
+   * under VITEST or CI. Injectable for tests.
+   */
+  osAuth?: OsAuth;
 };
 
 /** Dialog text: no control, hidden or direction characters, bounded. Passed as an argument, never as script source. */
@@ -143,15 +153,36 @@ export async function onAccessCommand(stdin: string, io: Io): Promise<number> {
 }
 
 /**
+ * Ask through the strongest channel that exists, without a typed code.
+ * 1. The operating system's verification (Touch ID or login password): another
+ *    program cannot click it. `reason` is the short prompt text.
+ * 2. A native dialog the person clicks (can be clicked by other software).
+ * 'unavailable' means neither exists. Once the OS prompt has been shown, a
+ * deny, an error or a timeout is a 'deny': it never falls back to a weaker channel.
+ */
+export async function askOwner(term: Terminal, dialogMessage: string, reason: string): Promise<DialogAnswer> {
+  const auth = term.osAuth ?? macOsAuth();
+  let available = false;
+  try { available = await auth.available(); } catch { available = false; }
+  if (available) {
+    let verdict: string = 'error';
+    try { verdict = await auth.verify(sanitizeReason(reason)); } catch { verdict = 'error'; }
+    return verdict === 'ok' ? 'allow' : 'deny';
+  }
+  return term.dialog ? await term.dialog(dialogMessage) : 'unavailable';
+}
+/**
  * Ask the person at the keyboard, through channels an agent's shell tool
- * cannot answer: first a native dialog they click; without one, a random code
- * shown once and typed back. The caller has already checked `interactive`.
+ * cannot answer: first the OS verification (Touch ID or login password), then a
+ * native dialog they click; without either, a random code shown once and typed
+ * back. The caller has already checked `interactive`. `reason` is the short
+ * text of the OS prompt and says what is being approved.
  * Prints why on refusal. Used by allow-read and approve session.
  */
-export async function personConfirms(term: Terminal, io: Io, dialogMessage: string): Promise<boolean> {
-  const viaDialog = term.dialog ? await term.dialog(dialogMessage) : 'unavailable';
-  if (viaDialog === 'deny') { io.err('Denied in the dialog. Nothing was allowed.'); return false; }
-  if (viaDialog === 'unavailable') {
+export async function personConfirms(term: Terminal, io: Io, dialogMessage: string, reason: string = dialogMessage): Promise<boolean> {
+  const viaOwner = await askOwner(term, dialogMessage, reason);
+  if (viaOwner === 'deny') { io.err('Denied in the verification prompt. Nothing was allowed.'); return false; }
+  if (viaOwner === 'unavailable') {
     const code = (term.nonce ?? (() => randomBytes(4).toString('hex').slice(0, 6)))();
     io.out(`Confirmation code: ${code}`);
     const answer = await term.ask('Type the confirmation code above to allow it: ');
@@ -159,7 +190,6 @@ export async function personConfirms(term: Terminal, io: Io, dialogMessage: stri
   }
   return true;
 }
-
 export async function allowReadCommand(argv: string[], io: Io, term: Terminal = processTerminal()): Promise<number> {
   const p = parse(argv, { help: { type: 'boolean', short: 'h' } });
   if (!p.ok) { io.err(`${p.error}\n\n${ALLOW_READ_HELP}`); return 2; }
@@ -180,7 +210,7 @@ export async function allowReadCommand(argv: string[], io: Io, term: Terminal = 
   io.out(`File:    ${shown}`);
   io.out(`SHA-256: ${hash}`);
   io.out('Allow only a file you have reviewed: Exorcist 98 will let your agent read exactly these bytes at this path.');
-  if (!(await personConfirms(term, io, `Allow your AI agent to read this file?\n\n${shown}\nSHA-256 ${hash.slice(0, 12)}...\n\nOnly allow a file you have reviewed.`))) return 1;
+  if (!(await personConfirms(term, io, `Allow your AI agent to read this file?\n\n${shown}\nSHA-256 ${hash.slice(0, 12)}...\n\nOnly allow a file you have reviewed.`, `Allow your AI agent to read ${shown} (SHA-256 ${hash.slice(0, 12)}...)`))) return 1;
 
   // Only the bytes the user confirmed: if the file changed meanwhile, nothing is written.
   const result = addAllowedRead(process.cwd(), file, process.env, hash);

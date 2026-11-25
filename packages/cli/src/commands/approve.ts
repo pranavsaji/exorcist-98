@@ -30,6 +30,7 @@ The running shield picks the change up on the next request. Your AI client may
 need to refresh its tool list (reconnect the MCP server) to see a restored tool.
 `;
 
+const NO_OS_AUTH: OsAuth = { available: async () => false, verify: async () => 'error' };
 export async function approveCommand(argv: string[], io: Io, term: Terminal = processTerminal(), osAuth: OsAuth = macOsAuth()): Promise<number> {
   const p = parse(argv, { dir: { type: 'string' }, help: { type: 'boolean', short: 'h' } });
   if (!p.ok) { io.err(`${p.error}\n\n${APPROVE_HELP}`); return 2; }
@@ -63,10 +64,14 @@ export async function approveCommand(argv: string[], io: Io, term: Terminal = pr
     const what = sessionSummary(dir, server, asOf);
     for (const w of what) io.out(`  - ${w}`);
     const msg = `Let this AI agent session send data out again?\n\nSession ${server}\n${what.map((w) => `- ${w}`).join('\n')}\n\nOnly release it if you asked for what it is trying to send.`;
+    // Here the release is the terminal one (policy "terminal", or no system prompt
+    // on this machine): the system prompt is asked by the Shield itself in "os"
+    // mode, so this command never asks it a second time.
+    const asker: Terminal = { ...term, osAuth: NO_OS_AUTH };
     if (!term.dialog || process.platform !== 'darwin') {
       io.err('Note: there is no native dialog here, so this uses a typed code. An agent that drives a real terminal could read it; only type it yourself.');
     }
-    if (!(await personConfirms(term, io, msg))) return 1;
+    if (!(await personConfirms(asker, io, msg, `Let AI agent session ${server} send data out again`))) return 1;
     const g = grantSession(dir, server, new Date(), asOf);
     if (!g.ok) { io.err(g.error); return 1; }
     io.out(g.message);

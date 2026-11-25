@@ -3,14 +3,15 @@ import { createReadStream, createWriteStream, openSync, writeSync } from 'node:f
 import { homedir } from 'node:os';
 import { createInterface } from 'node:readline';
 import { decideMcpWrite, shownName } from '@exorcist-98/core';
-import { macDialog, personConfirms } from './on-access.js';
+import { askOwner, macDialog, personConfirms } from './on-access.js';
 import type { Terminal } from './on-access.js';
 import type { Io } from '../util.js';
 
 export const GUARD_MCP_WRITE_HELP = `Usage: exorcist guard-mcp-write   (Kiro hook helper)
 Reads a Kiro PreToolUse hook event from stdin. When the tool would write to
 .kiro/settings/mcp.json (in a project or in your home folder), a person must
-confirm it: on macOS in a native dialog you click (Deny is the default),
+confirm it: on a Mac with the system verification (Touch ID or login password),
+else in a native dialog you click (Deny is the default),
 elsewhere by typing a code shown on your terminal (/dev/tty). The dialog names
 the file and never shows what the agent wanted to write.
 Exit codes: 0 allow, 2 block (denied, timed out, or nobody to ask; the reason
@@ -62,6 +63,9 @@ function dialogMessage(path: string): string {
   return `Your AI agent wants to change an MCP configuration file:\n\n${shownName(path)}\n\nA changed MCP config can start programs on your computer. Allow it only if you asked for this change.`;
 }
 
+function reasonText(path: string): string {
+  return `Allow your AI agent to change the MCP config ${shownName(path)}`;
+}
 function blockMessage(path: string, why: string): string {
   return `Exorcist 98 blocked the write to ${shownName(path)}: ${why} An MCP config can start programs on your computer, so only you may change it. To make the change yourself, edit the file in your own editor, then ask the agent to continue.`;
 }
@@ -70,9 +74,9 @@ function blockMessage(path: string, why: string): string {
 async function askPerson(deps: GuardDeps, path: string): Promise<'yes' | 'no' | 'nobody' | 'timeout'> {
   const { term, promptIo } = deps;
   const run = async (): Promise<'yes' | 'no' | 'nobody'> => {
-    if (term.interactive) return (await personConfirms(term, promptIo, dialogMessage(path))) ? 'yes' : 'no';
-    // No terminal to type in: only a native dialog can ask.
-    const answer = term.dialog ? await term.dialog(dialogMessage(path)) : 'unavailable';
+    if (term.interactive) return (await personConfirms(term, promptIo, dialogMessage(path), reasonText(path))) ? 'yes' : 'no';
+    // No terminal to type in: only the OS verification or a native dialog can ask.
+    const answer = await askOwner(term, dialogMessage(path), reasonText(path));
     return answer === 'allow' ? 'yes' : answer === 'deny' ? 'no' : 'nobody';
   };
   let timer: NodeJS.Timeout | undefined;

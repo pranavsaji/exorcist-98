@@ -239,7 +239,7 @@ Before any text reaches a model, every credential-shaped value is masked at the 
 - **Held-out public repositories** ([`docs/BENCHMARK.md`](BENCHMARK.md), held-out set C): on 5 repos never used for tuning (about 9,500 files) the scanner raised 1 finding, and it is correct.
 - **Field report** ([`docs/FIELD_REPORT.md`](FIELD_REPORT.md)): <!--f:fieldReport.repos-->483<!--/f--> public repositories in <!--f:fieldReport.rounds-->3<!--/f--> rounds; serious alerts from 4.0 to 0.24 per repository after the fixes (round 1 to round 2). Round 2 contained no real threats, so it shows how quiet the scanner is, not how often an alert is right.
 - **Haunted Repo:** <!--f:hauntedRepoFindings-->47<!--/f--> findings, pinned by a snapshot test.
-- **Inside Kiro:** the Shield and MCP server ran inside Kiro IDE; 5 of the <!--f:hooks-->7<!--/f--> Kiro hooks in this repository were seen firing there (the on-access hook on 2026-11-24); the `exorcist-gate` Stop hook and the MCP config write guard are built and tested but have not been seen firing in Kiro; the Power was installed through Kiro's Powers panel; the Crew app ran inside Kiro Crew. See [`docs/KIRO_LOG.md`](KIRO_LOG.md).
+- **Inside Kiro:** the Shield and MCP server ran inside Kiro IDE; all <!--f:hooks-->7<!--/f--> Kiro hooks in this repository were seen firing there (the on-access hook on 2026-11-24; the `exorcist-gate` Stop hook and the MCP config write guard on 2026-11-26, Kiro 1.5.11); the Power was installed through Kiro's Powers panel; the Crew app ran inside Kiro Crew. See [`docs/KIRO_LOG.md`](KIRO_LOG.md).
 
 ## How it compares to other MCP scanners
 
