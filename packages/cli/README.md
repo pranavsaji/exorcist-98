@@ -23,6 +23,19 @@ Add `--ai` to also ask an AI judge (Claude on Amazon Bedrock) about suspicious
 text. It needs AWS credentials, `AWS_REGION` and
 `npm install @aws-sdk/client-bedrock-runtime`; `--ai-max-calls` caps the cost.
 
+## Adopt on an existing repo
+```sh
+exorcist baseline .                                  # writes .exorcist-baseline.json
+exorcist scan . --baseline .exorcist-baseline.json   # reports new findings only
+```
+The baseline keeps a fingerprint of each finding, not its text. To silence one
+rule on one line, write `exorcist-ignore EX-012: reason` in a comment on that
+line or the line before (a reason is required; hidden characters, EX-001, and
+secrets, EX-011, can never be silenced this way). Suppressions are listed in the
+summary, and SARIF output marks them with `suppressions`. If the definitions are
+more than 30 days old, `scan` prints one warning on stderr; it makes no network
+request.
+
 ## Map the haunted house
 
 ```sh

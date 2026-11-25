@@ -43,8 +43,8 @@ a quarantine vault) and pointed it at the files and tools an agent trusts.
   maps to the OWASP LLM, Agentic or MCP Top 10. A Threat Encyclopedia explains
   each one in plain language.
 - **Measured precision:** on five well-known public agent and MCP repos it
-  raises 2 alarms in total (down from 4,457 before tuning); on five more repos never used for tuning (about 9,500 files) it raised 1, and that one is correct, and it catches 19
-  of 19 attacks in a labelled corpus that runs with the tests
+  raises 2 alarms in total (down from 4,457 before tuning); on five more repos never used for tuning (about 9,500 files) it raised 1, and that one is correct, and it catches 24
+  of 24 attacks in a labelled corpus that runs with the tests
   (`docs/BENCHMARK.md`).
 - **Private code too:** upload a .zip (up to 4 MB) instead of a GitHub link;
   it is unpacked only for the scan and deleted straight after. Branch, tag and

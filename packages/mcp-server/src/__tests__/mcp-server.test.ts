@@ -59,7 +59,7 @@ describe('the exorcist MCP server (official SDK client, real stdio)', () => {
     const c = await connect(ROOT);
     const r = await call(c, 'scan_repo', { path: 'fixtures/haunted-repo', maxFindings: 40 });
     expect(r.isError).toBe(false);
-    expect(r.text).toMatch(/\d+ threats in \d+ files/);
+    expect(r.text).toMatch(/\d+ threats in \d+ files \(.+\)\. Scanned \d+ files\./);
     expect(r.text).toContain('This file hides instructions for your AI');
     expect(r.text).toContain('rule: EX-001');
     expect(r.text).not.toContain('quoted:');
@@ -105,6 +105,20 @@ describe('the exorcist MCP server (official SDK client, real stdio)', () => {
     expect(out.text).toContain('rule: EX-021');
     expect(out.text).not.toContain('DEFANGED: placeholder message');
     expect(out.text).not.toMatch(/[\uFE00-\uFE0F\u{E0100}-\u{E01EF}]/u);
+  });
+
+  // m9-adoption REQ-6.2
+  it('scan_repo counts with correct singular and plural wording', async () => {
+    const ctx = { cwd: ROOT, definitionsDir: DEFS };
+    const one = await scanRepoTool(ctx, { path: 'fixtures/haunted-repo/EX-005-tool-description-poisoning.json' });
+    expect(one.text).toMatch(/^\d+ threats in 1 file \(.+\)\. Scanned 1 file\.$/m);
+    expect(one.text).not.toMatch(/1 files|\b1 threats/);
+
+    const d = tmp();
+    writeFileSync(join(d, 'README.md'), '# Hello\n\nA harmless readme.\n');
+    const clean = await scanRepoTool({ cwd: d, definitionsDir: DEFS }, { path: join(d, 'README.md') });
+    expect(clean.isError).toBeUndefined();
+    expect(clean.text).toBe('No threats found. Scanned 1 file.');
   });
 
   it('reveal() makes any hidden character visible', () => {

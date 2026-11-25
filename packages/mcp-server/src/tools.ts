@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { findDefinitionsDir as sharedFindDefinitionsDir } from '@exorcist-98/shield';
 import { homedir } from 'node:os';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { loadDefinitions, plainFor, redactFinding, scanRepo, scanText } from '@exorcist-98/core';
+import { loadDefinitions, plainFor, plural, redactFinding, scanRepo, scanText } from '@exorcist-98/core';
 import type { Finding, VirusDefinition } from '@exorcist-98/core';
 import { isWrapped, quarantineServer } from '@exorcist-98/shield';
 import type { McpConfig } from '@exorcist-98/shield';
@@ -247,13 +247,14 @@ function describe(findings: Finding[], limit: number, quotes: boolean): string {
 }
 
 function summary(findings: Finding[], files: number): string {
-  if (findings.length === 0) return `No threats found in ${files} files.`;
+  if (findings.length === 0) return `No threats found. Scanned ${plural(files, 'file')}.`;
   const counts = (['critical', 'high', 'medium', 'low'] as const)
     .map((s) => ({ s, n: findings.filter((f) => f.severity === s).length }))
     .filter((c) => c.n > 0)
     .map((c) => `${c.n} ${c.s}`)
     .join(', ');
-  return `${findings.length} threat${findings.length === 1 ? '' : 's'} in ${files} files (${counts}).`;
+  const withFindings = new Set(findings.map((f) => f.file)).size;
+  return `${plural(findings.length, 'threat')} in ${plural(withFindings, 'file')} (${counts}). Scanned ${plural(files, 'file')}.`;
 }
 
 export async function scanRepoTool(ctx: Ctx, a: { path: string; maxFindings?: number; includeQuotes?: boolean }): Promise<ToolText> {

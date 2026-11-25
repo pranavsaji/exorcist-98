@@ -32,6 +32,7 @@ type SarifRule = {
   helpUri?: string;
 };
 
+export type SarifSuppression = { kind: 'external' | 'inSource'; justification: string };
 type SarifResult = {
   ruleId: string;
   level: 'error' | 'warning' | 'note';
@@ -42,6 +43,7 @@ type SarifResult = {
       region: { startLine: number; startColumn: number };
     };
   }>;
+  suppressions?: Array<{ kind: 'external' | 'inSource'; status: 'accepted'; justification: string }>;
 };
 
 function severityToLevel(severity: Finding['severity']): SarifResult['level'] {
@@ -50,7 +52,11 @@ function severityToLevel(severity: Finding['severity']): SarifResult['level'] {
   return 'note';
 }
 
-export function toSarif(findings: Finding[], repoRoot: string): SarifLog {
+export function toSarif(
+  findings: Finding[],
+  repoRoot: string,
+  marks?: ReadonlyMap<Finding, SarifSuppression>,
+): SarifLog {
   const ruleMap = new Map<string, SarifRule>();
 
   const results: SarifResult[] = findings.map(f => {
@@ -66,6 +72,7 @@ export function toSarif(findings: Finding[], repoRoot: string): SarifLog {
     // Make the URI relative to the repo root
     const uri = f.file.startsWith('/') ? relativeTo(repoRoot, f.file) : f.file;
 
+    const mark = marks?.get(f);
     return {
       ruleId: f.ruleId,
       level:  severityToLevel(f.severity),
@@ -77,6 +84,9 @@ export function toSarif(findings: Finding[], repoRoot: string): SarifLog {
           region: { startLine: f.line, startColumn: f.col },
         },
       }],
+      ...(mark
+        ? { suppressions: [{ kind: mark.kind, status: 'accepted' as const, justification: mark.justification }] }
+        : {}),
     };
   });
 

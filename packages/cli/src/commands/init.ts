@@ -1,5 +1,6 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import { displayMessage } from '@exorcist-98/core';
 import { isWrapped } from '@exorcist-98/shield';
 import type { McpConfig } from '@exorcist-98/shield';
 import { parse, str } from '../util.js';
@@ -111,16 +112,20 @@ export function splitCommand(s: string): string[] | null {
 
 type Planned = { rel: string; body: string; executable?: boolean; summary: string };
 
+const MAX_NAME = 60;
 /** What --kiro found in the workspace MCP config (read only). */
-function describeMcpConfig(path: string): { exists: boolean; line: string } {
-  if (!existsSync(path)) return { exists: false, line: 'no .kiro/settings/mcp.json yet (the mcp-scan hook scans it once you add one)' };
+function describeMcpConfig(path: string): { exists: boolean; line: string; warnings: string[] } {
+  if (!existsSync(path)) return { exists: false, warnings: [], line: 'no .kiro/settings/mcp.json yet (the mcp-scan hook scans it once you add one)' };
   try {
     const cfg = JSON.parse(readFileSync(path, 'utf8')) as McpConfig;
     const entries = Object.entries(cfg.mcpServers ?? {});
     const shielded = entries.filter(([, e]) => isWrapped(e)).map(([n]) => n);
-    return { exists: true, line: `.kiro/settings/mcp.json: ${entries.length} server${entries.length === 1 ? '' : 's'}, ${shielded.length} behind the Shield` };
+    const warnings = entries
+      .filter(([, e]) => Array.isArray((e as { autoApprove?: unknown }).autoApprove) && ((e as { autoApprove: unknown[] }).autoApprove).includes('*'))
+      .map(([n]) => `WARNING: server "${displayMessage(n.slice(0, MAX_NAME).replace(/[\t\n\r]/g, ' '))}${n.length > MAX_NAME ? '...' : ''}" has autoApprove "*": your agent can run every tool of it without asking you. List only the tools you trust, or remove autoApprove.`);
+    return { exists: true, warnings, line: `.kiro/settings/mcp.json: ${entries.length} server${entries.length === 1 ? '' : 's'}, ${shielded.length} behind the Shield` };
   } catch {
-    return { exists: true, line: '.kiro/settings/mcp.json is not valid JSON; fix it before using --shield' };
+    return { exists: true, warnings: [], line: '.kiro/settings/mcp.json is not valid JSON; fix it before using --shield' };
   }
 }
 
@@ -215,7 +220,7 @@ export async function initCommand(argv: string[], io: Io): Promise<number> {
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, f.body, 'utf8');
     if (f.executable) chmodSync(path, 0o755);
-    io.out(`Wrote ${f.rel}`);
+    if (!kiro) io.out(`Wrote ${f.rel}`); // with --kiro the summary lists every file once
     done.push({ f, wrote: true });
   }
   const wroteAny = done.some((d) => d.wrote);
@@ -249,6 +254,7 @@ export async function initCommand(argv: string[], io: Io): Promise<number> {
     const d = done.find((x) => x.f.rel === rel);
     return d ? `${d.wrote ? 'wrote' : 'kept '} ${rel}` : rel;
   };
+  const mcp = describeMcpConfig(mcpPath);
   const lines = [
     '',
     `Exorcist 98 for Kiro, in ${root}`,
@@ -261,8 +267,11 @@ export async function initCommand(argv: string[], io: Io): Promise<number> {
     agent
       ? `  ${label('.kiro/agents/exorcist-reviewer.json')}\n      ${files.find((f) => f.rel.endsWith('exorcist-reviewer.json'))?.summary ?? ''}\n      MCP server command: ${mcpBin}`
       : '  not installed (--no-agent)',
+    'Support files',
+    ...['.exorcist/kiro-hook.sh', '.exorcist/.gitignore'].map((r) => `  ${label(r)}\n      ${files.find((f) => f.rel === r)?.summary ?? ''}`),
     'MCP servers',
-    `  ${describeMcpConfig(mcpPath).line}`,
+    `  ${mcp.line}`,
+    ...mcp.warnings.map((w) => `  ${w}`),
     shield ? `  Shield: ${shieldLine ?? 'not applied'}` : '  Shield: not applied. To put every server behind it: exorcist init --shield (undo: exorcist unwrap .kiro/settings/mcp.json)',
     'Git',
     `  ${label('.githooks/pre-commit')}\n      turn on once per clone: git config core.hooksPath .githooks`,

@@ -1,11 +1,12 @@
-import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { basename, dirname, join, resolve } from 'node:path';
-import { displayMessage, loadDefinitions, plainFor, redactFinding, scanRepo, toBadgeSvg, toJson, toMarkdown, toSarif } from '@exorcist-98/core';
-import type { Finding, ScanStats } from '@exorcist-98/core';
+import { existsSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { applyBaseline, applyInline, displayMessage, loadDefinitions, parseBaseline, plural, plainFor, redactFinding, scanRepo, toBadgeSvg, toJson, toMarkdown, toSarif, verdictForFindings } from '@exorcist-98/core';
+import type { Baseline, Finding, RejectCause, SarifSuppression, ScanStats, SuppressedSummary } from '@exorcist-98/core';
 import { MAX_SPANS_PER_FILE } from '@exorcist-98/core/llm';
 import type { BedrockClient, ChamberClient } from '@exorcist-98/core/llm';
 import { DEFAULT_DETONATE_MAX, EX024, makeChamberClient, parseDetonateMax, runDetonations } from './detonate.js';
 import { findDefinitionsDir, parse, str, strs } from '../util.js';
+import { usesCustomDefinitions, warnIfStale } from '../stale.js';
 import type { Io } from '../util.js';
 
 const RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
@@ -29,6 +30,9 @@ Options:
                                         Exit 1 if a finding is at least this bad (default: high)
   --ignore <path>                       Skip a path prefix (repeatable). A .exorcistignore
                                         file in the scanned folder lists more, one per line.
+  --baseline <file>                     Hide findings listed in a baseline file (made with
+                                        "exorcist baseline"); only new findings are shown and
+                                        decide the exit code. A missing or invalid file exits 2.
   --definitions <dir>                   Folder of virus definitions (YAML)
   --output <file>                       Write the report to a file instead of stdout
   --ai                                  Also ask an AI judge (Claude on Amazon Bedrock) about
@@ -41,6 +45,11 @@ Options:
                                         harmful. Nothing is executed. Needs AWS credentials and AWS_REGION;
                                         at most 2 model calls per file. Off by default.
   --detonate-max <n>                    Detonate at most n files (default ${DEFAULT_DETONATE_MAX})
+Inline suppression (always on): a comment on the same line as a finding, or on the line
+before it, silences one rule on that line, and the reason is listed in the report:
+  // exorcist-ignore EX-012: reviewed, this is documentation
+Openers: //  #  <!--  /*  --  ;   A reason is required. Hidden characters (EX-001) and
+secrets (EX-011) cannot be silenced this way. The comment's own text is still scanned.
 `;
 
 export function readIgnoreFile(root: string): string[] {
@@ -59,8 +68,22 @@ export function isIgnored(rel: string, prefixes: readonly string[]): boolean {
   });
 }
 
-function renderText(findings: Finding[], stats: ScanStats): string {
-  if (findings.length === 0) return `No threats found in ${stats.filesScanned} files.\n`;
+function suppressedLines(s: SuppressedSummary): string[] {
+  const parts: string[] = [];
+  if (s.baseline > 0) parts.push(`${s.baseline} by the baseline`);
+  if (s.inline.length > 0) parts.push(`${s.inline.length} by inline comments`);
+  const lines: string[] = parts.length > 0 ? [`Suppressed: ${parts.join(', ')}.`] : [];
+  for (const i of s.inline) lines.push(`  ${displayMessage(i.file)}:${i.line}  ${i.ruleId}  ${i.reason}`);
+  for (const r of s.rejected) {
+    lines.push(`Not honoured: ${displayMessage(r.file)}:${r.line}  ${r.ruleId}  ${REJECT_WHY[r.cause as RejectCause] ?? 'it cannot be used'}.`);
+  }
+  return lines;
+}
+function renderText(findings: Finding[], stats: ScanStats, suppressed: SuppressedSummary): string {
+  const extra = suppressedLines(suppressed);
+  const v = verdictForFindings(findings);
+  const verdict = `Verdict: ${v.word}. ${v.line}`;
+  if (findings.length === 0) return `${[`No threats found. Scanned ${plural(stats.filesScanned, 'file')}.`, ...extra, verdict].join('\n')}\n`;
   const sorted = [...findings].sort(
     (a, b) => (RANK[a.severity] ?? 9) - (RANK[b.severity] ?? 9) || a.file.localeCompare(b.file) || a.line - b.line,
   );
@@ -83,7 +106,9 @@ function renderText(findings: Finding[], stats: ScanStats): string {
     .filter((c) => c.n > 0)
     .map((c) => `${c.n} ${c.s}`)
     .join(', ');
-  lines.push('', `${findings.length} threat${findings.length === 1 ? '' : 's'} in ${stats.filesScanned} files (${counts}).`);
+  const withFindings = new Set(findings.map((f) => f.file)).size;
+  lines.push('', `${plural(findings.length, 'threat')} in ${plural(withFindings, 'file')} (${counts}). Scanned ${plural(stats.filesScanned, 'file')}.`);
+  lines.push(...extra, verdict);
   return `${lines.join('\n')}\n`;
 }
 
@@ -139,57 +164,53 @@ export async function makeAiClient(rawMax: string | undefined, io: Io, real?: Be
   };
 }
 
-export async function scanCommand(argv: string[], io: Io, deps: { chamber?: ChamberClient } = {}): Promise<number> {
-  const p = parse(argv, {
-    format: { type: 'string' }, 'fail-on': { type: 'string' }, ignore: { type: 'string', multiple: true },
-    definitions: { type: 'string' }, output: { type: 'string' }, help: { type: 'boolean', short: 'h' },
-    ai: { type: 'boolean' }, 'ai-max-calls': { type: 'string' },
-    detonate: { type: 'boolean' }, 'detonate-max': { type: 'string' },
-  });
-  if (!p.ok) { io.err(`${p.error}\n\n${SCAN_HELP}`); return 2; }
-  if (p.values['help']) { io.out(SCAN_HELP); return 0; }
-
-  const target = p.positionals[0];
-  if (!target || p.positionals.length > 1) { io.err(`Give exactly one path to scan.\n\n${SCAN_HELP}`); return 2; }
-
-  const format = (str(p.values['format']) ?? 'text') as Format;
-  if (!FORMATS.includes(format)) { io.err(`Unknown format "${format}". Use one of: ${FORMATS.join(', ')}.`); return 2; }
-  const failOn = str(p.values['fail-on']) ?? 'high';
-  if (failOn !== 'none' && !(failOn in RANK)) { io.err(`Unknown --fail-on "${failOn}". Use critical, high, medium, low or none.`); return 2; }
-
-  const abs = resolve(target);
-  if (!existsSync(abs)) { io.err(`Path not found: ${target}`); return 2; }
+export type ScanRun = {
+  findings: Finding[];
+  stats: ScanStats;
+  root: string;
+  only: string | null;
+  defsDir: string;
+};
+export type RunScanOptions = {
+  target: string;
+  definitions?: string | undefined;
+  ignore: readonly string[];
+  /** Runs after the path and definitions checks and before the scan; false means "stop, exit 2". */
+  beforeScan?: () => Promise<{ bedrockClient?: BedrockClient } | false>;
+};
+/**
+ * The part of a scan that collects findings, shared by `scan` and `baseline`: path and
+ * definitions checks, the ignore list (plus .exorcistignore), then the walk. Errors are
+ * printed here and returned as an exit code.
+ */
+export async function runScan(opts: RunScanOptions, io: Io): Promise<{ ok: true; run: ScanRun } | { ok: false; code: number }> {
+  const abs = resolve(opts.target);
+  if (!existsSync(abs)) { io.err(`Path not found: ${opts.target}`); return { ok: false, code: 2 }; }
   const isFile = statSync(abs).isFile();
   const root = isFile ? dirname(abs) : abs;
   const only = isFile ? basename(abs) : null;
-
-  const defsDir = findDefinitionsDir(str(p.values['definitions']));
-  if (!defsDir) { io.err('Could not find the virus definitions. Pass --definitions <dir> or set EXORCIST_DEFINITIONS.'); return 2; }
-
+  const defsDir = findDefinitionsDir(opts.definitions);
+  if (!defsDir) { io.err('Could not find the virus definitions. Pass --definitions <dir> or set EXORCIST_DEFINITIONS.'); return { ok: false, code: 2 }; }
   // A scan with no definitions would report "clean" for everything. Refuse.
   try {
     if ((await loadDefinitions(defsDir)).length === 0) {
       io.err(`No virus definitions were found in ${defsDir}, so the scan would find nothing. Check --definitions.`);
-      return 2;
+      return { ok: false, code: 2 };
     }
   } catch (err) {
     io.err(`Could not load the virus definitions from ${defsDir}: ${String(err).split('\n')[0]}`);
-    return 2;
+    return { ok: false, code: 2 };
   }
-
-  const detonateMax = parseDetonateMax(str(p.values['detonate-max']));
-  if (detonateMax === null) { io.err('--detonate-max must be a whole number from 1 to 1000.'); return 2; }
-  const chamber = p.values['detonate'] === true ? await makeChamberClient(io, '--detonate', deps.chamber) : null;
-  if (chamber === false) return 2;
-
-  const ignore = [...strs(p.values['ignore']), ...readIgnoreFile(root)];
+  // Shared by `scan` and `baseline`. stderr only, so report output on stdout is unchanged.
+  warnIfStale(io, { custom: usesCustomDefinitions(opts.definitions) });
+  const extra = opts.beforeScan ? await opts.beforeScan() : {};
+  if (extra === false) return { ok: false, code: 2 };
+  const ignore = [...opts.ignore, ...readIgnoreFile(root)];
   const findings: Finding[] = [];
   let stats: ScanStats = { filesScanned: 0, filesSkipped: 0, findingsTotal: 0, durationMs: 0 };
   let counted = 0;
-  const ai = p.values['ai'] === true ? await makeAiClient(str(p.values['ai-max-calls']), io) : null;
-  if (ai === false) return 2;
   try {
-    for await (const ev of scanRepo(root, { definitionsDir: defsDir, trustVault: true, ...(ai ? { bedrockClient: ai.client } : {}) })) {
+    for await (const ev of scanRepo(root, { definitionsDir: defsDir, trustVault: true, ...(extra.bedrockClient ? { bedrockClient: extra.bedrockClient } : {}) })) {
       if (ev.type === 'finding') {
         if (only !== null && ev.finding.file !== only) continue;
         if (isIgnored(ev.finding.file, ignore)) continue;
@@ -202,8 +223,89 @@ export async function scanCommand(argv: string[], io: Io, deps: { chamber?: Cham
     }
   } catch (err) {
     io.err(`The scan failed: ${String(err).split('\n')[0]}`);
-    return 2;
+    return { ok: false, code: 2 };
   }
+  stats = { ...stats, filesScanned: counted, findingsTotal: findings.length };
+  return { ok: true, run: { findings, stats, root, only, defsDir } };
+}
+/**
+ * Reads a scanned file for the inline-directive pass. The finding's relative path must stay
+ * inside the scan root (also after symlinks); anything else, or an unreadable file, gives null.
+ */
+export function makeRootReader(root: string): (file: string) => string | null {
+  let realRoot: string;
+  try { realRoot = realpathSync(root); } catch { return () => null; }
+  return (file) => {
+    try {
+      const real = realpathSync(resolve(realRoot, file));
+      const rel = relative(realRoot, real);
+      if (rel === '' || rel.startsWith('..') || isAbsolute(rel)) return null;
+      if (statSync(real).size > MAX_DIRECTIVE_FILE_BYTES) return null;
+      return readFileSync(real, 'utf8');
+    } catch {
+      return null;
+    }
+  };
+}
+const MAX_DIRECTIVE_FILE_BYTES = 10 * 1024 * 1024;
+const REJECT_WHY: Record<RejectCause, string> = {
+  'no-reason': 'it gives no reason',
+  'never-suppressible': 'hidden characters and secrets cannot be silenced in the source',
+  'timeout': 'the scan timed out on that line, so it cannot be silenced',
+};
+
+export async function scanCommand(argv: string[], io: Io, deps: { chamber?: ChamberClient } = {}): Promise<number> {
+  const p = parse(argv, {
+    format: { type: 'string' }, 'fail-on': { type: 'string' }, ignore: { type: 'string', multiple: true },
+    definitions: { type: 'string' }, output: { type: 'string' }, help: { type: 'boolean', short: 'h' },
+    baseline: { type: 'string' },
+    ai: { type: 'boolean' }, 'ai-max-calls': { type: 'string' },
+    detonate: { type: 'boolean' }, 'detonate-max': { type: 'string' },
+  });
+  if (!p.ok) { io.err(`${p.error}\n\n${SCAN_HELP}`); return 2; }
+  if (p.values['help']) { io.out(SCAN_HELP); return 0; }
+  const target = p.positionals[0];
+  if (!target || p.positionals.length > 1) { io.err(`Give exactly one path to scan.\n\n${SCAN_HELP}`); return 2; }
+  const format = (str(p.values['format']) ?? 'text') as Format;
+  if (!FORMATS.includes(format)) { io.err(`Unknown format "${format}". Use one of: ${FORMATS.join(', ')}.`); return 2; }
+  const failOn = str(p.values['fail-on']) ?? 'high';
+  if (failOn !== 'none' && !(failOn in RANK)) { io.err(`Unknown --fail-on "${failOn}". Use critical, high, medium, low or none.`); return 2; }
+  // The baseline is read first: a bad file must never fall back to a scan without it.
+  const baselinePath = str(p.values['baseline']);
+  let baseline: Baseline | null = null;
+  if (baselinePath !== undefined) {
+    let text: string;
+    try { text = readFileSync(resolve(baselinePath), 'utf8'); } catch {
+      io.err(`Could not read the baseline file ${baselinePath}. Check the path, or create one with: exorcist baseline <folder>`);
+      return 2;
+    }
+    const parsed = parseBaseline(text);
+    if (!parsed.ok) { io.err(`The baseline file ${baselinePath} cannot be used: ${parsed.error}`); return 2; }
+    baseline = parsed.baseline;
+  }
+  const detonateMax = parseDetonateMax(str(p.values['detonate-max']));
+  if (detonateMax === null) { io.err('--detonate-max must be a whole number from 1 to 1000.'); return 2; }
+  const held: { chamber: ChamberClient | null; ai: AiClient | null } = { chamber: null, ai: null };
+  const result = await runScan({
+    target, definitions: str(p.values['definitions']), ignore: strs(p.values['ignore']),
+    beforeScan: async () => {
+      if (p.values['detonate'] === true) {
+        const c = await makeChamberClient(io, '--detonate', deps.chamber);
+        if (c === false) return false;
+        held.chamber = c;
+      }
+      if (p.values['ai'] === true) {
+        const a = await makeAiClient(str(p.values['ai-max-calls']), io);
+        if (a === false) return false;
+        held.ai = a;
+      }
+      return held.ai ? { bedrockClient: held.ai.client } : {};
+    },
+  }, io);
+  if (!result.ok) return result.code;
+  const { findings, root, defsDir } = result.run;
+  let stats = result.run.stats;
+  const { ai, chamber } = held;
   if (ai) io.err(ai.summary());
   if (chamber) {
     const def = (await loadDefinitions(defsDir)).find((d) => d.id === EX024);
@@ -213,20 +315,30 @@ export async function scanCommand(argv: string[], io: Io, deps: { chamber?: Cham
     findings.push(...run.findings);
     io.err(run.summary);
   }
-  stats = { ...stats, filesScanned: counted, findingsTotal: findings.length };
-
+  stats = { ...stats, findingsTotal: findings.length };
+  // scan -> inline directives (always on) -> baseline on what is left.
+  const inline = applyInline(findings, makeRootReader(root));
+  const split = baseline ? applyBaseline(inline.active, baseline) : { active: inline.active, baselined: [] as Finding[] };
+  const active = split.active;
+  const suppressed: SuppressedSummary = {
+    baseline: split.baselined.length,
+    inline: inline.suppressed.map((s) => ({ ruleId: s.ruleId, file: s.file, line: s.line, reason: s.reason })),
+    rejected: inline.rejected.map((r) => ({ ...r })),
+  };
+  const hasSuppressed = suppressed.baseline > 0 || suppressed.inline.length > 0 || suppressed.rejected.length > 0;
+  const marks = new Map<Finding, SarifSuppression>();
+  for (const f of split.baselined) marks.set(f, { kind: 'external', justification: 'In the baseline (.exorcist-baseline.json)' });
+  for (const s of inline.suppressed) marks.set(s.finding, { kind: 'inSource', justification: s.reason });
   const body =
-    format === 'json' ? `${JSON.stringify(toJson(findings, stats, { target }), null, 2)}\n`
-    : format === 'sarif' ? `${JSON.stringify(toSarif(findings, root), null, 2)}\n`
-    : format === 'markdown' ? toMarkdown(findings, stats)
-    : format === 'badge' ? toBadgeSvg(findings)
-    : renderText(findings, stats);
-
+    format === 'json' ? `${JSON.stringify(toJson(active, stats, { target, ...(hasSuppressed ? { suppressed } : {}) }), null, 2)}\n`
+    : format === 'sarif' ? `${JSON.stringify(toSarif(findings, root, marks), null, 2)}\n`
+    : format === 'markdown' ? toMarkdown(active, stats)
+    : format === 'badge' ? toBadgeSvg(active)
+    : renderText(active, stats, suppressed);
   const outFile = str(p.values['output']);
   if (outFile) writeFileSync(outFile, body, 'utf8');
   else io.out(body);
-
   if (failOn === 'none') return 0;
   const limit = RANK[failOn] ?? 0;
-  return findings.some((f) => (RANK[f.severity] ?? 9) <= limit) ? 1 : 0;
+  return active.some((f) => (RANK[f.severity] ?? 9) <= limit) ? 1 : 0;
 }

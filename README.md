@@ -233,7 +233,8 @@ jobs:
 
 | Command | What it does |
 |---|---|
-| `scan <path>` | Scan a folder or file (`--format text|json|sarif|markdown|badge`, `--fail-on`, `--ai`) |
+| `scan <path>` | Scan a folder or file (`--format text|json|sarif|markdown|badge`, `--fail-on`, `--ai`, `--baseline <file>`) |
+| `baseline [folder]` | Write `.exorcist-baseline.json`: the findings you accept for now |
 | `exorcise [path]` | Disinfect: print a patch for every safe mechanical fix; `--write` applies it with a vault backup |
 | `map [dir]` | Draw the Haunted House Map (EX-023) |
 | `origin [dir]` | Trace each threat to the commit and author that introduced it |
@@ -247,7 +248,19 @@ jobs:
 | `update [--status]` | Install signed (Ed25519) definition updates, verified on download and on every load |
 | `detonate <file>` | The Detonation Chamber (experimental, needs AWS) |
 
-Every command above is in the published npm version, `@exorcist-98/cli@0.1.2`.
+Every command above except `baseline` and `scan --baseline` is in the published npm version, `@exorcist-98/cli@0.1.2`.
+### Adopting on an existing repo
+You do not have to fix everything first. Record what is there today, then fail only on what is new:
+```sh
+npx @exorcist-98/cli baseline .                                    # writes .exorcist-baseline.json
+npx @exorcist-98/cli scan . --baseline .exorcist-baseline.json     # reports new findings only
+```
+In the GitHub Action, set the input `baseline: .exorcist-baseline.json`.
+- **Baseline.** One entry per finding: rule id, file and a fingerprint of the matched text. It holds no raw text and no secrets. A finding that moves to another line is still baselined; one whose text changes is new again. The scan says how many findings the baseline hid.
+- **Inline suppression.** Write `exorcist-ignore EX-012: reason` in a comment on the same line or the line before. The reason is required. Hidden characters (EX-001) and secrets (EX-011) can never be suppressed this way. Every suppression is listed in the summary, and the comment text itself is still scanned.
+- **SARIF.** Baselined and suppressed results stay in the SARIF file, marked with SARIF's `suppressions` property, so code scanning shows them as suppressed instead of losing them.
+- **Old definitions.** If the definitions in use are more than 30 days old, `scan` and `map` print one warning on stderr with the way to update. It makes no network request.
+- **Tool descriptions in source code.** EX-005 now reads the description strings of tools registered in TypeScript, Python and Go server source, not only JSON tool definitions. Ordinary hints such as "use X before calling this tool" are left alone. Covered forms and gaps: [L-051](docs/KNOWN_LIMITATIONS.md).
 
 ## The optional AI layer
 
@@ -268,7 +281,7 @@ Before any text reaches a model, every credential-shaped value is masked at the 
 ## Measured, not claimed
 
 - **Tests:** about 1,600 unit, property-based (123 fast-check properties) and real-process tests, plus a 44-step Chrome run with an axe accessibility scan on every window: 0 violations.
-- **Labelled corpus** (`fixtures/benchmark/`): 19 of 19 defanged attacks caught, 19 of 19 look-alike ordinary files left alone. We wrote this corpus, so it shows coverage of known patterns, not real-world recall.
+- **Labelled corpus** (`fixtures/benchmark/`): 24 of 24 defanged attacks caught, 24 of 24 look-alike ordinary files left alone. We wrote this corpus, so it shows coverage of known patterns, not real-world recall.
 - **Held-out public repositories** ([`docs/BENCHMARK.md`](docs/BENCHMARK.md)): on 5 repos never used for tuning (about 9,500 files) the scanner raised 1 finding, and it is correct.
 - **Field report** ([`docs/FIELD_REPORT.md`](docs/FIELD_REPORT.md)): 421 public repositories in two held-out rounds; serious false alarms from 4.0 to 0.24 per repository after the fixes. Round 2 contained no real threats, so it shows how quiet the scanner is, not how often an alert is right.
 - **Inside Kiro:** the Shield and MCP server ran inside Kiro IDE; four of the five Kiro hooks were seen firing there; the Crew app ran inside Kiro Crew.

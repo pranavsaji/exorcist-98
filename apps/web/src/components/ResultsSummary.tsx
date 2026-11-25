@@ -1,3 +1,4 @@
+import { plural, verdictFor } from '@exorcist-98/core/browser';
 import { ShapeIcon } from './Icons';
 import { SeverityBadge } from './SeverityBadge';
 import { plainFor } from '@/lib/plain';
@@ -10,11 +11,7 @@ type Level = Severity | 'clean';
 /** The gauge, mildest to worst. */
 const GAUGE: Level[] = ['clean', 'low', 'medium', 'high', 'critical'];
 
-export function verdictFor(level: Level): { word: string; line: string } {
-  if (level === 'clean') return { word: 'CLEAN', line: 'Nothing here tries to give your AI agent orders.' };
-  if (level === 'critical' || level === 'high') return { word: 'POSSESSED', line: 'Your AI agent would read these as orders. Fix them first.' };
-  return { word: 'HAUNTED', line: 'Nothing urgent, but worth a look before your agent reads it.' };
-}
+export { verdictFor };
 
 /** Worst first, one per kind of threat, so the top three say three different things. */
 export function topThreats(findings: FindingEntry[], n = 3): FindingEntry[] {
@@ -29,8 +26,6 @@ export function topThreats(findings: FindingEntry[], n = 3): FindingEntry[] {
   }
   return out;
 }
-
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 /** A segmented meter, clean to critical. Decorative: the verdict and badge say the same in text. */
 function Gauge({ level }: { level: Level }) {

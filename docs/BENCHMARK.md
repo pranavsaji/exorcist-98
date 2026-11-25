@@ -150,7 +150,7 @@ Every false alarm fixed in rounds 1 and 2 is now a case in
 
 ## Labelled attack corpus (missed attacks)
 
-`fixtures/benchmark/` holds 19 defanged attacks and 19 ordinary files that
+`fixtures/benchmark/` holds 24 defanged attacks and 24 ordinary files that
 look like attacks to a naive scanner. `packages/core/src/__tests__/benchmark.test.ts`
 runs them on every test run.
 

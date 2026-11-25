@@ -5,6 +5,7 @@ import { canariesPath, findCanaryInText, isCanaryHome, lineColOf, loadCanariesFi
 import type { Canary } from '../canary.js';
 import type { VirusDefinition } from '../definitions/schema.js';
 import { walkRepo } from '../walker.js';
+import { languageOf, scanSourceTools } from '../source-tools.js';
 import { normalize } from '../normalizer.js';
 import { runSignatures } from './signature-engine.js';
 import { runHeuristics } from './heuristic-engine.js';
@@ -172,7 +173,9 @@ export async function* scanRepo(
         : [];
       const traps = canaryFindings(text, file.rel, records, ex022);
 
-      let deduped = deduplicate([...sigs, ...heurs, ...traps]);
+      // .go, .tsx and .mts files have role 'unknown' in the walker, so both roles qualify.
+      const sourceTools = (file.role === 'code' || file.role === 'unknown') && languageOf(file.rel) !== null ? scanSourceTools(file, text, defs) : [];
+      let deduped = deduplicate([...sigs, ...heurs, ...traps, ...sourceTools]);
       if (checkVault && deduped.length > 0 && file.rel.includes('.exorcist/vault/')) {
         const backup = checkVault(file.rel, await readFile(file.path));
         if (backup) deduped = deduped.map((f) => asBackupFinding(f, backup));

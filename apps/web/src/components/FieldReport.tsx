@@ -26,8 +26,8 @@ export function FieldReport() {
           <span>serious false alarms per repository, after fixing what round 1 exposed</span>
         </div>
         <div className="field-stat">
-          <span className="field-num">19 / 19</span>
-          <span>labelled attacks still caught, and 19 of 19 look-alikes left alone</span>
+          <span className="field-num">24 / 24</span>
+          <span>labelled attacks still caught, and 24 of 24 look-alikes left alone</span>
         </div>
         <div className="field-stat">
           <span className="field-num">2</span>
