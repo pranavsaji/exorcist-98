@@ -140,6 +140,75 @@ describe('scripts/kiro-hook.sh', () => {
   }, 60_000);
 });
 
+const HIDDEN = String.fromCodePoint(0xe0049, 0xe004e, 0xe0050);
+const KiroHookSchema = z.object({
+  version: z.literal('v1'),
+  hooks: z.array(z.object({
+    name: z.string().min(1),
+    description: z.string().optional(),
+    trigger: z.enum(['PromptSubmit', 'Stop', 'SessionStart', 'PreToolUse', 'PermissionRequest', 'PostToolUse', 'FileCreate', 'PostFileSave', 'FileDelete', 'PreTaskExecution', 'PostTaskExecution']),
+    matcher: z.string().optional(),
+    action: z.union([
+      z.object({ type: z.literal('command'), command: z.string().min(1) }),
+      z.object({ type: z.literal('agent'), prompt: z.string().min(1) }),
+    ]),
+    timeout: z.number().int().min(0).optional(),
+    enabled: z.boolean().optional(),
+  }).strict()).min(1),
+}).strict();
+/** A repository with one commit and a steering file; with `bad`, the working copy then gains hidden characters. */
+function gateRepo(bad: boolean): string {
+  const repo = tmp();
+  const git = (...a: string[]) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@example.invalid', ...a], { cwd: repo, stdio: 'ignore' });
+  git('init', '-q');
+  mkdirSync(join(repo, '.kiro/steering'), { recursive: true });
+  writeFileSync(join(repo, '.kiro/steering/style.md'), '# Style\n\nUse tabs.\n');
+  git('add', '-A');
+  git('commit', '-qm', 'first');
+  if (bad) writeFileSync(join(repo, '.kiro/steering/style.md'), `# Style\n\nUse tabs.${HIDDEN}\n`);
+  return repo;
+}
+const stopEvent = (cwd: string): string => JSON.stringify({ hook_event_name: 'Stop', cwd, session_id: 'sess_test' });
+
+describe('the exorcist-gate Stop hook (m10-kiro-gate 2.1 to 2.3, 2.6)', () => {
+  const file = join(ROOT, '.kiro/hooks/exorcist-gate.json');
+  it('is Kiro v1 JSON with trigger Stop and goes through the launcher', () => {
+    const parsed = KiroHookSchema.parse(JSON.parse(readFileSync(file, 'utf8')));
+    expect(parsed.hooks[0]?.trigger).toBe('Stop');
+    const cmd = hookCommand(file);
+    expect(cmd.startsWith('sh scripts/kiro-hook.sh ')).toBe(true);
+    expect(cmd).not.toMatch(/(^|\s)(pnpm|npx|node)(\s|$)/);
+    expect(cmd.endsWith(' gate')).toBe(true);
+  });
+  it('every hook file in this repository matches the schema', () => {
+    for (const f of ['definition-save', 'mcp-config-change', 'on-access-scan', 'pre-commit-secrets', 'spec-change', 'exorcist-gate']) {
+      expect(() => KiroHookSchema.parse(JSON.parse(readFileSync(join(ROOT, `.kiro/hooks/${f}.json`), 'utf8'))), f).not.toThrow();
+    }
+  });
+  // The hook runs in the project root; here the project is a temporary repository, so the paths are absolute.
+  const inRepo = `sh ${join(ROOT, 'scripts/kiro-hook.sh')} ${TSX} ${CLI_SRC} gate`;
+  it('with Kiro\'s PATH: a change that adds hidden characters fails, and the agent gets the list on stderr', () => {
+    const repo = gateRepo(true);
+    const r = runHook(inRepo, stopEvent(repo), repo, NODE_DIR);
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('.kiro/steering/style.md:3');
+    expect(r.err).toContain('EX-001');
+    expect(r.err).toContain('stop and tell the user');
+    expect(r.out).toBe('');
+  }, 60_000);
+  it('with Kiro\'s PATH: a clean change passes silently', () => {
+    const repo = gateRepo(false);
+    writeFileSync(join(repo, '.kiro/steering/style.md'), '# Style\n\nUse tabs.\nUse small functions.\n');
+    const r = runHook(inRepo, stopEvent(repo), repo, NODE_DIR);
+    expect(r).toEqual({ code: 0, err: '', out: '' });
+  }, 60_000);
+  it('without Node it says so instead of failing silently', () => {
+    const r = runHook('sh scripts/kiro-hook.sh node_modules/.bin/tsx packages/cli/src/index.ts gate', stopEvent(ROOT), ROOT, '/nonexistent');
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('Node.js was not found');
+  });
+});
+
 describe('the Kiro hooks written by exorcist init', () => {
   it('run with Kiro\'s PATH and block a commit with a staged secret', () => {
     const repo = repoWithStagedKey();
@@ -166,5 +235,16 @@ describe('the Kiro hooks written by exorcist init', () => {
     expect(blocked.code).toBe(2);
     expect(blocked.err).toContain('EX-002');
     expect(runHook(onAccess, read('k.txt.missing'), repo, NODE_DIR).code).toBe(0);
+    // The gate hook it writes is a Stop hook and fails on a possessed change (m10-kiro-gate 2.4).
+    const gateFile = join(repo, '.kiro/hooks/exorcist-gate.json');
+    expect(KiroHookSchema.parse(JSON.parse(readFileSync(gateFile, 'utf8'))).hooks[0]?.trigger).toBe('Stop');
+    const gateCmd = hookCommand(gateFile);
+    expect(gateCmd.startsWith('sh .exorcist/kiro-hook.sh ')).toBe(true);
+    expect(runHook(gateCmd, stopEvent(repo), repo, NODE_DIR).code).toBe(0); // nothing agent-facing is possessed yet
+    mkdirSync(join(repo, '.kiro/steering'), { recursive: true });
+    writeFileSync(join(repo, '.kiro/steering/style.md'), `# Style\n${HIDDEN}\n`);
+    const gated = runHook(gateCmd, stopEvent(repo), repo, NODE_DIR);
+    expect(gated.code).toBe(1);
+    expect(gated.err).toContain('EX-001');
   }, 60_000);
 });

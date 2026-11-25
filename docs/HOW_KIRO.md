@@ -15,7 +15,7 @@ Milestones M0 to M4 were specified and built spec by spec in Kiro IDE, as `docs/
 | [Hooks](#hooks) | Kiro IDE | Used to build it; shipped to users by exorcist init |
 | [MCP](#mcp) | Kiro IDE | Run inside Kiro; shipped to users |
 | [Powers](#powers) | Kiro Powers | Built; not yet installed through Kiro's Powers panel |
-| [Custom agents](#agents) | Kiro Crew | One agent, used in Kiro Crew |
+| [Custom agents](#agents) | Kiro Crew | One agent used in Kiro Crew; two Kiro agents checked against the docs, not yet seen loading in Kiro |
 | [Kiro CLI](#cli) | Kiro CLI 3.5.0, headless | Implemented parts of six M5 features, until the usage limit |
 | [Kiro Crew](#crew) | Kiro Crew 0.12.2 and 0.13.0 | Built for it and run inside it |
 | [Property-based testing](#pbt) | Kiro specs and fast-check | Used to build it |
@@ -83,6 +83,7 @@ Milestones M0 to M4 were specified and built spec by spec in Kiro IDE, as `docs/
 - `mcp-config-change` (PostFileSave on MCP config files): scanned a saved `.cursor/mcp.json` in Kiro and reported EX-005.
 - `definition-save` (PostFileSave on `definitions/*.yaml`): ran the core tests in Kiro after a definition was saved.
 - `on-access-scan` (PreToolUse on read tools, M5): blocks a read of a file that hides instructions for the AI (exit code 2) and tells the user how to allow it once. Tested with Kiro's PATH and the real event shape; not yet recorded firing inside Kiro.
+- `exorcist-gate` (Stop, m10-kiro-gate): when the agent finishes its turn, `exorcist gate` checks the steering, spec, hook, agent and MCP files it changed against the last commit, and exits 1 with a short plain-language list if the change adds a high or critical finding (findings already in the last commit are ignored). Kiro sends the failing command's stderr to the agent. Read-only, no network, about half a second here. Tested with Kiro's PATH and a real Stop event shape; not yet recorded firing inside Kiro. `exorcist init --kiro` writes it, disabled while the published CLI has no `gate` command.
 - Every command hook runs through `scripts/kiro-hook.sh`, which finds Node first (see "Where Kiro surprised us"). Tests run the hooks the way Kiro does: minimal PATH, the event on stdin.
 
 **Files**
@@ -92,6 +93,7 @@ Milestones M0 to M4 were specified and built spec by spec in Kiro IDE, as `docs/
 - `.kiro/hooks/mcp-config-change.json`
 - `.kiro/hooks/definition-save.json`
 - `.kiro/hooks/on-access-scan.json`
+- `.kiro/hooks/exorcist-gate.json`
 - `scripts/kiro-hook.sh`
 - `packages/cli/src/__tests__/kiro-hook.test.ts`
 
@@ -156,14 +158,17 @@ Milestones M0 to M4 were specified and built spec by spec in Kiro IDE, as `docs/
 
 ## Custom agents
 
-**Kiro Crew.** One agent, used in Kiro Crew.
+**Kiro Crew.** One agent used in Kiro Crew; two Kiro agents checked against the docs, not yet seen loading in Kiro.
 
 **What we did**
 
+- In `.kiro/agents/`: `exorcist-reviewer` (only the three read-only Exorcist tools, from its own `exorcist` MCP server) and `exorcist-red-team` (writes defanged samples only under `fixtures/benchmark/`, runs one test command). Checked field by field against kiro.dev/docs/custom-agents/configuration-reference; the reviewer had no MCP server of its own, so on a clone its tools did not exist, and now has one. To start one: trust the workspace in Kiro IDE and pick it in the agent picker of the chat header, or in Kiro CLI run `kiro-cli chat --agent exorcist-reviewer` (or `/agent swap` in a session). Use `exorcist-red-team` the same way.
 - In the Crew app: the `exorcist-sentry` agent, with one read-only MCP tool (`patrol_status`) that returns levels, counts and file:line but never quoted text. Seen in Crew chat reporting the Haunted Repo correctly with none of the 26 quoted spans in its reply, and running unattended from an agent cron.
 
 **Files**
 
+- `.kiro/agents/exorcist-reviewer.json`
+- `.kiro/agents/exorcist-red-team.json`
 - `exorcist-98-crew/agents/exorcist-sentry.json`
 
 **Evidence**
@@ -241,7 +246,7 @@ Milestones M0 to M4 were specified and built spec by spec in Kiro IDE, as `docs/
 
 ## What users get
 
-`exorcist init --kiro` writes the three Kiro hooks (secrets, MCP-config scan, on-access), the steering file, the PATH wrapper for hooks, a git pre-commit hook and the exorcist-reviewer agent, then prints what it set up. `--shield` also puts every server in `.kiro/settings/mcp.json` behind the Real-Time Shield; `exorcist unwrap .kiro/settings/mcp.json` puts the file back byte for byte. `--no-agent` leaves the agent out. Existing files are kept unless `--force` is given.
+`exorcist init --kiro` writes the four Kiro hooks (secrets, MCP-config scan, on-access, and the Stop gate, which stays off until the pinned CLI has `gate`), the steering file, the PATH wrapper for hooks, a git pre-commit hook and the exorcist-reviewer agent, then prints what it set up. `--shield` also puts every server in `.kiro/settings/mcp.json` behind the Real-Time Shield; `exorcist unwrap .kiro/settings/mcp.json` puts the file back byte for byte. `--no-agent` leaves the agent out. Existing files are kept unless `--force` is given.
 
 - `packages/cli/src/commands/init.ts`
 - `packages/cli/src/__tests__/init-kiro.test.ts`

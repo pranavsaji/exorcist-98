@@ -176,7 +176,7 @@ npx @exorcist-98/cli init --kiro          # hooks, steering, the hook PATH wrapp
 npx @exorcist-98/cli init --kiro --shield # also run every local MCP server through the Shield
 ```
 
-This writes Kiro hooks that block `git commit` while secrets or canary tokens are staged, scan an MCP config the moment it is saved, and scan a file before the agent reads it; steering that tells the agent how to treat tool output; and an `exorcist-reviewer` custom agent that may only use the read-only tools of the Exorcist MCP server.
+This writes Kiro hooks that block `git commit` while secrets or canary tokens are staged, scan an MCP config the moment it is saved, scan a file before the agent reads it, and (a `Stop` hook running `exorcist gate`) fail when the agent's turn ends with a high or critical finding added to a steering, spec, hook, agent or MCP file since the last commit; steering that tells the agent how to treat tool output; and an `exorcist-reviewer` custom agent that may only use the read-only tools of the Exorcist MCP server. Start an agent from `.kiro/agents/` (`exorcist-reviewer`, or `exorcist-red-team` in this repository) by trusting the workspace and picking it in the chat header's agent picker in Kiro IDE, or with `kiro-cli chat --agent exorcist-reviewer`. The gate hook is written disabled until the published CLI includes `gate`; run `exorcist gate` by hand any time.
 
 **Editor extension: Exorcist 98 for Kiro** ([`packages/vscode`](packages/vscode/README.md), works in VS Code too):
 

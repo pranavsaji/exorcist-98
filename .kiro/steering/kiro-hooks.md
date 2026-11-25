@@ -22,6 +22,10 @@ What running them inside Kiro taught us (docs/KIRO_LOG.md, L-003, S-015):
 - A hook must not call a CLI command that its CLI version lacks: an unknown command exits 2,
   which a `PreToolUse` hook turns into a block of every matching tool. `exorcist init` writes
   the on-access hook disabled under the published `@exorcist-98/cli@0.1.0`, which predates it.
+- `exorcist-gate` is a `Stop` hook: Kiro hands a failing command hook's stderr to the agent, but only
+  PreToolUse and PromptSubmit hooks block an action, so the gate exits 1 (not 2) with a list that
+  tells the agent to remove the change or tell the user. It never fails for environment reasons
+  (no git, no definitions): it exits 0 and says nothing was checked.
 - The shell event is `{hook_event_name, cwd, tool_name, tool_input: {command, ...}}`; a file
   save carries `file_path`.
 - Agents in `.kiro/agents/` are JSON in the documented format (kiro.dev/docs/custom-agents).
