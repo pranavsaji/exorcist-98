@@ -1,0 +1,43 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.pranavsaji/exorcist-98",
+  "title": "Exorcist 98",
+  "description": "Antivirus for AI coding agents: scan repos and MCP configs for prompt injection and poisoned tools.",
+  "version": "0.1.2",
+  "websiteUrl": "https://github.com/pranavsaji/exorcist-98#readme",
+  "repository": {
+    "url": "https://github.com/pranavsaji/exorcist-98",
+    "source": "github",
+    "id": "1458546278",
+    "subfolder": "packages/mcp-server"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@exorcist-98/mcp-server",
+      "version": "0.1.2",
+      "runtimeHint": "npx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "EXORCIST_ROOTS",
+          "description": "Extra folders the tools may read besides the start folder, separated like PATH. Client MCP roots are also used.",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "EXORCIST_MCP_NO_QUOTES",
+          "description": "Set to 1 to never return quoted file text, even when a tool call asks for it.",
+          "format": "string",
+          "choices": ["1"],
+          "isRequired": false,
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}

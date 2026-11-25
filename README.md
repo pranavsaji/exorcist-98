@@ -24,6 +24,7 @@ Your AI coding agent obeys what it reads: READMEs, rules and steering files, MCP
 ## Contents
 
 - [Try it in one minute](#try-it-in-one-minute)
+- [Install](#install)
 - [The problem](#the-problem)
 - [What Exorcist 98 does: Scan, Shield, Disinfect](#what-exorcist-98-does-scan-shield-disinfect)
 - [A tour of the app](#a-tour-of-the-app)
@@ -56,6 +57,19 @@ No install, no sign-in. Every link below opens the live app on that exact moment
 | [`/?repo=owner/name`](https://exorcist-98.vercel.app/?repo=modelcontextprotocol/servers) | Any public GitHub repository (branch, tag and commit links work too). The address bar is a shareable link to the scan |
 
 Private project? Upload a .zip (up to 4 MB). It is unpacked only for the scan and deleted straight after.
+
+## Install
+
+| What | Where | Status | How |
+|---|---|---|---|
+| CLI | [npm `@exorcist-98/cli`](https://www.npmjs.com/package/@exorcist-98/cli) | Published, with npm provenance | `npx -y @exorcist-98/cli scan .` |
+| MCP server | [npm `@exorcist-98/mcp-server`](https://www.npmjs.com/package/@exorcist-98/mcp-server) | Published, with npm provenance | `"command": "npx", "args": ["-y", "@exorcist-98/mcp-server"]` ([details](packages/mcp-server/README.md)) |
+| Editor extension | [Open VSX `exorcist-98.exorcist-98-kiro`](https://open-vsx.org/extension/exorcist-98/exorcist-98-kiro) | Published | `kiro --install-extension exorcist-98.exorcist-98-kiro` |
+| GitHub Action | This repository | Works from this repository | `uses: pranavsaji/exorcist-98@main` ([example](#in-your-editor-and-your-ci)) |
+| Kiro Power | This repository, [`power/`](power) | Installable by URL; not yet tried through Kiro's Powers panel | Powers panel, *Add Custom Power*, *Import power from a repository URL*: `https://github.com/pranavsaji/exorcist-98/tree/main/power` |
+| MCP server | Official MCP Registry | **Pending: not listed yet** | |
+| GitHub Action | GitHub Marketplace | **Pending: not listed yet** | |
+| Kiro Power | Kiro Powers registry (kiro.dev/powers) | **Pending: not submitted yet** | |
 
 ## The problem
 

@@ -121,7 +121,7 @@ describe('the Kiro Power follows the Agent Plugins layout', () => {
   it('plugin.json has the required fields', () => {
     const p = plugin.parse(readJson('power/plugin.json'));
     expect(p.name).toBe('exorcist');
-    expect(p.keywords).toEqual(expect.arrayContaining(['mcp', 'security']));
+    expect(p.keywords).toEqual(expect.arrayContaining(['mcp security', 'prompt injection']));
   });
 
   it('mcp.json starts the MCP server, pinned to an exact version', () => {
@@ -152,6 +152,50 @@ describe('the Kiro Power follows the Agent Plugins layout', () => {
     const cli = z.object({ version: z.string() }).parse(readJson('packages/cli/package.json'));
     expect(mcp.version).toBe(power.version);
     expect(cli.version).toBe(power.version);
+  });
+});
+
+// ── distribution listings (distribution/SUBMIT.md) ────────────────────────────
+
+describe('distribution listings agree with the packages', () => {
+  const mcpPkg = z.object({ name: z.string(), version: z.string(), mcpName: z.string() }).parse(readJson('packages/mcp-server/package.json'));
+  const cliPkg = z.object({ version: z.string() }).parse(readJson('packages/cli/package.json'));
+
+  it('server.json (MCP Registry) names the npm package, its version and its mcpName', () => {
+    const s = z.object({
+      $schema: z.literal('https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json'),
+      name: z.string(),
+      description: z.string().min(1).max(100),
+      version: z.string(),
+      repository: z.object({ url: z.literal('https://github.com/pranavsaji/exorcist-98'), source: z.literal('github') }).passthrough(),
+      packages: z.array(z.object({
+        registryType: z.literal('npm'),
+        registryBaseUrl: z.literal('https://registry.npmjs.org'),
+        identifier: z.string(),
+        version: z.string(),
+        transport: z.object({ type: z.literal('stdio') }),
+      }).passthrough()).length(1),
+    }).passthrough().parse(readJson('server.json'));
+    expect(s.name).toBe(mcpPkg.mcpName);
+    expect(s.name).toMatch(/^io\.github\.pranavsaji\//);
+    expect(s.version).toBe(mcpPkg.version);
+    expect(s.packages[0]?.identifier).toBe(mcpPkg.name);
+    expect(s.packages[0]?.version).toBe(mcpPkg.version);
+  });
+
+  it('both packages have the same version, and every pinned @exorcist-98 version in the Power and the action matches it', () => {
+    expect(cliPkg.version).toBe(mcpPkg.version);
+    const files = ['power/mcp.json', 'distribution/action-repo/action.yml', 'distribution/action-repo/README.md',
+      ...readdirSync(join(ROOT, 'power/skills')).map((d) => `power/skills/${d}/SKILL.md`)];
+    for (const f of files) {
+      for (const m of read(f).matchAll(/@exorcist-98\/(?:cli|mcp-server)@(\d+\.\d+\.\d+)/g)) expect(m[1], f).toBe(cliPkg.version);
+    }
+    expect(read('distribution/action-repo/README.md')).toContain(`exorcist-98-action@v${cliPkg.version}`);
+  });
+
+  it('distribution/action-repo/action.yml is what scripts/action-repo.mjs writes from action.yml', async () => {
+    const { currentStandaloneAction } = (await import(join(ROOT, 'scripts/action-repo.mjs'))) as { currentStandaloneAction: () => string };
+    expect(read('distribution/action-repo/action.yml'), 'run: node scripts/action-repo.mjs').toBe(currentStandaloneAction());
   });
 });
 
@@ -338,7 +382,7 @@ describe('GitHub Action and workflows', () => {
 // ── dogfood: the project passes its own antivirus ─────────────────────────────
 
 describe('dogfood: exorcist scans the files an agent reads in this repo', () => {
-  for (const path of ['.kiro/hooks', '.kiro/steering', 'power', 'scripts', '.github']) {
+  for (const path of ['.kiro/hooks', '.kiro/steering', 'power', 'scripts', '.github', 'distribution']) {
     it(`${path} is clean at --fail-on high`, () => {
       const r = scan(path);
       expect(r.code, r.out).toBe(0);

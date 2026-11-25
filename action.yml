@@ -1,5 +1,5 @@
 name: Exorcist 98
-description: Scan a repository for attacks on AI coding agents (hidden instructions, poisoned MCP tools, dangerous hooks, leaked secrets).
+description: "Scan a repository for attacks on AI coding agents: hidden instructions, poisoned MCP tools, dangerous hooks, leaked secrets."
 author: Pranav Saji
 branding:
   icon: shield
