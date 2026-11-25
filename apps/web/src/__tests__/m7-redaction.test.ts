@@ -80,9 +80,70 @@ describe('private key blocks are blanked on every line', () => {
     expect(snip.lines[0]?.before).toBe('# notes');
   });
 
+  it('redactSnippet blanks base64 lines next to a marker line even without the file text', () => {
+    const b64 = fakeChars(64, 7);
+    const s = { lines: [{ n: 5, before: b64, match: '', after: '' }, { n: 6, before: end, match: '', after: '' }, { n: 7, before: 'tail', match: '', after: '' }] };
+    const out = redactSnippet(s);
+    expect(JSON.stringify(out)).not.toContain(b64);
+    expect(out.lines.map((l) => l.n)).toEqual([5, 6, 7]);
+    expect(out.lines[2]?.before).toBe('tail');
+  });
+
   it('redactSnippet without the file text still works for a single line', () => {
     const s = { lines: [{ n: 1, before: 'a', match: 'b', after: 'c' }] };
     expect(redactSnippet(s)).toEqual(s);
+  });
+
+  // Security review: a hunk can start in the middle of a key block, so its BEGIN
+  // line is not in the diff text and the diff alone shows no key block.
+  describe('a hunk that starts in the middle of a key block', () => {
+    const lines = Array.from({ length: 6 }, (_, i) => fakeChars(64, 100 + i));
+    const before = ['# notes', begin, ...lines, end, `Be${ZWSP} kind.`, 'after'].join('\n');
+    const after = before.replace(ZWSP, '');
+    // Context of 3 lines around line 10 (the changed one): lines 7..11, so the
+    // hunk opens on key body line 6 (file line 7), 5 lines after BEGIN.
+    const hunk = [
+      'diff --git a/k.md b/k.md', '--- a/k.md', '+++ b/k.md', '@@ -7,5 +7,5 @@',
+      ` ${lines[4]}`, ` ${lines[5]}`, ` ${end}`, `-Be${ZWSP} kind.`, '+Be kind.', ' after',
+    ].join('\n');
+
+    it('redactPatch blanks the key lines it can see, using the original file text', async () => {
+      const { redactPatch } = await import('@/lib/scan-service');
+      const out = redactPatch(hunk, [{ file: 'k.md', before, after }]);
+      for (const l of lines) expect(out).not.toContain(l);
+      expect(out.split('\n')).toHaveLength(hunk.split('\n').length);
+      expect(out).toContain('+Be kind.');
+      expect(out).toContain('@@ -7,5 +7,5 @@');
+    });
+
+    it('blanks long base64-only lines next to a blanked key line even without the source text', async () => {
+      const { redactPatch } = await import('@/lib/scan-service');
+      // Only the END line is recognisable here (an unmatched marker line), so the
+      // base64 lines touching it are blanked by the backstop.
+      const orphan = ['--- a/x', '+++ b/x', '@@ -1,4 +1,4 @@', ` ${lines[0]}`, ` ${lines[1]}`, ` ${end}`, ' tail'].join('\n');
+      const out = redactPatch(orphan);
+      expect(out).not.toContain(lines[0] ?? '');
+      expect(out).not.toContain(lines[1] ?? '');
+      expect(out.split('\n')).toHaveLength(orphan.split('\n').length);
+      expect(out.split('\n').at(-1)).toBe(' tail');
+    });
+
+    it('the web stream hides the body when the hunk opens inside the block', async () => {
+      const events: ScanEventMsg[] = [];
+      const text = ['# notes', begin, ...lines, end, `Be${ZWSP} kind.`, 'after', ''].join('\n');
+      for await (const ev of scanTarget({ kind: 'github', display: 'o/r', owner: 'o', repo: 'r' }, {
+        lookup: null,
+        clone: async (_t, dir) => {
+          const { mkdir, writeFile } = await import('node:fs/promises');
+          await mkdir(dir, { recursive: true });
+          await writeFile(join(dir, 'AGENTS.md'), text);
+        },
+      })) events.push(ev);
+      const patch = events.find((e): e is PatchEvent => e.type === 'patch');
+      expect(patch?.patch).toContain('+Be kind.');
+      const wire = JSON.stringify(events);
+      for (const l of lines) expect(wire).not.toContain(l);
+    });
   });
 
   it('the patch keeps its lines and hides the key body', async () => {

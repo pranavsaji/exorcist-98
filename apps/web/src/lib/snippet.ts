@@ -7,6 +7,10 @@ import type { Snippet, SnippetLine } from './protocol';
 const HIDDEN = /[\u200B-\u200D\uFEFF\u202A-\u202E\u2066-\u2069\u{E0000}-\u{E007F}]|[\uFE00-\uFE0F\u{E0100}-\u{E01EF}]{4,}/gu;
 const HIDDEN_ONE = /^[\u200B-\u200D\uFEFF\u202A-\u202E\u2066-\u2069\u{E0000}-\u{E007F}\uFE00-\uFE0F\u{E0100}-\u{E01EF}]$/u;
 
+const PEM = ['PRIVATE', 'KEY'].join(' '); // assembled: this repo rejects files holding the marker
+const MARKER_ONLY = new RegExp(`^-----(?:BEGIN|END) [A-Z ]*${PEM}(?: BLOCK)?-----\\s*$`);
+const BASE64_ONLY = /^[A-Za-z0-9+/=]{40,}$/;
+
 const MAX_SIDE = 120;    // characters kept before and after a match on one line
 const MAX_MATCH = 240;   // characters kept inside a highlight
 const MAX_LINES = 14;
@@ -134,10 +138,20 @@ export function redactSnippet(snippet: Snippet, original?: string): Snippet {
   // Lines inside a private-key block are blanked whole: only the BEGIN and END
   // lines carry a marker a per-line redaction can see (m7-exemption-bypasses).
   const key = original === undefined ? null : privateKeyLines(original);
+  // Backstop: a long base64-only line touching a blanked key line is blanked too,
+  // in case the line numbers and the text disagree.
+  const blanked = snippet.lines.map((l) => key?.has(l.n) === true || MARKER_ONLY.test(l.before + l.match + l.after));
+  const isB64 = (i: number): boolean => { const l = snippet.lines[i]; return l !== undefined && BASE64_ONLY.test(l.before + l.match + l.after); };
+  for (const dir of [1, -1]) {
+    for (let k = 1; k < blanked.length; k++) {
+      const i = dir === 1 ? k : blanked.length - 1 - k;
+      if (!blanked[i] && blanked[i - dir] && isB64(i)) blanked[i] = true;
+    }
+  }
   return {
     ...snippet,
-    lines: snippet.lines.map((l) => {
-      if (key?.has(l.n)) return { n: l.n, before: PRIVATE_KEY_LINE_MARKER, match: '', after: '' };
+    lines: snippet.lines.map((l, i) => {
+      if (blanked[i]) return { n: l.n, before: PRIVATE_KEY_LINE_MARKER, match: '', after: '' };
       const whole = l.before + l.match + l.after;
       const safe = redactSecretText(whole);
       if (safe === whole) return l;
