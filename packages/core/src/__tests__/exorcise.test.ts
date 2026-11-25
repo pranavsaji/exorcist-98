@@ -402,3 +402,13 @@ describe('performance and output size', () => {
     expect(ms).toBeLessThan(2000);
   });
 });
+describe('REQ-01.1 removing selectors does not expose a zero-width character', () => {
+  it('takes out a U+200C that was benign only because a selector followed it (fast-check counterexample)', () => {
+    const text = '\u263A\uFE0F\u200C\u{E0100}\uFE01\uFE00\u{E0100}\uFE0E\uFE01\uFE01';
+    const findings = scanText(text, 'docs', defs, 'NOTES.md');
+    expect(findings.map((f) => f.ruleId)).toEqual(['EX-021']);
+    const r = exorciseFile({ file: 'NOTES.md', text, findings, only: new Set(['EX-001', 'EX-021']) });
+    expect(r.after).toBe('\u263A\uFE0F');
+    expect(scanText(r.after, 'docs', defs).filter((f) => f.ruleId === 'EX-001' || f.ruleId === 'EX-021')).toEqual([]);
+  });
+});

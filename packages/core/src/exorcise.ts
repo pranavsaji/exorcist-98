@@ -172,8 +172,9 @@ export function removeHiddenUnicode(text: string, classes: ReadonlySet<UnicodeCl
   // index in `cur` -> index in `text` (null while they are the same)
   let toOrig: number[] | null = null;
   const removed: UnicodeHit[] = [];
-  // Removing a character never makes another one hidden, so this loop ends
-  // after one round; the bound is a guard, not a tuning knob.
+  // Removing a character can make a neighbour count as hidden (a U+200C that
+  // sat next to a selector), so a second round can find more; the bound is a
+  // guard, not a tuning knob.
   for (let round = 0; round < 4; round++) {
     const hits = findHiddenUnicode(cur).filter((h) => classes.has(h.class));
     if (hits.length === 0) break;
@@ -350,11 +351,15 @@ export function exorciseFile(input: ExorciseFileInput): FileExorcism {
 
   // 1. Hidden characters first; later edits are placed through the offset map.
   //    When both rules are on, everything either reports goes, so taking out a
-  //    zero-width character can never leave a new run of selectors behind.
+  //    zero-width character can never leave a new run of selectors behind, and
+  //    taking out a run of selectors can never expose a zero-width character
+  //    that was benign only because a selector stood next to it.
   let text = original;
   let shift = (o: number): number => o;
-  const fix001 = only.has('EX-001') && signatureFindings(findings, 'EX-001').length > 0;
-  const fix021 = only.has('EX-021') && (signatureFindings(findings, 'EX-021').length > 0 || fix001);
+  const has001 = signatureFindings(findings, 'EX-001').length > 0;
+  const has021 = signatureFindings(findings, 'EX-021').length > 0;
+  const fix001 = only.has('EX-001') && (has001 || (only.has('EX-021') && has021));
+  const fix021 = only.has('EX-021') && (has021 || fix001);
   const hiddenClasses = new Set<UnicodeClass>([...(fix001 ? RULE_CLASSES['EX-001'] : []), ...(fix021 ? RULE_CLASSES['EX-021'] : [])]);
   if (hiddenClasses.size > 0) {
     const r = removeHiddenUnicode(original, hiddenClasses);
