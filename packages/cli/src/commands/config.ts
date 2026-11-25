@@ -16,7 +16,7 @@ unwrap Put the original file back byte for byte, if it was not edited since
 
 Options (wrap):
   --bin <command>       Command that runs the shield (default: exorcist)
-  --bin-arg <arg>       Argument before "shield" (repeatable), e.g. --bin npx --bin-arg -y --bin-arg @exorcist-98/cli@0.1.2
+  --bin-arg <arg>       Argument before "shield" (repeatable), e.g. --bin npx --bin-arg -y --bin-arg @exorcist-98/cli@0.1.3
   --dir <folder>        State folder (default: ${DEFAULT_DIR})
   --dry-run             Show the result without writing the file
 `;

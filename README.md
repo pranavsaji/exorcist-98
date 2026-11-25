@@ -66,7 +66,7 @@ Private project? Upload a .zip (up to 4 MB). It is unpacked only for the scan an
 | MCP server | [npm `@exorcist-98/mcp-server`](https://www.npmjs.com/package/@exorcist-98/mcp-server) | Published (0.1.2), with npm provenance | `"command": "npx", "args": ["-y", "@exorcist-98/mcp-server"]` ([details](packages/mcp-server/README.md)) |
 | Editor extension | [Open VSX `exorcist-98.exorcist-98-kiro`](https://open-vsx.org/extension/exorcist-98/exorcist-98-kiro) | Published | `kiro --install-extension exorcist-98.exorcist-98-kiro` |
 | GitHub Action | This repository | Works from this repository | `uses: pranavsaji/exorcist-98@main` ([example](#in-your-editor-and-your-ci)) |
-| Kiro Power | This repository, [`power/`](power) | Installable by URL; not yet tried through Kiro's Powers panel | Powers panel, *Add Custom Power*, *Import power from a repository URL*: `https://github.com/pranavsaji/exorcist-98/tree/main/power` |
+| Kiro Power | This repository, [`power/`](power) | Installed through Kiro's Powers panel on 2026-11-24; Kiro runs its server in the Power's own folder, so the tools use the folders Kiro shares or `EXORCIST_ROOTS` (see [`packages/mcp-server`](packages/mcp-server/README.md)) | Powers panel, *Add Custom Power*, *Import power from a repository URL*: `https://github.com/pranavsaji/exorcist-98/tree/main/power` |
 | MCP server | Official MCP Registry | **Pending: not listed yet** | |
 | GitHub Action | GitHub Marketplace | **Pending: not listed yet** | |
 | Kiro Power | Kiro Powers registry (kiro.dev/powers) | **Pending: not submitted yet** | |
@@ -427,7 +427,7 @@ Working and tested: everything described above runs from this repository and the
 
 Open, in plain words:
 
-- The Shield's check-before-every-call fix and the on-access hook are tested with real processes and Kiro's restricted PATH, but have not yet been re-run inside Kiro IDE. The Power has not been installed through Kiro's Powers panel, and the two custom agents have not been loaded in Kiro.
+- The Shield's check-before-every-call fix and the on-access hook are tested with real processes and Kiro's restricted PATH, but have not yet been re-run inside Kiro IDE. The Power was installed through Kiro's Powers panel on 2026-11-24 (a start-folder bug found there is fixed in the source, not yet in a published version), and the two custom agents have not been loaded in Kiro.
 - Detection is mostly signatures; the AI judge caught 10 of 10 reworded attacks on each of our two small test sets, but it needs an AWS account and costs money to run. On the public website it is off until the operator turns it on ([`docs/WEB_AI.md`](docs/WEB_AI.md)).
 
 Every known gap, with how sure we are of it, is in [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) and the `NOTES.md` of each `.kiro/specs/m5-*` spec.

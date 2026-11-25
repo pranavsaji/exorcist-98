@@ -9,7 +9,7 @@ Use this after a scan or a shield alert shows that an MCP server, a hook or a st
 
 ## Before you start
 
-The `quarantine` tool comes with this Power. The `exorcist vault` commands come from the CLI: if `exorcist --version` fails, give the user `npx -y @exorcist-98/cli@0.1.2 vault <command>` instead.
+The `quarantine` tool comes with this Power. The `exorcist vault` commands come from the CLI: if `exorcist --version` fails, give the user `npx -y @exorcist-98/cli@0.1.3 vault <command>` instead.
 
 ## Steps
 

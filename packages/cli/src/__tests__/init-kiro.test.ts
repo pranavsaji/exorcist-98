@@ -79,7 +79,7 @@ describe('exorcist init --kiro', () => {
     }
   });
 
-  it('under the default command (0.1.2, which has on-access) every hook is on', async () => {
+  it('under the default command (0.1.3, which has on-access) every hook is on', async () => {
     const d = tmp();
     const io = capture();
     expect(await initCommand([d, '--kiro'], io)).toBe(0);
@@ -191,7 +191,7 @@ describe('exorcist init --kiro', () => {
 
 describe('splitCommand (how --bin and --mcp-bin become a command and its arguments)', () => {
   it('splits on whitespace and groups quotes', () => {
-    expect(splitCommand(DEFAULT_BIN)).toEqual(['npx', '-y', '@exorcist-98/cli@0.1.2']);
+    expect(splitCommand(DEFAULT_BIN)).toEqual(['npx', '-y', '@exorcist-98/cli@0.1.3']);
     expect(splitCommand(`"/a b/node" '/c d/cli.mjs'  x`)).toEqual(['/a b/node', '/c d/cli.mjs', 'x']);
     expect(splitCommand('""')).toEqual(['']);
     expect(splitCommand('  ')).toBeNull();

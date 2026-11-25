@@ -1,7 +1,8 @@
 import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { findDefinitionsDir as sharedFindDefinitionsDir } from '@exorcist-98/shield';
-import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { homedir } from 'node:os';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { loadDefinitions, plainFor, redactFinding, scanRepo, scanText } from '@exorcist-98/core';
 import type { Finding, VirusDefinition } from '@exorcist-98/core';
 import { isWrapped, quarantineServer } from '@exorcist-98/shield';
@@ -13,6 +14,23 @@ export type Ctx = {
   definitionsDir: string;
   /** More folders the tools may read: the client's MCP roots and EXORCIST_ROOTS (S-018). Absolute, real paths. */
   roots?: readonly string[];
+  /**
+   * The folder relative paths (and ".") are resolved against first: the first
+   * folder the client shares, else the first EXORCIST_ROOTS entry. Kiro starts a
+   * Power's server in the Power's own install folder, so cwd is not the project.
+   * Must be one of `roots`; the S-018 confinement is unchanged.
+   */
+  base?: string;
+  /**
+   * Ask the person (an MCP elicitation form) whether a folder may be read for
+   * this session. Only set when the client supports elicitation. Only its
+   * answer counts: nothing the agent sends can approve a folder.
+   */
+  ask?: (folder: string) => Promise<boolean>;
+  /** Folders the person approved in this session. Never stored on disk. */
+  approved?: string[];
+  /** The home folder, for the sensitive-folder check (default: the real one). */
+  home?: string;
   /**
    * EXORCIST_MCP_NO_QUOTES=1: never return quoted file text, even when a call
    * asks for it (includeQuotes is ignored). Set by the exorcist-reviewer Kiro
@@ -49,21 +67,130 @@ export function resolveInside(
   cwd: string,
   p: string,
   roots: readonly string[] = [],
-): { ok: true; path: string; base: string } | { ok: false; error: string } {
-  const bases = [realpathSync(cwd), ...roots.filter((r) => existsSync(r)).map((r) => realpathSync(r))];
+  primary?: string,
+): { ok: true; path: string; base: string } | { ok: false; error: string; outside?: true } {
+  const real = (d: string): string => realpathSync(d);
+  const extra = roots.filter((r) => existsSync(r)).map(real);
+  const first = primary !== undefined && extra.includes(real(primary)) ? [real(primary)] : [];
+  const bases = [...new Set([...first, real(cwd), ...extra])];
   const tries = isAbsolute(p) ? [p] : bases.map((b) => resolve(b, p));
   const found = tries.find((t) => existsSync(t));
   if (!found) return { ok: false, error: `Path not found: ${p}` };
-  const real = realpathSync(found);
+  const target = realpathSync(found);
   const base = bases.find((b) => {
-    const rel = relative(b, real);
+    const rel = relative(b, target);
     return !rel.startsWith('..') && !isAbsolute(rel);
   });
   if (!base) {
     const where = bases.length > 1 ? `the project folder (${bases[0]}) or the folders your client shared` : `the project folder (${bases[0]})`;
-    return { ok: false, error: `"${p}" is outside ${where}. Only paths inside ${bases.length > 1 ? 'them' : 'it'} can be used.` };
+    return { ok: false, outside: true, error: `"${p}" is outside ${where}. Only paths inside ${bases.length > 1 ? 'them' : 'it'} can be used.` };
   }
-  return { ok: true, path: real, base };
+  return { ok: true, path: target, base };
+}
+
+const PROJECT_MARKERS = [
+  '.git', '.kiro', '.claude', '.cursor', '.vscode', '.mcp.json', 'mcp.json', 'package.json', 'pyproject.toml', 'requirements.txt', 'Cargo.toml',
+  'go.mod', 'pom.xml', 'build.gradle', 'Gemfile', 'composer.json', 'AGENTS.md', 'CLAUDE.md', 'README.md', 'README',
+];
+
+/**
+ * Does the start folder look like a project? A Power install folder (plugin.json
+ * or POWER.md next to its mcp.json and skills) never does, even if it has a README.
+ */
+export function looksLikeProject(dir: string): boolean {
+  const has = (n: string): boolean => existsSync(join(dir, n));
+  if (has('plugin.json') || has('POWER.md')) return false;
+  return PROJECT_MARKERS.some(has);
+}
+
+const SENSITIVE_IN_HOME = ['.ssh', '.aws', '.gnupg', '.kube', '.docker', '.azure', '.config', '.password-store', join('Library', 'Keychains')];
+const SENSITIVE_ABSOLUTE = ['/etc', '/private/etc', '/System', '/var/root', '/root'];
+
+const isWithin = (base: string, p: string): boolean => {
+  const rel = relative(base, p);
+  return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
+};
+
+/**
+ * Why a folder can never be approved, or null. Refused: the filesystem root,
+ * the home folder and every folder above it, credential folders under the home
+ * folder (and everything below them), and system folders. `real` must already
+ * be a real path (symlinks resolved).
+ */
+export function sensitiveReason(real: string, home: string = homedir()): string | null {
+  const realHome = existsSync(home) ? realpathSync(home) : home;
+  if (dirname(real) === real) return 'it is the filesystem root';
+  if (isWithin(real, realHome)) return real === realHome ? 'it is the home folder' : 'it contains the home folder';
+  for (const n of SENSITIVE_IN_HOME) {
+    const s = join(realHome, n);
+    if (isWithin(s, real) || isWithin(real, s)) return `it holds credentials or settings (${n.split(sep)[0]})`;
+  }
+  for (const s of SENSITIVE_ABSOLUTE) if (isWithin(s, real)) return 'it is a system folder';
+  return null;
+}
+
+/** Text for a form that came from an agent: no control, bidi, zero-width or tag characters. */
+const printable = (s: string): string =>
+  s.replace(/[\u0000-\u001F\u007F-\u009F\u200B-\u200F\u2028\u2029\u202A-\u202E\u2066-\u2069\uFEFF\u{E0000}-\u{E007F}]/gu, (c) => `[U+${(c.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, '0')}]`);
+
+/** The question the person sees. The folder is the one the server resolved, shown safely. */
+export function approvalMessage(folder: string): string {
+  const shown = printable(folder);
+  const where = shown.length > 300 ? `${shown.slice(0, 300)}...` : shown;
+  return `Allow Exorcist 98 to read the folder ${where} for this session? It can scan the files in it, and disable MCP servers in its config files only if you ask. The permission ends when the server stops.`;
+}
+
+const FIXES = 'Either set EXORCIST_ROOTS to the absolute path of the project folder in the env of the exorcist MCP server, or add the exorcist server to the workspace .kiro/settings/mcp.json, where Kiro starts it in the project folder.';
+
+/**
+ * With no shared or configured root, a relative path can only mean the start
+ * folder. If that folder holds no project (typically a Power's install folder),
+ * say so instead of scanning it and reporting "No threats".
+ */
+export function noProjectError(ctx: Ctx, p: string, inside: { ok: boolean; outside?: true }): string | null {
+  if (inside.outside || isAbsolute(p) || (ctx.roots?.length ?? 0) > 0 || looksLikeProject(ctx.cwd)) return null;
+  const how = ctx.ask
+    ? 'Call the tool again with the absolute path of the project folder; the person will be asked to allow it for this session. Other fixes: set EXORCIST_ROOTS to that folder in the env of the exorcist MCP server, or add the exorcist server to the workspace .kiro/settings/mcp.json, where Kiro starts it in the project folder.'
+    : FIXES;
+  return (
+    `No project folder is known, so "${p}" was not scanned. This server was started in ${ctx.cwd}, which is not a project, ` +
+    `and the client did not share a workspace folder (MCP roots). Nothing was checked. ${how} Do not report this as a clean scan.`
+  );
+}
+
+/**
+ * resolveInside, plus the person's approval: an absolute path outside every
+ * allowed folder is allowed for this session only if the client can ask and the
+ * person says yes. Sensitive folders are refused without asking.
+ */
+export async function resolveAllowed(
+  ctx: Ctx,
+  p: string,
+): Promise<{ ok: true; path: string; base: string } | { ok: false; error: string; outside?: true }> {
+  const first = resolveInside(ctx.cwd, p, ctx.roots, ctx.base);
+  if (first.ok || !first.outside || !isAbsolute(p)) return first;
+  const noRoots = (ctx.roots?.length ?? 0) === 0;
+  if (!ctx.ask) {
+    return noRoots && !looksLikeProject(ctx.cwd) ? { ...first, error: `${first.error} No project folder is known. ${FIXES}` } : first;
+  }
+  let folder: string;
+  try {
+    const real = realpathSync(p);
+    folder = statSync(real).isDirectory() ? real : dirname(real);
+  } catch {
+    return first;
+  }
+  const refused = sensitiveReason(folder, ctx.home);
+  if (refused) return { ok: false, outside: true, error: `${printable(folder)} cannot be allowed: ${refused}.` };
+  let yes = false;
+  try { yes = (await ctx.ask(folder)) === true; } catch { yes = false; }
+  if (!yes) {
+    return { ok: false, outside: true, error: `The person did not allow Exorcist 98 to read ${printable(folder)}, so nothing was read. Do not ask again unless the user requests it.` };
+  }
+  ctx.approved = [...(ctx.approved ?? []), folder];
+  ctx.roots = [...(ctx.roots ?? []), folder];
+  ctx.base ??= folder;
+  return resolveInside(ctx.cwd, p, ctx.roots, ctx.base);
 }
 
 /**
@@ -130,7 +257,9 @@ function summary(findings: Finding[], files: number): string {
 }
 
 export async function scanRepoTool(ctx: Ctx, a: { path: string; maxFindings?: number; includeQuotes?: boolean }): Promise<ToolText> {
-  const inside = resolveInside(ctx.cwd, a.path, ctx.roots);
+  const inside = await resolveAllowed(ctx, a.path);
+  const none = noProjectError(ctx, a.path, inside);
+  if (none) return err(none);
   if (!inside.ok) return err(inside.error);
   const defs = await loadDefs(ctx);
   if (!defs.ok) return err(defs.error);
@@ -150,7 +279,9 @@ export async function scanRepoTool(ctx: Ctx, a: { path: string; maxFindings?: nu
 }
 
 export async function scanMcpConfigTool(ctx: Ctx, a: { path: string; includeQuotes?: boolean }): Promise<ToolText> {
-  const inside = resolveInside(ctx.cwd, a.path, ctx.roots);
+  const inside = await resolveAllowed(ctx, a.path);
+  const none = noProjectError(ctx, a.path, inside);
+  if (none) return err(none);
   if (!inside.ok) return err(inside.error);
   if (!statSync(inside.path).isFile()) return err(`${a.path} is a folder. Give the path of an MCP config file.`);
   const defs = await loadDefs(ctx);
@@ -198,13 +329,15 @@ export async function explainFindingTool(ctx: Ctx, a: { ruleId: string }): Promi
 }
 
 export async function quarantineTool(ctx: Ctx, a: { config: string; server: string; reason?: string }): Promise<ToolText> {
-  const inside = resolveInside(ctx.cwd, a.config, ctx.roots);
+  const inside = await resolveAllowed(ctx, a.config);
+  const none = noProjectError(ctx, a.config, inside);
+  if (none) return err(none);
   if (!inside.ok) return err(inside.error);
   const r = quarantineServer({
     configPath: inside.path,
     serverName: a.server,
     reason: a.reason?.slice(0, 200) ?? 'quarantined from an AI agent request',
-    vaultDir: join(realpathSync(ctx.cwd), '.exorcist', 'vault'),
+    vaultDir: join(inside.base, '.exorcist', 'vault'),
   });
   if (!r.ok) return err(r.error);
   return {

@@ -53,13 +53,13 @@ runs:
 
     # The published CLI at one pinned version, checked against its npm provenance
     # (npm audit signatures). Nothing is built and no install scripts run.
-    - name: Install Exorcist 98 (@exorcist-98/cli@0.1.2)
+    - name: Install Exorcist 98 (@exorcist-98/cli@0.1.3)
       shell: bash
       run: |
         dir="$RUNNER_TEMP/exorcist-cli"
         mkdir -p "$dir" && cd "$dir"
         npm init -y >/dev/null
-        npm install --no-fund --no-audit --ignore-scripts "@exorcist-98/cli@0.1.2"
+        npm install --no-fund --no-audit --ignore-scripts "@exorcist-98/cli@0.1.3"
         npm audit signatures
 
     - name: Scan

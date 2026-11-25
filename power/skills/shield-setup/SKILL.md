@@ -9,7 +9,7 @@ The shield sits between Kiro and each MCP server. It pins every tool the first t
 
 ## Before you start
 
-The Power installs only the MCP server. The `exorcist` commands below come from the CLI. If `exorcist --version` fails, run each one as `npx -y @exorcist-98/cli@0.1.2 <command>`. A wrapped server must also find the shield, so in that case use `npx -y @exorcist-98/cli@0.1.2 init --kiro --shield` for steps 2 and 3: it wraps every server with that same pinned npx command.
+The Power installs only the MCP server. The `exorcist` commands below come from the CLI. If `exorcist --version` fails, run each one as `npx -y @exorcist-98/cli@0.1.3 <command>`. A wrapped server must also find the shield, so in that case use `npx -y @exorcist-98/cli@0.1.3 init --kiro --shield` for steps 2 and 3: it wraps every server with that same pinned npx command.
 
 ## Steps
 

@@ -18,7 +18,7 @@ import { updateCommand } from './commands/update.js';
 import { vaultCommand } from './commands/vault.js';
 import { stdio } from './util.js';
 
-const VERSION = '0.1.2';
+const VERSION = '0.1.3';
 
 const HELP = `Exorcist 98 ${VERSION}: antivirus for AI coding agents
 
