@@ -83,6 +83,9 @@
     ],
     "mindgard-steering-image-url": [
       "EX-012"
+    ],
+    "exfil-sentence-docs": [
+      "EX-002"
     ]
   },
   "benign": [

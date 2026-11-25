@@ -131,14 +131,15 @@ git and editors change them. The tests build them from code points.
   credentials, tokens or keys to a destination. Negated and quoted sentences stay
   quiet, as before.
 - **The README Problem sentence is now reported.** The Problem section of
-  `README.md` quotes an exfiltration sentence as an example of an attack. It used
-  to scan clean, and it is now an EX-002 finding. That is correct, and it has two
-  effects. The on-access hook (`.kiro/hooks/on-access-scan.json`) blocks an agent
-  read of `README.md` until a person allows it. And the CI dogfood scan ignores
-  `README.md` (`.github/workflows/exorcist.yml`, `ignore:` list, with a comment
-  that gives the reason), as it already ignores `fixtures`, `docs` and the
-  specs, which quote attacks on purpose. This page does not repeat the sentence,
-  so that it does not trigger the rule too.
+  `README.md` used to quote an exfiltration sentence as an example of an attack.
+  It used to scan clean, and with this change it became an EX-002 finding. That
+  is correct, so in release 0.2.0 the README no longer quotes it: it describes
+  the attack in words, and the working sentence lives in the benchmark case
+  `fixtures/benchmark/attacks/exfil-sentence-docs` (the Haunted Repo's EX-002
+  sample covers the same kind of order). `exorcist scan README.md` is clean, the
+  on-access hook lets an agent read it, and the CI dogfood scan
+  (`.github/workflows/exorcist.yml`) scans `README.md` again. This page does not
+  repeat the sentence, so that it does not trigger the rule too.
 - **Haunted Repo snapshot unchanged.** `packages/core/src/__tests__/haunted-snapshot.test.ts`
   (`finds exactly the expected (rule, file, line) set`) passes without edits to
   the snapshot, so the new rules add no finding there.
@@ -171,7 +172,7 @@ the item was checked by reading.
 | 3.1 | `packages/core/src/__tests__/ex002-exfiltration.test.ts`, `reports orders to send secrets to a destination`; `reports the README "Problem" sentence` |
 | 3.2 | `ex002-exfiltration.test.ts`, `negated sentences are quiet`; `a quoted example in a warning is quiet` |
 | 3.3 | `ex002-exfiltration.test.ts`, `has no exfiltration finding` |
-| 3.4 | `ex002-exfiltration.test.ts`, `reports the README "Problem" sentence` (reads the real `README.md`) |
+| 3.4 | `ex002-exfiltration.test.ts`, `reports the README "Problem" sentence` (reads the benchmark case that now holds it); `packages/cli/src/__tests__/cli.test.ts`, the on-access test reads the real `README.md` and expects it to be allowed and clean |
 | 4.1 | `packages/cli/src/__tests__/guard-mcp-write.test.ts`, `finds the project config by relative path, ../ and ~`; `finds a config reached through a symlink, and through any key` |
 | 4.2 | `guard-mcp-write.test.ts`, `at a terminal without a dialog, the right typed code allows and a wrong one blocks; the code goes to the terminal, not stdout` |
 | 4.3 | `guard-mcp-write.test.ts`, `with no dialog and no terminal it blocks`; `a prompt nobody answers times out and blocks`; `Deny blocks with exit 2 and a message that never quotes the content` |

@@ -26,11 +26,14 @@ describe('EX-002: exfiltration instruction (3.1)', () => {
     ]) expect(ids('AGENTS.md', `${t}\n`), t).toContain('EX-002');
   });
 
-  it('reports the README "Problem" sentence', () => {
-    const readme = readFileSync(fromRoot('README.md'), 'utf8');
-    const sentence = readme.split('\n').find((l) => l.includes('should first send the environment file to'));
+  it('reports the README "Problem" sentence (now kept in the benchmark, not in README.md)', () => {
+    // README.md describes this attack in words; the working sentence lives in
+    // fixtures/benchmark/attacks/exfil-sentence-docs so our own README stays clean.
+    const rel = 'docs/OVERVIEW.md';
+    const text = readFileSync(fromRoot('fixtures/benchmark/attacks/exfil-sentence-docs', rel), 'utf8');
+    const sentence = text.split('\n').find((l) => l.includes('should first send the environment file to'));
     expect(sentence).toBeDefined();
-    const found = scanText(`${sentence ?? ''}\n`, classifyFile('README.md'), defs, 'README.md');
+    const found = scanText(`${sentence ?? ''}\n`, classifyFile(rel), defs, rel);
     expect(found.map((f) => f.ruleId)).toContain('EX-002');
   });
 
