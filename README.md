@@ -147,6 +147,10 @@ It works on a phone too:
 | **Team lockfile** | `exorcist.lock` records the tool fingerprints a team expects. On a machine that never pinned a tool, drift from the lock is still a rug pull. The lock never approves anything, and `lock --check --static` runs in CI without starting a pull request's servers. |
 | **Quarantine Vault** | Disable an infected MCP server, hook or steering file with a backup, a diff and an exact restore. |
 
+**Watch it live: `exorcist console`.** Opens a local page that shows, as they happen, every tool call the Shields of a state folder allowed, held or blocked, the rule and the reason (EX-006 rug pull, EX-022 canary, EX-027 Session Guard...), which server, and what the Session Guard has seen in each agent session (untrusted text, private data, calls waiting for your answer). Each Shield appends its decisions to `.exorcist/events.jsonl` (bounded, names and rule ids only, never arguments or results); the console tails it. It is a **read-only** view: it cannot approve or release anything, which stays `exorcist approve ...` in your own terminal. It listens on 127.0.0.1 only, behind a random token in the URL, with a Host check and a strict CSP. Limits: [S-028](docs/KNOWN_LIMITATIONS.md).
+
+<img src="docs/media/shield-console-desktop.png" alt="The Shield console: tool calls allowed, held and blocked with rule ids, and an armed Session Guard holding a Slack message after a GitHub issue and a .env read" width="800">
+
 ## In your editor and your CI
 
 **Kiro, in one command:**
@@ -220,13 +224,14 @@ jobs:
 | `shield`, `wrap`, `unwrap` | Run MCP servers behind the Real-Time Shield |
 | `lock [--check] [--static]` | Write or check `exorcist.lock` |
 | `canary plant|--list|--remove` | Canary traps (EX-022) |
+| `console` | Open the live, read-only Shield console in your browser (not in 0.1.1 yet) |
 | `approve`, `alerts`, `vault` | Approve changed tools, hosts or servers, or a session the Session Guard holds (EX-027); read alerts; quarantine and restore |
 | `init [--kiro] [--shield]` | Wire a Kiro project |
 | `on-access`, `allow-read` | The on-access hook and its person-only allowance |
 | `update [--status]` | Install signed (Ed25519) definition updates, verified on download and on every load |
 | `detonate <file>` | The Detonation Chamber (experimental, needs AWS) |
 
-Every command above is in the published npm version, `@exorcist-98/cli@0.1.1`.
+Every command above except `console` is in the published npm version, `@exorcist-98/cli@0.1.1`.
 
 ## The optional AI layer
 

@@ -3,7 +3,8 @@
 // on every request, so a test can change a tool's description between two
 // tools/list calls (a rug pull) or make a result malicious.
 //
-//   FAKE_MCP_CONTROL  path of a JSON file: { description?, resultText? }
+//   FAKE_MCP_CONTROL  path of a JSON file: { description?, resultText?, tools?, results? }
+//                     tools replaces the tool list; results maps a tool name to its result text
 //   FAKE_MCP_LOG      path of a file; every tools/call it receives is appended
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
@@ -28,7 +29,7 @@ rl.on('line', (line) => {
     send({
       jsonrpc: '2.0', id: msg.id,
       result: {
-        tools: [
+        tools: c.tools ?? [
           {
             name: 'read_note',
             description: c.description ?? 'Read a note by name.',
@@ -45,7 +46,7 @@ rl.on('line', (line) => {
   } else if (msg.method === 'tools/call') {
     if (process.env.FAKE_MCP_LOG) appendFileSync(process.env.FAKE_MCP_LOG, `${JSON.stringify(msg.params)}\n`);
     const c = control();
-    send({ jsonrpc: '2.0', id: msg.id, result: { content: [{ type: 'text', text: c.resultText ?? `ok:${msg.params?.name}` }] } });
+    send({ jsonrpc: '2.0', id: msg.id, result: { content: [{ type: 'text', text: c.results?.[msg.params?.name] ?? c.resultText ?? `ok:${msg.params?.name}` }] } });
   } else if (msg.id !== undefined) {
     send({ jsonrpc: '2.0', id: msg.id, result: {} });
   }
