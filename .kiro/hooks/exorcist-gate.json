@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "exorcist-gate",
+      "description": "When the agent finishes its turn, check the agent-facing files it changed (steering, specs, hooks, agents, MCP configs, AGENTS.md, READMEs) against the last commit. If the change adds a high or critical finding, exit 1: Kiro sends the stderr list to the agent, which has to remove the change or tell the user. Read-only, no network. Runs through scripts/kiro-hook.sh because Kiro gives hook commands a PATH without Node.",
+      "trigger": "Stop",
+      "action": {
+        "type": "command",
+        "command": "sh scripts/kiro-hook.sh node_modules/.bin/tsx packages/cli/src/index.ts gate"
+      },
+      "timeout": 30
+    }
+  ]
+}

@@ -10,11 +10,13 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
-import { REVIEWER_DESCRIPTION, REVIEWER_PERMISSIONS, REVIEWER_PROMPT, REVIEWER_TOOLS, REVIEWER_WELCOME } from '../kiro-agent.js';
+import { DEFAULT_MCP_BIN } from '../commands/init.js';
+import { REVIEWER_DESCRIPTION, REVIEWER_PERMISSIONS, REVIEWER_PROMPT, REVIEWER_TOOLS, REVIEWER_WELCOME, reviewerAgentForProject } from '../kiro-agent.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '../../../..');
 const AGENTS = join(ROOT, '.kiro/agents');
+const VERSION = (JSON.parse(readFileSync(join(ROOT, 'packages/cli/package.json'), 'utf8')) as { version: string }).version;
 const STEERING = join(ROOT, '.kiro/steering');
 
 const Rule = z.object({
@@ -83,9 +85,20 @@ describe('.kiro/agents: Kiro custom agents', () => {
     for (const cap of ['shell', 'fs_write', 'web_fetch', 'web_search'] as const) {
       expect(a.permissions.rules).toContainEqual({ capability: cap, match: [cap === 'fs_write' ? '**' : '*'], effect: 'deny' });
     }
-    // In this repo it uses the exorcist server registered in .kiro/settings/mcp.json (kept out of git).
-    expect(a.includeMcpJson).toBe(true);
-    expect(a.mcpServers).toBeUndefined();
+    // It brings its own exorcist server (a clone has no .kiro/settings/mcp.json, which is kept out of git),
+    // so its @exorcist/... tools exist, and it reaches no other server (m10-kiro-gate 4.2).
+    expect(a.includeMcpJson).toBe(false);
+    expect(a.mcpServers).toEqual({ exorcist: { command: 'npx', args: ['-y', `@exorcist-98/mcp-server@${VERSION}`], env: { EXORCIST_MCP_NO_QUOTES: '1' } } });
+    expect(a).toEqual(reviewerAgentForProject(DEFAULT_MCP_BIN.split(' ')));
+  });
+  it('every tool selector names a server the agent starts or a documented built-in (m10-kiro-gate 4.3)', () => {
+    for (const name of ['exorcist-reviewer', 'exorcist-red-team']) {
+      const a = agent(name);
+      for (const t of a.tools) {
+        if (t.startsWith('@')) expect(Object.keys(a.mcpServers ?? {}), `${name}: ${t}`).toContain(t.slice(1).split('/')[0]);
+        else expect(['read', 'write', 'shell', 'web', 'subagent', 'knowledge', '*'], `${name}: ${t}`).toContain(t);
+      }
+    }
   });
 
   it('exorcist-red-team: writes only under fixtures/benchmark, runs only the benchmark test, no web', () => {

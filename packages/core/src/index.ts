@@ -47,6 +47,9 @@ export { extractReadPaths, decideRead, isReadTool, shownName, mustCheckFully, li
 export type { OnAccessDecision, DecideReadOptions } from './on-access.js';
 export { sha256File, sha256Bytes, readAllowedReads, addAllowedRead, allowedReadsLocation, allowKey, findProjectRoot, isInside, realPath } from './allowed-reads.js';
 export type { AllowReadResult, AllowedRead, AllowedReadsLocation } from './allowed-reads.js';
+export { isGateFile, gateRole, gateFindings, isBlocking, tooLargeFinding, renderGate } from './gate.js';
+export type { GateThreshold } from './gate.js';
+export { AGENT_FILE_HARD_LIMIT } from './walker.js';
 export { isTimeoutFinding } from './scanner/signature-engine.js';
 export { judgeText, locateQuote, MAX_JUDGED_CHARS } from './scanner/heuristic-engine.js';
 export type { TextVerdict } from './scanner/heuristic-engine.js';

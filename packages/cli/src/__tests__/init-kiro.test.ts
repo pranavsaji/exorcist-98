@@ -44,7 +44,7 @@ describe('exorcist init --kiro', () => {
     const io = capture();
     expect(await initCommand([d, '--kiro'], io)).toBe(0);
     for (const f of [
-      '.kiro/hooks/exorcist-secrets.json', '.kiro/hooks/exorcist-mcp-scan.json', '.kiro/hooks/exorcist-on-access.json',
+      '.kiro/hooks/exorcist-secrets.json', '.kiro/hooks/exorcist-mcp-scan.json', '.kiro/hooks/exorcist-on-access.json', '.kiro/hooks/exorcist-gate.json',
       '.kiro/steering/exorcist.md', '.kiro/agents/exorcist-reviewer.json', '.exorcist/kiro-hook.sh', '.githooks/pre-commit',
     ]) expect(existsSync(join(d, f)), f).toBe(true);
 
@@ -52,6 +52,11 @@ describe('exorcist init --kiro', () => {
     expect(hookOf(d, 'exorcist-secrets').trigger).toBe('PreToolUse');
     expect(hookOf(d, 'exorcist-mcp-scan').trigger).toBe('PostFileSave');
     expect(hookOf(d, 'exorcist-on-access').trigger).toBe('PreToolUse');
+    // m10-kiro-gate 2.4, 2.5: a Stop hook; disabled under the default command, which has no gate command.
+    expect(hookOf(d, 'exorcist-gate').trigger).toBe('Stop');
+    expect(hookOf(d, 'exorcist-gate').action.command).toBe(`sh .exorcist/kiro-hook.sh ${DEFAULT_BIN} gate`);
+    expect(hookOf(d, 'exorcist-gate').enabled).toBe(false);
+    expect(io.all()).toContain('WRITTEN DISABLED');
     for (const n of ['exorcist-secrets', 'exorcist-mcp-scan', 'exorcist-on-access']) {
       expect(hookOf(d, n).action.command.startsWith('sh .exorcist/kiro-hook.sh ')).toBe(true);
     }
@@ -79,19 +84,23 @@ describe('exorcist init --kiro', () => {
     }
   });
 
-  it('under the default command (0.1.3, which has on-access) every hook is on', async () => {
+  it('under the default command (0.1.3, which has on-access but not gate) every hook is on except the gate', async () => {
     const d = tmp();
     const io = capture();
     expect(await initCommand([d, '--kiro'], io)).toBe(0);
     expect(hookOf(d, 'exorcist-on-access').enabled).toBeUndefined();
     expect(hookOf(d, 'exorcist-on-access').action.command).toContain(DEFAULT_BIN);
-    expect(io.all()).not.toContain('WRITTEN DISABLED');
+    // Only the gate is written disabled: 0.1.3 predates the gate command, and an unknown command exits non-zero.
+    expect(io.all().match(/WRITTEN DISABLED/g)).toHaveLength(1);
+    expect(hookOf(d, 'exorcist-gate').enabled).toBe(false);
     expect(hookOf(d, 'exorcist-secrets').enabled).toBeUndefined();
     expect(hookOf(d, 'exorcist-mcp-scan').enabled).toBeUndefined();
 
     const local = tmp();
     expect(await initCommand([local, '--kiro', '--bin', '"/opt/node 22/bin/node" /opt/x98/cli.mjs'], capture())).toBe(0);
     expect(hookOf(local, 'exorcist-on-access').enabled).toBeUndefined();
+    expect(hookOf(local, 'exorcist-gate').enabled).toBeUndefined();
+    expect(hookOf(local, 'exorcist-gate').action.command).toBe('sh .exorcist/kiro-hook.sh "/opt/node 22/bin/node" /opt/x98/cli.mjs gate');
     expect(hookOf(local, 'exorcist-on-access').action.command).toBe('sh .exorcist/kiro-hook.sh "/opt/node 22/bin/node" /opt/x98/cli.mjs on-access');
   });
 

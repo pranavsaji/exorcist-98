@@ -24,7 +24,7 @@ function scan(path: string, ...extra: string[]) {
 // ── Kiro hooks ────────────────────────────────────────────────────────────────
 
 // Triggers whose names were confirmed in kiro.dev/docs/hooks on the day the hooks were written.
-const VERIFIED_TRIGGERS = ['PostFileSave', 'PreToolUse'] as const;
+const VERIFIED_TRIGGERS = ['PostFileSave', 'PreToolUse', 'Stop'] as const;
 
 const HookFile = z.object({
   version: z.literal('v1'),
@@ -47,8 +47,8 @@ const HookFile = z.object({
 describe('.kiro/hooks follow the documented v1 format', () => {
   const files = readdirSync(join(ROOT, '.kiro/hooks')).sort();
 
-  it('there are exactly five hook files and no leftover YAML', () => {
-    expect(files).toEqual(['definition-save.json', 'mcp-config-change.json', 'on-access-scan.json', 'pre-commit-secrets.json', 'spec-change.json']);
+  it('there are exactly six hook files and no leftover YAML', () => {
+    expect(files).toEqual(['definition-save.json', 'exorcist-gate.json', 'mcp-config-change.json', 'on-access-scan.json', 'pre-commit-secrets.json', 'spec-change.json']);
   });
 
   for (const f of files) {
@@ -146,6 +146,29 @@ describe('the Kiro Power follows the Agent Plugins layout', () => {
     });
   }
 
+  // m10-kiro-gate 3.1, 3.2: the published Agent Plugins 1.0.0 JSON schemas (agent-plugins.org/schemas/1.0.0),
+  // with additionalProperties false, which is how a client would validate the files. kiro.dev/docs/powers/create
+  // names plugin.json as the only required file; no POWER.md and no steering folder exist in the format.
+  it('plugin.json and mcp.json match the Agent Plugins 1.0.0 schemas exactly', () => {
+    z.object({
+      $schema: z.literal('https://agent-plugins.org/schemas/1.0.0/plugin.schema.json'),
+      name: z.string().min(1).max(64).regex(/^(?!.*(?:--|\.\.))[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/),
+      version: z.string(), description: z.string(),
+      author: z.object({ name: z.string(), email: z.string().optional(), url: z.string().optional() }).strict(),
+      homepage: z.string(), repository: z.string(), license: z.string(), keywords: z.array(z.string()),
+    }).strict().parse(readJson('power/plugin.json'));
+    const Stdio = z.object({ type: z.literal('stdio'), command: z.string().min(1), args: z.array(z.string()), env: z.record(z.string()).optional() }).strict();
+    z.object({ $schema: z.literal('https://agent-plugins.org/schemas/1.0.0/mcp.schema.json'), mcpServers: z.record(Stdio) }).strict().parse(readJson('power/mcp.json'));
+  });
+  it('has only the files the documented format has (plugin.json, mcp.json, skills/), each skill with a SKILL.md', () => {
+    expect(readdirSync(join(ROOT, 'power')).sort()).toEqual(['mcp.json', 'plugin.json', 'skills']);
+    for (const dir of readdirSync(join(ROOT, 'power/skills'))) expect(existsSync(join(ROOT, 'power/skills', dir, 'SKILL.md')), dir).toBe(true);
+  });
+  it('the scan-repo skill tells the agent to pass the absolute workspace path and leave the folder prompt to the user', () => {
+    const text = read('power/skills/scan-repo/SKILL.md');
+    expect(text).toContain('absolute path of the project');
+    expect(text).toContain('Only the user\'s answer counts');
+  });
   it('the Power version matches the packages it installs', () => {
     const power = plugin.parse(readJson('power/plugin.json'));
     const mcp = z.object({ version: z.string() }).parse(readJson('packages/mcp-server/package.json'));

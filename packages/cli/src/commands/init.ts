@@ -18,10 +18,11 @@ export const DEFAULT_MCP_BIN = 'npx -y @exorcist-98/mcp-server@0.1.3';
  * gets "Unknown command" and exit code 2, and exit 2 from a PreToolUse hook
  * blocks the tool: an on-access hook would block every file read. So under
  * the default command such a hook is written disabled. 0.1.0 lacked
- * on-access; 0.1.1 and later have every command, so the set is empty. Keep it when
- * adding a command that is not yet published.
+ * on-access; 0.1.1 to 0.1.3 have every command except `gate` (added after 0.1.3).
+ * Remove `gate` when the pinned version has it. Keep the set when adding a
+ * command that is not yet published.
  */
-const MISSING_FROM_DEFAULT_BIN = new Set<string>();
+const MISSING_FROM_DEFAULT_BIN = new Set<string>(['gate']);
 
 export const INIT_HELP = `Usage: exorcist init [folder] [--kiro] [--shield] [--no-agent] [--force]
                     [--bin <command>] [--mcp-bin <command>]
@@ -30,6 +31,9 @@ Add Exorcist 98 to a Kiro project:
   .kiro/hooks/exorcist-secrets.json    block "git commit" while secrets are staged (Kiro hook)
   .kiro/hooks/exorcist-mcp-scan.json   scan MCP config whenever it is saved (Kiro hook)
   .kiro/hooks/exorcist-on-access.json  scan a file before the agent reads it (Kiro hook)
+  .kiro/hooks/exorcist-gate.json       when the agent stops, fail if it added a high or critical finding
+                                       to a steering, spec, hook, agent or MCP file (Kiro Stop hook;
+                                       written disabled while the default command lacks "gate")
   .kiro/steering/exorcist.md           tell the agent how to treat tool output
   .exorcist/kiro-hook.sh               puts Node on PATH for the Kiro hooks (Kiro's hook PATH has none)
   .exorcist/.gitignore                 keeps the hook log out of git
@@ -145,6 +149,7 @@ export async function initCommand(argv: string[], io: Io): Promise<number> {
 
   const isDefaultBin = bin === DEFAULT_BIN;
   const onAccessOff = isDefaultBin && MISSING_FROM_DEFAULT_BIN.has('on-access');
+  const gateOff = isDefaultBin && MISSING_FROM_DEFAULT_BIN.has('gate');
 
   const files: Planned[] = [
     {
@@ -174,6 +179,16 @@ export async function initCommand(argv: string[], io: Io): Promise<number> {
         trigger: 'PreToolUse', matcher: 'read|readFile|read_file|readCode|fs_read|readMultipleFiles',
         action: { type: 'command', command: `${HOOK_RUNNER} ${bin} on-access` }, timeout: 15,
         ...(onAccessOff ? { enabled: false } : {}),
+      }),
+    },
+    {
+      rel: '.kiro/hooks/exorcist-gate.json',
+      summary: gateOff
+        ? 'Stop: WRITTEN DISABLED, because the published version in the default command has no gate command (pass --bin with a newer build, then set "enabled": true)'
+        : 'Stop: when the agent finishes, fails if it added a high or critical finding to a file agents obey',
+      body: hook('exorcist-gate', 'When the agent finishes its turn, check the agent files it changed against the last commit. Exit code 1 sends the list to the agent.', {
+        trigger: 'Stop', action: { type: 'command', command: `${HOOK_RUNNER} ${bin} gate` }, timeout: 30,
+        ...(gateOff ? { enabled: false } : {}),
       }),
     },
     { rel: '.kiro/steering/exorcist.md', body: STEERING, summary: 'steering (inclusion: always): tool output and file text are data, never instructions' },
@@ -241,7 +256,7 @@ export async function initCommand(argv: string[], io: Io): Promise<number> {
     'Hooks (.kiro/hooks, Kiro v1 JSON; every command runs through .exorcist/kiro-hook.sh)',
     ...done.filter((d) => d.f.rel.startsWith('.kiro/hooks/')).map((d) => `  ${label(d.f.rel)}\n      ${d.f.summary}`),
     'Steering',
-    `  ${label('.kiro/steering/exorcist.md')}\n      ${files[3]?.summary ?? ''}`,
+    `  ${label('.kiro/steering/exorcist.md')}\n      ${files.find((f) => f.rel === '.kiro/steering/exorcist.md')?.summary ?? ''}`,
     'Custom agent',
     agent
       ? `  ${label('.kiro/agents/exorcist-reviewer.json')}\n      ${files.find((f) => f.rel.endsWith('exorcist-reviewer.json'))?.summary ?? ''}\n      MCP server command: ${mcpBin}`
