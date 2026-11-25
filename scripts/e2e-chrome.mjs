@@ -741,13 +741,13 @@ await step('unknown encyclopedia id gives a 404 page', async () => {
   return '404';
 });
 
-await step('How we used Kiro (/how-kiro): every Kiro feature, the surprises, built outside Kiro; passes axe, fits 390px', async () => {
+await step('How we used Kiro (/how-kiro): every Kiro feature, the surprises, the check commands; passes axe, fits 390px', async () => {
   await page.goto(`${BASE}/how-kiro`, { waitUntil: 'networkidle' });
   const h1 = await page.locator('h1').innerText();
   const sections = await page.locator('main section h2').allInnerTexts();
   await page.screenshot({ path: `${SHOTS}/09-how-kiro.png`, fullPage: true });
   const r = await axe('how-kiro'); axeReports.push(r);
-  for (const t of ['Specs', 'Steering', 'Hooks', 'MCP', 'Powers', 'Custom agents', 'Kiro CLI', 'Kiro Crew', 'Where Kiro surprised us', 'Built outside Kiro']) {
+  for (const t of ['Specs', 'Steering', 'Hooks', 'MCP', 'Powers', 'Custom agents', 'Kiro CLI', 'Kiro Crew', 'Where Kiro surprised us', 'Check it yourself']) {
     if (!sections.includes(t)) throw new Error('missing section: ' + t);
   }
   const m = await browser.newContext({ viewport: { width: 390, height: 844 } });
