@@ -45,8 +45,10 @@ export function ExorcismPatch({ patch, target }: Props) {
           )}
           {patch.skipped > 0 && (
             <p className="m-0 text-xs">
-              {plural(patch.skipped, 'fixable threat')} could not be fixed safely here (a version could not be looked up)
-              and {patch.skipped === 1 ? 'is' : 'are'} left for a human.
+              {plural(patch.skipped, 'fixable threat')} {patch.skipped === 1 ? 'was' : 'were'} left out of the patch because{' '}
+              {patch.skipped === 1 ? 'it needs' : 'they need'} your judgment. Usually this is an MCP server package that cannot be
+              pinned to a safe version: npm has no such package, has removed it, or did not answer in time. Open the finding
+              for the fix, or run <code>exorcist exorcise</code> locally for the exact reason.
             </p>
           )}
         </>

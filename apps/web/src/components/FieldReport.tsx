@@ -1,4 +1,5 @@
 import report from '@/lib/field-report.json';
+import facts from '@/lib/facts.json';
 
 const REPORT_URL = 'https://github.com/pranavsaji/exorcist-98/blob/main/docs/FIELD_REPORT.md';
 const fmt = (n: number) => n.toLocaleString('en-US');
@@ -8,16 +9,17 @@ const perRepo = (findings: number, repos: number) => (findings / repos).toFixed(
 export function FieldReport() {
   const r1 = report.round1;
   const r2 = report;
-  const repos = r1.repos + r2.repos;
-  const files = r1.files + r2.files;
+  const repos = facts.fieldReport.repos;
+  const files = facts.fieldReport.files;
   const before = perRepo(r1.highCritical.findings, r1.repos);
   const after = perRepo(r2.highCritical.findings, r2.repos);
 
   return (
     <div className="flex flex-col gap-2 text-sm">
       <p className="m-0">
-        We scanned <strong>{fmt(repos)} public MCP servers and agent-config repos</strong> ({fmt(files)} files) in two
-        held-out rounds, and read every serious alert by hand.
+        We scanned <strong>{fmt(repos)} public MCP servers and agent-config repos</strong> ({fmt(files)} files) in{' '}
+        {facts.fieldReport.rounds} rounds, and read every serious alert by hand. The numbers below come from the first two
+        rounds, each on its own set of repositories.
       </p>
 
       <div className="field-stats">
@@ -26,8 +28,8 @@ export function FieldReport() {
           <span>serious false alarms per repository, after fixing what round 1 exposed</span>
         </div>
         <div className="field-stat">
-          <span className="field-num">24 / 24</span>
-          <span>labelled attacks still caught, and 24 of 24 look-alikes left alone</span>
+          <span className="field-num">{facts.benchmarkAttacksCaught} / {facts.benchmarkAttacks}</span>
+          <span>labelled attacks still caught, and {facts.benchmarkBenignClean} of {facts.benchmarkBenign} look-alikes left alone</span>
         </div>
         <div className="field-stat">
           <span className="field-num">2</span>

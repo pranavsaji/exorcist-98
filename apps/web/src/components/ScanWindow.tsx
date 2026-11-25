@@ -104,9 +104,17 @@ export function ScanWindow({ state, onScanUrl, onScanZip, onScanHaunted, onCance
             It finds hidden instructions, poisoned MCP tools and risky agent settings before Kiro, Cursor or Claude Code
             read them.
           </p>
-          <div className="flex flex-col items-start gap-1">
-            {hauntedButton}
-            <p className="m-0 text-xs">A safe demo repo full of defanged attacks. Takes about a second.</p>
+          <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
+            <div className="flex flex-col items-start gap-1">
+              {hauntedButton}
+              <p className="m-0 text-xs">A safe demo repo full of defanged attacks. Takes about a second.</p>
+            </div>
+            <div className="flex flex-col items-start gap-1">
+              <a className="btn btn-hero" href="/?demo=trifecta" data-testid="trifecta-demo">
+                Watch the Lethal Trifecta
+              </a>
+              <p className="m-0 text-xs">Three harmless steps, one stolen secret, stopped live.</p>
+            </div>
           </div>
         </div>
       )}

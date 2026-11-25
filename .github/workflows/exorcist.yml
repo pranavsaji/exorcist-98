@@ -2,7 +2,7 @@ name: Exorcist 98 scan
 
 # Dogfood: scan this repository with its own action on every pull request.
 # The Haunted Repo fixtures and the specs quote attacks on purpose, so they are skipped.
-# So is the root README.md, whose "The problem" section quotes an exfiltration sentence (EX-002) as an example.
+# The root README.md is scanned: it describes attacks in words and quotes no working instruction.
 on:
   pull_request:
   push:
@@ -24,7 +24,6 @@ jobs:
           comment: "true"
           ignore: |
             fixtures
-            README.md
             .kiro/specs
             docs
             definitions

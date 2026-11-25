@@ -90,6 +90,8 @@ await step('first screen: one focused window with the hero line, one primary act
   const primary = hero.locator('.btn-primary');
   if ((await primary.count()) !== 1) throw new Error('expected exactly one primary button');
   if ((await primary.innerText()).trim() !== 'Scan the Haunted Repo') throw new Error('primary: ' + (await primary.innerText()));
+  const trifecta = hero.getByRole('link', { name: /Lethal Trifecta/ });
+  if ((await trifecta.getAttribute('href')) !== '/?demo=trifecta') throw new Error('trifecta link: ' + (await trifecta.getAttribute('href')));
   for (const name of ['Possession Lab', 'Bring your own attack', 'Field report']) await hero.getByRole('button', { name, exact: true }).waitFor();
   const kiro = hero.getByRole('link', { name: /^How we used Kiro/ });
   if ((await kiro.getAttribute('href')) !== '/how-kiro') throw new Error('How Kiro link: ' + (await kiro.getAttribute('href')));
@@ -647,8 +649,16 @@ await step('product page loads, links back to the desktop, and passes axe', asyn
   if ((await page.locator('a[href="/"]').count()) === 0) throw new Error('no link back to the desktop');
   await page.screenshot({ path: `${SHOTS}/10-product.png`, fullPage: true });
   const r = await axe('product'); axeReports.push(r);
+  const text = await page.locator('main').innerText();
+  for (const need of ['Session Guard', 'Shield console', 'Editor extension', 'Kiro Power', 'Kiro Crew app', 'AI judge']) if (!text.includes(need)) throw new Error('/product is missing: ' + need);
+  const m = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const p = await m.newPage();
+  await p.goto(`${BASE}/product`, { waitUntil: 'networkidle' });
+  const overflow = await p.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+  await m.close();
+  if (overflow > 0) throw new Error('/product scrolls sideways at 390px by ' + overflow + 'px');
   await page.goto(BASE, { waitUntil: 'networkidle' });
-  return `"${h1}", ${r.violations.length} axe violation types`;
+  return `"${h1}", ${r.violations.length} axe violation types, no sideways scroll at 390px`;
 });
 
 await step('real GitHub scan through the UI (octocat/Hello-World)', async () => {

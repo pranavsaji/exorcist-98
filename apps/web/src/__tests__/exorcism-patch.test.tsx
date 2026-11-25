@@ -112,7 +112,7 @@ describe('the exorcism patch on the page', () => {
     expect(html).toContain('id="exorcise-desc"');
     expect(html).toContain('5 threats in 2 files have a');
     expect(html).toContain('git apply exorcist-haunted-repo.patch');
-    expect(html).toContain('1 fixable threat could not be fixed safely');
+    expect(html).toContain('1 fixable threat was left out of the patch');
   });
 
   it('says so when nothing can be fixed automatically, or the patch is too big', () => {

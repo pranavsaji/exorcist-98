@@ -113,7 +113,7 @@ Milestones M0 to M4 were specified and built spec by spec in Kiro IDE, as `docs/
 **What we did**
 
 - The `exorcist` MCP server, on the official MCP SDK: `scan_repo`, `scan_mcp_config` and `explain_finding` (read-only) and `quarantine` (changes the config, so the agent must ask first). Its answers leave out quoted file text unless a call asks for it, so it cannot become an injection channel.
-- On 2026-11-20, with `.kiro/settings/mcp.json` added by the owner (it holds local paths, so it is not committed), Kiro started the server and the Shield. `scan_repo` on the Haunted Repo returned 51 threats in 23 files, the same as the CLI, and refused `../exorcist-98-crew` as outside the project.
+- On 2026-11-20, with `.kiro/settings/mcp.json` added by the owner (it holds local paths, so it is not committed), Kiro started the server and the Shield. `scan_repo` on the Haunted Repo returned 51 threats in 23 files that day, the same as the CLI then (the Haunted Repo gives fewer now, after the precision fixes of 2026-11-24; see docs/facts.json), and refused `../exorcist-98-crew` as outside the project.
 - The Real-Time Shield (`exorcist shield`, `exorcist wrap`) is an MCP proxy. Running it inside Kiro found the biggest problem of the project (see "Where Kiro surprised us"); the fix is tested with real processes and the SDK but has not yet been repeated inside Kiro (S-001).
 
 **Files**

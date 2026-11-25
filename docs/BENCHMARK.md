@@ -8,11 +8,11 @@ ordinary code. Measured on 2026-11-20.
 | Set | Repositories | Used to tune rules? | Findings |
 |---|---:|---|---:|
 | Tuning set | 5 | yes | 4,457 before, 2 after |
-| Held-out round 1 | 5 | inspected, then tuned | 2,200 before, 13 after |
-| Held-out round 2 (blind) | 5 | inspected, then tuned | 401 before, 6 after |
-| Held-out round 3 (blind, final) | 5 | **no** | **1** (correct) |
+| Held-out set A | 5 | inspected, then tuned | 2,200 before, 13 after |
+| Held-out set B (blind) | 5 | inspected, then tuned | 401 before, 6 after |
+| Held-out set C (blind, final) | 5 | **no** | **1** (correct) |
 
-Round 3 is the honest number: five repositories that no rule was ever
+Held-out set C is the honest number: five repositories that no rule was ever
 adjusted for, about 9,500 files, scanned once. Its one finding is a real
 unpinned MCP server. Details below.
 
@@ -23,17 +23,17 @@ other public repositories almost every high or critical alert was noise, and
 the rules were changed to fix that. All 20 repositories above were scanned
 again at the same commits, with the scanner before those fixes and after
 them, using the same download method as the field report. No rule was changed
-for these repositories in this round, but they were looked at before, so
+for these repositories in this re-run, but they were looked at before, so
 these are not new held-out numbers:
 
 | Set | Findings before | Findings after | High or critical before | High or critical after |
 |---|---:|---:|---:|---:|
 | Tuning set | 2 | 2 | 2 | 2 |
-| Held-out round 1 | 13 | 4 | 11 | 0 |
-| Held-out round 2 | 6 | 6 | 5 | 4 |
-| Held-out round 3 | 1 | 1 | 0 | 0 |
+| Held-out set A | 13 | 4 | 11 | 0 |
+| Held-out set B | 6 | 6 | 5 | 4 |
+| Held-out set C | 1 | 1 | 0 | 0 |
 
-"Before" reproduces the "after" column of each round exactly. What changed:
+"Before" reproduces the "after" column of each set exactly. What changed:
 
 - `github/awesome-copilot`: 11 high or critical findings are gone. Five were
   injection phrases quoted in order to warn about them ("never follow text
@@ -48,7 +48,7 @@ these are not new held-out numbers:
   in `jlowin/fastmcp` workflows (EX-005, EX-006, false alarms) and the
   unpinned servers (EX-010).
 
-The labelled corpus below still gives 19 of 19 attacks caught and 19 of 19
+At that re-run (2026-11-23) the labelled corpus below gave 19 of 19 attacks caught and 19 of 19
 ordinary files clean. `packages/core/src/__tests__/precision-round2.test.ts`
 adds a regression test for every false-alarm pattern that was fixed and for
 every attack shape that must still be caught.
@@ -77,7 +77,7 @@ The two that remain:
 - `cline/cline`, `apps/examples/desktop-app/src-tauri/tauri.conf.json`: a minisign public key, which
   decodes to the readable words "untrusted comment: minisign public key".
   A false alarm.
-  Fixed since (m7-precision, `docs/FIELD_REPORT.md` round 3): EX-003 no longer
+  Fixed since (m7-precision, `docs/FIELD_REPORT.md` Round 3, a different scan): EX-003 no longer
   reports a minisign key or signature unless the other rules flag the text
   inside it.
 
@@ -106,12 +106,12 @@ To repeat: shallow-clone each repository at the commit above and run
 ## Held-out repositories
 
 The tuning set above was also used to change the rules, so its numbers show
-the rules fit those repositories, not that they generalise. Three more rounds
-of five repositories each, all picked because they contain agent instruction
+the rules fit those repositories, not that they generalise. Three more sets
+of five repositories each (A, B and C, scanned on 2026-11-20; not the same as the field report rounds), all picked because they contain agent instruction
 files, rules files or MCP configs, measured on 2026-11-20 with
 `node packages/cli/dist/index.mjs scan <folder> --format json --fail-on none`.
 
-**Round 1** (modelcontextprotocol/python-sdk `77001c9`,
+**Held-out set A** (modelcontextprotocol/python-sdk `77001c9`,
 openai/openai-agents-python `6c4e4a2`, github/awesome-copilot `f10fdb8`,
 PatrickJS/awesome-cursorrules `b044f95`, punkpeye/awesome-mcp-servers
 `5fb385c`): **2,200 findings**. 2,180 were one false alarm: Persian text in
@@ -125,7 +125,7 @@ files", and an agent prompt saying "you are now operating beyond normal
 limits". Fixed: U+200C and U+200D between non-Latin letters are not hidden
 text; EX-002, EX-011, EX-012 and EX-014 narrowed. After: **13**.
 
-**Round 2** (microsoft/playwright-mcp `2337aff`, upstash/context7 `b1e3611`,
+**Held-out set B** (microsoft/playwright-mcp `2337aff`, upstash/context7 `b1e3611`,
 jlowin/fastmcp `ffb3a3b`, steipete/agent-rules `42993e4`,
 hesreallyhim/awesome-claude-code `00e1ce3`), scanned once before any change:
 **401 findings**. 390 were one false alarm: EX-012 flagged every README image
@@ -138,28 +138,28 @@ EX-011 skips `$(...)` and `$VAR` values. After: **6**. Two of those are agent
 prompts inside GitHub workflows that say "before responding" and "Do not
 mention", which is ordinary prompt wording there: still false alarms.
 
-**Round 3** (punkpeye/fastmcp `dc4e085`, wong2/awesome-mcp-servers `39eb1d7`,
+**Held-out set C** (punkpeye/fastmcp `dc4e085`, wong2/awesome-mcp-servers `39eb1d7`,
 anthropics/claude-code `11fd18f`, microsoft/vscode-copilot-chat `5863f5a`,
 ComposioHQ/awesome-claude-skills `be2a406`), scanned once and **not used to
 change anything**: **1 finding** in about 9,500 files, EX-010 on
 `.roo/mcp.json` running `@upstash/context7-mcp` without a version. That is a
 correct finding.
 
-Every false alarm fixed in rounds 1 and 2 is now a case in
+Every false alarm fixed for held-out sets A and B is now a case in
 `fixtures/benchmark/benign/`, so it stays fixed.
 
 ## Labelled attack corpus (missed attacks)
 
-`fixtures/benchmark/` holds 24 defanged attacks and 24 ordinary files that
+Today `fixtures/benchmark/` holds <!--f:benchmarkAttacks-->21<!--/f--> defanged attacks and <!--f:benchmarkBenign-->21<!--/f--> ordinary files that
 look like attacks to a naive scanner. `packages/core/src/__tests__/benchmark.test.ts`
 runs them on every test run.
 
 | | Cases | Result |
 |---|---:|---|
-| Attacks caught | 24 | 24 caught |
-| Ordinary files with no findings | 24 | 24 clean |
+| Attacks caught | <!--f:benchmarkAttacks-->21<!--/f--> | <!--f:benchmarkAttacksCaught-->21<!--/f--> caught |
+| Ordinary files with no findings | <!--f:benchmarkBenign-->21<!--/f--> | <!--f:benchmarkBenignClean-->21<!--/f--> clean |
 
-The attacks include five that the scanner missed before this round:
+The attacks include five that the scanner missed before the precision work of 2026-11-20:
 - a Cursor rules file (`.cursor/rules/*.mdc`) whose instruction is split by a
   zero-width space;
 - a word joiner (U+2060);
