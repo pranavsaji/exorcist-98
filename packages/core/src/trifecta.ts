@@ -13,6 +13,8 @@ import { CAPABILITIES, classifyCapabilities } from './capabilities.js';
 import type { CapabilityRule, ServerSpec } from './capabilities.js';
 import type { Capability, ConfigMap, FileRole, MapGhost, SignatureFinding } from './types.js';
 import type { VirusDefinition } from './definitions/schema.js';
+import { lowersSeverity } from './severity-paths.js';
+import { classifyFile } from './walker.js';
 
 export const TRIFECTA_RULE_ID = 'EX-023';
 // No caps on servers, abilities or tools: padding a config with filler
@@ -275,6 +277,10 @@ export function trifectaFinding(config: ParsedMcpConfig, map: ConfigMap, defs: r
   if (!map.trifecta || map.severity === null) return null;
   const def = defs.find((d) => d.id === TRIFECTA_RULE_ID && d.enabled !== false && d.match.analysis === 'trifecta');
   if (!def) return null;
+  // Test and eval fixtures are not a user's agent setup (skip_paths, as for the text rules).
+  if (def.skip_paths?.some((p) => new RegExp(p, 'i').test(config.file))) return null;
+  // Same for low_severity_paths: reported, at low severity, unless the file is agent-facing.
+  const lowered = lowersSeverity(def, config.file, classifyFile(config.file));
   const legs = CAPABILITIES.map((c) => `${LEG_WORDS[c]} ${map.legs[c].join(', ')}`).join('; ');
   const auto = map.ghosts.filter((g) => g.autoApproved && g.capabilities.length > 0).map((g) => g.name);
   const autoText = auto.length > 0 ? ` Tools on ${auto.join(', ')} are auto-approved, so nothing asks you first.` : '';
@@ -282,7 +288,7 @@ export function trifectaFinding(config: ParsedMcpConfig, map: ConfigMap, defs: r
     source: 'signature',
     ruleId: def.id,
     title: def.title,
-    severity: map.severity,
+    severity: lowered ? 'low' : map.severity,
     file: config.file,
     line: config.anchor.line,
     col: config.anchor.col,

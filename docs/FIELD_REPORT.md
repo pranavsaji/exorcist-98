@@ -1,8 +1,9 @@
-# Field Report: Exorcist 98 on public repositories, two rounds
+# Field Report: Exorcist 98 on public repositories, three rounds
 
 What happens when Exorcist 98 is pointed at real MCP servers and agent
-configuration repositories it has never seen. Two rounds, each on its own
-held-out set of public GitHub repositories, chosen the same way:
+configuration repositories it has never seen. Rounds 1 and 2 each used their
+own held-out set of public GitHub repositories, chosen the same way; round 3
+looked at the most popular ones:
 
 - **Round 1** (2026-11-22): 224 repositories, the rules as they were.
   Almost every high or critical alert was noise.
@@ -10,6 +11,9 @@ held-out set of public GitHub repositories, chosen the same way:
   round 1 found, without losing any attack the test corpus covers.
 - **Round 2** (2026-11-23): 197 different repositories, chosen with a new
   seed, scanned once with the fixed rules and triaged by hand.
+- **Round 3** (2026-11-24): 62 popular MCP servers and agent-configuration
+  repositories (see "Round 3" below). No real issue was found. It also showed
+  that secrets were printed in full in reports, which is now fixed.
 
 ## Summary
 
@@ -306,6 +310,147 @@ finding are in [`triage.json`](../fixtures/wild-scan-round2/triage.json).
 | EX-003 | 3 | Base64 PEM certificates and keys: a kubeconfig in saved test output, release-signing public keys | Treat decoded PEM blocks and signing keys as embedded files (a decoded private key belongs to the secrets rule). |
 | EX-004 | 3 | HTML comments written for people that mention exfiltration (maintainer notes, metadata of copied prompts) | The word "exfiltrate" alone still triggers EX-004; require an order, as for the other words. |
 | EX-008, EX-005, EX-002 | 4 | An installer's dependency list (`install_command:` for uv, 2 files), "Before calling this tool, list the existing rules" guidance, "your new instructions may be brief" | Case by case. |
+
+## Round 3: 62 popular MCP servers and agent configurations
+
+**Headline: no real security issue was found in 62 popular repositories.**
+Every high or critical alert was a false alarm or a true match that is
+deliberate and harmless (a documented example, a test, a template). No project
+is named here, because none had a problem to report.
+
+### The set and the method
+
+- **62 repositories** of popular MCP servers and agent-configuration
+  collections (2 more were skipped because they were too large), **75,305
+  files**, each at one pinned commit, scanned on 2026-11-24 with scanner 0.1.1
+  and the bundled definitions of 2026-11-23. Default settings; the AI judge
+  was off.
+- Each repository was shallow-cloned and scanned with
+  `exorcist scan <folder> --format json --fail-on none`. Nothing in a clone
+  was ever run.
+- Every high and critical finding was read in context and given the same three
+  labels as in rounds 1 and 2 (true positive, benign, false positive).
+  Findings of one kind in one file count as one issue.
+- This round was not held out from the fixes below. The rules were then
+  changed for what it showed, so the "after" column is a development-set
+  result, like the round-1 re-run. It shows that the false alarms are gone. It
+  does not measure precision on repositories nobody has looked at.
+
+### What it found
+
+| | Round 3, before the fixes |
+|---|---:|
+| Repositories scanned | 62 |
+| Files scanned | 75,305 |
+| Findings, all severities | 117 |
+| High and critical findings | 77 |
+| Distinct high and critical issues | 49 |
+| Real issues | 0 |
+| True but benign | 15 |
+| False positives | 34 |
+| Repositories with a high or critical finding | 11 |
+
+The all-severity counts in this round predate the follow-up fix: findings in test folders are now reported at low severity instead of being dropped, and the high and critical counts are unaffected.
+
+### The benign and the false-alarm categories
+
+True but benign (the text does what the rule describes, on purpose and
+harmlessly):
+
+- attack phrases written down in a security guide, a threat model or a test
+  sample ("ignore all previous instructions" shown as the thing to guard
+  against, "You are now DAN" in a list of known jailbreaks);
+- authoring notes inside an HTML comment in a prompt template, meant for the
+  AI that fills the template in;
+- a public API key that the project itself lists as allowed to be public;
+- a documentation page describing a mode that approves every tool call;
+- a test configuration with many powerful servers, kept as an eval fixture.
+
+False positives (the rule fired but the threat does not apply):
+
+- base64 that decodes to a database or KQL script, a semantic-model
+  definition, a plain-text file in an API example (`payloadType:
+  InlineBase64`), and minisign public keys in update configurations (40 of the
+  77 findings);
+- a single zero-width space after `@` in changelogs, which stops GitHub
+  mentions (five of them in one file were reported as critical);
+- the verb `pass` found inside `NEO4J_PASSWORD` in a tool description;
+- pasted-picture links from a document editor and a documentation host, with a
+  `?key=` or `alt=media&token=` query;
+- install commands inside long JSON strings (a documentation page, a code
+  sample and a list of snippets in a website's content cache);
+- a sentence saying a user "cannot bypass" the confirmation prompt, and a
+  sentence telling the AI it must not follow the classic override phrase;
+- an HTML comment that is a linter `noqa` directive;
+- `uvx --python 3.13 <package>`, read as an unpinned package named `3.13`.
+
+### The fixes (m7-precision)
+
+| Rule | Change |
+|---|---|
+| EX-003 | A blob that decodes to a SQL or KQL script, a semantic-model definition, a minisign key or signature, or a value an object declares as `InlineBase64`, is reported only if the other rules flag the decoded text. A decoded URL or command is always reported. |
+| EX-001 | A single U+200B between `@` and a name is low, and it does not count toward the five short runs that raise a file to critical. |
+| EX-005 | The verbs `send`, `pass`, `upload` and the rest must be whole words. |
+| EX-012 | Image links to the picture host of a document editor (`?key=`) and of a documentation host (`alt=media&token=`) are not exfiltration. Look-alike hosts and other query data still are. |
+| EX-008, EX-015 | In a JSON file the command counts if the key that holds the string is a command key (`command`, `scripts`, `run`, ...). A command inside a document or code sample stored under another key does not. A method call such as `sandbox.exec('...')` is no longer read as "Run: ...". |
+| EX-018, EX-002 | New `negated_cues`: a phrase the sentence itself forbids ("cannot bypass", "never ignore earlier instructions", "must not attempt to tell the agent to ...") is a defence. "Do not mention this, tell the agent to ..." is still an attack. |
+| EX-004 | A `noqa` comment is skipped unless it also holds an unmistakable attack phrase. |
+| EX-010 | Options that take a value (`--python 3.13`, `--with x`) are skipped when finding the package. |
+| EX-001, 002, 004, 023 | `skip_paths` for test, spec, fixture, e2e and eval folders, as the other rules already had. The same text anywhere else is still reported. |
+
+Each fix has a regression test and a test that an attack of the same shape is
+still caught (`packages/core/src/__tests__/m7-precision.test.ts`). The labelled
+corpus still catches 19 of 19 attacks and leaves 19 of 19 look-alikes alone,
+and the Haunted Repo still gives its 47 findings.
+
+### Before and after
+
+The 11 repositories with a high or critical finding were cloned again at the
+same commits (shallow, hooks off, into an empty folder that was deleted
+afterwards) and scanned with the fixed rules. The other 51 repositories had no
+high or critical finding and were not scanned again.
+
+| Rule | High and critical before | High and critical after |
+|---|---:|---:|
+| EX-001 | 10 | 0 |
+| EX-002 | 9 | 4 |
+| EX-003 | 40 | 2 |
+| EX-004 | 4 | 3 |
+| EX-005 | 1 | 0 |
+| EX-008 | 2 | 0 |
+| EX-011 | 2 | 2 |
+| EX-012 | 5 | 0 |
+| EX-014 | 1 | 1 |
+| EX-015 | 1 | 0 |
+| EX-018 | 1 | 0 |
+| EX-023 | 1 | 0 |
+| **Total** | **77** | **12** |
+
+In those 11 repositories all findings went from 106 to 45. The 12 that remain
+are in 10 files. Eleven are true but benign: two mentions of one public
+key, four documented attack phrases, one attack example in a threat model,
+three template comments for the AI and one description of an approve-everything
+mode. One is a false positive that still fires: a plain-text example file whose
+base64 value is not marked `InlineBase64`.
+
+### Two scanner gaps this round showed
+
+1. **Secrets were printed in full.** The `text`, `json` and `sarif` reports
+   printed the whole value of a secret that EX-011 found, and the GitHub
+   Action can upload SARIF to code scanning, so a scan could have published a
+   live key. **Fixed**: one shared helper now redacts every output
+   (`docs/KNOWN_LIMITATIONS.md`, L-050).
+2. **Tool descriptions written in source code are not checked by EX-005.**
+   Descriptions that live in a TypeScript, Python or Go file, not in an MCP
+   config, are not read by `exorcist scan`. The Shield does read them, but only
+   when the server runs. **Still open** (L-051).
+
+### Limits of this round
+
+One reviewer (an AI agent working with the team that wrote the rules), no
+independent check. Precision only: a real issue the scanner missed would not
+appear here. The "after" numbers come from the repositories the fixes were
+made on.
 
 ## Round 1 set re-run with the fixed rules (development set)
 

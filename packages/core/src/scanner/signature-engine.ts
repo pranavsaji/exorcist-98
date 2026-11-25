@@ -4,8 +4,9 @@ import type { RepoFile, SignatureFinding, Severity } from '../types.js';
 import type { NormalizedText, UnicodeHit } from '../normalizer.js';
 import type { VirusDefinition } from '../definitions/schema.js';
 import { decodeHidden, MAX_HIDDEN_RUNS } from '../ouija.js';
+import { lowersSeverity } from '../severity-paths.js';
 import { typosquatOf } from '../known-packages.js';
-import { decodeBlob, embeddedDocumentKind, fencedRanges, inExecContext, inMarkdownCode, isCredibleSecret, isQuotedExample } from './context.js';
+import { benignPayloadKind, COMMAND_LIKE, decodeBlob, embeddedDocumentKind, fencedRanges, inExecContext, inMarkdownCode, isCredibleSecret, isNegated, isQuotedExample } from './context.js';
 
 const MAX_SPAN = 120;
 
@@ -82,6 +83,15 @@ function locateJsonValue(original: string, value: string, occurrence = 0): { lin
   return offsetToPosition(original, idx);
 }
 
+/** Runner options whose next argument is their value, never the package (uvx, npx). */
+const OPTIONS_WITH_VALUE = new Set([
+  '--python', '--python-preference', '--with', '--with-editable', '--with-requirements', '--index', '--index-url',
+  '--extra-index-url', '--default-index', '--directory', '--env-file', '--constraints', '--overrides', '--registry',
+  '--cache', '--cache-dir', '--userconfig',
+]);
+/** `3`, `3.13`, `3.13.1`, `cpython-3.13`, `pypy3.10`: a Python version, not a package. */
+const PYTHON_VERSION = /^(?:(?:cpython|pypy)[-@]?)?\d+(?:\.\d+){0,2}(?:t|-[a-z0-9_.-]+)?$/i;
+
 /**
  * The package a runner (`npx`, `bunx`, `pnpx`, `uvx`) is told to run: the value
  * of `--package`/`-p`/`--from`, or else the first argument that is not a flag
@@ -93,8 +103,13 @@ export function packageArg(args: unknown[]): string | null {
     if (typeof a !== 'string') return null;
     if (a === '--package' || a === '-p' || a === '--from') {
       const v = args[i + 1];
-      return typeof v === 'string' ? v : null;
+      if (typeof v !== 'string') return null;
+      // `uvx -p 3.13 pkg`: for uv, -p is the Python version, not the package.
+      if (a === '-p' && PYTHON_VERSION.test(v)) { i++; continue; }
+      return v;
     }
+    // `uvx --python 3.13 pkg`: these options take a value, which is not the package.
+    if (OPTIONS_WITH_VALUE.has(a)) { i++; continue; }
     const eq = /^--(?:package|from)=(.+)$/.exec(a);
     if (eq) return eq[1] ?? null;
     if (a.startsWith('-')) continue; // -y, --yes, --quiet and other flags
@@ -134,7 +149,7 @@ function looksLikeText(bytes: Buffer): boolean {
   const text = bytes.toString('latin1');
   if (/^\s*[{[]/.test(text)) return false;
   const words = text.split(/\s+/).filter((w) => /[A-Za-z]{2,}/.test(w)).length;
-  return words >= 4 || /(https?:\/\/|\bcurl\b|\bwget\b|\|\s*(ba|z)?sh\b|powershell|\$\(|`)/i.test(text);
+  return words >= 4 || COMMAND_LIKE.test(text);
 }
 
 // ── Time limit for rule regexes (L-004) ────────────────────────────────────────
@@ -190,11 +205,14 @@ export function runSignatures(
   const active: Active[] = [];
   const jobs: Job[] = [];
   const vis = norm.visible;
+  const lowered = new Set<string>();
   const ctx = makeContext(file, norm, defs, limitMs);
   for (const def of defs) {
     if (def.enabled === false) continue;
     if (!def.applies_to.includes(file.role)) continue;
     if (def.skip_paths?.some((p) => getRegex(p, 'i').test(file.rel))) continue;
+    // Test and eval folders: report at low severity instead of dropping (never for agent-facing files).
+    if (lowersSeverity(def, file.rel, file.role)) lowered.add(def.id);
     const { match } = def;
     // A whole-config analysis (EX-023) is run by the orchestrator, not here.
     if (match.analysis) continue;
@@ -290,6 +308,7 @@ export function runSignatures(
       let run: UnicodeHit[] = [];
       const mineStart = findings.length;
       let minorRuns = 0;
+      const guards = new Set<SignatureFinding>();
       // Decoding is bounded too: at most MAX_HIDDEN_RUNS runs per file (REQ-04.2).
       let decodedRuns = 0;
       const flush = (): void => {
@@ -305,11 +324,19 @@ export function runSignatures(
         // characters and bidi controls keep the rule's own severity.
         const minor = match.minor_run;
         const isMinor = Boolean(minor && run.length <= minor.max_length && run.every((h) => minor.classes.includes(h.class)));
-        if (isMinor) minorRuns++;
-        const severity = isMinor && minor ? minor.severity : base.severity;
+        // A single U+200B between `@` and a name: the changelog trick that stops
+        // GitHub from notifying the person. Low, and it does not count toward
+        // the escalation below (m7-precision).
+        const guard = match.mention_guard;
+        const isGuard = Boolean(guard && run.length === 1 && first.codePoint === 0x200B
+          && norm.original[first.offset - 1] === '@' && /[A-Za-z0-9_]/.test(norm.original[first.offset + 1] ?? ''));
+        if (isMinor && !isGuard) minorRuns++;
+        const severity = isGuard && guard ? guard.severity : isMinor && minor ? minor.severity : base.severity;
         const decoded = decodedRuns < MAX_HIDDEN_RUNS ? decodedForRun(run) : undefined;
         if (decoded !== undefined) decodedRuns += 1;
-        findings.push({ ...base, severity, line, col, span: joinEscapes(run), ...(decoded !== undefined ? { decoded } : {}) });
+        const out: SignatureFinding = { ...base, severity, line, col, span: joinEscapes(run), ...(decoded !== undefined ? { decoded } : {}) };
+        if (isGuard) guards.add(out);
+        findings.push(out);
         run = [];
       };
       for (const hit of norm.hiddenUnicode) {
@@ -328,7 +355,7 @@ export function runSignatures(
       if (minorRuns >= MINOR_RUNS_ESCALATE) {
         for (let i = mineStart; i < findings.length; i++) {
           const f = findings[i];
-          if (f && f.ruleId === def.id) findings[i] = { ...f, severity: base.severity };
+          if (f && f.ruleId === def.id && !guards.has(f)) findings[i] = { ...f, severity: base.severity };
         }
       }
     }
@@ -377,7 +404,8 @@ export function runSignatures(
     }
   }
 
-  return sameLineGroups(findings, defs);
+  const out = lowered.size === 0 ? findings : findings.map((f) => (lowered.has(f.ruleId) ? { ...f, severity: 'low' as const } : f));
+  return sameLineGroups(out, defs);
 }
 
 // ── Precision round 2 helpers ──────────────────────────────────────────────────
@@ -445,12 +473,16 @@ function capPerFile(def: VirusDefinition, out: SignatureFinding[]): SignatureFin
 function makeContext(file: RepoFile, norm: NormalizedText, defs: VirusDefinition[], limitMs: number) {
   let fences: Array<[number, number]> | null = null;
   // Rules whose phrases count as instructions when found inside a decoded file.
-  let rescan: Array<{ re: RegExp; cues: RegExp | null }> | null = null;
-  const rescanRules = (self: VirusDefinition): Array<{ re: RegExp; cues: RegExp | null }> => {
+  let rescan: Array<{ re: RegExp; cues: RegExp | null; neg: RegExp | null }> | null = null;
+  const rescanRules = (self: VirusDefinition): Array<{ re: RegExp; cues: RegExp | null; neg: RegExp | null }> => {
     rescan ??= defs
       .filter((d) => d.enabled !== false && d.id !== self.id && d.match.regex && !d.match.merge_adjacent
         && (d.applies_to.includes('instruction') || d.applies_to.includes('hook')))
-      .map((d) => ({ re: getRegex(d.match.regex as string, 'gi'), cues: d.match.quoted_example_cues ? getRegex(d.match.quoted_example_cues, 'i') : null }));
+      .map((d) => ({
+        re: getRegex(d.match.regex as string, 'gi'),
+        cues: d.match.quoted_example_cues ? getRegex(d.match.quoted_example_cues, 'i') : null,
+        neg: d.match.negated_cues ? getRegex(d.match.negated_cues, 'i') : null,
+      }));
     return rescan;
   };
   return {
@@ -464,6 +496,8 @@ function makeContext(file: RepoFile, norm: NormalizedText, defs: VirusDefinition
         if (inMarkdownCode(norm.plain, at, fences)) return false;
       }
       if (m.quoted_example_cues && isQuotedExample(src, index, text.length, getRegex(m.quoted_example_cues, 'i'))) return false;
+      // The passage forbids the phrase: a defence, not an attack.
+      if (m.negated_cues && isNegated(src, index, getRegex(m.negated_cues, 'i'))) return false;
       return true;
     },
     /**
@@ -484,7 +518,12 @@ function makeContext(file: RepoFile, norm: NormalizedText, defs: VirusDefinition
       if (piece === undefined) return false;
       if (m.validate !== 'base64-text' && m.validate !== 'encoded-text') return true;
       const decoded = decodeBlob(merged) ?? decodeBlob(piece) ?? '';
-      if (embeddedDocumentKind(decoded) === null) return true;
+      // An embedded file, or data that is not hidden words (a query, a model
+      // definition, a minisign key, a declared InlineBase64 payload), counts
+      // only when what it says is flagged by the other rules.
+      const first = group[0];
+      const around = first ? norm.plain.slice(Math.max(0, first.at - 300), first.at + merged.length + 300) : '';
+      if (embeddedDocumentKind(decoded) === null && benignPayloadKind(decoded, around) === null) return true;
       const sample = decoded.slice(0, 200_000);
       if (m.decoded_flag_regex && getRegex(m.decoded_flag_regex, 'i').test(sample)) return true;
       const rules = rescanRules(def);
@@ -493,7 +532,8 @@ function makeContext(file: RepoFile, norm: NormalizedText, defs: VirusDefinition
       // The same quoted-example exemption as in plain text.
       return hits.some((h, i) => h.some(([index, t]) => {
         const cues = rules[i]?.cues;
-        return !cues || !isQuotedExample(sample, index, t.length, cues);
+        const neg = rules[i]?.neg;
+        return (!cues || !isQuotedExample(sample, index, t.length, cues)) && (!neg || !isNegated(sample, index, neg));
       }));
     },
   };

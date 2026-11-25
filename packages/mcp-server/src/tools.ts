@@ -2,7 +2,7 @@ import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { findDefinitionsDir as sharedFindDefinitionsDir } from '@exorcist-98/shield';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
-import { loadDefinitions, plainFor, scanRepo, scanText } from '@exorcist-98/core';
+import { loadDefinitions, plainFor, redactFinding, scanRepo, scanText } from '@exorcist-98/core';
 import type { Finding, VirusDefinition } from '@exorcist-98/core';
 import { isWrapped, quarantineServer } from '@exorcist-98/shield';
 import type { McpConfig } from '@exorcist-98/shield';
@@ -111,7 +111,8 @@ function describe(findings: Finding[], limit: number, quotes: boolean): string {
   sorted.slice(0, limit).forEach((f, i) => {
     lines.push(`${i + 1}. [${f.severity.toUpperCase()}] ${plainFor(f.ruleId, f.title).headline}`);
     lines.push(`   where: ${f.file}:${f.line}:${f.col}   rule: ${f.ruleId}`);
-    if (quotes) lines.push(`   quoted: ${JSON.stringify(reveal(f.span).slice(0, 80))}`);
+    // A secret is never quoted in full, even when quotes are on (m7-precision).
+    if (quotes) lines.push(`   quoted: ${JSON.stringify(reveal(redactFinding(f).span).slice(0, 80))}`);
     lines.push(`   fix: ${f.fix.replace(/\s+/g, ' ').trim()}`);
   });
   if (sorted.length > limit) lines.push(`...and ${sorted.length - limit} more. Use a smaller folder or raise maxFindings.`);

@@ -9,7 +9,7 @@
  * is never stored or logged, and the result quotes at most MAX_QUOTE
  * consecutive characters of it (enforced at the end by `capQuotes`).
  */
-import { scanText } from '@exorcist-98/core';
+import { redactFinding, scanText } from '@exorcist-98/core';
 import type { FileRole, Severity, SignatureFinding, VirusDefinition } from '@exorcist-98/core';
 import { ShieldEngine } from './engine.js';
 import type { Action } from './engine.js';
@@ -199,7 +199,7 @@ function scan(placement: ByoaPlacement, text: string, defs: VirusDefinition[]): 
   }
   out.sort((a, b) => RANK[a.severity] - RANK[b.severity] || a.line - b.line || a.col - b.col);
   return out.slice(0, MAX_FINDINGS).map((f) => ({
-    ruleId: f.ruleId, severity: f.severity, title: f.title, line: f.line, col: f.col, span: f.span, fix: f.fix,
+    ruleId: f.ruleId, severity: f.severity, title: f.title, line: f.line, col: f.col, span: redactFinding(f).span, fix: f.fix,
   }));
 }
 

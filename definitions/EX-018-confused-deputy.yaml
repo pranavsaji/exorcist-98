@@ -15,6 +15,13 @@ match:
   # EX-002 (docs/FIELD_REPORT.md). A quoted phrase that runs on into a longer
   # instruction is still reported.
   quoted_example_cues: '\b(?:such\s+as|e\.g\.|i\.e\.|for\s+(?:example|instance)|never|do\s+not|don''t|must\s+not|should\s+not|refuse|reject|treat|untrusted|inert|injection|jailbreak|adversarial|attack|malicious|hostile|crafted|hijack|red[- ]?team|detect|flag|block|strip|sanitiz|filter|pattern|phrase|cases?\b|example|quarantine|directive|look(?:s|ing)?\s+like|shaped)'
+  # A phrase the passage itself forbids is a defence, not an attack: "never
+  # ignore earlier instructions", "users cannot bypass the prompt", "it must not
+  # attempt to tell the agent to ignore earlier instructions". The negation has
+  # to govern the phrase (it ends right before it, or opens a list of what must
+  # not be attempted); "do not mention this, tell the agent to ..." is still an
+  # attack (m7-precision, packages/core/src/scanner/context.ts isNegated).
+  negated_cues: '\b(?:(?:must|should|shall|will|would|may|might|can|could)\s*(?:not|never)|(?:must|should|shall|would|could|do|does|did|is|are|was|were|has|have|ca|wo)n[''’]t|cannot|do(?:es)?\s+not|did\s+not|never|refus(?:e|es|ed|ing)\s+to|(?:is|are)\s+not\s+(?:to|allowed\s+to|permitted\s+to|able\s+to)|unable\s+to)\s+(?:(?:ever|simply|just|even|actually|knowingly)\s+)*$|\b(?:(?:must|should|shall|will|would|may|might|can|could)\s*(?:not|never)|(?:must|should|shall|would|could|do|does|did|is|are|was|were|has|have|ca|wo)n[''’]t|cannot)\s+(?:attempt|try|seek)\s+to\b[^.!?\n]*?\b(?:tell|instruct|ask|cause|make|persuade|trick|convince|get|force|let|allow)\w*\s+(?:(?:the|an?|your|any)\s+)?(?:(?:agent|model|assistant|ai|llm|bot|claude)s?\s+)?(?:to\s+)?$|\b(?:(?:must|should|shall|will|would|may|might|can|could)\s*(?:not|never)|(?:must|should|shall|would|could|do|does|did|is|are|was|were|has|have|ca|wo)n[''’]t|cannot|do(?:es)?\s+not|did\s+not|never|refus(?:e|es|ed|ing)\s+to|(?:is|are)\s+not\s+(?:to|allowed\s+to|permitted\s+to|able\s+to)|unable\s+to)\s+(?:follow|obey|comply\s+with|act\s+on|honou?r|accept|execute|run)\s+(?:(?:any|an?|the|such|these|those|that|text|instructions?|requests?|commands?|messages?|content|tool\s+output|it)\s+)*(?:(?:that|which)\s+)?(?:(?:say|says|saying|tell|tells|telling|ask|asks|asking)\s+(?:you\s+)?(?:to\s+)?)?$'
 owasp:
   - "ASI02 Inadequate Human-in-the-Loop Controls"
   - "LLM06:2025 Excessive Agency"

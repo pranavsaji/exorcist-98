@@ -11,7 +11,7 @@
 import { existsSync, realpathSync, statSync } from 'node:fs';
 import { posix, relative, resolve, sep } from 'node:path';
 import {
-  displayMessage, loadDefinitions, openRepo, plainFor, scanRepo,
+  displayMessage, loadDefinitions, openRepo, plainFor, redactFinding, scanRepo,
   shortSha, traceOrigins, buildTimeline, OriginReportSchema, ORIGIN_TIMEOUT_MS, ORIGIN_TOTAL_TIMEOUT_MS,
 } from '@exorcist-98/core';
 import type { Finding, OriginReport, TimelineThreat } from '@exorcist-98/core';
@@ -180,7 +180,8 @@ export async function originCommand(argv: string[], io: Io): Promise<number> {
     { perFindingMs: ORIGIN_TIMEOUT_MS, totalMs, boundaries },
   );
   const { commits, unknown } = buildTimeline(findings.map((f, i) => ({
-    threat: { ruleId: f.ruleId, severity: f.severity, file: f.file, line: f.line, title: f.title, span: f.span },
+    // The raw span is for `git log -S` above; reports only ever carry the redacted one.
+    threat: { ruleId: f.ruleId, severity: f.severity, file: f.file, line: f.line, title: f.title, span: redactFinding(f).span },
     hit: hits[i] ?? { status: 'error', reason: 'not traced' },
   })));
 

@@ -16,6 +16,16 @@ match:
   # A comment inside Markdown code (backticks or a fenced block) is displayed,
   # not hidden, so it is not smuggling.
   skip_in_code: true
+  # Only a bare linter directive is exempt: `<!-- noqa -->` or `<!-- noqa: CODE,
+  # CODE -->` and nothing else. Free text after the code is still checked, so
+  # starting a comment with noqa does not hide an instruction.
+  exclude_regex: '^<!--\s*noqa(?::\s*[A-Z0-9-]+(?:,\s*[A-Z0-9-]+)*)?\s*-->$'
+# Test and eval fixtures hold attack samples on purpose (a security scanner's
+# own tests, adversarial evals). Findings there are reported at low severity,
+# not dropped. A file an agent reads (instructions, hooks, MCP configs, .kiro,
+# .claude, .cursor) is never lowered, wherever it sits.
+low_severity_paths:
+  - "(^|/)(tests?|__tests__|__mocks__|spec|specs|fixtures?|testdata|test-data|e2e|evals?)/|[._-](test|spec)s?\\.[A-Za-z0-9]+$|_tests?\\.(rs|go|py)$"
 owasp:
   - "LLM01:2025 Prompt Injection"
   - "ASI03 Prompt Injection via External Content"

@@ -85,7 +85,8 @@ const KEY_AT_LINE_START = /^\s*[{[,]?\s*(?:-\s*)?["']?([A-Za-z0-9_.-]+)["']?\s*:
 /** Every `"key":` or `key:` on a line (JSON or YAML). */
 const KEY_ON_LINE = /(?:["']([A-Za-z0-9_.-]+)["']|(?:^|[\s{,[-])([A-Za-z0-9_.-]+))\s*:(?=\s|["'[{|>]|$)/g;
 /** "Run: curl …", "please execute curl …": a step the reader is told to run. */
-const IMPERATIVE_BEFORE = /\b(?:run|execute|exec|paste|type|enter|invoke)\b\W{0,3}$/i;
+// A verb in prose, not a method or function call: `sandbox.exec('curl ...')` is code, not a step.
+const IMPERATIVE_BEFORE = /(?<![.\w$])\b(?:run|execute|exec|paste|type|enter|invoke)\b[^\w(]{0,3}$/i;
 
 const normKey = (k: string): string => k.toLowerCase().replace(/[-_]/g, '');
 
@@ -103,6 +104,14 @@ export function inExecContext(rel: string, text: string, at: number, match = '')
   const lineStart = text.lastIndexOf('\n', at - 1) + 1;
   const before = text.slice(lineStart, at);
   if (IMPERATIVE_BEFORE.test(before.slice(-40))) return true;
+  // In a JSON file, ask the structure, not the line: a command inside a long
+  // string (a document, a code sample, a content cache entry) is data, and the
+  // key that counts is the one that holds the string, not a `command:` written
+  // inside the text (m7-precision).
+  if (/\.json$/i.test(rel)) {
+    const j = jsonKeyAt(text, at);
+    if (j.inString && j.key !== null) return EXEC_KEYS.has(normKey(j.key));
+  }
   // The key nearest before the match on its own line ("command": "…curl…").
   const keys = [...before.matchAll(KEY_ON_LINE)];
   const own = keys[keys.length - 1];
@@ -204,4 +213,109 @@ export function decodeBlob(s: string): string | null {
   const b = s.replace(/=+$/, '');
   if (/[^A-Za-z0-9+/]/.test(b)) return null;
   return Buffer.from(b, 'base64').toString('utf8');
+}
+
+// ── JSON structure (exec_context) ───────────────────────────────────────────
+type JsonFrame = { kind: '{' | '['; key: string | null };
+type JsonString = { start: number; end: number; key: string | null };
+let jsonCache: { text: string; strings: JsonString[] } | null = null;
+
+/**
+ * The strings of a JSON text with the key that holds each one (for an array
+ * item, the key of the array). A small tokenizer, not a parser: it keeps
+ * working on JSON with comments or trailing commas. The last result is kept,
+ * since one file is asked about many times.
+ */
+function jsonStrings(text: string): JsonString[] {
+  if (jsonCache && jsonCache.text === text) return jsonCache.strings;
+  const strings: JsonString[] = [];
+  const stack: JsonFrame[] = [];
+  let i = 0;
+  while (i < text.length) {
+    const c = text[i];
+    if (c === '"') {
+      let j = i + 1;
+      while (j < text.length && text[j] !== '"') j += text[j] === '\\' ? 2 : 1;
+      let k = j + 1;
+      while (k < text.length && /\s/.test(text[k] ?? '')) k++;
+      const top = stack[stack.length - 1];
+      if (top && top.kind === '{' && text[k] === ':') {
+        try { top.key = JSON.parse(text.slice(i, j + 1)) as string; } catch { top.key = text.slice(i + 1, j); }
+      } else {
+        strings.push({ start: i, end: j, key: top ? top.key : null });
+      }
+      i = j + 1;
+      continue;
+    }
+    if (c === '{' || c === '[') {
+      const top = stack[stack.length - 1];
+      stack.push({ kind: c, key: c === '[' ? (top ? top.key : null) : null });
+    } else if (c === '}' || c === ']') {
+      stack.pop();
+    } else if (c === ',') {
+      const top = stack[stack.length - 1];
+      if (top && top.kind === '{') top.key = null;
+    }
+    i++;
+  }
+  jsonCache = { text, strings };
+  return strings;
+}
+
+/** Whether offset `at` is inside a JSON string, and the key that holds it. */
+export function jsonKeyAt(text: string, at: number): { inString: boolean; key: string | null } {
+  const strings = jsonStrings(text);
+  // Binary search: strings are in order and do not overlap.
+  let lo = 0;
+  let hi = strings.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const s = strings[mid];
+    if (!s) break;
+    if (at < s.start) hi = mid - 1;
+    else if (at > s.end) lo = mid + 1;
+    else return { inString: true, key: s.key };
+  }
+  return { inString: false, key: null };
+}
+
+// ── Negation (negated_cues) ─────────────────────────────────────────────────
+/**
+ * True when the text from the start of the sentence up to `index` matches
+ * `cues`: the passage forbids the phrase it is about to quote, so it is a
+ * defence ("never ignore earlier instructions"), not an attack.
+ */
+export function isNegated(text: string, index: number, cues: RegExp): boolean {
+  const prefix = text.slice(Math.max(0, index - 200), index);
+  let cut = prefix.lastIndexOf('\n') + 1;
+  for (const m of prefix.matchAll(/[.!?;](?=\s)/g)) cut = Math.max(cut, (m.index ?? 0) + 1);
+  return cues.test(prefix.slice(cut));
+}
+
+// ── Payloads that are data, not hidden words (EX-003) ───────────────────────
+/** Commands and addresses: decoded text with these is never waved through. */
+export const COMMAND_LIKE = /(https?:\/\/|\bcurl\b|\bwget\b|\|\s*(ba|z)?sh\b|powershell|\$\(|`)/i;
+const SQL_START = /^\s*(?:--[^\n]*\n\s*)*(?:select\s|insert\s+into\s|update\s+\S+\s+set\s|delete\s+from\s|create\s+(?:or\s+alter\s+)?(?:table|view|procedure|function|database|schema|index)\b|alter\s+table\b|with\s+\w+\s+as\s*\(|declare\s+@|merge\s+into\s)/i;
+const KQL_START = /^\s*(?:\/\/[^\n]*\n\s*)*(?:\.(?:create|alter|set|append|drop|show)\b|let\s+\w+\s*=|[A-Za-z_][\w.]*\s*\r?\n\s*\|\s*(?:where|project|summarize|extend|take|limit|join|order|sort|count|distinct|top|render|parse|mv-expand)\b)/i;
+const TMDL_START = /^\s*(?:table|model|namespace|culture|cultureInfo|relationship|expression|database)\b[^\n]*\r?\n\s+[A-Za-z]+\s*[:=]/;
+const MINISIGN = /^untrusted comment:/;
+/** A base64 value that its own object declares as a payload. */
+const DECLARED_PAYLOAD = /"payloadType"\s*:\s*"InlineBase64"/i;
+
+/**
+ * What a decoded blob is when it is data rather than hidden words: a database
+ * or KQL script, a semantic-model definition, a minisign key or signature
+ * (Tauri update keys), or the value of a `payload` an object declares as
+ * `InlineBase64`. Null otherwise. `around` is the text near the blob. Decoded
+ * text with a URL or a command in it is never data. The caller still reports a
+ * blob of this kind when the other rules flag the decoded text.
+ */
+export function benignPayloadKind(decoded: string, around: string): string | null {
+  if (MINISIGN.test(decoded)) return 'minisign key or signature';
+  if (COMMAND_LIKE.test(decoded)) return null;
+  if (SQL_START.test(decoded)) return 'SQL script';
+  if (KQL_START.test(decoded)) return 'KQL script';
+  if (TMDL_START.test(decoded)) return 'semantic model definition';
+  if (DECLARED_PAYLOAD.test(around)) return 'declared InlineBase64 payload';
+  return null;
 }

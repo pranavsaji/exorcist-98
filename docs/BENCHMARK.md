@@ -77,6 +77,9 @@ The two that remain:
 - `cline/cline`, `apps/examples/desktop-app/src-tauri/tauri.conf.json`: a minisign public key, which
   decodes to the readable words "untrusted comment: minisign public key".
   A false alarm.
+  Fixed since (m7-precision, `docs/FIELD_REPORT.md` round 3): EX-003 no longer
+  reports a minisign key or signature unless the other rules flag the text
+  inside it.
 
 "Before" is the scanner at commit `1a01d22`. Almost all of it was EX-003
 (encoded payload), which matched any 40-character run of the base64 alphabet,

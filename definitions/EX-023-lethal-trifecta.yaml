@@ -13,6 +13,12 @@ match:
   # naming the servers on each leg; critical when a server on a leg has
   # auto-approved tools.
   analysis: trifecta
+# Test and eval fixtures hold attack samples on purpose (a security scanner's
+# own tests, adversarial evals). Findings there are reported at low severity,
+# not dropped. A file an agent reads (instructions, hooks, MCP configs, .kiro,
+# .claude, .cursor) is never lowered, wherever it sits.
+low_severity_paths:
+  - "(^|/)(tests?|__tests__|__mocks__|spec|specs|fixtures?|testdata|test-data|e2e|evals?)/|[._-](test|spec)s?\\.[A-Za-z0-9]+$|_tests?\\.(rs|go|py)$"
 owasp:
   - "LLM01:2025 Prompt Injection"
   - "LLM06:2025 Excessive Agency"
