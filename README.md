@@ -2,6 +2,12 @@
 
 **The 90s antivirus, resurrected for AI coding agents.**
 
+![A screen recording of the Possession Lab rug pull: a trusted MCP tool changes its own description after approval, and the same attack plays twice. Without the Shield the agent follows the new orders and the result is "compromised". With the Shield the changed tool is hidden and the call is refused, and the result is "protected".](docs/media/rug-pull-demo.gif)
+
+*The rug pull from the [live demo](https://exorcist-98.vercel.app/?demo=rug-pull), 21 seconds: the same attack with and without the Shield, ending on "Result: protected". Open the link to run it yourself.*
+
+**Five minutes? Start with [`docs/START-HERE.md`](docs/START-HERE.md):** three live links with nothing to install, then three commands for your own machine.
+
 [![Kiroween 2026: Resurrection](https://img.shields.io/badge/Kiroween_2026-Resurrection-8a3fb0)](https://kiroween.devpost.com/)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![Used Kiro](https://img.shields.io/badge/used-Kiro-6b3fd4)](docs/HOW_KIRO.md)
@@ -40,6 +46,9 @@ New in 0.2.0:
 - **Published Kiro attacks:** rules for text hidden from people on a web page (EX-028) and for file names that give the AI orders (EX-029), plus a hook that asks a person before the agent writes to an MCP config ([`docs/INCIDENTS.md`](docs/INCIDENTS.md)).
 Around those: an on-access hook that scans a file before Kiro's agent reads it, canary traps, a team lockfile for MCP tools, a map of risky server combinations, signed definition updates, a Kiro Crew app that patrols your folders nightly, and an optional AI judge for reworded attacks.
 
+How this differs from tools that already exist: Snyk Agent Scan, Invariant Guardrails, Lakera Guard, MCPTrust, mcp-fence, Semgrep rules and GitHub secret scanning each cover part of this, and do more in places (fleet discovery, custom rules, hosted detection, signed lockfiles).
+Exorcist 98 adds a scan of the repository's own agent files, Kiro hooks and a one-patch fix. Every row, with its source: [`docs/REFERENCE.md`](docs/REFERENCE.md#how-this-differs-from-tools-that-already-exist).
+
 ## Install
 
 Only what is published today:
@@ -56,14 +65,14 @@ The repository is at 0.2.0 (the gate, the baseline and the incident rules), whic
 
 ## Built with Kiro
 
-- **Kiro IDE** wrote and implemented ten specs (requirements, design, tasks), among them the OS release, the precision work, the incident rules, the baseline and the gate. Four steering files set the security rules before any code. The repository has <!--f:specs-->20<!--/f--> specs, <!--f:steering-->10<!--/f--> steering files and <!--f:hooks-->7<!--/f--> hooks.
+- **Kiro IDE** wrote and implemented ten specs (requirements, design, tasks), among them the OS release, the precision work, the incident rules, the baseline and the gate. Four steering files set the security rules before any code. The repository has <!--f:specs-->21<!--/f--> specs, <!--f:steering-->10<!--/f--> steering files and <!--f:hooks-->7<!--/f--> hooks.
 - **Seen working in Kiro:** the Power was installed through Kiro's Powers panel, and the on-access hook was seen firing in Kiro IDE: it blocked the agent's read of a brief that quoted an injection phrase ([`docs/KIRO_LOG.md`](docs/KIRO_LOG.md)).
 - **Kiro CLI** implemented parts of six features in headless runs. **Kiro Crew** runs the [nightly patrol app](https://github.com/pranavsaji/exorcist-98-crew).
 - Not everything is Kiro's work. The dated record of what Kiro did and did not do is [`docs/KIRO_LOG.md`](docs/KIRO_LOG.md); the feature-by-feature map is [How we used Kiro](https://exorcist-98.vercel.app/how-kiro).
 
 ## Measured
 
-- <!--f:tests-->2,309<!--/f--> tests in <!--f:testFiles-->155<!--/f--> files (<!--f:propertyTests-->156<!--/f--> fast-check properties), and a <!--f:browserSteps-->44<!--/f-->-step Chrome run with an accessibility scan.
+- <!--f:tests-->2,341<!--/f--> tests in <!--f:testFiles-->157<!--/f--> files (<!--f:propertyTests-->156<!--/f--> fast-check properties), and a <!--f:browserSteps-->44<!--/f-->-step Chrome run with an accessibility scan.
 - A corpus we wrote: <!--f:benchmarkAttacksCaught-->28<!--/f--> of <!--f:benchmarkAttacks-->28<!--/f--> attacks caught, <!--f:benchmarkBenignClean-->27<!--/f--> of <!--f:benchmarkBenign-->27<!--/f--> ordinary look-alikes left alone. It shows coverage of known patterns, not real-world recall.
 - On 5 public repositories never used for tuning (about 9,500 files) the scanner raised 1 finding, and it was correct ([`docs/BENCHMARK.md`](docs/BENCHMARK.md)).
 - A field report on <!--f:fieldReport.repos-->483<!--/f--> public repositories in <!--f:fieldReport.rounds-->3<!--/f--> rounds. The first round was noisy; after the fixes, serious alerts fell from 4.0 to 0.24 per repository on a fresh set. That set had no real threats, so it shows how quiet the scanner is, not how often an alert is right ([`docs/FIELD_REPORT.md`](docs/FIELD_REPORT.md)).

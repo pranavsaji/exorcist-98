@@ -294,7 +294,7 @@ describe('GitHub Action and workflows', () => {
     // packageManager field at the same time, and refused to run.
     type Job = { steps: Array<{ uses?: string; with?: Record<string, unknown> }> };
     const ci = yaml.load(read('.github/workflows/ci.yml')) as { jobs: Record<string, Job> };
-    expect(Object.keys(ci.jobs).sort()).toEqual(['build', 'e2e', 'test']);
+    expect(Object.keys(ci.jobs).sort()).toEqual(['build', 'e2e', 'published-shape', 'test']);
     for (const [name, job] of Object.entries(ci.jobs)) {
       for (const s of job.steps) {
         if (s.uses?.startsWith('pnpm/action-setup')) expect(s.with?.['version'], name).toBeUndefined();

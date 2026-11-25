@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { SiteFooter } from '@/components/SiteFooter';
 import facts from '@/lib/facts.json';
 import { BookIcon, GhostIcon, ShieldIcon, SkullIcon } from '@/components/Icons';
 
@@ -159,6 +160,7 @@ export default function ProductPage() {
         </p>
       </Panel>
       </main>
+      <SiteFooter />
     </div>
   );
 }

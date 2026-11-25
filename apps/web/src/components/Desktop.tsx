@@ -21,6 +21,7 @@ import type { LabRequest } from './PossessionLab';
 import { FieldReport } from './FieldReport';
 import { BootScreen } from './BootScreen';
 import { GuideGhost, GUIDE_TIPS } from './GuideGhost';
+import { START_HERE_URL } from './SiteFooter';
 import { useScan } from '@/hooks/useScan';
 
 type WinId = 'scan' | 'results' | 'detail' | 'lab' | 'field' | 'about';
@@ -412,6 +413,9 @@ export function Desktop() {
                   </a>
                   <a className="font-semibold underline" href={HOW_KIRO} target="_blank" rel="noopener noreferrer">
                     How we used Kiro (opens in a new tab)
+                  </a>
+                  <a className="font-semibold underline" href={START_HERE_URL} target="_blank" rel="noopener noreferrer">
+                    Start here: five minutes (opens in a new tab)
                   </a>
                 </p>
               </div>

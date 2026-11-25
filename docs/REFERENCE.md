@@ -233,7 +233,7 @@ Before any text reaches a model, every credential-shaped value is masked at the 
 
 ## Measured, not claimed
 
-- **Tests:** <!--f:tests-->2,309<!--/f--> tests in <!--f:testFiles-->155<!--/f--> files (unit, <!--f:propertyTests-->156<!--/f--> fast-check properties and real-process tests), plus a <!--f:browserSteps-->44<!--/f-->-step Chrome run with an axe accessibility scan on every window: <!--f:browserAxeViolationTypes-->0<!--/f--> violation types.
+- **Tests:** <!--f:tests-->2,341<!--/f--> tests in <!--f:testFiles-->157<!--/f--> files (unit, <!--f:propertyTests-->156<!--/f--> fast-check properties and real-process tests), plus a <!--f:browserSteps-->44<!--/f-->-step Chrome run with an axe accessibility scan on every window: <!--f:browserAxeViolationTypes-->0<!--/f--> violation types.
 - **Labelled corpus** (`fixtures/benchmark/`): <!--f:benchmarkAttacksCaught-->28<!--/f--> of <!--f:benchmarkAttacks-->28<!--/f--> defanged attacks caught, <!--f:benchmarkBenignClean-->27<!--/f--> of <!--f:benchmarkBenign-->27<!--/f--> look-alike ordinary files left alone. We wrote this corpus, so it shows coverage of known patterns, not real-world recall.
 - **Published Kiro attacks** ([`docs/INCIDENTS.md`](INCIDENTS.md)): defanged replicas of CVE-2026-10591 (hidden web text rewrites the MCP config) and the Mindgard file-name attack are in the corpus, with the rule, Shield or hook layer that stops each and what is not covered.
 - **Held-out public repositories** ([`docs/BENCHMARK.md`](BENCHMARK.md), held-out set C): on 5 repos never used for tuning (about 9,500 files) the scanner raised 1 finding, and it is correct.
@@ -241,22 +241,32 @@ Before any text reaches a model, every credential-shaped value is masked at the 
 - **Haunted Repo:** <!--f:hauntedRepoFindings-->47<!--/f--> findings, pinned by a snapshot test.
 - **Inside Kiro:** the Shield and MCP server ran inside Kiro IDE; all <!--f:hooks-->7<!--/f--> Kiro hooks in this repository were seen firing there (the on-access hook on 2026-11-24; the `exorcist-gate` Stop hook and the MCP config write guard on 2026-11-26, Kiro 1.5.11); the Power was installed through Kiro's Powers panel; the Crew app ran inside Kiro Crew. See [`docs/KIRO_LOG.md`](KIRO_LOG.md).
 
-## How it compares to other MCP scanners
-
-Exorcist 98 is not the first tool to look at MCP servers. Open-source scanners such as Invariant Labs' **mcp-scan**, **mcp-security-guard**, **mcp-audit-scanner** and **trustmcp** already detect tool poisoning, and several pin tool descriptions by hash to catch rug pulls (mcp-scan also has a proxy mode). If you already run one of them, keep it.
-
-What Exorcist 98 adds, as far as we can tell from those projects' public documentation in November 2026:
-
-| | Exorcist 98 |
-|---|---|
-| **Checks a tool before every call** | Not only when the list is fetched: needed because agents such as Kiro cache the tool list. |
-| **The whole repository, not just MCP config** | READMEs, rules and steering files, hooks, install scripts, Powers, skills and memory files across seven agents. |
-| **Scans before the agent reads** | The on-access hook stops a poisoned file at the moment of reading, inside Kiro. |
-| **Measured false-alarm rate on repositories it was never tuned on** | Most tools publish detection counts; we publish both sides. |
-| **Disinfect, not just detect** | A patch for every safe mechanical fix, with an exact restore. |
-| **Lives where Kiro users work** | Hooks, steering, a Power, an MCP server, custom agents and a Crew app. |
-| **Runs on your machine** | The scanner and Shield send nothing anywhere. The AI layer is off unless you turn it on with your own AWS account. |
-
+## How this differs from tools that already exist
+Several tools already cover parts of this problem, and some do things Exorcist 98 does not. This table states only what each tool's own documentation says, read on 2026-11-25; the last column links the page it comes from. "Not documented" means we did not find it on that page, not that the tool lacks it. Tools change; check the source before you rely on a row.
+| Tool | What it looks at | Runs between the agent and the server | Catches a tool that changed after approval | Where it runs and what leaves your machine | Source |
+|---|---|---|---|---|---|
+| **Exorcist 98** | The files in a repository that an agent reads (READMEs, rules and steering files, hooks, MCP configs, Powers, skills), and tool descriptions in server source code | Yes: `exorcist shield` (stdio, and remote servers over HTTP) | Yes: pins each tool and checks it again before every call | Your machine. Nothing is sent unless you turn on the optional AI judge with your own AWS account | this repository: [README](../README.md), [limits](KNOWN_LIMITATIONS.md) |
+| **Snyk Agent Scan** (the `invariantlabs-ai/mcp-scan` address now serves its README) | MCP servers, tools, prompts, resources and agent skills it finds on the machine; hidden Unicode is one of its listed risks | Not documented (it describes a scan and a background scan that reports to Snyk Evo) | Not documented | Needs a Snyk token. Sends tool names, descriptions and skill content (secrets redacted) to Snyk's analysis API | [README](https://github.com/snyk/agent-scan), [issue codes](https://github.com/snyk/agent-scan/blob/main/docs/issue-codes.md) |
+| **Invariant Guardrails** (with Invariant Gateway) | Agent messages, tool calls and tool results that pass through it, against rules you write, including flows between tools | Yes: deployed as an MCP or LLM proxy | Not documented | The README shows rules running locally with the `invariant-ai` package; the Gateway's hosting terms are not documented there | [README](https://github.com/invariantlabs-ai/invariant) |
+| **Lakera Guard** (now Check Point AI Guardrails) | Content you send to its Guard API: prompts, reference documents, tool calls, tool responses and tool descriptions | No proxy documented: your gateway or app calls an API | Not documented | Cloud service or self-hosted product; needs an account | [documentation](https://docs.lakera.ai/guard) |
+| **semgrep-rules-mcp** (a community ruleset, not by Semgrep) | Source code of MCP servers and clients: tool descriptions in code, shell calls built from tool arguments, SDK settings | No (static rules) | No (static rules) | Runs locally with Semgrep Community Edition; no login | [README](https://github.com/garag0l/semgrep-rules-mcp) |
+| **GitHub secret scanning** | Credentials in git history, issues, pull requests, discussions, wikis and secret gists | No | No | On GitHub. Free on public repositories; private ones need GitHub Secret Protection | [documentation](https://docs.github.com/en/code-security/secret-scanning/introduction/about-secret-scanning) |
+| **MCPTrust** | A server's tools, prompts and resources, recorded in a lockfile | Yes: a deny-by-default proxy | Yes: blocks anything not in the lockfile, and a CI step fails on drift | Your machine (a Go program) | [README](https://github.com/mcptrust/mcptrust) |
+| **mcp-fence** | MCP messages in both directions, and a standalone scan of a file or text | Yes: stdio, SSE and Streamable HTTP | Yes: SHA-256 pins of tool descriptions, checked on `tools/list` responses | Your machine (Node.js) | [README](https://github.com/yjcho9617/mcp-fence) |
+### What Exorcist 98 adds
+- **It reads the repository, not only the server.** None of the other rows documents scanning a repository's README, rules, steering, hook and Power files for text that gives the agent orders. Snyk Agent Scan reads skills and MCP configs; mcp-fence scans one file or text you give it.
+- **It acts inside Kiro.** An on-access hook scans a file before Kiro's agent reads it, a `Stop` hook (`exorcist gate`) checks the agent's changes, and there is a Kiro Power and a Crew app. See [How we used Kiro](HOW_KIRO.md).
+- **It can fix, not only report.** `exorcist exorcise` writes one patch for every safe mechanical fix, with an exact backup in the Quarantine Vault. None of the other pages documents this.
+- **Both sides of the accuracy are published.** The [benchmark](BENCHMARK.md) counts attacks caught and look-alike files left alone, and the [field report](FIELD_REPORT.md) counts alerts on <!--f:fieldReport.repos-->483<!--/f--> public repositories. Both are small and written by us.
+### Where another tool does more
+- **Snyk Agent Scan** finds agent configs and skills across a whole machine for 14 listed agents and supports fleet monitoring through Snyk Evo. Exorcist 98 scans folders you point it at.
+- **Lakera Guard** is a hosted detection service with its own threat data, 100+ languages and content and PII checks. Exorcist 98 detects mostly by signature, so a reworded attack can get past it unless the optional AI judge is on ([limits](KNOWN_LIMITATIONS.md)).
+- **Invariant Guardrails** and **mcp-fence** let you write your own rules for flows between tools (for example, reading a file and then sending an email). Exorcist 98's Session Guard is one built-in rule of that kind, not a rule language.
+- **MCPTrust** signs lockfiles and pins and verifies the package a server runs, which Exorcist 98 does not.
+- **mcp-fence** keeps a tamper-evident audit log and supports JWT authentication; Exorcist 98 keeps a simpler alert log.
+- **semgrep-rules-mcp** finds code bugs in MCP servers that Exorcist 98 does not look for, such as tool arguments reaching a shell and missing SDK security settings.
+- **GitHub secret scanning** checks every commit in history and tells the provider so it can revoke the key. Exorcist 98 checks the files in front of the agent.
+These tools also work together: Exorcist 98 does not replace a secret scanner, a code scanner or a hosted guardrail service.
 ## Virus definitions
 
 Open YAML in [`definitions/`](../definitions/), each with severity, the files it applies to, per-rule precision controls, an OWASP mapping (LLM, Agentic or MCP Top 10) and a plain-language fix. Browse them in the app's [Threat Encyclopedia](https://exorcist-98.vercel.app/encyclopedia).

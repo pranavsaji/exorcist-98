@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { BookIcon } from './Icons';
+import { SiteFooter } from './SiteFooter';
 
 /** A static window for server-rendered pages (the Threat Encyclopedia). */
 export function RetroFrame({ title, children }: { title: string; children: ReactNode }) {
@@ -16,6 +17,7 @@ export function RetroFrame({ title, children }: { title: string; children: React
         </div>
         <div className="p-3 text-sm">{children}</div>
       </main>
+      <SiteFooter />
     </div>
   );
 }

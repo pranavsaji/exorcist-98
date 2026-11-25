@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { BookIcon, GhostIcon, ShieldIcon, SkullIcon } from '@/components/Icons';
+import { SiteFooter } from '@/components/SiteFooter';
 import {
   CHECK_COMMANDS, HOW_KIRO_INTRO, HOW_KIRO_TITLE, SURFACES, SURPRISES, USER_SETUP,
 } from '@/lib/how-kiro';
@@ -148,6 +149,7 @@ export default function HowKiroPage() {
           </pre>
         </Panel>
       </main>
+      <SiteFooter />
     </div>
   );
 }

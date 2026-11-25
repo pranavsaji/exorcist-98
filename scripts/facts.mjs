@@ -28,7 +28,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const FACTS_PATH = join(ROOT, 'docs/facts.json');
 const WEB_COPY = join(ROOT, 'apps/web/src/lib/facts.json');
 /** Documents whose numbers are written by --docs and checked by --check. */
-export const DOCS = ['README.md', 'docs/SUBMISSION.md', 'docs/KIRO_LOG.md', 'docs/VIDEO_SCRIPT.md', 'docs/KNOWN_LIMITATIONS.md', 'docs/REFERENCE.md', 'docs/BLOG.md', 'docs/SOCIAL.md', 'docs/BENCHMARK.md'];
+export const DOCS = ['README.md', 'docs/SUBMISSION.md', 'docs/KIRO_LOG.md', 'docs/VIDEO_SCRIPT.md', 'docs/KNOWN_LIMITATIONS.md', 'docs/REFERENCE.md', 'docs/BLOG.md', 'docs/SOCIAL.md', 'docs/BENCHMARK.md', 'docs/START-HERE.md'];
 const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'dist', 'e2e-output', 'out', 'coverage']);
 
 function walk(dir, keep, out = []) {
