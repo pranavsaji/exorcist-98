@@ -16,6 +16,9 @@ inputs:
   ignore:
     description: Paths to skip, one per line (prefixes relative to the scanned folder).
     default: ""
+  baseline:
+    description: Path of a .exorcist-baseline.json relative to the workspace. Only findings not in it are reported.
+    default: ""
   comment:
     description: Post (or update) a summary comment on pull requests.
     default: "true"
@@ -69,11 +72,13 @@ runs:
         EXORCIST_CLI: ${{ runner.temp }}/exorcist-cli/node_modules/@exorcist-98/cli/dist/index.mjs
         SCAN_PATH: ${{ inputs.path }}
         SCAN_IGNORE: ${{ inputs.ignore }}
+        BASELINE: ${{ inputs.baseline }}
       run: |
         args=()
         while IFS= read -r line; do
           [ -n "$line" ] && args+=(--ignore "$line")
         done <<< "$SCAN_IGNORE"
+        if [ -n "$BASELINE" ]; then args+=(--baseline "$BASELINE"); fi
         out="$RUNNER_TEMP/exorcist"
         mkdir -p "$out"
         node "$EXORCIST_CLI" scan "$SCAN_PATH" "${args[@]}" --format sarif    --output "$out/exorcist.sarif" --fail-on none
@@ -210,10 +215,12 @@ runs:
         EXORCIST_CLI: ${{ runner.temp }}/exorcist-cli/node_modules/@exorcist-98/cli/dist/index.mjs
         SCAN_PATH: ${{ inputs.path }}
         SCAN_IGNORE: ${{ inputs.ignore }}
+        BASELINE: ${{ inputs.baseline }}
         FAIL_ON: ${{ inputs.fail-on }}
       run: |
         args=()
         while IFS= read -r line; do
           [ -n "$line" ] && args+=(--ignore "$line")
         done <<< "$SCAN_IGNORE"
+        if [ -n "$BASELINE" ]; then args+=(--baseline "$BASELINE"); fi
         node "$EXORCIST_CLI" scan "$SCAN_PATH" "${args[@]}" --fail-on "$FAIL_ON"

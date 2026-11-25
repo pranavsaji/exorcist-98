@@ -442,8 +442,10 @@ base64 value is not marked `InlineBase64`.
    (`docs/KNOWN_LIMITATIONS.md`, L-050).
 2. **Tool descriptions written in source code are not checked by EX-005.**
    Descriptions that live in a TypeScript, Python or Go file, not in an MCP
-   config, are not read by `exorcist scan`. The Shield does read them, but only
-   when the server runs. **Still open** (L-051).
+   config, were not read by `exorcist scan`. The Shield reads them when the
+   server runs. **Partly fixed**: `exorcist scan` now reads the common
+   registration forms in those three languages; descriptions built at run time
+   and other languages are still not covered (L-051).
 
 ### Limits of this round
 

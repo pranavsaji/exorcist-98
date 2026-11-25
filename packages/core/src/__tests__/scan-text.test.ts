@@ -91,7 +91,17 @@ describe('toMarkdown', () => {
   const stats = { filesScanned: 3, filesSkipped: 0, findingsTotal: 0, durationMs: 1 };
 
   it('says so when nothing is found', () => {
-    expect(toMarkdown([], stats)).toContain('No threats found in 3 files');
+    const md = toMarkdown([], stats);
+    expect(md).toContain('No threats found. Scanned 3 files.');
+    expect(md).toContain('**Verdict: CLEAN.**');
+  });
+  it('counts files with findings, pluralises, and gives a verdict', () => {
+    const one = toMarkdown([finding('medium', 'EX-010', 'a.md', 1)], { ...stats, filesScanned: 1 });
+    expect(one).toContain('**1 threat** in 1 file (1 medium). Scanned 1 file.');
+    expect(one).toContain('**Verdict: HAUNTED.**');
+    const many = toMarkdown([finding('high', 'EX-001', 'a.md', 1), finding('high', 'EX-001', 'a.md', 2), finding('low', 'EX-010', 'b.md', 1)], { ...stats, filesScanned: 120 });
+    expect(many).toContain('**3 threats** in 2 files (2 high, 1 low). Scanned 120 files.');
+    expect(many).toContain('**Verdict: POSSESSED.**');
   });
 
   it('lists worst first with plain-language text and counts', () => {

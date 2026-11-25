@@ -13,3 +13,8 @@ export type { PlainEntry } from './plain.js';
 export { decodeHidden, displayMessage, truncateMessage, encodeAsTags, encodeAsVariationSelectors, decodeVsBytes, MAX_HIDDEN_RUNS, MAX_DECODED_CHARS, MAX_VS_BYTES } from './ouija.js';
 export type { HiddenMessage, HiddenMessageKind } from './ouija.js';
 export type { Finding, ScanStats, Severity, Capability, CapabilityReason, MapGhost, ConfigMap, HauntedMap } from './types.js';
+export { plural } from './plural.js';
+export { verdictFor, verdictForFindings, worstLevel } from './verdict.js';
+export type { Verdict, VerdictLevel } from './verdict.js';
+export { staleness } from './staleness.js';
+export type { Staleness } from './staleness.js';

@@ -64,6 +64,15 @@
     ],
     "lethal-trifecta-claude": [
       "EX-023"
+    ],
+    "mcp-source-poison-ts": [
+      "EX-005"
+    ],
+    "mcp-source-poison-py": [
+      "EX-005"
+    ],
+    "mcp-source-poison-go": [
+      "EX-005"
     ]
   },
   "benign": [
@@ -87,6 +96,9 @@
     "shell-env-setup",
     "defensive-rules",
     "project-scoped-mcp",
-    "claude-allow-safe"
+    "claude-allow-safe",
+    "mcp-source-hints-ts",
+    "mcp-source-hints-py",
+    "mcp-source-hints-go"
   ]
 }

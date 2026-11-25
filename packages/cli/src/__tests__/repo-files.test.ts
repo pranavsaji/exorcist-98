@@ -216,6 +216,20 @@ describe('GitHub Action and workflows', () => {
     expect(action.outputs['sarif-file']).toBeDefined();
   });
 
+  // m9-adoption REQ-1.7
+  it('baseline input defaults to empty and reaches every scan call through an env var', () => {
+    expect(action.inputs['baseline']?.default).toBe('');
+    for (const name of ['Scan', 'Fail on findings']) {
+      const s = action.runs.steps.find((x) => x.name === name) as (Step & { env?: Record<string, string> }) | undefined;
+      expect(s?.env?.['BASELINE'], name).toBe('${{ inputs.baseline }}');
+      expect(s?.run, name).toContain('if [ -n "$BASELINE" ]; then args+=(--baseline "$BASELINE"); fi');
+      const scans = (s?.run ?? '').split('\n').filter((l) => /\bscan\b/.test(l) && l.includes('EXORCIST_CLI'));
+      expect(scans.length, name).toBeGreaterThan(0);
+      for (const l of scans) expect(l, name).toContain('"${args[@]}"'); // args holds --baseline
+    }
+    for (const s of action.runs.steps) expect(s.run ?? '', s.name).not.toContain('inputs.baseline');
+  });
+
   it('every step runs something, and shell steps name their shell', () => {
     for (const s of action.runs.steps) {
       expect(Boolean(s.uses) !== Boolean(s.run), s.name ?? s.uses).toBe(true);

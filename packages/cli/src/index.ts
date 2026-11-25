@@ -1,5 +1,6 @@
 import { decideCommitGuard } from '@exorcist-98/core';
 import { approveCommand, alertsCommand } from './commands/approve.js';
+import { baselineCommand } from './commands/baseline.js';
 import { canaryCommand } from './commands/canary.js';
 import { wrapCommand } from './commands/config.js';
 import { checkStagedCommand } from './commands/check-staged.js';
@@ -26,6 +27,8 @@ Usage: exorcist <command> [options]
 
 Commands:
   scan <path>        Scan a folder or file for attacks on AI agents
+  baseline [folder]  Write .exorcist-baseline.json: the findings you accept for now,
+                     so "scan --baseline" fails on new ones only
   detonate <file>    Detonation Chamber: show what the text makes a sandboxed AI
                      with fake tools try to do (EX-024; needs AWS credentials)
   map [dir]          Draw the Haunted House Map: which MCP servers read secrets,
@@ -76,6 +79,7 @@ export async function main(argv: string[]): Promise<number> {
       stdio.out(VERSION);
       return 0;
     case 'scan':   return await scanCommand(rest, stdio);
+    case 'baseline': return await baselineCommand(rest, stdio);
     case 'map':    return await mapCommand(rest, stdio);
     case 'update': return await updateCommand(rest, stdio);
     case 'exorcise': return await exorciseCommand(rest, stdio);

@@ -189,6 +189,57 @@ describe('exorcist init --kiro', () => {
   });
 });
 
+describe('init --kiro summary (m9 6.3, 6.4)', () => {
+  const FILES = [
+    '.kiro/hooks/exorcist-secrets.json', '.kiro/hooks/exorcist-mcp-scan.json', '.kiro/hooks/exorcist-on-access.json',
+    '.kiro/steering/exorcist.md', '.kiro/agents/exorcist-reviewer.json', '.exorcist/kiro-hook.sh', '.exorcist/.gitignore', '.githooks/pre-commit',
+  ];
+  const withMcp = (d: string, servers: object): void => {
+    mkdirSync(join(d, '.kiro/settings'), { recursive: true });
+    writeFileSync(join(d, '.kiro/settings/mcp.json'), JSON.stringify({ mcpServers: servers }));
+  };
+  const entryLines = (out: string, rel: string): string[] => out.split('\n').filter((l) => /^ {2}(wrote|kept ) /.test(l) && l.endsWith(rel));
+  it('lists every written file exactly once on stdout', async () => {
+    const d = tmp();
+    const io = capture();
+    expect(await initCommand([d, '--kiro'], io)).toBe(0);
+    const out = io.outs.join('\n');
+    for (const f of FILES) {
+      expect(entryLines(out, f), f).toHaveLength(1);
+      expect(out.split('\n').filter((l) => l.startsWith('Wrote ') && l.endsWith(f)), f).toHaveLength(0);
+    }
+  });
+  it('warns, naming the server, when autoApprove has "*"; also with --shield', async () => {
+    for (const flag of ['--kiro', '--shield']) {
+      const d = tmp();
+      withMcp(d, { risky: { command: 'node', args: ['a.js'], autoApprove: ['*'] }, fine: { command: 'node', args: ['b.js'], autoApprove: ['read'] } });
+      const io = capture();
+      expect(await initCommand([d, flag], io)).toBe(0);
+      const out = io.outs.join('\n');
+      expect(out).toContain('WARNING: server "risky" has autoApprove "*"');
+      expect(out).not.toContain('server "fine"');
+      expect(out).toContain('2 servers');
+    }
+  });
+  it('does not warn for a specific tool list or without autoApprove', async () => {
+    const d = tmp();
+    withMcp(d, { a: { command: 'node', autoApprove: ['read', 'list'] }, b: { command: 'node' } });
+    const io = capture();
+    expect(await initCommand([d, '--kiro'], io)).toBe(0);
+    expect(io.all()).not.toContain('WARNING');
+  });
+  it('prints a server name with an escape sequence escaped and caps its length', async () => {
+    const d = tmp();
+    withMcp(d, { ['x\u001b[31mred' + 'y'.repeat(200)]: { command: 'node', autoApprove: ['*'] } });
+    const io = capture();
+    expect(await initCommand([d, '--kiro'], io)).toBe(0);
+    const out = io.outs.join('\n');
+    expect(out).not.toContain('\u001b');
+    expect(out).toContain('x[U+001B][31mred');
+    expect(out).toContain('...');
+    expect(out).not.toContain('y'.repeat(100));
+  });
+});
 describe('splitCommand (how --bin and --mcp-bin become a command and its arguments)', () => {
   it('splits on whitespace and groups quotes', () => {
     expect(splitCommand(DEFAULT_BIN)).toEqual(['npx', '-y', '@exorcist-98/cli@0.1.3']);

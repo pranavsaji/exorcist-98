@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { displayMessage, mapRepo } from '@exorcist-98/core';
 import type { Capability, ConfigMap, HauntedMap, SignatureFinding } from '@exorcist-98/core';
 import { findDefinitionsDir, parse, str } from '../util.js';
+import { usesCustomDefinitions, warnIfStale } from '../stale.js';
 import type { Io } from '../util.js';
 
 export const MAP_HELP = `Usage: exorcist map [dir] [options]
@@ -109,6 +110,7 @@ export async function mapCommand(argv: string[], io: Io): Promise<number> {
   const defsDir = findDefinitionsDir(str(p.values['definitions']));
   if (!defsDir) { io.err('Could not find the virus definitions. Pass --definitions <dir> or set EXORCIST_DEFINITIONS.'); return 2; }
 
+  warnIfStale(io, { custom: usesCustomDefinitions(str(p.values['definitions'])) });
   const r = await mapRepo(root, { definitionsDir: defsDir });
   if (!r.ok) { io.err(`Could not map ${target}: ${r.error}`); return 2; }
   for (const n of r.notes) io.err(`Note: ${safe(n)}`);

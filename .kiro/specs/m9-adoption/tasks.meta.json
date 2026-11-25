@@ -1,0 +1,300 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 `plural.ts`, `verdict.ts` (with web app `verdictFor` using it), `staleness.ts`; export from index; unit tests": [
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795595811668
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795595819696
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795598379024
+      }
+    ],
+    "2.1 `baseline.ts` (fingerprint, build, parse with zod, apply) with unit and fast-check tests": [
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795595811711
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795598381989
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795598597974
+      }
+    ],
+    "2.2 `suppress.ts` (directives, `applyInline`) with unit and fast-check tests, including the \"comment text is still scanned\" test": [
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795595811752
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795598382698
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795598598306
+      }
+    ],
+    "2.3 SARIF `suppressions` and JSON `suppressed` in the reporters, with tests": [
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795595811793
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795598610397
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795598757861
+      }
+    ],
+    "2.4 CLI: `runScan` shared, `--baseline`, `baseline` command, exit code from active findings, help text": [
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795595811833
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795598760673
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795599169828
+      }
+    ],
+    "2.5 GitHub Action input `baseline`, with a test that reads `action.yml`": [
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795595811876
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795599172536
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795599306166
+      }
+    ],
+    "3.1 `source-tools.ts` extractor for TS/JS, Python, Go, with unit tests and a linear-time test": [
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795595811922
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795598383535
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795598598469
+      }
+    ],
+    "3.2 Wire into the orchestrator (EX-005 only, mapped back to source positions)": [
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795595811961
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795598610461
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795598757798
+      }
+    ],
+    "3.3 Benchmark: attack and look-alike benign cases per language; update `labels.json`": [
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795595812005
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795598761367
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795599168313
+      }
+    ],
+    "3.4 Update L-051 in `docs/KNOWN_LIMITATIONS.md`": [
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795595812043
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795598762043
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795599169279
+      }
+    ],
+    "4. Stale definitions warning in `scan`, `baseline` and `map` (requirements 5.1 to 5.4), with tests": [
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795595812101
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795599318971
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795599491813
+      }
+    ],
+    "5.1 `scan` and markdown summary: files with findings, scanned count, plural, verdict line": [
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795595812142
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795599173533
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795599391034
+      }
+    ],
+    "5.2 `init`: each file once, `autoApprove: \"*\"` warning": [
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795595812173
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795599174227
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795599306245
+      }
+    ],
+    "6.1 README and CLI help; row in `docs/KIRO_LOG.md`": [
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795595812202
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795599491888
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795599606255
+      }
+    ],
+    "6.2 `pnpm -r typecheck` and `pnpm vitest run` pass from the repository root": [
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795595812251
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795599606890
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795599702548
+      }
+    ],
+    "6.3 Commit (do not push)": [
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795595812304
+      },
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795599703122
+      }
+    ],
+    "1. Shared helpers in `packages/core` (requirements 6.2, 6.5, 5.1, 5.2)": [
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795598379079
+      }
+    ],
+    "3. Tool descriptions in source (requirements 4.1 to 4.7)": [
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795599169319
+      }
+    ],
+    "2. Baseline (requirements 1.1 to 1.9)": [
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795599306197
+      }
+    ],
+    "5. CLI wording (requirements 6.1 to 6.5)": [
+      {
+        "executionId": "b732f0d7-7987-4d1f-a1d1-d104a9bd2dbd",
+        "chatSessionId": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+        "timestamp": 1795599391085
+      }
+    ]
+  }
+}
