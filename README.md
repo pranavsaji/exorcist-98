@@ -163,6 +163,8 @@ It works on a phone too:
 
 **Watch it live: `exorcist console`.** Opens a local page that shows, as they happen, every tool call the Shields of a state folder allowed, held or blocked, the rule and the reason (EX-006 rug pull, EX-022 canary, EX-027 Session Guard...), which server, and what the Session Guard has seen in each agent session (untrusted text, private data, calls waiting for your answer). Each Shield appends its decisions to `.exorcist/events.jsonl` (bounded, names and rule ids only, never arguments or results); the console tails it. It is a **read-only** view: it cannot approve or release anything, which stays with you: in `exorcist approve ...` in your own terminal, or, when the Shield uses OS release (`sessionRelease: os`, macOS), in the system prompt (Touch ID or your login password). It listens on 127.0.0.1 only, behind a random token in the URL, with a Host check and a strict CSP. Limits: [S-028](docs/KNOWN_LIMITATIONS.md).
 
+**Try it (macOS, with you at the keyboard).** `pnpm --filter @exorcist-98/cli build && node scripts/demo-touchid.mjs` makes a temporary project with a fake `.env`, starts real Shields in front of fake servers, and plays the trifecta: an issue that hides an instruction, the `.env` read, then an email to an allowed host. The email is held and the system prompt asks for Touch ID (or your login password); Cancel it to see the call refused. It prints the `exorcist console` command to watch it live, and refuses to run in tests, in CI or off macOS.
+
 <img src="docs/media/shield-console-desktop.png" alt="The Shield console: tool calls allowed, held and blocked with rule ids, and an armed Session Guard holding a Slack message after a GitHub issue and a .env read" width="800">
 
 ## In your editor and your CI

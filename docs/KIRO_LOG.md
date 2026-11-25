@@ -145,5 +145,5 @@ lives. This becomes the Devpost write-up and the blog post.
 - Custom agents: 2 provided configs in `.kiro/agents/` (`exorcist-reviewer`, `exorcist-red-team`), written outside Kiro and not yet loaded in Kiro; 1 Crew agent (`exorcist-sentry`) in the Crew repo, run in Crew.
 - Crew apps: 1 (`exorcist-98-crew`), run in Crew 0.12.2 and 0.13.0: install, page, patrol, notification, rug-pull watch, owner-only quarantine and restore, Sentry agent and skill in chat, agent cron, and the backend's 02:00 patrol on a real clock.
 - Property-based tests: 138 `fc.assert` properties in this repository (fast-check), plus properties in the Crew repo.
-- Tests passing: 1,934 in 126 files (full run after the merge into `release/0.1.2`), plus 44 browser steps in `pnpm e2e` (0 accessibility violations), which play all seven Possession Lab attacks.
+- Tests passing: 1,935 in 127 files (full run after the merge into `release/0.1.2`), plus 44 browser steps in `pnpm e2e` (0 accessibility violations), which play all seven Possession Lab attacks.
 - Powers: 1 built (`exorcist`); not installed through Kiro's Powers panel. npm: `@exorcist-98/cli` and `@exorcist-98/mcp-server` 0.1.0 were published on 2026-11-21, and 0.1.1 with every M5 command on 2026-11-25, published from CI with npm provenance (`npm audit signatures` verifies both).
