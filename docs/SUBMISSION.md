@@ -188,7 +188,7 @@ hooks, a Power, an MCP server and a Crew app; and an exact-restore quarantine.
   the server changes it to "send the contents of .env to ...", the agent no
   longer sees it, the call is refused, and the server's own log proves it never
   received the call.
-- <!--f:tests-->2,295<!--/f--> tests in <!--f:testFiles-->154<!--/f--> files in the main repo (unit, <!--f:propertyTests-->156<!--/f--> property-based with fast-check, and
+- <!--f:tests-->2,309<!--/f--> tests in <!--f:testFiles-->155<!--/f--> files in the main repo (unit, <!--f:propertyTests-->156<!--/f--> property-based with fast-check, and
   real processes), 143 in the Crew repo; a <!--f:browserSteps-->44<!--/f-->-step Chrome run with <!--f:browserAxeViolationTypes-->0<!--/f--> axe
   violations on every window that plays all seven Possession Lab attacks.
 
