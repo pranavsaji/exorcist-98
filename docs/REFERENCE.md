@@ -35,7 +35,7 @@ Attackers hide instructions in invisible Unicode, HTML comments, base64 blobs or
 
 | | What it does | Where |
 |---|---|---|
-| **Scan** | <!--f:definitions-->25<!--/f--> open YAML virus definitions plus code checks across the files seven coding agents read. Every finding shows the file, line, the exact text, an infection level (text and shape, never colour alone), the threat class and a plain-language fix. | web app, `exorcist scan`, GitHub Action, MCP server |
+| **Scan** | <!--f:definitions-->27<!--/f--> open YAML virus definitions plus code checks across the files seven coding agents read. Every finding shows the file, line, the exact text, an infection level (text and shape, never colour alone), the threat class and a plain-language fix. | web app, `exorcist scan`, GitHub Action, MCP server |
 | **Shield** | An MCP firewall between the agent and each MCP server: pins every tool, re-checks it before every call, hides tools that change, blocks secrets, unknown hosts and canary tokens in tool calls, withholds attack-like tool results, and holds data going out once a session has read untrusted text and private data (EX-027). | `exorcist shield` / `wrap` |
 | **Disinfect** | One patch for every threat with a safe mechanical fix (hidden characters, smuggled comments, remote images, unpinned MCP packages), with an exact backup in the Quarantine Vault. | "Download exorcism patch", `exorcist exorcise` |
 
@@ -125,7 +125,7 @@ npx @exorcist-98/cli init --kiro          # hooks, steering, the hook PATH wrapp
 npx @exorcist-98/cli init --kiro --shield # also run every local MCP server through the Shield
 ```
 
-This writes Kiro hooks that block `git commit` while secrets or canary tokens are staged, scan an MCP config the moment it is saved, scan a file before the agent reads it, ask a person before the agent writes to an MCP config (`mcp-config-write-guard`), and (a `Stop` hook running `exorcist gate`) fail when the agent's turn ends with a high or critical finding added to a steering, spec, hook, agent or MCP file since the last commit; steering that tells the agent how to treat tool output; and an `exorcist-reviewer` custom agent that may only use the read-only tools of the Exorcist MCP server. Start an agent from `.kiro/agents/` (`exorcist-reviewer`, or `exorcist-red-team` in this repository) by trusting the workspace and picking it in the chat header's agent picker in Kiro IDE, or with `kiro-cli chat --agent exorcist-reviewer`. The gate hook is written disabled until the published CLI includes `gate`; run `exorcist gate` by hand any time.
+This writes Kiro hooks that block `git commit` while secrets or canary tokens are staged, scan an MCP config the moment it is saved, scan a file before the agent reads it, ask a person before the agent writes to an MCP config (`mcp-config-write-guard`), and (a `Stop` hook running `exorcist gate`) fail when the agent's turn ends with a high or critical finding added to a steering, spec, hook, agent or MCP file since the last commit; steering that tells the agent how to treat tool output; and an `exorcist-reviewer` custom agent that may only use the read-only tools of the Exorcist MCP server. Start an agent from `.kiro/agents/` (`exorcist-reviewer`, or `exorcist-red-team` in this repository) by trusting the workspace and picking it in the chat header's agent picker in Kiro IDE, or with `kiro-cli chat --agent exorcist-reviewer`. You can also run `exorcist gate` by hand at any time.
 
 **Editor extension: Exorcist 98 for Kiro** ([`packages/vscode`](../packages/vscode/README.md), works in VS Code too):
 
@@ -200,7 +200,7 @@ jobs:
 | `update [--status]` | Install signed (Ed25519) definition updates, verified on download and on every load |
 | `detonate <file>` | The Detonation Chamber (experimental, needs AWS) |
 
-The published npm version is `@exorcist-98/cli@0.1.2`. The repository is at 0.1.3 (the Power start-folder fix), which is not published yet.
+The published npm version is `@exorcist-98/cli@0.1.2`, and 0.1.3 (the Power start-folder fix) is being published. The repository is at 0.2.0, which is not published yet; `baseline`, `scan --baseline`, `gate` and `guard-mcp-write` are new in 0.2.0.
 ### Adopting on an existing repo
 You do not have to fix everything first. Record what is there today, then fail only on what is new:
 ```sh
@@ -233,8 +233,8 @@ Before any text reaches a model, every credential-shaped value is masked at the 
 
 ## Measured, not claimed
 
-- **Tests:** <!--f:tests-->2,042<!--/f--> tests in <!--f:testFiles-->137<!--/f--> files (unit, <!--f:propertyTests-->139<!--/f--> fast-check properties and real-process tests), plus a <!--f:browserSteps-->44<!--/f-->-step Chrome run with an axe accessibility scan on every window: <!--f:browserAxeViolationTypes-->0<!--/f--> violation types.
-- **Labelled corpus** (`fixtures/benchmark/`): <!--f:benchmarkAttacksCaught-->21<!--/f--> of <!--f:benchmarkAttacks-->21<!--/f--> defanged attacks caught, <!--f:benchmarkBenignClean-->21<!--/f--> of <!--f:benchmarkBenign-->21<!--/f--> look-alike ordinary files left alone. We wrote this corpus, so it shows coverage of known patterns, not real-world recall.
+- **Tests:** <!--f:tests-->2,295<!--/f--> tests in <!--f:testFiles-->154<!--/f--> files (unit, <!--f:propertyTests-->156<!--/f--> fast-check properties and real-process tests), plus a <!--f:browserSteps-->44<!--/f-->-step Chrome run with an axe accessibility scan on every window: <!--f:browserAxeViolationTypes-->0<!--/f--> violation types.
+- **Labelled corpus** (`fixtures/benchmark/`): <!--f:benchmarkAttacksCaught-->28<!--/f--> of <!--f:benchmarkAttacks-->28<!--/f--> defanged attacks caught, <!--f:benchmarkBenignClean-->27<!--/f--> of <!--f:benchmarkBenign-->27<!--/f--> look-alike ordinary files left alone. We wrote this corpus, so it shows coverage of known patterns, not real-world recall.
 - **Published Kiro attacks** ([`docs/INCIDENTS.md`](INCIDENTS.md)): defanged replicas of CVE-2026-10591 (hidden web text rewrites the MCP config) and the Mindgard file-name attack are in the corpus, with the rule, Shield or hook layer that stops each and what is not covered.
 - **Held-out public repositories** ([`docs/BENCHMARK.md`](BENCHMARK.md), held-out set C): on 5 repos never used for tuning (about 9,500 files) the scanner raised 1 finding, and it is correct.
 - **Field report** ([`docs/FIELD_REPORT.md`](FIELD_REPORT.md)): <!--f:fieldReport.repos-->483<!--/f--> public repositories in <!--f:fieldReport.rounds-->3<!--/f--> rounds; serious alerts from 4.0 to 0.24 per repository after the fixes (round 1 to round 2). Round 2 contained no real threats, so it shows how quiet the scanner is, not how often an alert is right.
@@ -316,7 +316,7 @@ Releases and the repository itself:
 
 ## How we used Kiro
 
-Milestones M0 to M4, the OS release (m6) and the precision work (m7) were specified spec by spec in **Kiro IDE**: seven specs written by Kiro IDE (requirements, design, tasks), four steering files that every change followed, property-based tests for the requirements, and hooks on file save and before commits. **Kiro CLI** implemented parts of six M5 features in headless runs, one git worktree per feature, until the account's monthly usage limit. The **Kiro Crew** app was built for Crew and run inside it.
+Milestones M0 to M4, the OS release (m6), the precision work (m7), the incident rules (m8), adoption (m9) and the gate (m10) were specified spec by spec in **Kiro IDE**: ten specs written and implemented by Kiro IDE (requirements, design, tasks), four steering files that every change followed, property-based tests for the requirements, and hooks on file save and before commits. **Kiro CLI** implemented parts of six M5 features in headless runs, one git worktree per feature, until the account's monthly usage limit. The **Kiro Crew** app was built for Crew and run inside it.
 
 Kiro surprised us more than once, and each surprise made the product better: Kiro caches the MCP tool list (so the Shield now re-checks every call), Kiro runs hook commands with a PATH that has no Node (so every hook now finds Node first), and Kiro Crew's task runner reported "8/8 tasks passed" from an empty sandbox.
 

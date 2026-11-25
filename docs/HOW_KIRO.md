@@ -10,7 +10,7 @@ Milestones M0 to M4 were specified and built spec by spec in Kiro IDE, as `docs/
 
 | Feature | Kiro product | Status |
 | --- | --- | --- |
-| [Specs](#specs) | Kiro IDE | Used for M0 to M4 and m6-os-release; the M5 specs are in Kiro's spec format |
+| [Specs](#specs) | Kiro IDE | Ten specs written and implemented with Kiro IDE (M0 to M4, m6 to m10); the M5 specs are in Kiro's spec format |
 | [Steering](#steering) | Kiro IDE | Four files written with Kiro IDE |
 | [Hooks](#hooks) | Kiro IDE | Used to build it; shipped to users by exorcist init |
 | [MCP](#mcp) | Kiro IDE | Run inside Kiro; shipped to users |
@@ -24,14 +24,14 @@ Milestones M0 to M4 were specified and built spec by spec in Kiro IDE, as `docs/
 
 ## Specs
 
-**Kiro IDE.** Used for M0 to M4 and m6-os-release; the M5 specs are in Kiro's spec format.
+**Kiro IDE.** Ten specs written and implemented with Kiro IDE (M0 to M4, m6 to m10); the M5 specs are in Kiro's spec format.
 
 **What we did**
 
 - One spec per milestone, each with `requirements.md`, `design.md` and `tasks.md`: `m0-foundation`, `m1-engine`, `m2-ui`, `m3-shield`, `m4-polish`. The `tech.md` steering asks for every requirement to map to at least one test, and property-based tests are numbered per spec (PBT-SEC, PBT-SHD, PBT-WEB...).
 - When the engine needed accuracy fixes, they went into `m1-engine` as REQ-10 and TASK-13 instead of a new spec, keeping one spec per milestone.
 - The ten M5 specs (`.kiro/specs/m5-*`) are in Kiro's spec format. Kiro did not write them; Kiro CLI implemented parts of six of the features (see Kiro CLI). Each `NOTES.md` records where the build departed from the spec and why (for example, on-access allowances moved out of the repository because a repo could ship its own allow list).
-- A sixth spec written and implemented with the Kiro IDE agent: `m6-os-release` (OS-verified release for the Session Guard with Touch ID).
+- Five more specs written and implemented with the Kiro IDE agent: `m6-os-release` (OS-verified release for the Session Guard with Touch ID), `m7-precision`, `m8-incidents` (the published Kiro attacks), `m9-adoption` (baseline and suppressions) and `m10-kiro-gate` (the gate and its Stop hook). That makes ten Kiro IDE specs.
 - One more spec in the Crew repository: `crew-app`.
 
 **Files**
@@ -83,7 +83,8 @@ Milestones M0 to M4 were specified and built spec by spec in Kiro IDE, as `docs/
 - `mcp-config-change` (PostFileSave on MCP config files): scanned a saved `.cursor/mcp.json` in Kiro and reported EX-005.
 - `definition-save` (PostFileSave on `definitions/*.yaml`): ran the core tests in Kiro after a definition was saved.
 - `on-access-scan` (PreToolUse on read tools, M5): blocks a read of a file that hides instructions for the AI (exit code 2) and tells the user how to allow it once. Tested with Kiro's PATH and the real event shape; not yet recorded firing inside Kiro.
-- `exorcist-gate` (Stop, m10-kiro-gate): when the agent finishes its turn, `exorcist gate` checks the steering, spec, hook, agent and MCP files it changed against the last commit, and exits 1 with a short plain-language list if the change adds a high or critical finding (findings already in the last commit are ignored). Kiro sends the failing command's stderr to the agent. Read-only, no network, about half a second here. Tested with Kiro's PATH and a real Stop event shape; not yet recorded firing inside Kiro. `exorcist init --kiro` writes it, disabled while the published CLI has no `gate` command.
+- `exorcist-gate` (Stop, m10-kiro-gate): when the agent finishes its turn, `exorcist gate` checks the steering, spec, hook, agent and MCP files it changed against the last commit, and exits 1 with a short plain-language list if the change adds a high or critical finding (findings already in the last commit are ignored). Kiro sends the failing command's stderr to the agent. Read-only, no network, about half a second here. Tested with Kiro's PATH and a real Stop event shape; not yet recorded firing inside Kiro. `exorcist init --kiro` writes it, enabled from 0.2.0 (under 0.1.3, which has no `gate` command, it was written disabled).
+- `mcp-config-write-guard` (PreToolUse on write and shell tools, m8-incidents): asks a person before the agent writes to an MCP config, the step of the published CVE-2026-10591 attack, and blocks the write (exit code 2) when nobody confirms. Tested with Kiro's PATH and the real event shape; not yet recorded firing inside Kiro. `exorcist init --kiro` writes it as `exorcist-mcp-write-guard.json`.
 - Every command hook runs through `scripts/kiro-hook.sh`, which finds Node first (see "Where Kiro surprised us"). Tests run the hooks the way Kiro does: minimal PATH, the event on stdin.
 
 **Files**
@@ -94,6 +95,7 @@ Milestones M0 to M4 were specified and built spec by spec in Kiro IDE, as `docs/
 - `.kiro/hooks/definition-save.json`
 - `.kiro/hooks/on-access-scan.json`
 - `.kiro/hooks/exorcist-gate.json`
+- `.kiro/hooks/mcp-config-write-guard.json`
 - `scripts/kiro-hook.sh`
 - `packages/cli/src/__tests__/kiro-hook.test.ts`
 
@@ -138,8 +140,8 @@ Milestones M0 to M4 were specified and built spec by spec in Kiro IDE, as `docs/
 
 **What we did**
 
-- The `exorcist` Power in the Agent Plugins layout that kiro.dev/docs/powers documents: `plugin.json` (manifest and activation keywords), `mcp.json` (the MCP server, pinned to `@exorcist-98/mcp-server@0.1.2`) and three skills: scan a repo, set up the Shield, quarantine.
-- The npm packages it points at are published (`@exorcist-98/cli` and `@exorcist-98/mcp-server`: 0.1.0 on 2026-11-21, 0.1.1 with every M5 command on 2026-11-25, 0.1.2 on 2026-11-25, all published from CI with npm provenance (`npm audit signatures` verifies both); the registry, Marketplace and Powers listings are prepared but not submitted). Installing the Power through Kiro's Powers panel has not been done yet.
+- The `exorcist` Power in the Agent Plugins layout that kiro.dev/docs/powers documents: `plugin.json` (manifest and activation keywords), `mcp.json` (the MCP server, pinned to `@exorcist-98/mcp-server@0.2.0`, the version of this release) and three skills: scan a repo, set up the Shield, quarantine.
+- The npm packages it points at are published (`@exorcist-98/cli` and `@exorcist-98/mcp-server`: 0.1.0 on 2026-11-21, 0.1.1 with every M5 command on 2026-11-25, 0.1.2 on 2026-11-25, all published from CI with npm provenance (`npm audit signatures` verifies both); 0.1.3 is being published and 0.2.0, which the Power now pins, is not published yet; the registry, Marketplace and Powers listings are prepared but not submitted). The Power was installed through Kiro's Powers panel on 2026-11-24 from the repository URL (see `docs/KIRO_LOG.md`).
 
 **Files**
 

@@ -30,7 +30,7 @@ Two plain-words terms used below:
 
 | | What it does | Where |
 |---|---|---|
-| **Scan** | <!--f:definitions-->25<!--/f--> open YAML virus definitions find hidden Unicode, instructions aimed at the AI, poisoned tool descriptions, remote code in hooks and more, in the files seven coding agents read. Every finding shows the file, line, the exact quoted text, a severity in words, the threat class and a fix. | web app, `exorcist scan`, GitHub Action, MCP server |
+| **Scan** | <!--f:definitions-->27<!--/f--> open YAML virus definitions find hidden Unicode, instructions aimed at the AI, poisoned tool descriptions, remote code in hooks and more, in the files seven coding agents read. Every finding shows the file, line, the exact quoted text, a severity in words, the threat class and a fix. | web app, `exorcist scan`, GitHub Action, MCP server |
 | **Shield** | A firewall between the agent and each MCP server. It pins every tool and re-checks it before every call, hides a tool that changed, blocks secrets and canary tokens in tool calls, withholds attack-like tool results, and holds data going out once a session has read untrusted text and private data (the Session Guard). | `exorcist shield` / `wrap` |
 | **Disinfect** | One patch for every safe mechanical fix, with an exact backup in the Quarantine Vault. | `exorcist exorcise` |
 
@@ -52,19 +52,19 @@ Only what is published today:
 | GitHub Action | this repository | `uses: pranavsaji/exorcist-98@main` |
 | Kiro Power | this repository, [`power/`](power) | Powers panel, *Add Custom Power*, *Import power from a repository URL*: `https://github.com/pranavsaji/exorcist-98/tree/main/power` |
 
-The repository is at 0.1.3 (a Power fix); npm still has 0.1.2. Kiro setup in one command: `npx @exorcist-98/cli init --kiro`.
+The repository is at 0.2.0 (the gate, the baseline and the incident rules), which is not on npm yet; npm has 0.1.2, and 0.1.3 (a Power fix) is being published. Kiro setup in one command: `npx @exorcist-98/cli init --kiro`.
 
 ## Built with Kiro
 
-- **Kiro IDE** wrote and implemented seven specs (requirements, design, tasks), among them the OS release and the precision work. Four steering files set the security rules before any code. The repository has <!--f:specs-->17<!--/f--> specs, <!--f:steering-->10<!--/f--> steering files and <!--f:hooks-->5<!--/f--> hooks.
+- **Kiro IDE** wrote and implemented ten specs (requirements, design, tasks), among them the OS release, the precision work, the incident rules, the baseline and the gate. Four steering files set the security rules before any code. The repository has <!--f:specs-->20<!--/f--> specs, <!--f:steering-->10<!--/f--> steering files and <!--f:hooks-->7<!--/f--> hooks.
 - **Seen working in Kiro:** the Power was installed through Kiro's Powers panel, and the on-access hook was seen firing in Kiro IDE: it blocked the agent's read of a brief that quoted an injection phrase ([`docs/KIRO_LOG.md`](docs/KIRO_LOG.md)).
 - **Kiro CLI** implemented parts of six features in headless runs. **Kiro Crew** runs the [nightly patrol app](https://github.com/pranavsaji/exorcist-98-crew).
 - Not everything is Kiro's work. The dated record of what Kiro did and did not do is [`docs/KIRO_LOG.md`](docs/KIRO_LOG.md); the feature-by-feature map is [How we used Kiro](https://exorcist-98.vercel.app/how-kiro).
 
 ## Measured
 
-- <!--f:tests-->2,042<!--/f--> tests in <!--f:testFiles-->137<!--/f--> files (<!--f:propertyTests-->139<!--/f--> fast-check properties), and a <!--f:browserSteps-->44<!--/f-->-step Chrome run with an accessibility scan.
-- A corpus we wrote: <!--f:benchmarkAttacksCaught-->21<!--/f--> of <!--f:benchmarkAttacks-->21<!--/f--> attacks caught, <!--f:benchmarkBenignClean-->21<!--/f--> of <!--f:benchmarkBenign-->21<!--/f--> ordinary look-alikes left alone. It shows coverage of known patterns, not real-world recall.
+- <!--f:tests-->2,295<!--/f--> tests in <!--f:testFiles-->154<!--/f--> files (<!--f:propertyTests-->156<!--/f--> fast-check properties), and a <!--f:browserSteps-->44<!--/f-->-step Chrome run with an accessibility scan.
+- A corpus we wrote: <!--f:benchmarkAttacksCaught-->28<!--/f--> of <!--f:benchmarkAttacks-->28<!--/f--> attacks caught, <!--f:benchmarkBenignClean-->27<!--/f--> of <!--f:benchmarkBenign-->27<!--/f--> ordinary look-alikes left alone. It shows coverage of known patterns, not real-world recall.
 - On 5 public repositories never used for tuning (about 9,500 files) the scanner raised 1 finding, and it was correct ([`docs/BENCHMARK.md`](docs/BENCHMARK.md)).
 - A field report on <!--f:fieldReport.repos-->483<!--/f--> public repositories in <!--f:fieldReport.rounds-->3<!--/f--> rounds. The first round was noisy; after the fixes, serious alerts fell from 4.0 to 0.24 per repository on a fresh set. That set had no real threats, so it shows how quiet the scanner is, not how often an alert is right ([`docs/FIELD_REPORT.md`](docs/FIELD_REPORT.md)).
 

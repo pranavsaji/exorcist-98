@@ -147,8 +147,8 @@ git and editors change them. The tests build them from code points.
   now 24 attacks and 24 look-alikes, all caught or left alone. We wrote it, so it
   shows coverage of known patterns, not real-world recall.
 - **Hook and init.** `.kiro/hooks/mcp-config-write-guard.json`, and
-  `exorcist init --kiro` writes `exorcist-mcp-write-guard.json` (disabled under
-  the default command, which lacks `guard-mcp-write`).
+  `exorcist init --kiro` writes `exorcist-mcp-write-guard.json` (written disabled
+  under the 0.1.3 default command, which lacked `guard-mcp-write`; on from 0.2.0).
 - **Possession Lab.** An eighth attack, `hidden-web-text`.
 
 ## Traceability: requirement to test
@@ -179,7 +179,7 @@ the item was checked by reading.
 | 4.4 | `guard-mcp-write.test.ts`, `ignores other files and non-events`; `allows other writes, other events and unparseable input without asking` |
 | 4.5 | `guard-mcp-write.test.ts`, `a click on Allow confirms: exit 0, file named, content never shown`; `Deny blocks with exit 2 and a message that never quotes the content` |
 | 4.6 | `packages/cli/src/__tests__/repo-files.test.ts`, `the MCP config write guard runs before write and shell tools, with a timeout above the dialog's`; `kiro-hook.test.ts`, `every command hook in this repo goes through it, never a bare pnpm, npx or node` |
-| 4.7 | `packages/cli/src/__tests__/init-kiro.test.ts`, `the MCP write guard is written disabled under the default command, enabled under a local --bin` |
+| 4.7 | `packages/cli/src/__tests__/init-kiro.test.ts`, `the MCP write guard is on under the default command and under a local --bin` (in 0.1.3 it was written disabled; 0.2.0 has the command) |
 | 4.8 | `guard-mcp-write.test.ts`, "decideMcpWrite: shell write forms" (`sees: <command>` for each form; `leaves reads and unrelated writes alone`) |
 | 4.9 | `guard-mcp-write.test.ts` (every test uses fake dependencies: dialog, terminal and clock) |
 | 5.1, 5.2, 5.3 | `packages/core/src/__tests__/benchmark.test.ts`, `attack <name> is caught by ...` and `benign <name> produces no findings` for the six new cases and all earlier ones |
