@@ -295,7 +295,7 @@ Several tools already cover parts of this problem, and some do things Exorcist 9
 - **Lakera Guard** is a hosted detection service with its own threat data, 100+ languages and content and PII checks. Exorcist 98 detects mostly by signature, so a reworded attack can get past it unless the optional AI judge is on ([limits](KNOWN_LIMITATIONS.md)).
 - **Invariant Guardrails** and **mcp-fence** let you write your own rules for flows between tools (for example, reading a file and then sending an email). Exorcist 98's Session Guard is one built-in rule of that kind, not a rule language.
 - **MCPTrust** signs lockfiles and pins and verifies the package a server runs, which Exorcist 98 does not.
-- **mcp-fence** keeps a tamper-evident audit log and supports JWT authentication; Exorcist 98 keeps a simpler alert log.
+- **mcp-fence** supports JWT authentication, which Exorcist 98 does not. Both keep a tamper-evident log: Exorcist 98 hash-chains the Shield log and checks it with `exorcist verify-log` ([S-031](KNOWN_LIMITATIONS.md) says what that does not prove).
 - **semgrep-rules-mcp** finds code bugs in MCP servers that Exorcist 98 does not look for, such as tool arguments reaching a shell and missing SDK security settings.
 - **GitHub secret scanning** checks every commit in history and tells the provider so it can revoke the key. Exorcist 98 checks the files in front of the agent.
 These tools also work together: Exorcist 98 does not replace a secret scanner, a code scanner or a hosted guardrail service.
