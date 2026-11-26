@@ -1,7 +1,7 @@
 {
   "note": "Written by scripts/facts.mjs. Do not edit by hand. Test and browser numbers come from the last run given to the script (--run-tests, --tests, --e2e); everything else is counted from the repository.",
-  "tests": 2420,
-  "testFiles": 166,
+  "tests": 2560,
+  "testFiles": 181,
   "benchmarkAttacksCaught": 28,
   "benchmarkBenignClean": 27,
   "browserSteps": 45,

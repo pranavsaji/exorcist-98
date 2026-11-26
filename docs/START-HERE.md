@@ -25,7 +25,7 @@ Each row can be run, and each has an expected result. "Web" rows use the live si
 | Rug pull (real processes) | `node scripts/demo-rug-pull.mjs` | Pins the tool, sees its description change, hides it, refuses the call | The tool list loses `read_note`; a critical EX-006 alert with a diff; "calls received by the real server: 1 (only the first one)" |
 | Lethal Trifecta (web) | the third link above | Tracks one session across three servers | The outgoing message is held, with EX-027 named |
 | The published packages work | `node scripts/published-shape.mjs` | Packs the CLI and the MCP server, installs the tarballs in an empty folder and checks them | Six `PASS` lines and "The published shape works." |
-| The whole test suite | `pnpm vitest run` | Runs every test, including the checks above | <!--f:tests-->2,420<!--/f--> tests pass |
+| The whole test suite | `pnpm vitest run` | Runs every test, including the checks above | <!--f:tests-->2,560<!--/f--> tests pass |
 If your shell sets `PYTHONSTARTUP`, the Shield refuses to start the demo server (EX-025, a program-loader variable). Unset it for that run.
 ## Where to look for each judging question
 | Question | Where to look |
