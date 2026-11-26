@@ -1,0 +1,4 @@
+{
+  "editor.formatOnSave": true,
+  "kiroAgent.trustedCommands": ["git status", "pnpm test"]
+}

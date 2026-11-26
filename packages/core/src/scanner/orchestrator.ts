@@ -6,6 +6,7 @@ import type { Canary } from '../canary.js';
 import type { VirusDefinition } from '../definitions/schema.js';
 import { walkPaths, walkRepo } from '../walker.js';
 import { languageOf, scanSourceTools } from '../source-tools.js';
+import { sandboxFindings } from '../sandbox-policy.js';
 import { checkPathSegment } from '../path-names.js';
 import { normalize } from '../normalizer.js';
 import { runSignatures } from './signature-engine.js';
@@ -203,7 +204,7 @@ export async function* scanRepo(
 
       // .go, .tsx and .mts files have role 'unknown' in the walker, so both roles qualify.
       const sourceTools = (file.role === 'code' || file.role === 'unknown') && languageOf(file.rel) !== null ? scanSourceTools(file, text, defs) : [];
-      let deduped = deduplicate([...sigs, ...heurs, ...traps, ...sourceTools]);
+      let deduped = deduplicate([...sigs, ...heurs, ...traps, ...sandboxFindings(text, file.rel), ...sourceTools]);
       if (checkVault && deduped.length > 0 && file.rel.includes('.exorcist/vault/')) {
         const backup = checkVault(file.rel, await readFile(file.path));
         if (backup) deduped = deduped.map((f) => asBackupFinding(f, backup));

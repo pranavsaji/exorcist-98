@@ -35,7 +35,7 @@ Attackers hide instructions in invisible Unicode, HTML comments, base64 blobs or
 
 | | What it does | Where |
 |---|---|---|
-| **Scan** | <!--f:definitions-->27<!--/f--> open YAML virus definitions plus code checks across the files seven coding agents read. Every finding shows the file, line, the exact text, an infection level (text and shape, never colour alone), the threat class and a plain-language fix. | web app, `exorcist scan`, GitHub Action, MCP server |
+| **Scan** | <!--f:definitions-->33<!--/f--> open YAML virus definitions plus code checks across the files seven coding agents read. Every finding shows the file, line, the exact text, an infection level (text and shape, never colour alone), the threat class and a plain-language fix. | web app, `exorcist scan`, GitHub Action, MCP server |
 | **Shield** | An MCP firewall between the agent and each MCP server: pins every tool, re-checks it before every call, hides tools that change, blocks secrets, unknown hosts and canary tokens in tool calls, withholds attack-like tool results, and holds data going out once a session has read untrusted text and private data (EX-027). | `exorcist shield` / `wrap` |
 | **Disinfect** | One patch for every threat with a safe mechanical fix (hidden characters, smuggled comments, remote images, unpinned MCP packages), with an exact backup in the Quarantine Vault. | "Download exorcism patch", `exorcist exorcise` |
 
@@ -217,7 +217,9 @@ jobs:
 | `scan <path>` | Scan a folder or file (`--format text|json|sarif|markdown|badge`, `--fail-on`, `--ai`, `--baseline <file>`) |
 | `baseline [folder]` | Write `.exorcist-baseline.json`: the findings you accept for now |
 | `gate [folder] [--dir <state folder>]` | Fail if the changes since the last commit add a high or critical finding to a steering, spec, hook, agent or MCP file (read-only; run by the Kiro `Stop` hook). Also prints the Shield event log's head hash when the state folder has one; `--dir` picks that folder |
-| `guard-mcp-write` | Hook helper: a person must confirm any agent write to an MCP config |
+| `guard-mcp-write` | Hook helper: a person must confirm any agent write to an MCP config, to trusted commands in `.vscode/settings.json`, or to `.kiro/hooks/` and `.kiro/agents/` |
+| `guard-web-fetch` | Hook helper: block a web fetch whose address holds a secret, canary token or `.env` value |
+| `guard-env-write` | Hook helper: block writing a `.env` value into any other file |
 | `exorcise [path]` | Disinfect: print a patch for every safe mechanical fix; `--write` applies it with a vault backup |
 | `map [dir]` | Draw the Haunted House Map (EX-023) |
 | `origin [dir]` | Trace each threat to the commit and author that introduced it |
@@ -227,12 +229,12 @@ jobs:
 | `console` | Open the live, read-only Shield console in your browser (new in 0.1.2) |
 | `approve`, `alerts`, `vault` | Approve changed tools, hosts or servers, or a session the Session Guard holds (EX-027); read alerts (the last line is the event log's head hash); quarantine and restore |
 | `verify-log [--dir] [--expect <hash\|seq:hash>] [--json]` | Check that the Shield's event log was not changed, cut short or reordered. Exit 0 intact or not chained, 1 broken (or not chained with `--expect`), 2 usage error. See "A log that shows if it was edited" above |
-| `init [--kiro] [--shield]` | Wire a Kiro project |
+| `init [--kiro] [--shield] [--sandbox]` | Wire a Kiro project; `--sandbox` also writes `.kiro/settings/sandbox.json` (sandbox on, network blocked, MCP sandboxing on) |
 | `on-access`, `allow-read` | The on-access hook and its person-only allowance |
 | `update [--status]` | Install signed (Ed25519) definition updates, verified on download and on every load |
 | `detonate <file>` | The Detonation Chamber (experimental, needs AWS) |
 
-The published npm version is `@exorcist-98/cli@0.1.2`, and 0.1.3 (the Power start-folder fix) is being published. The repository is at 0.2.0, which is not published yet; `baseline`, `scan --baseline`, `gate` and `guard-mcp-write` are new in 0.2.0.
+The published npm version is `@exorcist-98/cli@0.1.2`, and 0.1.3 (the Power start-folder fix) is being published. The repository is at 0.2.0, which is not published yet; `baseline`, `scan --baseline`, `gate`, `guard-mcp-write`, `guard-web-fetch`, `guard-env-write` and `init --sandbox` are new in 0.2.0. Under the published 0.2.0 CLI, `init --kiro` writes the two new hooks disabled, because that CLI lacks the commands.
 ### Adopting on an existing repo
 You do not have to fix everything first. Record what is there today, then fail only on what is new:
 ```sh
@@ -265,13 +267,13 @@ Before any text reaches a model, every credential-shaped value is masked at the 
 
 ## Measured, not claimed
 
-- **Tests:** <!--f:tests-->2,571<!--/f--> tests in <!--f:testFiles-->181<!--/f--> files (unit, <!--f:propertyTests-->202<!--/f--> fast-check properties and real-process tests), plus a <!--f:browserSteps-->45<!--/f-->-step Chrome run with an axe accessibility scan on every window: <!--f:browserAxeViolationTypes-->0<!--/f--> violation types.
-- **Labelled corpus** (`fixtures/benchmark/`): <!--f:benchmarkAttacksCaught-->28<!--/f--> of <!--f:benchmarkAttacks-->28<!--/f--> defanged attacks caught, <!--f:benchmarkBenignClean-->27<!--/f--> of <!--f:benchmarkBenign-->27<!--/f--> look-alike ordinary files left alone. We wrote this corpus, so it shows coverage of known patterns, not real-world recall.
+- **Tests:** <!--f:tests-->2,472<!--/f--> tests in <!--f:testFiles-->166<!--/f--> files (unit, <!--f:propertyTests-->212<!--/f--> fast-check properties and real-process tests), plus a <!--f:browserSteps-->44<!--/f-->-step Chrome run with an axe accessibility scan on every window: <!--f:browserAxeViolationTypes-->0<!--/f--> violation types.
+- **Labelled corpus** (`fixtures/benchmark/`): <!--f:benchmarkAttacksCaught-->38<!--/f--> of <!--f:benchmarkAttacks-->38<!--/f--> defanged attacks caught, <!--f:benchmarkBenignClean-->37<!--/f--> of <!--f:benchmarkBenign-->37<!--/f--> look-alike ordinary files left alone. We wrote this corpus, so it shows coverage of known patterns, not real-world recall.
 - **Published Kiro attacks** ([`docs/INCIDENTS.md`](INCIDENTS.md)): defanged replicas of CVE-2026-10591 (hidden web text rewrites the MCP config) and the Mindgard file-name attack are in the corpus, with the rule, Shield or hook layer that stops each and what is not covered.
 - **Held-out public repositories** ([`docs/BENCHMARK.md`](BENCHMARK.md), held-out set C): on 5 repos never used for tuning (about 9,500 files) the scanner raised 1 finding, and it is correct.
 - **Field report** ([`docs/FIELD_REPORT.md`](FIELD_REPORT.md)): <!--f:fieldReport.repos-->483<!--/f--> public repositories in <!--f:fieldReport.rounds-->3<!--/f--> rounds; serious alerts from 4.0 to 0.24 per repository after the fixes (round 1 to round 2). Round 2 contained no real threats, so it shows how quiet the scanner is, not how often an alert is right.
 - **Haunted Repo:** <!--f:hauntedRepoFindings-->47<!--/f--> findings, pinned by a snapshot test.
-- **Inside Kiro:** the Shield and MCP server ran inside Kiro IDE; all <!--f:hooks-->10<!--/f--> Kiro hooks in this repository were seen firing there (the on-access hook on 2026-11-24; the `exorcist-gate` Stop hook and the MCP config write guard on 2026-11-26, Kiro 1.5.11); the Power was installed through Kiro's Powers panel; the Crew app ran inside Kiro Crew. See [`docs/KIRO_LOG.md`](KIRO_LOG.md).
+- **Inside Kiro:** the Shield and MCP server ran inside Kiro IDE; of the <!--f:hooks-->12<!--/f--> Kiro hooks in this repository, nine were seen firing there (the on-access hook on 2026-11-24; the `exorcist-gate` Stop hook and the MCP config write guard on 2026-11-26, Kiro 1.5.11). The three newest, `spec-trace`, `guard-web-fetch` and `guard-env-write`, are covered by tests but have not yet been seen firing in Kiro. The Power was installed through Kiro's Powers panel; the Crew app ran inside Kiro Crew. See [`docs/KIRO_LOG.md`](KIRO_LOG.md).
 
 ## How this differs from tools that already exist
 Several tools already cover parts of this problem, and some do things Exorcist 98 does not. This table states only what each tool's own documentation says, read on 2026-11-25; the last column links the page it comes from. "Not documented" means we did not find it on that page, not that the tool lacks it. Tools change; check the source before you rely on a row.
@@ -331,8 +333,14 @@ Open YAML in [`definitions/`](../definitions/), each with severity, the files it
 | EX-025 | An MCP server's environment changes how its program loads (`NODE_OPTIONS`, `LD_PRELOAD`…) | high |
 | EX-026 | An agent file too large to check (never skipped in silence) | medium |
 | EX-027 | Lethal trifecta completed in a live session: after untrusted text and private data, data going out is held (the Shield's Session Guard) | critical |
-| EX-028 | Hidden text that instructs the AI (white, tiny, `display:none`, off-screen) | high |
+| EX-028 | Hidden text, `<meta>` tags or image alt text that instruct the AI (white, tiny, `display:none`, off-screen) | high |
 | EX-029 | File or folder name that instructs the AI, or hides characters | high |
+| EX-030 | Instructions to change the agent's own settings or guard files | high |
+| EX-031 | Instructions to weaken tests or checks | high |
+| EX-032 | Instructions to push or publish somewhere else | high |
+| EX-033 | Settings that let the agent run any command without asking (Kiro `kiroAgent.trustedCommands`, Claude Code `permissions.allow`, Cursor `.cursor/cli.json`) | critical |
+| EX-034 | Copilot `chat.tools.terminal.autoApprove` map that trusts every command | critical |
+| EX-035 | Info: a committed `.kiro/settings/sandbox.json` turns MCP sandboxing off (reported at low, because there is no info level) | low |
 
 ## How Exorcist 98 protects itself
 

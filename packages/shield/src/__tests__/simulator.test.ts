@@ -83,7 +83,7 @@ describe('Possession Lab simulator (real ShieldEngine)', () => {
   });
 
   it('the lethal trifecta: each step alone passes, and EX-027 holds the call that closes the loop', () => {
-    expect(SCENARIO_IDS).toHaveLength(8);
+    expect(SCENARIO_IDS).toHaveLength(9);
     expect(listScenarios().find((s) => s.id === 'trifecta')?.title).toBe('The Lethal Trifecta');
     const r = runScenario('trifecta', defs, rules);
     // Unprotected: three servers, and the base64 .env (two fake keys) reached team chat.
@@ -142,6 +142,23 @@ describe('Possession Lab simulator (real ShieldEngine)', () => {
     expect(r.shielded.verdict).toMatch(/^Nothing leaked and no attack reached your AI/);
   });
 
+  it('CT-19: settings tamper: the wildcard is written without the Shield, and EX-030 withholds the file with it', () => {
+    expect(listScenarios().find((s) => s.id === 'settings-tamper')?.title).toBe('The Settings Tamper');
+    const r = runScenario('settings-tamper', defs, rules);
+    expect(r.unshielded.poisonReachedAgent).toBe(true);
+    expect(r.unshielded.serverReceived.map((c) => c.tool)).toEqual(['read_file', 'write_file']);
+    const written = JSON.stringify(r.unshielded.serverReceived[1]!.args);
+    expect(written).toContain('.vscode/settings.json');
+    expect(written).toContain('kiroAgent.trustedCommands');
+    expect(r.unshielded.verdict).toBe('The agent made every command trusted, so nothing asks you any more.');
+    expect(r.shielded.poisonReachedAgent).toBe(false);
+    expect(r.shielded.alerts).toBeGreaterThan(0);
+    const ev = r.steps[1]!.shielded.find((e) => e.actor === 'shield' && e.ruleId === 'EX-030');
+    expect(ev?.severity).toBe('high');
+    expect(r.shielded.serverReceived.map((c) => c.tool)).toEqual(['read_file']);
+    expect(r.shielded.verdict).toMatch(/^Nothing leaked and no attack reached your AI/);
+    expect(JSON.stringify(r)).not.toMatch(/https?:\/\/(?![^"]*\.invalid)/);
+  });
   it('is deterministic', () => {
     for (const id of SCENARIO_IDS) expect(JSON.stringify(runScenario(id, defs, rules))).toBe(JSON.stringify(runScenario(id, defs, rules)));
   });

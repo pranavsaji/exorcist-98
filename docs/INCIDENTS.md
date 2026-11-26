@@ -1,7 +1,8 @@
 # Published attacks on Kiro, and what Exorcist 98 does about them
 
-Two disclosed incidents were used as the target of spec `m8-incidents`
-(`.kiro/specs/m8-incidents/`). Both are fixed in Kiro itself. This page is about
+Three disclosed incidents are covered here. The first two were the target of spec
+`m8-incidents` (`.kiro/specs/m8-incidents/`); the third was added by
+`m11-config-tamper`. All three are fixed in Kiro itself. This page is about
 what happens if someone copies the idea against your project, and which layer
 of Exorcist 98 would stop it. The samples in `fixtures/benchmark/` are defanged
 replicas written for this repository (`example.invalid` hosts, fake secrets).
@@ -92,6 +93,53 @@ incident.
 
 Names containing hidden characters are not committed in the fixture, because
 git and editors change them. The tests build them from code points.
+
+## Incident 3: 2025 Kiro launch, a poisoned file widens the agent's trusted commands
+
+**What happened.** On the day Kiro was released, July 15, 2025, the researcher
+who publishes as wunderwuzzi (Johann Rehberger, Embrace The Red) reported that
+Kiro could be hijacked by text in a file it was asked to read. The demo hid the
+orders in a comment in a C source file. Kiro wrote to files without asking, so
+the note could make it edit `.vscode/settings.json` and put a wildcard into the
+`kiroAgent.trustedCommands` list. From then on any shell command ran without a
+prompt, and the demo opened the Calculator app. A second path in the same post
+added an attacker's server to `.kiro/settings/mcp.json`. The post says AWS fixed
+both by August 5, 2025 (reported fixed in Kiro 0.1.42) and that no CVE was
+issued.
+Primary source: Embrace The Red, "AWS Kiro: Arbitrary Code Execution via
+Indirect Prompt Injection", published August 26, 2025 (page metadata):
+<https://embracethered.com/blog/posts/2025/aws-kiro-aribtrary-command-execution-with-indirect-prompt-injection/>
+
+**Vendor record.** AWS published security bulletin AWS-2025-019 on October 7,
+2025. It names this post, says the issue needed local access to plant the
+instructions, and says Kiro 0.1.42 (released August 1, 2025) asks for human
+confirmation for these actions in Supervised mode. The bulletin gives no CVE.
+Source: <https://aws.amazon.com/security/security-bulletins/AWS-2025-019/>
+
+**What we checked and did not use.** An earlier note pointed at Kiro GitHub
+issue 7733. We looked it up: it is a closed feature request from April 2026 about
+regular expressions for trusted commands. It does not describe this incident, so
+it is not cited. We did not find a Kiro changelog page for 0.1.42 that we could
+read, so the fix version rests on the post and the AWS bulletin above.
+
+**What stops a copy.** This is the same idea as Incident 1, aimed at a different
+setting: the agent is talked into loosening its own approval rules.
+
+| Layer | What it does | Rule or file |
+|---|---|---|
+| Scanner | Reports text that tells an agent to change its trusted-commands or auto-approve setting, or to edit hook, agent or steering files. | EX-030, `definitions/EX-030-settings-tamper-instruction.yaml` |
+| Scanner | Reports a committed settings file whose trusted-commands list holds a wildcard or a bare shell name. | EX-033, `definitions/EX-033-trusts-all-commands.yaml` |
+| Hook | A Kiro `PreToolUse` hook asks a person before an agent write that adds or widens a trusted command in `.vscode/settings.json`, or that touches `.kiro/hooks/` or `.kiro/agents/`. With nobody to ask, the write is blocked. | `.kiro/hooks/mcp-config-write-guard.json`, `exorcist guard-mcp-write` |
+| Shield | Withholds the poisoned file before the agent reads it. | EX-030 |
+
+**Tests and demos.** Benchmark replica `fixtures/benchmark/attacks/settings-tamper-docs`
+(EX-030), plus the wildcard settings cases `claude-allow-bash-wildcard`,
+`cursor-shell-wildcard` and `trusted-commands-wildcard` (EX-033, the last one
+is the Kiro `.vscode/settings.json` form), each with a look-alike that stays quiet
+(`settings-docs-for-people`, `claude-allow-safe`, `cursor-shell-narrow`,
+`trusted-commands-narrow`).
+Possession Lab attack 9, "The Settings Tamper" (`?demo=settings-tamper`), shows
+the Shield layer. It does not run the hook and does not show Kiro's fix.
 
 ## What is not covered
 

@@ -72,3 +72,20 @@ describe('benchmark case names are confined to fixtures/benchmark', () => {
     for (const n of labels.benign) expect(() => caseDir('benign', n)).not.toThrow();
   });
 });
+
+describe('CT-20: config-tamper cases are paired and counted', () => {
+  const readme = readFileSync(join(BENCH, 'README.md'), 'utf8').replace(/\s+/g, ' ');
+  it('CT-20: the README states the number of attack and benign cases in labels.json', () => {
+    const m = /corpus has (\d+) attacks and (\d+) look-alikes/.exec(readme);
+    expect(m?.[1]).toBe(String(Object.keys(labels.attacks).length));
+    expect(m?.[2]).toBe(String(labels.benign.length));
+  });
+  it('CT-20: every rule of m11 has an attack case, and its benign look-alikes are listed', () => {
+    const covered = new Set(Object.values(labels.attacks).flat());
+    for (const id of ['EX-028', 'EX-030', 'EX-031', 'EX-032', 'EX-033', 'EX-034', 'EX-035']) expect([...covered], id).toContain(id);
+    expect(Object.keys(labels.attacks)).toContain('trusted-commands-wildcard');
+    for (const n of ['cursor-shell-narrow', 'copilot-autoapprove-narrow', 'settings-docs-for-people', 'weaken-tests-ordinary-code', 'ci-or-true', 'release-process-docs', 'ordinary-meta-tags', 'descriptive-alt-text', 'sandbox-mcp-on', 'trusted-commands-narrow']) {
+      expect(labels.benign, n).toContain(n);
+    }
+  });
+});

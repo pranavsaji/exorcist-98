@@ -1,0 +1,24 @@
+id: EX-034
+title: Copilot terminal auto-approve map that trusts every command
+severity: critical
+applies_to:
+  - config
+  - mcp-config
+match:
+  # VS Code's chat.tools.terminal.autoApprove is a map from a command pattern to
+  # true (run without asking) or false (ask), or to { "approve": true }. A key
+  # that matches every command, or a bare shell, set to true trusts everything.
+  # Source: https://code.visualstudio.com/docs/agents/run/approvals
+  # This is a map, so the finding quotes the key (json_path ends in ~), and it
+  # cannot share a path with the list forms of EX-033.
+  json_path: "$..[?(@property==='chat.tools.terminal.autoApprove')][?(@ === true || (@ && @.approve === true))]~"
+  value_regex: '^\s*(?:\*+|/\^?\.[*+]\$?/|\.\*|(?:sh|bash|zsh|fish|dash|ksh|cmd|powershell|pwsh|node|python[0-9.]*|perl|ruby|php|eval|exec|sudo|env|xargs|ssh|curl|wget|nc|npx)(?:\s+\*+)?|/\^?\(?(?:sh|bash|zsh)\b[^/]*/)\s*$'
+  file_regex: 'chat\.tools\.terminal\.autoApprove'
+owasp:
+  - "ASI02 Inadequate Human-in-the-Loop Controls"
+  - "ASI05 Unexpected Code Execution"
+  - "LLM06:2025 Excessive Agency"
+fix: >
+  Remove the pattern that matches every command from chat.tools.terminal.autoApprove,
+  or set it to false. Trust only specific commands such as "git status", and put
+  that setting in your user settings, not in a file committed to the repository.

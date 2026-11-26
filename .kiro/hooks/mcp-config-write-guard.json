@@ -3,7 +3,7 @@
   "hooks": [
     {
       "name": "mcp-config-write-guard",
-      "description": "A person must confirm any agent write to an MCP config (.kiro/settings/mcp.json, in a project or in the home folder). On macOS a native dialog asks, elsewhere a code typed on the terminal. Exit code 2 blocks the write. The dialog never shows what the agent wanted to write. Runs through scripts/kiro-hook.sh because Kiro gives hook commands a PATH without Node.",
+      "description": "A person must confirm any agent write to an MCP config (.kiro/settings/mcp.json, in a project or in the home folder), any change that adds a trusted command in .vscode/settings.json, and any change to a file in .kiro/hooks/ or .kiro/agents/. On macOS a native dialog asks, elsewhere a code typed on the terminal. Exit code 2 blocks the write. The dialog never shows what the agent wanted to write. Runs through scripts/kiro-hook.sh because Kiro gives hook commands a PATH without Node.",
       "trigger": "PreToolUse",
       "matcher": "write|shell",
       "action": {

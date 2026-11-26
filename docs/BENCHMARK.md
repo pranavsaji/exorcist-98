@@ -150,14 +150,14 @@ Every false alarm fixed for held-out sets A and B is now a case in
 
 ## Labelled attack corpus (missed attacks)
 
-Today `fixtures/benchmark/` holds <!--f:benchmarkAttacks-->28<!--/f--> defanged attacks and <!--f:benchmarkBenign-->27<!--/f--> ordinary files that
+Today `fixtures/benchmark/` holds <!--f:benchmarkAttacks-->38<!--/f--> defanged attacks and <!--f:benchmarkBenign-->37<!--/f--> ordinary files that
 look like attacks to a naive scanner. `packages/core/src/__tests__/benchmark.test.ts`
 runs them on every test run.
 
 | | Cases | Result |
 |---|---:|---|
-| Attacks caught | <!--f:benchmarkAttacks-->28<!--/f--> | <!--f:benchmarkAttacksCaught-->28<!--/f--> caught |
-| Ordinary files with no findings | <!--f:benchmarkBenign-->27<!--/f--> | <!--f:benchmarkBenignClean-->27<!--/f--> clean |
+| Attacks caught | <!--f:benchmarkAttacks-->38<!--/f--> | <!--f:benchmarkAttacksCaught-->38<!--/f--> caught |
+| Ordinary files with no findings | <!--f:benchmarkBenign-->37<!--/f--> | <!--f:benchmarkBenignClean-->37<!--/f--> clean |
 
 The attacks include five that the scanner missed before the precision work of 2026-11-20:
 - a Cursor rules file (`.cursor/rules/*.mdc`) whose instruction is split by a

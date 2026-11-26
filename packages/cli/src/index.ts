@@ -9,6 +9,8 @@ import { exorciseCommand } from './commands/exorcise.js';
 import { detonateCommand } from './commands/detonate.js';
 import { gateCommand } from './commands/gate.js';
 import { GUARD_MCP_WRITE_HELP, guardMcpWriteCommand } from './commands/guard-mcp-write.js';
+import { GUARD_ENV_WRITE_HELP, guardEnvWriteCommand } from './commands/guard-env-write.js';
+import { GUARD_WEB_FETCH_HELP, guardWebFetchCommand } from './commands/guard-web-fetch.js';
 import { hookScanCommand } from './commands/hook-scan.js';
 import { initCommand } from './commands/init.js';
 import { lockCommand } from './commands/lock.js';
@@ -60,6 +62,8 @@ Commands:
   gate [dir]         Fail if this session's changes to agent files add a high or critical
                      finding (read-only; run by the Kiro Stop hook)
   guard-mcp-write    Hook helper: a person must confirm any agent write to an MCP config
+  guard-web-fetch    Hook helper: block a web fetch whose address holds a secret, canary or .env value
+  guard-env-write    Hook helper: block writing a .env value into any other file
   guard-commit       Hook helper: block git commit while secrets are staged
   hook-scan          Hook helper: scan the file named in a Kiro "file saved" event
   check-staged       Git pre-commit helper: exit 1 if staged files contain secrets or canary tokens
@@ -111,6 +115,12 @@ export async function main(argv: string[]): Promise<number> {
     case 'guard-mcp-write':
       if (rest.includes('--help') || rest.includes('-h')) { stdio.out(GUARD_MCP_WRITE_HELP); return 0; }
       return await guardMcpWriteCommand(await readStdin(), stdio);
+    case 'guard-web-fetch':
+      if (rest.includes('--help') || rest.includes('-h')) { stdio.out(GUARD_WEB_FETCH_HELP); return 0; }
+      return guardWebFetchCommand(await readStdin(), stdio);
+    case 'guard-env-write':
+      if (rest.includes('--help') || rest.includes('-h')) { stdio.out(GUARD_ENV_WRITE_HELP); return 0; }
+      return guardEnvWriteCommand(await readStdin(), stdio);
     case 'check-staged': return await checkStagedCommand(stdio);
     case 'guard-commit': {
       const d = decideCommitGuard(await readStdin());

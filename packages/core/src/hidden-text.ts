@@ -5,7 +5,8 @@
  */
 
 export type HidingMethod =
-  | 'colour' | 'font-size' | 'display-none' | 'visibility-hidden' | 'opacity-zero' | 'off-screen' | 'zero-box';
+  | 'colour' | 'font-size' | 'display-none' | 'visibility-hidden' | 'opacity-zero' | 'off-screen' | 'zero-box'
+  | 'meta-tag' | 'alt-text';
 
 export type HiddenText = {
   /** Offset of the element's opening tag in the scanned text. */
@@ -113,8 +114,68 @@ function plainElementText(html: string): string {
   return html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/\s+/g, ' ').trim();
 }
 
-/** Every hidden element in `text` whose own text addresses the AI or asks for an action. */
+// ── m11 (CT-11, CT-12): meta tags and alt text ─────────────────────────────
+const AI_META_NAME = /^(?:ai|llm|assistant|gpt|chatgpt|claude|kiro|copilot|agent|ai-agent|bot-instructions)(?:[-_:.][a-z0-9_.:-]*)?$/i;
+const META_TAG = /<meta\b[^<>]*>/gi;
+const IMG_TAG = /<img\b[^<>]*>/gi;
+const MD_IMAGE = /!\[([^\]\n]{1,500})\]\(/g;
+const AI_WORD = '(?:AI|assistants?|agents?|llms?|language\\s+models?|kiro|claude|copilot|chatgpt|gemini|cursor)';
+// Alt text that talks to the AI directly ("Assistant, ...", "If you are an AI ...").
+const ALT_ADDRESS = new RegExp(
+  `(?:^|[.!?]\\s+)(?:hey\\s+|dear\\s+|attention\\s+)?${AI_WORD}\\s*[,:]|\\b(?:if\\s+you\\s+are|you\\s+are\\s+an?|note\\s+to|message\\s+for|instructions?\\s+for|attention)\\b[^.\\n]{0,30}\\b${AI_WORD}\\b`,
+  'i',
+);
+
+function attr(tag: string, name: string): string | null {
+  const m = new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, 'i').exec(tag);
+  return m ? (m[1] ?? m[2] ?? '') : null;
+}
+
+function altInstructs(alt: string): boolean {
+  const t = alt.replace(/\s+/g, ' ').trim();
+  return t.length > 0 && (ALT_ADDRESS.test(t) || OVERRIDE.test(t) || ACTION.test(t));
+}
+
+/** `<meta name="ai-instructions" content="...">`: a name aimed at a model and a content that addresses the AI. Visibility does not matter. */
+export function metaTagFindings(text: string): HiddenText[] {
+  const out: HiddenText[] = [];
+  META_TAG.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = META_TAG.exec(text)) !== null) {
+    const name = attr(m[0], 'name');
+    const content = attr(m[0], 'content');
+    if (name === null || content === null || !AI_META_NAME.test(name.trim())) continue;
+    const body = content.replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/\s+/g, ' ').trim();
+    if (!addressesAi(body)) continue;
+    out.push({ index: m.index, length: m[0].length, method: 'meta-tag', text: body });
+  }
+  return out;
+}
+
+/** `<img alt="...">` or `![alt](...)` whose alt text instructs the AI. Plain descriptions stay quiet. */
+export function altTextFindings(text: string): HiddenText[] {
+  const out: HiddenText[] = [];
+  let m: RegExpExecArray | null;
+  IMG_TAG.lastIndex = 0;
+  while ((m = IMG_TAG.exec(text)) !== null) {
+    const alt = attr(m[0], 'alt');
+    if (alt !== null && altInstructs(alt)) out.push({ index: m.index, length: m[0].length, method: 'alt-text', text: alt.replace(/\s+/g, ' ').trim() });
+  }
+  MD_IMAGE.lastIndex = 0;
+  while ((m = MD_IMAGE.exec(text)) !== null) {
+    const alt = m[1] as string;
+    if (altInstructs(alt)) out.push({ index: m.index, length: m[0].length, method: 'alt-text', text: alt.replace(/\s+/g, ' ').trim() });
+  }
+  return out;
+}
+
+/** Every hidden element in `text` whose own text addresses the AI or asks for an action, plus AI-aimed meta tags and instructing alt text. */
 export function findHiddenText(text: string): HiddenText[] {
+  const all = [...findHiddenElements(text), ...metaTagFindings(text), ...altTextFindings(text)];
+  return all.sort((a, b) => a.index - b.index);
+}
+
+function findHiddenElements(text: string): HiddenText[] {
   const out: HiddenText[] = [];
   OPEN_TAG.lastIndex = 0;
   let lastEnd = -1;

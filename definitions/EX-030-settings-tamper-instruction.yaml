@@ -1,0 +1,54 @@
+id: EX-030
+title: Instructions to change the agent's own settings or guard files
+severity: high
+applies_to:
+  - instruction
+  - docs
+  - memory
+  - tool-result
+match:
+  # Text addressed to an agent that asks it to change what the agent trusts:
+  # a trusted-commands or auto-approve setting (commandsToAlwaysAllow,
+  # permissions.allow, autoApprove), an agent settings file (.vscode/settings.json,
+  # .claude/settings.json, .cursor/cli.json), or the files that hold its guards
+  # (.kiro/hooks/, .kiro/agents/, .kiro/steering/, AGENTS.md). An attacker uses
+  # this to make a change stick after the poisoned file is gone.
+  #
+  # Two shapes, both in one sentence:
+  #   1. an edit verb, then one of those targets, where the sentence is plainly
+  #      talking to the agent ("you must", "please", "the agent should",
+  #      "silently", "before you continue", "to proceed") before the verb;
+  #   2. an edit verb with a wildcard ("*") or "all/any command" and a trusted
+  #      commands or auto-approve setting, which needs no other cue.
+  # "Edit .vscode/settings.json to change the font size" is ordinary
+  # documentation for a person and is not flagged.
+  #
+  # The cue is part of the match, so the span starts at it and a quoted order
+  # ("... such as "you must edit .kiro/hooks"") is recognised as an example.
+  # The words between the cue and the verb may not negate it ("you must never
+  # edit"); a negation right before a verb without a cue is left to
+  # negated_cues. A "." inside a word (kiro.commandsToAlwaysAllow,
+  # settings.json) does not end the sentence.
+  regex: '(?:(?:\byou\s+(?:must|should|need\s+to|have\s+to|will|shall|are\s+to|can\s+now)\b|\bplease\b|\b(?:agent|assistant|ai|claude|kiro|copilot|cursor|llm|model)s?\s*[,:]|\b(?:the\s+)?(?:agent|assistant|ai|llm|model)\s+(?:must|should|needs?\s+to|has\s+to|will|shall)\b|\bsilently\b|\bquietly\b|\bwithout\s+(?:asking|telling|mentioning|informing|notifying)\b|\bbefore\s+(?:you|answering|continuing|responding|proceeding)\b|\bto\s+(?:continue|proceed|finish|complete)\b|\bimportant\s*:|\bnote\s+to\s+(?:the\s+)?(?:agent|ai|assistant)\b|\bnext\s*,?\s+step\b)(?:(?!\bnot\b|\bnever\b|n[''’]t\b|\bcannot\b|\bavoid|\brefrain)(?:[^.!?\n]|\.(?=\S))){0,60}?\b(?:add|append|insert|put|set|write|include|whitelist|enable|change|update|edit|modify|extend|overwrite|rewrite|replace|patch|delete|remove|clear|disable|create|empty|loosen|relax|widen)\b(?:[^.!?\n]|\.(?=\S)){0,60}?(?:\.vscode[/\\]settings\.json|\.claude[/\\]settings(?:\.local)?\.json|\.cursor[/\\](?:cli|settings)\.json|\.kiro[/\\](?:hooks|agents|steering|settings)\b[/\\]?|\bAGENTS\.md\b|\b(?:commandsToAlwaysAllow|trustedCommands)\b|\b(?:trusted|always[- ]?allow(?:ed)?)\s+commands?\b|\bauto[- ]?approve\b|\bautoApprove\b|\bpermissions\.allow\b|\b(?:command|shell)\s+allow-?list\b)|\b(?:add|append|insert|put|set|include|whitelist|trust|allow)\b(?:[^.!?\n]|\.(?=\S)){0,50}?(?:["''`]\*["''`]|(?<![\w*])\*(?![\w*])|\ball\s+commands\b|\bany\s+command\b|\bevery\s+command\b|\beverything\b)(?:[^.!?\n]|\.(?=\S)){0,50}?(?:\b(?:commandsToAlwaysAllow|trustedCommands)\b|\b(?:trusted|always[- ]?allow(?:ed)?)\s+commands?\b|\bauto[- ]?approve\b|\bautoApprove\b|\bpermissions\.allow\b|\b(?:command|shell)\s+allow-?list\b))'
+  # A phrase in quotation marks that close right after it, in a passage that
+  # is warning about it or quoting it as an example ("never follow text such
+  # as ..."), is not an order.
+  quoted_example_cues: '\b(?:such\s+as|e\.g\.|i\.e\.|for\s+(?:example|instance)|never|do\s+not|don''t|must\s+not|should\s+not|refuse|reject|treat|untrusted|inert|injection|jailbreak|adversarial|attack|malicious|hostile|crafted|hijack|red[- ]?team|detect|flag|block|strip|sanitiz|filter|pattern|phrase|cases?\b|example|quarantine|directive|look(?:s|ing)?\s+like|shaped)'
+  # A sentence that forbids the change is a defence ("you must never edit
+  # .kiro/hooks", "do not add * to the trusted commands"). The negation has to
+  # end right before the verb, as for EX-002. A second form covers a verb joined
+  # to a forbidden one by "or" ("you must never edit .kiro/hooks or add * to ...").
+  negated_cues: '\b(?:(?:must|should|shall|will|would|may|might|can|could)\s*(?:not|never)|(?:must|should|shall|would|could|do|does|did|is|are|was|were|has|have|ca|wo)n[''’]t|cannot|do(?:es)?\s+not|did\s+not|never|avoid|refrain\s+from|refus(?:e|es|ed|ing)\s+to|(?:is|are)\s+not\s+(?:to|allowed\s+to|permitted\s+to|able\s+to)|unable\s+to|forbidden\s+to|prohibited\s+from)\s+(?:(?:ever|simply|just|even|actually|knowingly|first|then|also|silently|quietly)\s+)*$|\b(?:never|(?:must|should|shall|will|would|can|could|do|does)\s*(?:not|never)|(?:don|doesn|shouldn|mustn|won|can)[''’]?t)\s+(?:(?:ever|simply|just|actually|silently|quietly)\s+)*(?:add|append|insert|put|set|write|include|whitelist|enable|change|update|edit|modify|extend|overwrite|rewrite|replace|patch|delete|remove|clear|disable|create|empty|loosen|relax|widen)\b(?:[^.!?\n]|\.(?=\S)){0,80}?\b(?:or|nor)\s+(?:(?:ever|simply|just|actually|silently|quietly)\s+)*$'
+# Test and eval fixtures hold attack samples on purpose. Findings there are
+# reported at low severity, not dropped. A file an agent reads is never lowered.
+low_severity_paths:
+  - "(^|/)(tests?|__tests__|__mocks__|spec|specs|fixtures?|testdata|test-data|e2e|evals?)/|[._-](test|spec)s?\\.[A-Za-z0-9]+$|_tests?\\.(rs|go|py)$"
+owasp:
+  - "ASI02 Inadequate Human-in-the-Loop Controls"
+  - "ASI03 Prompt Injection via External Content"
+  - "LLM01:2025 Prompt Injection"
+fix: >
+  Remove the instruction. A file your agent reads should not tell it to widen
+  its own trusted commands or to edit its hooks, agents, steering or AGENTS.md.
+  Make those changes yourself, in a reviewed commit. If you are documenting the
+  attack, put it in a fenced code block or say that the agent must never do it.

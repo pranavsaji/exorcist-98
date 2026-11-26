@@ -1,0 +1,30 @@
+id: EX-033
+title: Settings that let the agent run any command without asking
+severity: critical
+applies_to:
+  - config
+  - mcp-config
+match:
+  # A committed settings file whose trusted-commands list holds a wildcard or a
+  # bare shell or interpreter name. Settings names, from each tool's own docs
+  # (sources in .kiro/specs/m11-config-tamper/design.md):
+  #   Kiro IDE (0.x)   kiroAgent.trustedCommands (VS Code settings.json), prefix match
+  #   Claude Code      permissions.allow: "Bash" or "Bash(*)" allow every shell command
+  #   Cursor CLI       permissions.allow in .cursor/cli.json: "Shell(*)"
+  # The file may carry comments and trailing commas (VS Code settings are JSON
+  # with comments). The Copilot form, a map of patterns to true, is EX-034.
+  # EX-007 cannot hold this: it is high, and this one is critical, and its
+  # value_regex is tuned to tool names, not to command patterns.
+  json_path: "$..[?(@property==='kiroAgent.trustedCommands' || (@property==='allow' && @parentProperty==='permissions'))][*]"
+  value_regex: '^\s*(?:(?:\*+|\.\*|\^?\.[*+]\$?)|(?:sh|bash|zsh|fish|dash|ksh|csh|tcsh|cmd|powershell|pwsh|node|nodejs|deno|bun|python[0-9.]*|perl|ruby|php|lua|eval|exec|sudo|env|xargs|ssh|curl|wget|nc|ncat|npx|bunx|pnpx|uvx)(?:\s+\*+)?|(?:Bash|Shell|PowerShell)(?:\(\s*(?:\*+|:\*|(?:sh|bash|zsh|fish|dash|ksh|cmd|powershell|pwsh|node|python[0-9.]*|perl|ruby|php|eval|exec|sudo|env|xargs|ssh|curl|wget|nc|npx)(?:\s*:?\s*\*+)?)?\s*\))?)\s*$'
+  # Only files that name one of those settings are looked at (generic config files).
+  file_regex: 'kiroAgent\.trustedCommands|"permissions"'
+owasp:
+  - "ASI02 Inadequate Human-in-the-Loop Controls"
+  - "ASI05 Unexpected Code Execution"
+  - "LLM06:2025 Excessive Agency"
+fix: >
+  Remove the wildcard or the bare shell name from the trusted-commands or allow
+  list. List only specific, read-only commands (for example "git status" or
+  "pnpm test"), and keep trust for commands in your own user settings, not in a
+  file that is committed to the repository.

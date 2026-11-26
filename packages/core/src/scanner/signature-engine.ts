@@ -5,6 +5,7 @@ import type { NormalizedText, UnicodeHit } from '../normalizer.js';
 import type { VirusDefinition } from '../definitions/schema.js';
 import { decodeHidden, MAX_HIDDEN_RUNS } from '../ouija.js';
 import { findHiddenText } from '../hidden-text.js';
+import { parseJsonLoose } from '../json-loose.js';
 import { lowersSeverity } from '../severity-paths.js';
 import { typosquatOf } from '../known-packages.js';
 import { benignPayloadKind, COMMAND_LIKE, decodeBlob, embeddedDocumentKind, fencedRanges, inExecContext, inMarkdownCode, isCredibleSecret, isNegated, isQuotedExample } from './context.js';
@@ -370,12 +371,10 @@ export function runSignatures(
     }
     // ── json_path (+ optional value_regex filter) ────────────────────────────
     if (match.json_path) {
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(norm.original);
-      } catch {
-        continue; // not valid JSON: skip silently
-      }
+      // Editors read settings files as JSON with comments (`.vscode/settings.json`),
+      // so comments and trailing commas are accepted (m11 CT-1.5).
+      const parsed: unknown = parseJsonLoose(norm.original);
+      if (parsed === undefined) continue; // not JSON: skip silently
       // A bare JSON value (`false`, `0`, `"text"`) has no paths to match.
       if (parsed === null || typeof parsed !== 'object') continue;
       let results: unknown[];

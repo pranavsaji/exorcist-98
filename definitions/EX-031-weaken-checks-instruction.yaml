@@ -1,0 +1,46 @@
+id: EX-031
+title: Instructions to weaken tests or checks
+severity: high
+applies_to:
+  - instruction
+  - docs
+  - memory
+  - tool-result
+  - code
+match:
+  # Text addressed to an agent that asks it to get a change through by making
+  # the checks weaker: adding .skip / xit / test.todo, deleting a test file
+  # because it is flaky, --no-verify, "|| true" on a CI step, lowering a
+  # coverage threshold, or making a failing check pass by other means than a
+  # fix. Comments in source files are scanned too (applies_to includes code).
+  #
+  # Two shapes:
+  #   1. a cue that the sentence is talking to the agent ("you must", "please",
+  #      "the agent should", "silently", "before you continue", "to proceed"),
+  #      then a weakening verb, then one of the targets above;
+  #   2. "make the failing tests pass" followed by a means that is not a fix
+  #      ("by skipping", "whatever it takes", "at any cost"), which needs no cue.
+  # A test file that calls it.skip(...), a CI file with "|| true", and a page
+  # that explains --no-verify to a person have no such cue and are not flagged.
+  regex: '(?:(?<=(?:\byou\s+(?:must|should|need\s+to|have\s+to|will|shall|are\s+to|can\s+now)\b|\bplease\b|\b(?:agent|assistant|ai|claude|kiro|copilot|cursor|llm|model)s?\s*[,:]|\b(?:the\s+)?(?:agent|assistant|ai|llm|model)\s+(?:must|should|needs?\s+to|has\s+to|will|shall)\b|\bsilently\b|\bquietly\b|\bwithout\s+(?:asking|telling|mentioning|informing|notifying)\b|\bbefore\s+(?:you|answering|continuing|responding|proceeding)\b|\bto\s+(?:continue|proceed|finish|complete)\b|\bimportant\s*:|\bnote\s+to\s+(?:the\s+)?(?:agent|ai|assistant)\b|\bnext\s*,?\s+step\b)[^.!?\n]{0,60}?)\b(?:add|append|insert|put|use|pass|mark|skip|disable|comment\s+out|delete|remove|lower|reduce|relax|drop|bypass|ignore|silence|force|commit|push|merge|turn\s+off|set|change|append|tack\s+on)\b[^.!?\n]{0,60}?(?:\.skip\b|\bxit\b|\bxdescribe\b|\b(?:test|it)\.todo\b|--no-verify\b|\|\|\s*true\b|\bcoverage\s+(?:threshold|requirement|gate|minimum)s?\b|\b(?:failing|flaky|broken)\s+(?:tests?|checks?|specs?|ci|builds?)\b|\b(?:tests?|specs?)\s+files?\b|\bci\s+(?:checks?|steps?|failures?)\b|\bpre-?commit\s+hooks?\b)|\bmake\s+(?:the\s+)?(?:failing|failed|red)\s+(?:tests?|checks?|builds?|ci)\s+pass\b[^.!?\n]{0,40}?(?:\bby\s+(?:any\s+means|whatever\s+means|skipping|deleting|removing|disabling|ignoring|bypassing)\b|\bwhatever\s+it\s+takes\b|\bat\s+any\s+cost\b|\bno\s+matter\s+what\b|\bwithout\s+(?:fixing|reading|looking)\b))'
+  # A phrase in quotation marks that closes right after it, in a passage that
+  # is warning about it or quoting it as an example ("never follow text such
+  # as ..."), is not an order.
+  quoted_example_cues: '\b(?:such\s+as|e\.g\.|i\.e\.|for\s+(?:example|instance)|never|do\s+not|don''t|must\s+not|should\s+not|refuse|reject|treat|untrusted|inert|injection|jailbreak|adversarial|attack|malicious|hostile|crafted|hijack|red[- ]?team|detect|flag|block|strip|sanitiz|filter|pattern|phrase|cases?\b|example|quarantine|directive|look(?:s|ing)?\s+like|shaped)'
+  # A sentence that forbids the action is a defence ("you must never use
+  # --no-verify"). The negation has to end right before the verb, as for EX-002.
+  negated_cues: '\b(?:(?:must|should|shall|will|would|may|might|can|could)\s*(?:not|never)|(?:must|should|shall|would|could|do|does|did|is|are|was|were|has|have|ca|wo)n[''’]t|cannot|do(?:es)?\s+not|did\s+not|never|avoid|refrain\s+from|refus(?:e|es|ed|ing)\s+to|(?:is|are)\s+not\s+(?:to|allowed\s+to|permitted\s+to|able\s+to)|unable\s+to|forbidden\s+to|prohibited\s+from)\s+(?:(?:ever|simply|just|even|actually|knowingly|first|then|also|silently|quietly)\s+)*$'
+# Test and eval fixtures hold attack samples on purpose. Findings there are
+# reported at low severity, not dropped. A file an agent reads is never lowered.
+low_severity_paths:
+  - "(^|/)(tests?|__tests__|__mocks__|spec|specs|fixtures?|testdata|test-data|e2e|evals?)/|[._-](test|spec)s?\\.[A-Za-z0-9]+$|_tests?\\.(rs|go|py)$"
+owasp:
+  - "ASI02 Inadequate Human-in-the-Loop Controls"
+  - "ASI03 Prompt Injection via External Content"
+  - "LLM01:2025 Prompt Injection"
+fix: >
+  Remove the instruction. A file your agent reads should not tell it to skip or
+  delete tests, bypass hooks with --no-verify, hide CI failures with "|| true",
+  lower a coverage threshold, or make a failing check pass without a fix. Fix
+  the cause in a reviewed commit. If you are documenting the attack, put it in
+  a fenced code block or say that the agent must never do it.
