@@ -38,7 +38,10 @@ describe('EventLog: what is written', () => {
     const log = new EventLog(dir, { server: 'notes', session: 'p1-abc', pid: 4242, now: () => new Date('2026-11-24T10:00:00Z') });
     expect(log.write({ kind: 'start', mode: 'enforce', guard: 'hold', remote: false })).toBe(true);
     expect(log.write({ kind: 'call', tool: 'read_note', decision: 'allowed' })).toBe(true);
-    const got = lines(eventsPath(dir)).map((l) => ShieldEventSchema.parse(JSON.parse(l)));
+    const written = lines(eventsPath(dir)).map((l) => ShieldEventSchema.parse(JSON.parse(l)));
+    // Chain fields are covered by chain-writer.test.ts; here only the event body is compared.
+    expect(written.map((e) => e.seq)).toEqual([1, 2]);
+    const got = written.map(({ seq: _s, prev: _p, hash: _h, ...body }) => body);
     expect(got).toEqual([
       { v: 1, time: '2026-11-24T10:00:00.000Z', pid: 4242, server: 'notes', session: 'p1-abc', kind: 'start', mode: 'enforce', guard: 'hold', remote: false },
       { v: 1, time: '2026-11-24T10:00:00.000Z', pid: 4242, server: 'notes', session: 'p1-abc', kind: 'call', tool: 'read_note', decision: 'allowed' },
@@ -105,7 +108,8 @@ describe('EventLog: bounded size', () => {
   it('drops (and counts) events instead of growing past 2 x maxBytes when it cannot rotate', () => {
     const dir = tmp();
     const maxBytes = 2048;
-    const log = new EventLog(dir, { server: 'notes', maxBytes });
+    // Unchained: this is about the rotation lock; a chained writer would wait for the lock, then fall back to this path.
+    const log = new EventLog(dir, { server: 'notes', maxBytes, chain: false });
     // Someone else holds a fresh rotation lock.
     log.write({ kind: 'call', tool: 't', decision: 'allowed' });
     mkdirSync(join(dir, 'events.lock'));
@@ -167,7 +171,7 @@ describe('parseEventLines and EventTail: damaged input', () => {
 
   it('a new EventTail starts with the older file, then the current one', () => {
     const dir = tmp();
-    const log = new EventLog(dir, { server: 'notes', maxBytes: 800 });
+    const log = new EventLog(dir, { server: 'notes', maxBytes: 800, chain: false });
     for (let i = 0; i < 40; i++) log.write({ kind: 'call', tool: `n${i}`, decision: 'allowed' });
     const got = new EventTail(dir).read().map((e) => Number((e as { tool: string }).tool.slice(1)));
     expect(got.length).toBeGreaterThan(5);

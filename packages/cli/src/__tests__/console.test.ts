@@ -375,3 +375,57 @@ describe('exorcist console command', () => {
     expect(openCommand('win32', `http://127.0.0.1:5000/${TOKEN}/" & calc`)).toBeNull();
   });
 });
+
+describe('console chain status', () => {
+  const write = (dir: string, n: number): void => {
+    const log = new EventLog(dir, { server: 'notes', pid: 99 });
+    for (let i = 1; i <= n; i++) log.write({ kind: 'call', tool: `t${i}`, decision: 'allowed', prompt: i });
+  };
+
+  it('AC-16: the head hash and an intact chain status appear in the console state', () => {
+    const dir = tmp();
+    write(dir, 3);
+    const head = JSON.parse(readFileSync(join(dir, 'events.head.json'), 'utf8')) as { seq: number; hash: string };
+    const s = new ConsoleModel(dir, { alive }).state();
+    expect(s.chain?.status).toBe('intact');
+    expect(s.chainHead).toEqual({ seq: head.seq, hash: head.hash });
+  });
+
+  it('AC-16: a log longer than the recent-events buffer is still reported intact, not broken', () => {
+    const dir = tmp();
+    write(dir, 450);
+    const m = new ConsoleModel(dir, { alive });
+    m.poll();
+    expect(m.events().length).toBeLessThan(450);
+    expect(m.state().chain?.status).toBe('intact');
+  });
+
+  it('AC-18: a tampered log shows "broken at event N" and the state updates when the log changes', () => {
+    const dir = tmp();
+    write(dir, 4);
+    const m = new ConsoleModel(dir, { alive });
+    expect(m.state().chain?.status).toBe('intact');
+    const file = join(dir, 'events.jsonl');
+    const lines = readFileSync(file, 'utf8').split('\n');
+    lines[1] = lines[1]!.replace('"t2"', '"tX"');
+    writeFileSync(file, lines.join('\n'));
+    const c = m.state().chain;
+    expect(c).toMatchObject({ status: 'broken', atSeq: 2, reason: 'changed' });
+  });
+
+  it('AC-18: a log with no chained events is "not chained", and an empty folder has no status', () => {
+    const dir = tmp();
+    expect(new ConsoleModel(dir, { alive }).state().chain).toBeNull();
+    new EventLog(dir, { server: 'notes', pid: 99, chain: false }).write({ kind: 'call', tool: 't', decision: 'allowed', prompt: 1 });
+    expect(new ConsoleModel(dir, { alive }).state().chain).toEqual({ status: 'not-chained' });
+  });
+
+  it('AC-18: the page renders the three labels as text, with colour only as a class', () => {
+    const html = consolePage('n'.repeat(24));
+    expect(html).toContain("label = 'intact'");
+    expect(html).toContain("'broken at event ' + c.atSeq");
+    expect(html).toContain("label = 'not chained'");
+    expect(html).toContain('id="chain-head"');
+    expect(html).toContain('role="status"');
+  });
+});

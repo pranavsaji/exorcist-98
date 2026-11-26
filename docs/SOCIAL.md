@@ -23,7 +23,7 @@ real-time shield and a quarantine vault, aimed at those files and tools.
 
 - Scan any public GitHub repo; every finding shows the file, line and exact text
 - An MCP firewall that hides a tool the moment it changes after you approved it
-- <!--f:propertyTests-->156<!--/f--> property-based tests, one Kiro spec per milestone, and a Kiro Crew app
+- <!--f:propertyTests-->171<!--/f--> property-based tests, one Kiro spec per milestone, and a Kiro Crew app
   that patrols your folders every night
 
 My favourite thing about Kiro: specs. Writing requirements first, then

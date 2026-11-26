@@ -5,6 +5,7 @@ import type { KeyboardEvent } from 'react';
 import type { ScenarioId, SimEvent, SimResult } from '@exorcist-98/shield/simulator';
 import { play } from '@/lib/sound';
 import { ByoaLab } from './ByoaLab';
+import { ChainControls } from './ChainControls';
 
 type ScenarioCard = { id: ScenarioId; title: string; summary: string };
 
@@ -259,6 +260,7 @@ function ScriptedLab({ initial, request }: { initial: ScenarioId; request?: LabR
                     );
                   })}
                 </ol>
+                {side === 'shielded' && (id === 'rug-pull' || id === 'trifecta') && <ChainControls key={id} scenario={id} />}
                 {finished && (
                   <div className={side === 'shielded' ? 'lab-verdict lab-verdict-safe' : 'lab-verdict lab-verdict-harm'} role="status">
                     <span className="lab-stamp" aria-hidden="true">{side === 'shielded' ? 'EXORCISED' : 'POSSESSED'}</span>

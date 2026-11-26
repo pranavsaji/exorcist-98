@@ -359,6 +359,7 @@ body {
     font-weight: 800;
     padding: 0 0.3rem;
     border: 1px solid #120b22;
+    color: #120b22;
   }
   .lab-tag-ok { background: #8dffb4; }
   .lab-tag-warn { background: #ffd93c; }
@@ -416,8 +417,9 @@ body {
 }
 
 @keyframes lab-in {
-  from { transform: translateY(6px); opacity: 0.2; }
-  to { transform: none; opacity: 1; }
+  /* Slide only: fading text in from low opacity fails WCAG AA contrast mid-animation. */
+  from { transform: translateY(6px); }
+  to { transform: none; }
 }
 @keyframes stamp {
   from { transform: rotate(-9deg) scale(2.4); opacity: 0; }

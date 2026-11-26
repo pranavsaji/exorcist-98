@@ -22,6 +22,10 @@ export type { OsVerdict, OsAuth, Release, Spawner, MacOsAuthOptions } from './os
 export { runProxy } from './proxy.js';
 export { EventLog, EventTail, ShieldEventSchema, parseEventLines, eventsPath, oldEventsPath, MAX_EVENT_BYTES, MAX_LINE_BYTES } from './events.js';
 export type { ShieldEvent, CallShieldEvent, EngineEvent, EventBody, EventLogOptions, ParsedLines } from './events.js';
+export {
+  HeadRecordSchema, canonicalize, eventHash, verifyChain, headPath, genesisPath, readGenesis, loadOrCreateGenesis, readHead, writeHeadAtomic, verifyLogDir,
+} from './chain.js';
+export type { Genesis, ChainFields, ChainedShieldEvent, HeadRecord, BreakReason, ChainStatus, VerifyOptions, ChainResult } from './chain.js';
 export { AiReview, findingsFor } from './ai-review.js';
 export type { AiJudge, AiLabel, AiFindings } from './ai-review.js';
 export { launchFingerprint, checkLaunch, packageSpec, specIsPinned, launchEntryOf, loaderEnvKeys, configLabel, LOADER_ENV } from './launch.js';

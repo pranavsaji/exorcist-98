@@ -3,11 +3,11 @@ import { execFile } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createInterface } from 'node:readline';
-import { macOsAuth, sanitizeReason } from '@exorcist-98/shield';
+import { EventLog, macOsAuth, sanitizeReason, cleanText } from '@exorcist-98/shield';
 import type { OsAuth } from '@exorcist-98/shield';
 import { addAllowedRead, decideRead, loadDefinitions, readAllowedReads, realPath, sha256File, shownName } from '@exorcist-98/core';
 import type { VirusDefinition } from '@exorcist-98/core';
-import { findDefinitionsDir, parse } from '../util.js';
+import { findDefinitionsDir, parse, stateDir } from '../util.js';
 import type { Io } from '../util.js';
 
 export const ON_ACCESS_HELP = `Usage: exorcist on-access   (Kiro hook helper)
@@ -56,6 +56,8 @@ export type Terminal = {
   dialog?: (message: string) => Promise<DialogAnswer>;
   /** A fresh random confirmation code (injectable for tests). */
   nonce?: () => string;
+  /** The clock for code expiry (injectable for tests). Default: the system clock. */
+  now?: () => Date;
   /**
    * The operating system's own verification (Touch ID or login password).
    * Tried before `dialog`. Default: macOsAuth(), which is never available
@@ -108,9 +110,61 @@ export const processTerminal = (): Terminal => ({
  * The typed fallback: a random code shown once, never derived from the file,
  * so it cannot be computed ahead of time.
  */
-export const confirms = (answer: string, code: string): boolean =>
-  code.length >= 6 && answer.trim().toLowerCase() === code.toLowerCase();
+export type ApprovalCode = { code: string; issuedAt: number }; // issuedAt: epoch ms
+export type CodeVerdict = 'ok' | 'mismatch' | 'expired' | 'used';
 
+/** How long a typed code stays valid (AC-25). A literal on purpose: a policy file in the state folder is not trusted. */
+export const CODE_TTL_MS = 15 * 60 * 1000;
+
+/**
+ * Pure check of a typed answer against an issued code. A wrong answer is
+ * always 'mismatch' (it never reveals whether the code was used or expired).
+ * A right answer is 'used' once accepted before, 'expired' once more than
+ * `ttlMs` have passed since it was issued, otherwise 'ok'.
+ */
+export function checkCode(answer: string, ticket: ApprovalCode, nowMs: number, usedAlready: boolean, ttlMs: number = CODE_TTL_MS): CodeVerdict {
+  if (ticket.code.length < 6 || answer.trim().toLowerCase() !== ticket.code.toLowerCase()) return 'mismatch';
+  if (usedAlready) return 'used';
+  if (nowMs - ticket.issuedAt > ttlMs) return 'expired';
+  return 'ok';
+}
+
+/**
+ * Where a CLI-side approval outcome is recorded (AC-29): the state folder the
+ * Shield writes to, and what was being approved. `subject` is a fixed command
+ * name; `detail` is a short label such as a session key (never a file's
+ * content and never the confirmation code).
+ */
+export type ApprovalAudit = { dir: string; subject: 'approve session' | 'allow-read' | 'guard-mcp-write'; detail?: string };
+export type ApprovalOutcome = 'accepted' | 'declined' | 'expired' | 'used';
+const OUTCOME_WHY: Record<ApprovalOutcome, string> = {
+  accepted: 'The person approved it in their own terminal or system prompt.',
+  declined: 'The person declined, or the confirmation did not match. Nothing was allowed.',
+  expired: 'The confirmation code was typed after it expired. Nothing was allowed.',
+  used: 'The confirmation code had already been used. Nothing was allowed.',
+};
+/**
+ * Best-effort: append exactly one chained event for an approval outcome.
+ * Same contract as EventLog.write: it never throws and never blocks the
+ * approval. No file text, no code, no reason text is written.
+ */
+export function recordApproval(audit: ApprovalAudit | undefined, outcome: ApprovalOutcome, now?: () => Date): boolean {
+  if (!audit) return false;
+  try {
+    const log = new EventLog(audit.dir, { server: 'exorcist-cli', ...(now ? { now } : {}) });
+    const detail = audit.detail ? ` (${cleanText(audit.detail, 60)})` : '';
+    return log.write({
+      kind: 'call',
+      tool: audit.subject,
+      decision: outcome === 'accepted' ? 'allowed' : 'blocked',
+      ruleId: audit.subject === 'approve session' ? 'EX-027' : 'SHIELD',
+      by: 'user',
+      why: `${OUTCOME_WHY[outcome]}${detail}`,
+    });
+  } catch {
+    return false;
+  }
+}
 /** The event's `cwd`, so the state folder is the project the agent works in, not the hook's own cwd. */
 function eventCwd(stdin: string): string {
   try {
@@ -160,16 +214,19 @@ export async function onAccessCommand(stdin: string, io: Io): Promise<number> {
  * 'unavailable' means neither exists. Once the OS prompt has been shown, a
  * deny, an error or a timeout is a 'deny': it never falls back to a weaker channel.
  */
-export async function askOwner(term: Terminal, dialogMessage: string, reason: string): Promise<DialogAnswer> {
+export async function askOwner(term: Terminal, dialogMessage: string, reason: string, audit?: ApprovalAudit): Promise<DialogAnswer> {
   const auth = term.osAuth ?? macOsAuth();
   let available = false;
   try { available = await auth.available(); } catch { available = false; }
   if (available) {
     let verdict: string = 'error';
     try { verdict = await auth.verify(sanitizeReason(reason)); } catch { verdict = 'error'; }
+    recordApproval(audit, verdict === 'ok' ? 'accepted' : 'declined', term.now);
     return verdict === 'ok' ? 'allow' : 'deny';
   }
-  return term.dialog ? await term.dialog(dialogMessage) : 'unavailable';
+  const answer = term.dialog ? await term.dialog(dialogMessage) : 'unavailable';
+  if (answer !== 'unavailable') recordApproval(audit, answer === 'allow' ? 'accepted' : 'declined', term.now);
+  return answer;
 }
 /**
  * Ask the person at the keyboard, through channels an agent's shell tool
@@ -179,14 +236,23 @@ export async function askOwner(term: Terminal, dialogMessage: string, reason: st
  * text of the OS prompt and says what is being approved.
  * Prints why on refusal. Used by allow-read and approve session.
  */
-export async function personConfirms(term: Terminal, io: Io, dialogMessage: string, reason: string = dialogMessage): Promise<boolean> {
-  const viaOwner = await askOwner(term, dialogMessage, reason);
+export async function personConfirms(term: Terminal, io: Io, dialogMessage: string, reason: string = dialogMessage, audit?: ApprovalAudit): Promise<boolean> {
+  const viaOwner = await askOwner(term, dialogMessage, reason, audit);
   if (viaOwner === 'deny') { io.err('Denied in the verification prompt. Nothing was allowed.'); return false; }
   if (viaOwner === 'unavailable') {
-    const code = (term.nonce ?? (() => randomBytes(4).toString('hex').slice(0, 6)))();
-    io.out(`Confirmation code: ${code}`);
+    const now = term.now ?? (() => new Date());
+    const ticket: ApprovalCode = { code: (term.nonce ?? (() => randomBytes(4).toString('hex').slice(0, 6)))(), issuedAt: now().getTime() };
+    // The code lives only in this process: it is never written to the state folder,
+    // so there is nothing for a later call to reuse. `used` makes one-shot structural.
+    let used = false;
+    io.out(`Confirmation code: ${ticket.code}`);
     const answer = await term.ask('Type the confirmation code above to allow it: ');
-    if (!confirms(answer, code)) { io.err('That does not match. Nothing was allowed.'); return false; }
+    const verdict = checkCode(answer, ticket, now().getTime(), used);
+    if (verdict === 'ok') used = true;
+    recordApproval(audit, verdict === 'ok' ? 'accepted' : verdict === 'mismatch' ? 'declined' : verdict, term.now);
+    if (verdict === 'expired') { io.err('That code has expired (it is valid for 15 minutes). Nothing was allowed. Run the command again.'); return false; }
+    if (verdict === 'used') { io.err('That code was already used. Nothing was allowed.'); return false; }
+    if (verdict !== 'ok') { io.err('That does not match. Nothing was allowed.'); return false; }
   }
   return true;
 }
@@ -210,7 +276,7 @@ export async function allowReadCommand(argv: string[], io: Io, term: Terminal = 
   io.out(`File:    ${shown}`);
   io.out(`SHA-256: ${hash}`);
   io.out('Allow only a file you have reviewed: Exorcist 98 will let your agent read exactly these bytes at this path.');
-  if (!(await personConfirms(term, io, `Allow your AI agent to read this file?\n\n${shown}\nSHA-256 ${hash.slice(0, 12)}...\n\nOnly allow a file you have reviewed.`, `Allow your AI agent to read ${shown} (SHA-256 ${hash.slice(0, 12)}...)`))) return 1;
+  if (!(await personConfirms(term, io, `Allow your AI agent to read this file?\n\n${shown}\nSHA-256 ${hash.slice(0, 12)}...\n\nOnly allow a file you have reviewed.`, `Allow your AI agent to read ${shown} (SHA-256 ${hash.slice(0, 12)}...)`, { dir: stateDir(), subject: 'allow-read' }))) return 1;
 
   // Only the bytes the user confirmed: if the file changed meanwhile, nothing is written.
   const result = addAllowedRead(process.cwd(), file, process.env, hash);

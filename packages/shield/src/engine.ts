@@ -642,9 +642,18 @@ export class ShieldEngine {
    */
   private afterOwnerVerified(call: JsonRpcMessage, id: JsonRpcId, tool: string, ownerNo: number | undefined): Action[] {
     const params = (call.params ?? {}) as { arguments?: unknown };
+    const answered = { ruleId: SESSION_RULE_ID, by: 'user' as const, via: 'os' as const, ...(ownerNo ? { prompt: ownerNo } : {}) };
+    // A tool withheld while the prompt was open (rug pull, poisoned) is not called, as at the start of onToolCall.
+    const withheld = this.withheld.get(tool);
+    if (withheld && this.enforcing()) {
+      this.callEvent(tool, 'blocked', { ...answered, ruleId: withheld.ruleId, why: `Verified in the system prompt, but it is withheld: ${withheld.reason}` });
+      return [
+        { type: 'forward', to: 'client', message: toolErrorResult(id, `Exorcist 98 blocked "${cleanText(tool, 80)}": ${withheld.reason} Nothing was sent to the tool.`) },
+        this.alert({ ruleId: withheld.ruleId, severity: 'high', tool, message: `Refused a call to the withheld tool "${cleanText(tool, 80)}" after device verification.` }),
+      ];
+    }
     const ss = serverState(this.o.io.load(), this.o.server);
     const verdict = inspectCall(params.arguments, { allowedHosts: this.o.policy.allowedHosts, approvedHosts: ss.approvedHosts });
-    const answered = { ruleId: SESSION_RULE_ID, by: 'user' as const, via: 'os' as const, ...(ownerNo ? { prompt: ownerNo } : {}) };
     if (verdict.action === 'allow') {
       return this.sendCall(call, id, tool, { ...answered, why: 'Released by the operating system check (Touch ID or login password), once. Nothing was granted.' });
     }
@@ -656,7 +665,12 @@ export class ShieldEngine {
 
   /** The agent's connection ended: drop calls still waiting for device verification. */
   abandon(): void {
-    for (const [ticket, held] of this.heldCalls) if (held.kind === 'os') this.heldCalls.delete(ticket);
+    for (const [ticket, held] of this.heldCalls) {
+      if (held.kind !== 'os') continue;
+      this.heldCalls.delete(ticket);
+      const ownerNo = Number(ticket.slice(OWNER_PREFIX.length)) || undefined;
+      this.callEvent(held.tool, 'blocked', { ruleId: SESSION_RULE_ID, via: 'os', ...(ownerNo ? { prompt: ownerNo } : {}), why: 'The agent connection ended while the system prompt was open. Nothing was sent.' });
+    }
   }
 
   /** Ask the user whether a call the Session Guard held may go out (S-004 prompt, EX-027). */

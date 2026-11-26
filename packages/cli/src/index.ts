@@ -19,6 +19,7 @@ import { scanCommand } from './commands/scan.js';
 import { shieldCommand } from './commands/shield.js';
 import { updateCommand } from './commands/update.js';
 import { vaultCommand } from './commands/vault.js';
+import { verifyLogCommand } from './commands/verify-log.js';
 import { stdio } from './util.js';
 
 const VERSION = '0.2.0';
@@ -47,6 +48,8 @@ Commands:
   approve <kind>     Approve a changed tool, a host, a server or a held session
                      (see: exorcist approve --help)
   alerts             Show recent shield alerts
+  verify-log         Check that the Shield's event log was not changed, cut or reordered
+                     (exit 0 intact, 1 broken; --json, --expect <hash>)
   console            Open the live, read-only Shield console in your browser
   init [folder]      Add hooks and steering to a Kiro project (--kiro: also the
                      reviewer agent and a summary; --shield: wrap .kiro/settings/mcp.json)
@@ -97,6 +100,7 @@ export async function main(argv: string[]): Promise<number> {
     case 'vault':  return await vaultCommand(rest, stdio);
     case 'approve': return await approveCommand(rest, stdio);
     case 'alerts': return await alertsCommand(rest, stdio);
+    case 'verify-log': return await verifyLogCommand(rest, stdio);
     case 'console': return await consoleCommand(rest, stdio);
     case 'init':   return await initCommand(rest, stdio);
     case 'origin': return await originCommand(rest, stdio);

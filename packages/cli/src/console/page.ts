@@ -126,6 +126,7 @@ h1, h2, h3, h4, p { margin: 0; }
 .badge.flagged, .badge.high, .badge.cautious { background: var(--high); }
 .badge.medium, .badge.watching { background: var(--med); }
 .badge.calm { background: var(--ok); }
+.badge.chain-none { background: var(--paper); }
 .badge.monitor { background: repeating-linear-gradient(135deg, var(--ok) 0 6px, #d6ffe4 6px 12px); }
 .shape { width: 11px; height: 11px; flex: none; background: var(--ink); display: inline-block; }
 .shape.circle { border-radius: 50%; }
@@ -420,6 +421,18 @@ const SCRIPT = String.raw`
     $('n-shields').textContent = n;
   }
 
+  // The label is the signal; the colour class only adds to it.
+  function renderChain(c, head) {
+    const b = $('chain-badge');
+    let cls = 'chain-none'; let shapeKind = 'ring'; let label = 'not chained';
+    if (c && c.status === 'intact') { cls = 'calm'; shapeKind = 'circle'; label = 'intact'; }
+    else if (c && c.status === 'broken') { cls = 'critical'; shapeKind = 'octagon'; label = 'broken at event ' + c.atSeq; }
+    b.className = 'badge ' + cls;
+    b.replaceChildren(shape(shapeKind), document.createTextNode(label));
+    $('chain-head').textContent = head ? 'event ' + head.seq + ', head hash ' + head.hash : 'no head hash yet';
+    $('chain-why').textContent = c && c.status === 'broken' ? ' ' + String(c.detail || c.reason) : '';
+  }
+
   const RELEASE_TEXT = {
     terminal: 'a held session is released only by running exorcist approve session <key> in your own terminal.',
     os: 'a held session is released only in the system prompt on this computer (Touch ID or your login password), never from a terminal command or from this page.',
@@ -433,6 +446,7 @@ const SCRIPT = String.raw`
     renderShields(s.shields);
     $('where').textContent = s.stateDir;
     $('release-how').textContent = RELEASE_TEXT[s.release] || RELEASE_TEXT.terminal;
+    renderChain(s.chain, s.chainHead);
     $('skipped').textContent = s.skipped > 0 ? ' · ' + s.skipped + ' damaged log line' + (s.skipped === 1 ? '' : 's') + ' skipped' : '';
   }
 
@@ -525,6 +539,7 @@ export function consolePage(nonce: string): string {
       <span class="conn" id="conn" data-live="false" role="status"><span class="dot" aria-hidden="true"></span><span id="conn-text">CONNECTING</span></span>
       <div class="readonly" role="note"><strong>Read-only view.</strong><span>Nothing on this page can approve, allow or release anything. Calls held for a host are answered in your agent's approval prompt; <span id="release-how">a held session is released only by running exorcist approve session &lt;key&gt; in your own terminal.</span></span></div>
       <p class="where">State folder: <span class="mono" id="where"></span><span id="skipped"></span></p>
+      <p class="where" id="chain">Event log chain: <span id="chain-badge" class="badge chain-none" role="status" aria-label="Event log chain status"><span class="shape ring" aria-hidden="true"></span>not chained</span> <span class="mono" id="chain-head">no head hash yet</span><span id="chain-why"></span></p>
     </div>
   </header>
 

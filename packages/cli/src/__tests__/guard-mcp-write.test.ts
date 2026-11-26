@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -8,7 +8,13 @@ import type { GuardDeps } from '../commands/guard-mcp-write.js';
 import type { DialogAnswer } from '../commands/on-access.js';
 
 const dirs: string[] = [];
-afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true }); });
+let savedDir: string | undefined;
+// The guard records each approval outcome in the state folder: keep that in a temp folder.
+beforeEach(() => { savedDir = process.env['EXORCIST_DIR']; process.env['EXORCIST_DIR'] = mkdtempSync(join(tmpdir(), 'exorcist-mcpguard-state-')); dirs.push(process.env['EXORCIST_DIR']); });
+afterEach(() => {
+  if (savedDir === undefined) delete process.env['EXORCIST_DIR']; else process.env['EXORCIST_DIR'] = savedDir;
+  for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
+});
 const tmp = (): string => { const d = realpathSync(mkdtempSync(join(tmpdir(), 'exorcist-mcpguard-'))); dirs.push(d); return d; };
 
 /** A home and a project, each with a real .kiro/settings/mcp.json. */

@@ -6,8 +6,8 @@
  */
 import { lstatSync, readdirSync } from 'node:fs';
 import type { CapabilityRule } from '@exorcist-98/core';
-import { EventTail, FileSessionStore, SESSION_TTL_MS, assessSession, cleanText, isSessionKey, sessionsPath } from '@exorcist-98/shield';
-import type { CallShieldEvent, Fact, ShieldEvent } from '@exorcist-98/shield';
+import { EventTail, FileSessionStore, SESSION_TTL_MS, assessSession, cleanText, eventsPath, genesisPath, headPath, isSessionKey, oldEventsPath, readHead, sessionsPath, verifyLogDir } from '@exorcist-98/shield';
+import type { CallShieldEvent, ChainStatus, Fact, ShieldEvent } from '@exorcist-98/shield';
 
 /** Events kept in memory and sent to a newly opened page. */
 export const BACKLOG = 400;
@@ -62,6 +62,14 @@ export type ConsoleState = {
   counts: Counts;
   /** Lines of the event log that were not valid events (damaged, edited, or from a newer version). */
   skipped: number;
+  /**
+   * Whether the whole event log still matches its hash chain (from verifyLogDir over the files, not
+   * from the recent-events buffer, which holds only the last BACKLOG events and would look broken).
+   * null when the folder has no log and no head record yet.
+   */
+  chain: ChainStatus | null;
+  /** The chain's current tip as recorded in the head file (shown whatever the status), or null. */
+  chainHead: { seq: number; hash: string } | null;
 };
 
 export type Liveness = (pid: number) => boolean;
@@ -99,6 +107,28 @@ export class ConsoleModel {
     private readonly o: { rules?: readonly CapabilityRule[]; alive?: Liveness; now?: () => Date } = {},
   ) {
     this.tail = new EventTail(dir);
+  }
+
+  private chainSig = '';
+  private chainCache: { chain: ChainStatus | null; chainHead: { seq: number; hash: string } | null } = { chain: null, chainHead: null };
+
+  /**
+   * Chain status of the whole log, recomputed only when one of the four files involved changed
+   * (size, mtime, inode), so a quiet folder costs a few stat calls per poll. Read-only.
+   */
+  private chainState(): { chain: ChainStatus | null; chainHead: { seq: number; hash: string } | null } {
+    const sig = [eventsPath(this.dir), oldEventsPath(this.dir), headPath(this.dir), genesisPath(this.dir)]
+      .map((p) => {
+        try { const st = lstatSync(p); return `${st.ino}:${st.size}:${st.mtimeMs}`; } catch { return '-'; }
+      })
+      .join('|');
+    if (sig === this.chainSig) return this.chainCache;
+    this.chainSig = sig;
+    const present = sig.split('|').some((x, i) => x !== '-' && i !== 3);
+    const h = readHead(this.dir);
+    const chainHead = h.ok && h.value ? { seq: h.value.seq, hash: h.value.hash } : null;
+    this.chainCache = { chain: present ? verifyLogDir(this.dir) : null, chainHead };
+    return this.chainCache;
   }
 
   private now(): Date {
@@ -161,6 +191,7 @@ export class ConsoleModel {
       release: modes.size > 1 ? 'mixed' : modes.has('os') ? 'os' : 'terminal',
       counts: { ...this.counts },
       skipped: this.tail.skipped,
+      ...this.chainState(),
     };
   }
 

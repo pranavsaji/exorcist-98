@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./simulator": "./src/simulator.ts",
+    "./chain-core": "./src/chain-core.ts",
     "./byoa": "./src/byoa.ts",
     "./byoa-samples": "./src/byoa-samples.ts"
   },

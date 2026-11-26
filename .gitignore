@@ -167,6 +167,8 @@ packages/mcp-server/definitions.old-*/
 # Canary traps planted locally (exorcist canary plant): never commit the tokens
 .exorcist/canary/
 .exorcist/canaries.json
+# Shield event log, its chain head and genesis (runtime state, never commit)
+.exorcist/events*
 
 # Editor extension package (built with: pnpm --filter exorcist-98-kiro package)
 packages/vscode/*.vsix

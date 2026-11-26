@@ -61,7 +61,7 @@ that is reading it.
 polish), each with requirements, design and tasks. Each requirement maps to a
 test, and the specs caught design problems before code did.
 
-**Property-based tests.** <!--f:propertyTests-->156<!--/f--> fast-check properties. These say things like "for
+**Property-based tests.** <!--f:propertyTests-->171<!--/f--> fast-check properties. These say things like "for
 any tool definition, a changed fingerprint is never listed or callable" and "a
 secret at any depth in the arguments is never forwarded" and check them
 against thousands of generated inputs. That's how a security tool should be
