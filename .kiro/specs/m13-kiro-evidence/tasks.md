@@ -192,7 +192,7 @@ Pure extractor and counters first, then the export script and its safety rescan,
   - [x] 22.2 Re-run `node scripts/kiro-evidence.mjs`, regenerate `docs/KIRO_EVIDENCE.md`, refresh facts, run the KE tests, `pnpm -r typecheck` and `pnpm vitest run`, and commit as a new commit without pushing
     - _Requirements: KE-46, KE-47_
 
-- [ ] 23. Close the security review gaps in the export
+- [x] 23. Close the security review gaps in the export
   - [x] 23.1 Implement KE-59 in `packages/core/src/kiro-evidence.ts`: generalise KE-55 to all file-returning tools with one shared path detector
     - _Requirements: KE-59_
   - [x] 23.2 Implement KE-60 and KE-61: redact INI-style and lowercase credential keys and detect them in the after-write rescan
@@ -201,7 +201,7 @@ Pure extractor and counters first, then the export script and its safety rescan,
     - _Requirements: KE-62_
   - [x] 23.4 Write KE tests for KE-59 to KE-62, with test names starting with the KE-ID and made-up values built at runtime
     - _Requirements: KE-63_
-  - [-] 23.5 Re-run `node scripts/kiro-evidence.mjs`, run the rescan, regenerate `docs/KIRO_EVIDENCE.md`, refresh facts, run the KE tests, `pnpm -r typecheck` and `pnpm vitest run`, and commit as a new commit without pushing
+  - [x] 23.5 Re-run `node scripts/kiro-evidence.mjs`, run the rescan, regenerate `docs/KIRO_EVIDENCE.md`, refresh facts, run the KE tests, `pnpm -r typecheck` and `pnpm vitest run`, and commit as a new commit without pushing
     - _Requirements: KE-46, KE-47_
 ## Notes
 - Tasks marked with `*` are optional and can be skipped for a faster pass; they are not implemented automatically when executing this plan.
