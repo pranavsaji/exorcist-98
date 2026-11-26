@@ -184,7 +184,7 @@ Convert the design into incremental coding steps. Each task builds on the ones b
   - All tests pass, including the full existing suite. Ensure all tests pass, ask the user if questions arise.
   - _Requirements: AC-1 through AC-31 (test gate)_
 
-- [-] 25. Commit the work without pushing
+- [x] 25. Commit the work without pushing
   - Stage the new and changed files (spec, `packages/shield`, `packages/cli`, `apps/web`, `docs/REFERENCE.md`, `docs/KNOWN_LIMITATIONS.md`, `docs/KIRO_LOG.md`, `docs/THREATS.md`, `docs/kiro-briefs/TASK-audit-chain.md`) and commit with a message describing the hash-chained log, `verify-log`, and the approval hardening. Do not push.
   - _Requirements: none (process step)_
 
