@@ -180,12 +180,12 @@ Rules first (EX-007 extension, EX-030, EX-031, EX-032, EX-028 extension), then t
     - Run `node scripts/facts.mjs --run-tests --docs` and reconcile any count mismatch in the docs
     - _Requirements: CT-21_
 
-- [ ] 15. Record and finish
+- [x] 15. Record and finish
   - [x] 15.1 `docs/KIRO_LOG.md` row and moving the brief (CT-22)
     - Add a row to `docs/KIRO_LOG.md` for this work by the Kiro IDE agent
     - Move `TASK-config-tamper.md` to `docs/kiro-briefs/`
     - _Requirements: CT-22_
-  - [-] 15.2 Final checkpoint - typecheck, test, commit (CT-22)
+  - [x] 15.2 Final checkpoint - typecheck, test, commit (CT-22)
     - Run `pnpm -r typecheck` and `pnpm vitest run` until both pass
     - Commit the work; do not push
     - Ensure all tests pass, ask the user if questions arise.
