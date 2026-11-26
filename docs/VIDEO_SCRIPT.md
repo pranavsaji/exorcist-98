@@ -43,5 +43,5 @@ anything you have not actually run.
 - Do not say scans use AI. The AI judge is optional, needs your own AWS account,
   and is off on the public site unless the operator turns it on.
 - Test and property counts change. Read them from `docs/facts.json` before you
-  say one: <!--f:tests-->2,738<!--/f--> tests passed in the last recorded run.
+  say one: <!--f:tests-->2,743<!--/f--> tests passed in the last recorded run.
 - The Crew app is not in this video. Mention it in the written submission.
