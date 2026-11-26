@@ -5,10 +5,11 @@ import {
   AGENT_FILE_HARD_LIMIT, gateFindings, isBlocking, isGateFile, gitRepoRoot, loadDefinitions, renderGate, runGit, tooLargeFinding,
 } from '@exorcist-98/core';
 import type { GateThreshold, SignatureFinding, VirusDefinition } from '@exorcist-98/core';
-import { findDefinitionsDir, parse, str } from '../util.js';
+import { readHead } from '@exorcist-98/shield';
+import { findDefinitionsDir, parse, stateDir, str } from '../util.js';
 import type { Io } from '../util.js';
 
-export const GATE_HELP = `Usage: exorcist gate [dir] [--fail-on <critical|high|medium|low>]
+export const GATE_HELP = `Usage: exorcist gate [dir] [--fail-on <critical|high|medium|low>] [--dir <state folder>]
 The gate for the end of an agent's turn. It looks only at the files an AI agent
 obeys (steering, specs, hooks, custom agents, MCP configs, AGENTS.md and the
 other rule files, READMEs) that changed since the last commit, and exits 1 with
@@ -17,12 +18,19 @@ Findings that the committed version already had are ignored.
 Read-only: it never writes, never uses the network and runs no repository program.
 Exit codes: 0 nothing added (or nothing could be checked: the reason is printed
 to stdout, so an environment problem never stops an agent), 1 the change adds a finding.
+When the Shield's state folder has an event-log head file, its head hash is
+printed too (see "exorcist verify-log").
 The Kiro hook written by "exorcist init" runs it when the agent stops.
 `;
 
 const THRESHOLDS: readonly GateThreshold[] = ['critical', 'high', 'medium', 'low'];
 const GIT_MS = 10_000;
 
+/** The log's current head hash as one plain line, or null when there is no head file (or it is unreadable). */
+function headLine(explicit: string | undefined): string | null {
+  const h = readHead(stateDir(explicit));
+  return h.ok && h.value !== null ? `Exorcist event log head: ${h.value.hash} (event ${h.value.seq})` : null;
+}
 const nothingChecked = (io: Io, why: string): number => {
   io.out(`Exorcist gate: nothing checked (${why}).`);
   return 0;
@@ -74,7 +82,7 @@ async function diskIds(root: string, rels: readonly string[]): Promise<Map<strin
 }
 
 export async function gateCommand(argv: string[], io: Io): Promise<number> {
-  const p = parse(argv, { 'fail-on': { type: 'string' }, definitions: { type: 'string' }, help: { type: 'boolean', short: 'h' } });
+  const p = parse(argv, { 'fail-on': { type: 'string' }, definitions: { type: 'string' }, dir: { type: 'string' }, help: { type: 'boolean', short: 'h' } });
   if (!p.ok) { io.err(`${p.error}\n\n${GATE_HELP}`); return 2; }
   if (p.values['help']) { io.out(GATE_HELP); return 0; }
   if (p.positionals.length > 1) { io.err(`Give at most one folder.\n\n${GATE_HELP}`); return 2; }
@@ -121,7 +129,11 @@ export async function gateCommand(argv: string[], io: Io): Promise<number> {
     added.push(...gateFindings(rel, before, after, defs));
   }
   const blocking = added.filter((f) => isBlocking(f, threshold));
-  if (blocking.length === 0) return 0;
-  io.err(renderGate(blocking));
+  const head = headLine(str(p.values['dir']));
+  if (blocking.length === 0) {
+    if (head !== null) io.out(head);
+    return 0;
+  }
+  io.err(head === null ? renderGate(blocking) : `${renderGate(blocking)}\n${head}`);
   return 1;
 }

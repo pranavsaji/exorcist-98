@@ -537,6 +537,36 @@ await step('Possession Lab: the rug pull plays to the end, protected vs compromi
   return `diff shown in past steps: ${diff >= 0}; ${r.violations.length} axe violation types`;
 });
 
+await step('Possession Lab: the Shield log tamper test (Rewrite an event, Verify the log) works by keyboard, announces the result and passes axe (m12 AC-19 to AC-23)', async () => {
+  for (const demo of ['rug-pull', 'trifecta']) {
+    const { c, p } = await fresh(`/?demo=${demo}`);
+    const lab = p.getByRole('dialog', { name: /Possession Lab/ });
+    const box = lab.getByTestId('chain-controls');
+    await box.waitFor({ timeout: 15000 });
+    const status = box.getByTestId('chain-status');
+    const verify = box.getByRole('button', { name: /^Verify the log/ });
+    const rewrite = box.getByRole('button', { name: /^Rewrite an event/ });
+    // Keyboard only: focus the button, press Enter.
+    await verify.focus();
+    await p.keyboard.press('Enter');
+    await status.getByText('INTACT', { exact: true }).waitFor({ timeout: 3000 });
+    await rewrite.focus();
+    await p.keyboard.press('Enter');
+    await verify.focus();
+    await p.keyboard.press('Enter');
+    await status.getByText(/BROKEN AT EVENT \d+/).waitFor({ timeout: 3000 });
+    const said = await status.innerText();
+    if ((await status.getAttribute('aria-live')) !== 'polite') throw new Error('status is not a polite live region');
+    await box.scrollIntoViewIfNeeded();
+    await p.addScriptTag({ content: axeSource });
+    const v = await p.evaluate(async () => (await window.axe.run(document, { resultTypes: ['violations'] })).violations.map((x) => ({ id: x.id, impact: x.impact, nodes: x.nodes.length, sample: x.nodes[0]?.target?.join(' ').slice(0, 120) })));
+    axeReports.push({ label: `chain-controls-${demo}`, violations: v });
+    await c.close();
+    if (v.length) throw new Error(`${demo}: ${v.length} axe violation types: ${JSON.stringify(v).slice(0, 200)}`);
+    if (!said) throw new Error(`${demo}: no status text`);
+  }
+  return 'rug-pull and trifecta: keyboard rewrite then verify reports the broken event; 0 axe violations';
+});
 await step('Possession Lab: every attack ends with the shielded side protected', async () => {
   const lab = page.getByRole('dialog', { name: /Possession Lab/ });
   const names = ['The Rug Pull', 'The Poisoned Tool', 'The Secret Leak', 'The Unknown Host', 'The Poisoned Result', 'The Canary', 'The Lethal Trifecta', 'The Hidden Page'];

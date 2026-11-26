@@ -72,7 +72,7 @@ The repository is at 0.2.0 (the gate, the baseline and the incident rules), whic
 
 ## Measured
 
-- <!--f:tests-->2,341<!--/f--> tests in <!--f:testFiles-->157<!--/f--> files (<!--f:propertyTests-->156<!--/f--> fast-check properties), and a <!--f:browserSteps-->44<!--/f-->-step Chrome run with an accessibility scan.
+- <!--f:tests-->2,413<!--/f--> tests in <!--f:testFiles-->167<!--/f--> files (<!--f:propertyTests-->171<!--/f--> fast-check properties), and a <!--f:browserSteps-->44<!--/f-->-step Chrome run with an accessibility scan.
 - A corpus we wrote: <!--f:benchmarkAttacksCaught-->28<!--/f--> of <!--f:benchmarkAttacks-->28<!--/f--> attacks caught, <!--f:benchmarkBenignClean-->27<!--/f--> of <!--f:benchmarkBenign-->27<!--/f--> ordinary look-alikes left alone. It shows coverage of known patterns, not real-world recall.
 - On 5 public repositories never used for tuning (about 9,500 files) the scanner raised 1 finding, and it was correct ([`docs/BENCHMARK.md`](docs/BENCHMARK.md)).
 - A field report on <!--f:fieldReport.repos-->483<!--/f--> public repositories in <!--f:fieldReport.rounds-->3<!--/f--> rounds. The first round was noisy; after the fixes, serious alerts fell from 4.0 to 0.24 per repository on a fresh set. That set had no real threats, so it shows how quiet the scanner is, not how often an alert is right ([`docs/FIELD_REPORT.md`](docs/FIELD_REPORT.md)).

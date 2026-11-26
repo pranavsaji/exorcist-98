@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { readAllowedReads, sha256File } from '@exorcist-98/core';
-import { allowReadCommand, dialogText, confirms } from '../commands/on-access.js';
+import { allowReadCommand, dialogText, checkCode } from '../commands/on-access.js';
 import type { DialogAnswer, Terminal } from '../commands/on-access.js';
 
 const dirs: string[] = [];
@@ -88,11 +88,11 @@ describe('exorcist allow-read: only a person can allow a file', () => {
     expect(readAllowedReads(process.cwd()).size).toBe(0);
   });
 
-  it('confirms matches only the code, trimmed and case-insensitive; short codes never match', () => {
-    expect(confirms('c0ffee', 'c0ffee')).toBe(true);
-    expect(confirms(' C0FFEE\n', 'c0ffee')).toBe(true);
-    expect(confirms('c0ffe', 'c0ffee')).toBe(false);
-    expect(confirms('', '')).toBe(false);
+  it('checkCode matches only the code, trimmed and case-insensitive; short codes never match', () => {
+    expect(checkCode('c0ffee', { code: 'c0ffee', issuedAt: 0 }, 0, false)).toBe('ok');
+    expect(checkCode(' C0FFEE\n', { code: 'c0ffee', issuedAt: 0 }, 0, false)).toBe('ok');
+    expect(checkCode('c0ffe', { code: 'c0ffee', issuedAt: 0 }, 0, false)).toBe('mismatch');
+    expect(checkCode('', { code: '', issuedAt: 0 }, 0, false)).toBe('mismatch');
   });
 
   it('dialog text has no control or direction characters and is bounded (it is passed as an argument, never as script)', () => {

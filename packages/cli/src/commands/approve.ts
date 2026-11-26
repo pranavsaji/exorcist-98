@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { alertsPath, loadPolicy, macOsAuth, policyPath, resolveRelease, approveHost, approveServer, approveTool, grantSession, liveSessions, sessionSummary, loadState, saveState, statePath } from '@exorcist-98/shield';
+import { alertsPath, readHead, loadPolicy, macOsAuth, policyPath, resolveRelease, approveHost, approveServer, approveTool, grantSession, liveSessions, sessionSummary, loadState, saveState, statePath } from '@exorcist-98/shield';
 import { DEFAULT_DIR, stateDir, parse, str } from '../util.js';
 import type { Io } from '../util.js';
 import { personConfirms, processTerminal } from './on-access.js';
@@ -71,7 +71,7 @@ export async function approveCommand(argv: string[], io: Io, term: Terminal = pr
     if (!term.dialog || process.platform !== 'darwin') {
       io.err('Note: there is no native dialog here, so this uses a typed code. An agent that drives a real terminal could read it; only type it yourself.');
     }
-    if (!(await personConfirms(asker, io, msg, `Let AI agent session ${server} send data out again`))) return 1;
+    if (!(await personConfirms(asker, io, msg, `Let AI agent session ${server} send data out again`, { dir, subject: 'approve session', detail: server }))) return 1;
     const g = grantSession(dir, server, new Date(), asOf);
     if (!g.ok) { io.err(g.error); return 1; }
     io.out(g.message);
@@ -96,8 +96,14 @@ export async function approveCommand(argv: string[], io: Io, term: Terminal = pr
 export async function alertsCommand(argv: string[], io: Io): Promise<number> {
   const p = parse(argv, { dir: { type: 'string' }, last: { type: 'string' }, help: { type: 'boolean', short: 'h' } });
   if (!p.ok) { io.err(p.error); return 2; }
-  const file = alertsPath(stateDir(str(p.values['dir'])));
-  if (!existsSync(file)) { io.out('No alerts.'); return 0; }
+  const dir = stateDir(str(p.values['dir']));
+  const file = alertsPath(dir);
+  const printHead = (): void => {
+    const h = readHead(dir);
+    if (!h.ok) io.out(`Event log head: unreadable (${h.error.replace(/[^\x20-\x7e]/g, '?')}).`);
+    else io.out(h.value === null ? 'Event log head: none yet (nothing has been logged in this folder).' : `Event log head: ${h.value.hash} (event ${h.value.seq})`);
+  };
+  if (!existsSync(file)) { io.out('No alerts.'); printHead(); return 0; }
   const n = Math.max(1, Number.parseInt(str(p.values['last']) ?? '20', 10) || 20);
   const lines = readFileSync(file, 'utf8').split('\n').filter(Boolean).slice(-n);
   for (const l of lines) {
@@ -106,5 +112,6 @@ export async function alertsCommand(argv: string[], io: Io): Promise<number> {
       io.out(`${a.time}  ${a.severity.toUpperCase().padEnd(8)} ${a.ruleId}  ${a.server}${a.tool ? `/${a.tool}` : ''}: ${a.message}`);
     } catch { /* skip a damaged line */ }
   }
+  printHead();
   return 0;
 }

@@ -1,0 +1,533 @@
+{
+  "pbtResults": {
+    "2.1 Write property test for the chain core": {
+      "status": "passed",
+      "lastRunTimestamp": 1795637521367
+    },
+    "2.2 Write property test for not-chained classification": {
+      "status": "passed",
+      "lastRunTimestamp": 1795637522216
+    },
+    "2.3 Write property test for tamper detection": {
+      "status": "passed",
+      "lastRunTimestamp": 1795637522772
+    },
+    "17.1 Write property test for chained approval outcomes": {
+      "status": "passed",
+      "lastRunTimestamp": 1795651536591
+    }
+  },
+  "executionHistory": {
+    "1. Create `packages/shield/src/chain.ts` with the pure chain core": [
+      {
+        "executionId": "9ff06cad-7a06-4928-b92b-2fb275adedd1",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795637190958
+      },
+      {
+        "executionId": "9ff06cad-7a06-4928-b92b-2fb275adedd1",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795637197858
+      },
+      {
+        "executionId": "9ff06cad-7a06-4928-b92b-2fb275adedd1",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795637292939
+      }
+    ],
+    "4. Checkpoint - chain core and writer": [
+      {
+        "executionId": "9ff06cad-7a06-4928-b92b-2fb275adedd1",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795637191002
+      },
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645131766
+      },
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645135251
+      }
+    ],
+    "7. Checkpoint - verify-log command": [
+      {
+        "executionId": "9ff06cad-7a06-4928-b92b-2fb275adedd1",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795637191052
+      },
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645425415
+      },
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645554787
+      }
+    ],
+    "10. Checkpoint - head hash visible in alerts, gate and console": [
+      {
+        "executionId": "9ff06cad-7a06-4928-b92b-2fb275adedd1",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795637191094
+      },
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645674266
+      },
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795646293128
+      }
+    ],
+    "11. Write `docs/KNOWN_LIMITATIONS.md` entry for the chain's limit": [
+      {
+        "executionId": "9ff06cad-7a06-4928-b92b-2fb275adedd1",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795637191132
+      },
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645558285
+      },
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645667168
+      }
+    ],
+    "13. Checkpoint - web demo chain controls": [
+      {
+        "executionId": "9ff06cad-7a06-4928-b92b-2fb275adedd1",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795637191170
+      },
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795646298166
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795650967937
+      }
+    ],
+    "15. Checkpoint - approval code gap fix": [
+      {
+        "executionId": "9ff06cad-7a06-4928-b92b-2fb275adedd1",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795637191223
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795650971451
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795651052565
+      }
+    ],
+    "18. Checkpoint - approvals chained and pinned": [
+      {
+        "executionId": "9ff06cad-7a06-4928-b92b-2fb275adedd1",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795637191259
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795651572853
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795651681440
+      }
+    ],
+    "19. Update `docs/REFERENCE.md`": [
+      {
+        "executionId": "9ff06cad-7a06-4928-b92b-2fb275adedd1",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795637191297
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795651681916
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795651755638
+      }
+    ],
+    "20. Run `node scripts/facts.mjs --run-tests --docs`": [
+      {
+        "executionId": "9ff06cad-7a06-4928-b92b-2fb275adedd1",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795637191334
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795651756301
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795651925935
+      }
+    ],
+    "21. Add the row to `docs/KIRO_LOG.md`": [
+      {
+        "executionId": "9ff06cad-7a06-4928-b92b-2fb275adedd1",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795637191405
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795651926632
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795652017186
+      }
+    ],
+    "22. Move the brief to `docs/kiro-briefs/`": [
+      {
+        "executionId": "9ff06cad-7a06-4928-b92b-2fb275adedd1",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795637191446
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795652017902
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795652049384
+      }
+    ],
+    "23. Run `pnpm -r typecheck` from the repository root": [
+      {
+        "executionId": "9ff06cad-7a06-4928-b92b-2fb275adedd1",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795637191473
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795652050060
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795652079036
+      }
+    ],
+    "24. Run `pnpm vitest run` from the repository root": [
+      {
+        "executionId": "9ff06cad-7a06-4928-b92b-2fb275adedd1",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795637191505
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795652078257
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795652274763
+      }
+    ],
+    "25. Commit the work without pushing": [
+      {
+        "executionId": "9ff06cad-7a06-4928-b92b-2fb275adedd1",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795637191542
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795652274829
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795652314499
+      }
+    ],
+    "2. Add genesis and head file I/O to `chain.ts`": [
+      {
+        "executionId": "9ff06cad-7a06-4928-b92b-2fb275adedd1",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795637310298
+      },
+      {
+        "executionId": "9ff06cad-7a06-4928-b92b-2fb275adedd1",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795637539336
+      }
+    ],
+    "2.1 Write property test for the chain core": [
+      {
+        "executionId": "9ff06cad-7a06-4928-b92b-2fb275adedd1",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795637538259
+      }
+    ],
+    "2.2 Write property test for not-chained classification": [
+      {
+        "executionId": "9ff06cad-7a06-4928-b92b-2fb275adedd1",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795637538315
+      }
+    ],
+    "2.3 Write property test for tamper detection": [
+      {
+        "executionId": "9ff06cad-7a06-4928-b92b-2fb275adedd1",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795637539241
+      }
+    ],
+    "3. Add a shared lock helper and wire chaining into `EventLog.write`": [
+      {
+        "executionId": "9ff06cad-7a06-4928-b92b-2fb275adedd1",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795637539427
+      },
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645125478
+      }
+    ],
+    "3.1 Write property test for concurrent append ordering": [
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645124976
+      }
+    ],
+    "3.2 Write integration test for real multi-process concurrency": [
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645125159
+      }
+    ],
+    "3.3 Write unit tests for unchained fallback and old-log compatibility": [
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645125427
+      }
+    ],
+    "5. Create `verifyLogDir` and the streaming file reader": [
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645131826
+      },
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645286566
+      }
+    ],
+    "5.1 Write performance integration test": [
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645286507
+      }
+    ],
+    "6. Create `exorcist verify-log`": [
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645286621
+      },
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645424884
+      }
+    ],
+    "6.1 Write unit tests for verify-log CLI wiring": [
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645424833
+      }
+    ],
+    "8. Surface the head hash in `exorcist alerts` and `exorcist gate`": [
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645555791
+      },
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645665352
+      }
+    ],
+    "9. Add chain status to the console model and page": [
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645557283
+      },
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645666279
+      }
+    ],
+    "14. Fix the approval-code gap: expiry and single use": [
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645558876
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795650549178
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795650549782
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795650968468
+      }
+    ],
+    "8.1 Write unit tests for alerts and gate head-hash output": [
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645665259
+      }
+    ],
+    "9.1 Write unit tests for the console chain badge": [
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645666235
+      }
+    ],
+    "12. Add browser-safe chain controls to the web Possession Lab demos": [
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795645674390
+      },
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795646294059
+      }
+    ],
+    "12.1 Write component tests for the demo chain controls": [
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795646293738
+      }
+    ],
+    "12.2 Add an axe accessibility check to the e2e script": [
+      {
+        "executionId": "c6a5e542-c065-4ea6-817c-0f4d70f4d38d",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795646293986
+      }
+    ],
+    "14.1 Write property test for approval code expiry": [
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795650968027
+      }
+    ],
+    "14.2 Write property test for approval code single use": [
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795650968431
+      }
+    ],
+    "16. Pin the existing OS-release single-use and full-re-check behavior with property tests": [
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795651052645
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795651218658
+      }
+    ],
+    "16.1 Write property test for OS-release single-use tickets": [
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795651218082
+      }
+    ],
+    "16.2 Write property test for full re-check at release time": [
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795651218619
+      }
+    ],
+    "17. Chain every approval, refusal and expiry outcome": [
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795651221652
+      },
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795651569842
+      }
+    ],
+    "17.1 Write property test for chained approval outcomes": [
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795651569741
+      }
+    ],
+    "17.2 Write unit tests for AC-28's reachability boundaries": [
+      {
+        "executionId": "93036001-664a-468c-808e-938425927b4a",
+        "chatSessionId": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+        "timestamp": 1795651569808
+      }
+    ]
+  }
+}

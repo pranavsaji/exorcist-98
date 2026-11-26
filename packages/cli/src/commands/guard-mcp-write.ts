@@ -4,7 +4,8 @@ import { homedir } from 'node:os';
 import { createInterface } from 'node:readline';
 import { decideMcpWrite, shownName } from '@exorcist-98/core';
 import { askOwner, macDialog, personConfirms } from './on-access.js';
-import type { Terminal } from './on-access.js';
+import type { ApprovalAudit, Terminal } from './on-access.js';
+import { stateDir } from '../util.js';
 import type { Io } from '../util.js';
 
 export const GUARD_MCP_WRITE_HELP = `Usage: exorcist guard-mcp-write   (Kiro hook helper)
@@ -73,10 +74,11 @@ function blockMessage(path: string, why: string): string {
 /** Ask once; a timeout counts as no. */
 async function askPerson(deps: GuardDeps, path: string): Promise<'yes' | 'no' | 'nobody' | 'timeout'> {
   const { term, promptIo } = deps;
+  const audit: ApprovalAudit = { dir: stateDir(), subject: 'guard-mcp-write' };
   const run = async (): Promise<'yes' | 'no' | 'nobody'> => {
-    if (term.interactive) return (await personConfirms(term, promptIo, dialogMessage(path), reasonText(path))) ? 'yes' : 'no';
+    if (term.interactive) return (await personConfirms(term, promptIo, dialogMessage(path), reasonText(path), audit)) ? 'yes' : 'no';
     // No terminal to type in: only the OS verification or a native dialog can ask.
-    const answer = await askOwner(term, dialogMessage(path), reasonText(path));
+    const answer = await askOwner(term, dialogMessage(path), reasonText(path), audit);
     return answer === 'allow' ? 'yes' : answer === 'deny' ? 'no' : 'nobody';
   };
   let timer: NodeJS.Timeout | undefined;

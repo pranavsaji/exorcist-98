@@ -39,6 +39,7 @@ import type { Stats } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { cleanText } from './notify.js';
+import { eventHash, loadOrCreateGenesis, readHead, writeHeadAtomic } from './chain.js';
 
 export const eventsPath = (dir: string): string => join(dir, 'events.jsonl');
 export const oldEventsPath = (dir: string): string => join(dir, 'events.1.jsonl');
@@ -51,6 +52,7 @@ const STALE_LOCK_MS = 10_000;
 /** The reader never reads more than this from one file at once. */
 const MAX_READ_BYTES = 8 * 1024 * 1024;
 
+const HEX64 = /^[0-9a-f]{64}$/;
 const NAME_CHARS = 80;
 const WHY_CHARS = 400;
 const MESSAGE_CHARS = 600;
@@ -66,6 +68,10 @@ const Base = {
   pid:     z.number().int().positive(),
   server:  Name,
   session: z.string().regex(KEY_RE).optional(),
+  /** Hash-chain fields (chain.ts). Absent on lines written before the chain existed or when the lock could not be taken. */
+  seq:     z.number().int().positive().optional(),
+  prev:    z.string().regex(HEX64).optional(),
+  hash:    z.string().regex(HEX64).optional(),
 };
 
 /** A Shield process started (one per wrapped server). */
@@ -162,7 +168,53 @@ export type EventLogOptions = {
   session?: string;
   maxBytes?: number;
   now?: () => Date;
+  /** Hash-chain each event (default true). false writes plain lines, like a log from before the chain. */
+  chain?: boolean;
+  /** Genesis value generator, injectable for tests. */
+  random?: () => Buffer;
+  /** How many times to try for the lock before writing an event unchained (default LOCK_ATTEMPTS). */
+  lockAttempts?: number;
 };
+
+/** About 2.4 s of waiting in all, enough to ride out a loaded machine: the critical section lasts well under a millisecond, so this only runs out when a lock is truly stuck. */
+const LOCK_ATTEMPTS = 800;
+const LOCK_WAIT_MS = 5;
+
+function sleepMs(ms: number): void {
+  try { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); } catch { /* no wait available: retry at once */ }
+}
+
+/**
+ * Run `fn` holding the state folder's lock folder (`mkdirSync` as the mutex). A lock
+ * older than STALE_LOCK_MS was left by a dead process and is removed. Tries up to
+ * `attempts` times, waiting briefly between tries; `{ held: false }` when it never got
+ * the lock (`fn` is not run). Never throws: a failure inside `fn` propagates to the caller.
+ */
+function withLock<T>(lock: string, attempts: number, fn: () => T): { held: true; value: T } | { held: false } {
+  let got = false;
+  for (let i = 0; i < attempts && !got; i++) {
+    try {
+      mkdirSync(lock);
+      got = true;
+    } catch (err) {
+      if (code(err) !== 'EEXIST') return { held: false };
+      try {
+        if (Date.now() - lstatSync(lock).mtimeMs > STALE_LOCK_MS) {
+          rmdirSync(lock);
+          mkdirSync(lock);
+          got = true;
+        }
+      } catch { /* another process won the race; try again */ }
+    }
+    if (!got && i + 1 < attempts) sleepMs(1 + Math.random() * (LOCK_WAIT_MS - 1));
+  }
+  if (!got) return { held: false };
+  try {
+    return { held: true, value: fn() };
+  } finally {
+    try { rmdirSync(lock); } catch { /* removed as stale later */ }
+  }
+}
 
 /**
  * One Shield process's writer. Never throws: a log that cannot be written
@@ -177,6 +229,9 @@ export class EventLog {
   private readonly pid: number;
   private readonly server: string;
   private readonly now: () => Date;
+  private readonly chain: boolean;
+  private readonly random: (() => Buffer) | undefined;
+  private readonly lockAttempts: number;
   private sessionKey: string | undefined;
   /** Events not written because the file was full and could not be rotated. */
   dropped = 0;
@@ -190,6 +245,9 @@ export class EventLog {
     this.pid = o.pid ?? process.pid;
     this.server = cleanText(o.server, NAME_CHARS);
     this.now = o.now ?? (() => new Date());
+    this.chain = o.chain ?? true;
+    this.random = o.random;
+    this.lockAttempts = o.lockAttempts ?? LOCK_ATTEMPTS;
     this.session = o.session;
   }
 
@@ -213,29 +271,64 @@ export class EventLog {
     };
     const parsed = ShieldEventSchema.safeParse(record);
     if (!parsed.success) { this.fail(`an event did not validate (${parsed.error.issues[0]?.message ?? 'invalid'})`); return false; }
-    const line = Buffer.from(`${JSON.stringify(parsed.data)}\n`, 'utf8');
-    if (line.length > MAX_LINE_BYTES) { this.fail('an event was too long'); return false; }
     try {
       mkdirSync(this.dir, { recursive: true });
-      const size = this.size();
-      if (size + line.length > this.maxBytes) {
-        this.rotate();
-        if (this.size() + line.length > this.maxBytes * 2) { this.dropped++; return false; }
+      if (this.chain) {
+        // One critical section per event: read head, compute, append, write head.
+        const r = withLock(this.lock, this.lockAttempts, () => this.writeChained(parsed.data));
+        if (r.held) return r.value;
+        this.fail('the event log lock could not be taken, so an event was written without chain fields');
       }
-      // O_NOFOLLOW: never append through a symlink someone put in the state folder.
-      const flags = constants.O_WRONLY | constants.O_APPEND | constants.O_CREAT | (constants.O_NOFOLLOW ?? 0);
-      const fd = openSync(this.path, flags, 0o600);
-      try {
-        if (!fstatSync(fd).isFile()) { this.fail(`${this.path} is not a regular file`); return false; }
-        writeSync(fd, line);
-      } finally {
-        closeSync(fd);
-      }
-      return true;
+      return this.append(this.encode(parsed.data));
     } catch (err) {
       this.fail(`${this.path} could not be written (${code(err)})`);
       return false;
     }
+  }
+
+  private encode(e: ShieldEvent): Buffer | null {
+    const line = Buffer.from(`${JSON.stringify(e)}\n`, 'utf8');
+    if (line.length > MAX_LINE_BYTES) { this.fail('an event was too long'); return null; }
+    return line;
+  }
+
+  /** Size check, rotation and the single O_APPEND write of one line. The caller holds no lock unless it is chaining. */
+  private append(line: Buffer | null, locked = false): boolean {
+    if (line === null) return false;
+    const size = this.size();
+    if (size + line.length > this.maxBytes) {
+      if (locked) this.rotateLocked(); else this.rotate();
+      if (this.size() + line.length > this.maxBytes * 2) { this.dropped++; return false; }
+    }
+    // O_NOFOLLOW: never append through a symlink someone put in the state folder.
+    const flags = constants.O_WRONLY | constants.O_APPEND | constants.O_CREAT | (constants.O_NOFOLLOW ?? 0);
+    const fd = openSync(this.path, flags, 0o600);
+    try {
+      if (!fstatSync(fd).isFile()) { this.fail(`${this.path} is not a regular file`); return false; }
+      writeSync(fd, line);
+    } finally {
+      closeSync(fd);
+    }
+    return true;
+  }
+
+  /** The chained write, with the lock held. Falls back to an unchained line when the chain files are unusable. */
+  private writeChained(event: ShieldEvent): boolean {
+    const g = loadOrCreateGenesis(this.dir, this.random);
+    if (!g.ok) { this.fail(g.error); return this.append(this.encode(event), true); }
+    const h = readHead(this.dir);
+    // A damaged head counts as "no head yet": the verifier then reports the break instead of the writer hiding it.
+    if (!h.ok) this.fail(h.error);
+    const head = h.ok ? h.value : null;
+    const seq = (head?.seq ?? 0) + 1;
+    const prev = head?.hash ?? g.value;
+    const hash = eventHash({ ...event, seq, prev });
+    const chained = ShieldEventSchema.safeParse({ ...event, seq, prev, hash });
+    if (!chained.success) { this.fail('a chained event did not validate'); return false; }
+    if (!this.append(this.encode(chained.data), true)) return false;
+    const w = writeHeadAtomic(this.dir, { v: 1, genesis: g.value, seq, hash });
+    if (!w.ok) this.fail(w.error);
+    return true;
   }
 
   private fail(p: string): void {
@@ -246,25 +339,17 @@ export class EventLog {
     try { return lstatSync(this.path).size; } catch { return 0; }
   }
 
-  /** Rename the full file to events.1.jsonl, under the lock. Best effort. */
+  /** Rename the full file to events.1.jsonl, under the lock (one try). Best effort. */
   private rotate(): void {
-    try {
-      mkdirSync(this.lock);
-    } catch (err) {
-      if (code(err) !== 'EEXIST') return;
-      // Someone else is rotating, or a process died holding the lock.
-      try {
-        if (Date.now() - lstatSync(this.lock).mtimeMs <= STALE_LOCK_MS) return;
-        rmdirSync(this.lock);
-        mkdirSync(this.lock);
-      } catch { return; }
-    }
+    withLock(this.lock, 1, () => this.rotateLocked());
+  }
+
+  /** The rotation itself; the caller holds the lock. */
+  private rotateLocked(): void {
     try {
       // Another process may have rotated just before this one took the lock.
       if (this.size() > 0 && this.size() >= this.maxBytes / 2) renameSync(this.path, this.old);
-    } catch { /* the next write tries again */ } finally {
-      try { rmdirSync(this.lock); } catch { /* removed as stale later */ }
-    }
+    } catch { /* the next write tries again */ }
   }
 }
 

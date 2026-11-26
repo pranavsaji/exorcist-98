@@ -112,6 +112,37 @@ It works on a phone too:
 
 **Watch it live: `exorcist console`.** Opens a local page that shows, as they happen, every tool call the Shields of a state folder allowed, held or blocked, the rule and the reason (EX-006 rug pull, EX-022 canary, EX-027 Session Guard...), which server, and what the Session Guard has seen in each agent session (untrusted text, private data, calls waiting for your answer). Each Shield appends its decisions to `.exorcist/events.jsonl` (bounded, names and rule ids only, never arguments or results); the console tails it. It is a **read-only** view: it cannot approve or release anything, which stays with you: in `exorcist approve ...` in your own terminal, or, when the Shield uses OS release (`sessionRelease: os`, macOS), in the system prompt (Touch ID or your login password). It listens on 127.0.0.1 only, behind a random token in the URL, with a Host check and a strict CSP. Limits: [S-028](KNOWN_LIMITATIONS.md).
 
+**A log that shows if it was edited: the hash chain.** Each line the Shield writes to `events.jsonl` is linked to the line before it, like pages numbered and stamped in a ledger. Every event carries three extra fields: `seq` (its position, starting at 1), `prev` (the hash of the event before it) and `hash` (SHA-256 of the event itself, including `seq` and `prev`). Change, remove, insert or swap a line and the links after it no longer fit.
+
+- **Genesis file.** The first event links to a random value kept in `events.genesis.json`, created once (exclusively, so two Shields starting together share one value). It ties the head file to this log.
+- **Head file.** `events.head.json` holds the genesis value and the `seq` and `hash` of the newest event. It is written to a temporary file in the same folder and then renamed, so a reader never sees half a file. A log that was cut short, or whose end was replaced, no longer matches it.
+- **Several Shields at once.** Shields that share a state folder take a short lock (`events.lock`, a folder, the same one rotation uses) around "read the head, write the line, write the head", so they still produce one chain in order. A lock left behind by a dead process is removed after 10 seconds. If a Shield cannot get the lock after about 2.4 seconds of trying, it writes the event **unchained** (no `seq`, `prev` or `hash`) instead of dropping it or freezing your agent. Verification tolerates such lines only at the very end of the log, and says how many it did not check. In the middle of a chain, an unchained line reads as tampering ([S-031](KNOWN_LIMITATIONS.md)).
+- **Rotation.** At 1 MiB the log is renamed to `events.1.jsonl` and a new `events.jsonl` starts. The chain carries on across the two files. Rotation drops the oldest events, so verification then starts at the first event still there and cannot see before it.
+- **Old logs.** A log written before the chain, or an empty one, has none. It is reported as "not chained", not as broken.
+
+**What the chain detects, and what it does not.** It detects a partial edit: a changed, removed, inserted or swapped event, and a log whose end no longer matches the head file. `exorcist verify-log` names the first event that is wrong. It does **not** stop anyone who can write the state folder: they can rewrite the whole log and the head file together, and the result verifies as intact. That full rewrite is caught only if you saved a head hash somewhere outside the state folder (a CI log, a ticket, a note) and check it with `--expect`. This is detection, not prevention. The full list of limits is [S-031](KNOWN_LIMITATIONS.md).
+
+**Where to find the head hash.** The last line of `exorcist alerts` prints `Event log head: <hash> (event <n>)`, or says there is none yet. `exorcist gate` prints the same line, on stdout when the check passes and after its result on stderr when it fails (it reads the folder given with `--dir`, default the Shield state folder). The Shield console shows it next to a chain badge whose text says **intact**, **broken at event N** or **not chained**; the words carry the meaning, the colour only adds to it. Save the hash outside the state folder if you want to detect a full rewrite later.
+
+**Checking it: `exorcist verify-log [--dir <folder>] [--expect <hash | seq:hash>] [--json]`.** Reads the log (both files), the head file and the genesis file in one pass.
+
+| Result | Plain-text message | Exit code |
+|---|---|---|
+| Intact | `The log is intact: <n> events, none changed. Head hash: <hash>` (adds `<k> later lines are not chained and were not checked.` when the log ends with unchained lines) | 0 |
+| Not chained | `The log is not chained: it has no hash chain (an old or empty log), so there is nothing to check.` | 0 (1 with `--expect`, whose message is `The log is not chained, so the expected head cannot be matched.`) |
+| Broken | `The log is broken at event <n>: <reason>. <detail>`, where the reason is one of `an event was changed`, `an event was removed`, `an event was inserted`, `events were swapped`, `the log's end does not match its head record`, or `the log's head does not match the expected hash` | 1 |
+| Usage error | An unknown flag, an extra argument, or an `--expect` that is not a 64-character hash or `<seq>:<hash>`, with the help text | 2 |
+
+- `--dir` is the Shield state folder (default: the project's `.exorcist` folder, or `EXORCIST_DIR`).
+- `--expect <hash>` must equal the log's current head. `--expect <seq>:<hash>` must equal the hash of event number `seq`, and stays valid after the log has grown, so it suits a hash you saved last week. A mismatch is "broken" (exit 1).
+- `--json` prints one JSON object and nothing else, with the same exit codes. Its shape is one of `{"status":"intact","head":{"v":1,"genesis":"<hex>","seq":<n>,"hash":"<hex>"}}` (plus `"unchained":<k>` when the log ends with unchained lines), `{"status":"not-chained"}`, or `{"status":"broken","atSeq":<n>,"reason":"changed|removed|inserted|reordered|head-mismatch|expect-mismatch","detail":"<text>"}`.
+
+**What a person has to do to release a held call.** Releasing is only ever done by a person, and a code or a release cannot be reused:
+
+- **Typed code (no OS prompt available).** The one-time code shown by `exorcist approve session` and `exorcist allow-read` is valid for a **fixed 15 minutes** and works **once**. Typing it late prints "That code has expired (it is valid for 15 minutes). Nothing was allowed. Run the command again."; typing it a second time prints "That code was already used. Nothing was allowed." A wrong answer is just "That does not match" and never says whether a code was expired or used.
+- **OS release (macOS).** A successful Touch ID or login-password check releases **one** held call, grants nothing, and the next call is held again. The call is **re-checked in full** at that moment against the current state: a tool withheld while the prompt was open (a rug pull or a poisoned description) is still refused, and a call to a host that is not allowed still goes through the unknown-host check (EX-016).
+- **Every outcome is in the log.** Each approval, refusal and expiry is written as an event, so it is chained like any other: accepted, declined, expired, already used, and a timed-out or cancelled OS prompt. The CLI commands (`approve session`, `allow-read`, `guard-mcp-write`) write theirs without file text, codes or reasons.
+
 **Try it (macOS, with you at the keyboard).** `pnpm --filter @exorcist-98/cli build && node scripts/demo-touchid.mjs` makes a temporary project with a fake `.env`, starts real Shields in front of fake servers, and plays the trifecta: an issue that hides an instruction, the `.env` read, then an email to an allowed host. The email is held and the system prompt asks for Touch ID (or your login password); Cancel it to see the call refused. It prints the `exorcist console` command to watch it live, and refuses to run in tests, in CI or off macOS.
 
 <img src="media/shield-console-desktop.png" alt="The Shield console: tool calls allowed, held and blocked with rule ids, and an armed Session Guard holding a Slack message after a GitHub issue and a .env read" width="800">
@@ -185,7 +216,7 @@ jobs:
 |---|---|
 | `scan <path>` | Scan a folder or file (`--format text|json|sarif|markdown|badge`, `--fail-on`, `--ai`, `--baseline <file>`) |
 | `baseline [folder]` | Write `.exorcist-baseline.json`: the findings you accept for now |
-| `gate [folder]` | Fail if the changes since the last commit add a high or critical finding to a steering, spec, hook, agent or MCP file (read-only; run by the Kiro `Stop` hook) |
+| `gate [folder] [--dir <state folder>]` | Fail if the changes since the last commit add a high or critical finding to a steering, spec, hook, agent or MCP file (read-only; run by the Kiro `Stop` hook). Also prints the Shield event log's head hash when the state folder has one; `--dir` picks that folder |
 | `guard-mcp-write` | Hook helper: a person must confirm any agent write to an MCP config |
 | `exorcise [path]` | Disinfect: print a patch for every safe mechanical fix; `--write` applies it with a vault backup |
 | `map [dir]` | Draw the Haunted House Map (EX-023) |
@@ -194,7 +225,8 @@ jobs:
 | `lock [--check] [--static]` | Write or check `exorcist.lock` |
 | `canary plant|--list|--remove` | Canary traps (EX-022) |
 | `console` | Open the live, read-only Shield console in your browser (new in 0.1.2) |
-| `approve`, `alerts`, `vault` | Approve changed tools, hosts or servers, or a session the Session Guard holds (EX-027); read alerts; quarantine and restore |
+| `approve`, `alerts`, `vault` | Approve changed tools, hosts or servers, or a session the Session Guard holds (EX-027); read alerts (the last line is the event log's head hash); quarantine and restore |
+| `verify-log [--dir] [--expect <hash\|seq:hash>] [--json]` | Check that the Shield's event log was not changed, cut short or reordered. Exit 0 intact or not chained, 1 broken (or not chained with `--expect`), 2 usage error. See "A log that shows if it was edited" above |
 | `init [--kiro] [--shield]` | Wire a Kiro project |
 | `on-access`, `allow-read` | The on-access hook and its person-only allowance |
 | `update [--status]` | Install signed (Ed25519) definition updates, verified on download and on every load |
@@ -233,7 +265,7 @@ Before any text reaches a model, every credential-shaped value is masked at the 
 
 ## Measured, not claimed
 
-- **Tests:** <!--f:tests-->2,341<!--/f--> tests in <!--f:testFiles-->157<!--/f--> files (unit, <!--f:propertyTests-->156<!--/f--> fast-check properties and real-process tests), plus a <!--f:browserSteps-->44<!--/f-->-step Chrome run with an axe accessibility scan on every window: <!--f:browserAxeViolationTypes-->0<!--/f--> violation types.
+- **Tests:** <!--f:tests-->2,413<!--/f--> tests in <!--f:testFiles-->167<!--/f--> files (unit, <!--f:propertyTests-->171<!--/f--> fast-check properties and real-process tests), plus a <!--f:browserSteps-->44<!--/f-->-step Chrome run with an axe accessibility scan on every window: <!--f:browserAxeViolationTypes-->0<!--/f--> violation types.
 - **Labelled corpus** (`fixtures/benchmark/`): <!--f:benchmarkAttacksCaught-->28<!--/f--> of <!--f:benchmarkAttacks-->28<!--/f--> defanged attacks caught, <!--f:benchmarkBenignClean-->27<!--/f--> of <!--f:benchmarkBenign-->27<!--/f--> look-alike ordinary files left alone. We wrote this corpus, so it shows coverage of known patterns, not real-world recall.
 - **Published Kiro attacks** ([`docs/INCIDENTS.md`](INCIDENTS.md)): defanged replicas of CVE-2026-10591 (hidden web text rewrites the MCP config) and the Mindgard file-name attack are in the corpus, with the rule, Shield or hook layer that stops each and what is not covered.
 - **Held-out public repositories** ([`docs/BENCHMARK.md`](BENCHMARK.md), held-out set C): on 5 repos never used for tuning (about 9,500 files) the scanner raised 1 finding, and it is correct.

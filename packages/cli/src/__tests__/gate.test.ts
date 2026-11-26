@@ -32,7 +32,10 @@ function repo(): string {
 async function gate(dir: string, extra: string[] = []): Promise<{ code: number; out: string; err: string }> {
   let out = '';
   let err = '';
-  const code = await gateCommand([dir, ...extra], { out: (s) => { out += s; }, err: (s) => { err += s; } });
+  // Hermetic: an empty state folder, so an ambient `.exorcist/` cannot add a head-hash line.
+  const state = extra.includes('--dir') ? [] : ['--dir', mkdtempSync(join(tmpdir(), 'exorcist-gate-state-'))];
+  if (state[1]) dirs.push(state[1]);
+  const code = await gateCommand([dir, ...state, ...extra], { out: (s) => { out += s; }, err: (s) => { err += s; } });
   return { code, out, err };
 }
 
@@ -143,7 +146,11 @@ describe('exorcist gate', () => {
   it('through the real CLI: exit code 1 and the list on stderr; the Kiro Stop hook command form', () => {
     const d = repo();
     put(d, '.kiro/steering/style.md', `# Style\n${HIDDEN}\n`);
-    const r = spawnSync(join(ROOT, 'node_modules/.bin/tsx'), [join(ROOT, 'packages/cli/src/index.ts'), 'gate'], { cwd: d, encoding: 'utf8' });
+    const r = spawnSync(join(ROOT, 'node_modules/.bin/tsx'), [join(ROOT, 'packages/cli/src/index.ts'), 'gate'], {
+      cwd: d,
+      encoding: 'utf8',
+      env: { ...process.env, EXORCIST_DIR: mkdtempSync(join(tmpdir(), 'exorcist-gate-state-')) },
+    });
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('EX-001');
     expect(r.stdout).toBe('');
