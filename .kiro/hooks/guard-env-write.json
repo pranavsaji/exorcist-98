@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "guard-env-write",
+      "description": "Blocks the write tools (fs_write, str_replace) when the text to be written holds a value from a .env file of this project and the destination is not itself a .env file. Exit code 2 blocks the write; the reason names the file, never the value. Unparsable input is allowed. Runs through scripts/kiro-hook.sh because Kiro gives hook commands a PATH without Node.",
+      "trigger": "PreToolUse",
+      "matcher": "write|fs_write|str_replace",
+      "action": {
+        "type": "command",
+        "command": "sh scripts/kiro-hook.sh node_modules/.bin/tsx packages/cli/src/index.ts guard-env-write"
+      },
+      "timeout": 15
+    }
+  ]
+}

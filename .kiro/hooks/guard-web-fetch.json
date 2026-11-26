@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "guard-web-fetch",
+      "description": "Blocks the web_fetch tool when the address holds a secret (key or token), a canary token, or a value from a .env file of this project, plain, percent-encoded, base64 or split. A fetch sends its address to another computer. Exit code 2 blocks the fetch; the reason names the kind of value and the host, never the value. Unparsable input is allowed. Runs through scripts/kiro-hook.sh because Kiro gives hook commands a PATH without Node.",
+      "trigger": "PreToolUse",
+      "matcher": "web_fetch|webFetch",
+      "action": {
+        "type": "command",
+        "command": "sh scripts/kiro-hook.sh node_modules/.bin/tsx packages/cli/src/index.ts guard-web-fetch"
+      },
+      "timeout": 15
+    }
+  ]
+}

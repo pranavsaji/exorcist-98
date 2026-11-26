@@ -28,9 +28,9 @@ describe('GET /api/shield-sim', () => {
   });
 });
 describe('GET /api/shield-sim, The Hidden Page (m8-incidents, requirement 6)', () => {
-  it('is listed as the eighth attack', async () => {
+  it('is listed among the attacks', async () => {
     const r = (await (await get('')).json()) as { scenarios: Array<{ id: string; title: string }> };
-    expect(r.scenarios).toHaveLength(8);
+    expect(r.scenarios).toHaveLength(9);
     expect(r.scenarios.find((s) => s.id === 'hidden-web-text')?.title).toBe('The Hidden Page');
   });
   it('replays it: the config is written without the Shield, and EX-028 withholds the page with it', async () => {
@@ -43,3 +43,16 @@ describe('GET /api/shield-sim, The Hidden Page (m8-incidents, requirement 6)', (
   });
 });
 
+
+describe('GET /api/shield-sim, The Settings Tamper (m11-config-tamper)', () => {
+  it('CT-19: is listed as attack 9 and replays blocked, with EX-030 as the stopping rule', async () => {
+    const list = (await (await get('')).json()) as { scenarios: Array<{ id: string; title: string }> };
+    expect(list.scenarios).toHaveLength(9);
+    expect(list.scenarios[8]).toMatchObject({ id: 'settings-tamper', title: 'The Settings Tamper' });
+    const r = (await (await get('?scenario=settings-tamper')).json()) as SimResult;
+    expect(r.unshielded.verdict).toMatch(/every command trusted/);
+    expect(r.shielded.poisonReachedAgent).toBe(false);
+    expect(r.shielded.serverReceived.map((c) => c.tool)).toEqual(['read_file']);
+    expect(r.steps.some((s) => s.shielded.some((e) => e.ruleId === 'EX-030' && e.severity === 'high'))).toBe(true);
+  });
+});

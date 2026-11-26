@@ -1,0 +1,684 @@
+{
+  "pbtResults": {
+    "1.11 Write property test for Property 4": {
+      "status": "passed",
+      "lastRunTimestamp": 1795674706246
+    },
+    "1.3 Write property test for Properties 1 and 2": {
+      "status": "passed",
+      "lastRunTimestamp": 1795674975981
+    },
+    "1.10 Write property test for Property 3 (settings-tamper, weaken-checks, redirect-publish negation)": {
+      "status": "passed",
+      "lastRunTimestamp": 1795688907839
+    }
+  },
+  "executionHistory": {
+    "1.1 EX-007 extension: broad agent trust in committed settings (CT-1, CT-2, CT-3)": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644713693
+      },
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644721210
+      },
+      {
+        "executionId": "a2ad3cae-da22-419f-a99a-95bccbc7ed18",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795650565866
+      },
+      {
+        "executionId": "a2ad3cae-da22-419f-a99a-95bccbc7ed18",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795650567041
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795688847600
+      }
+    ],
+    "1.4 EX-030: instructions to change agent settings or guard files (CT-4)": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644713742
+      },
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644721391
+      },
+      {
+        "executionId": "a2ad3cae-da22-419f-a99a-95bccbc7ed18",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795650565936
+      },
+      {
+        "executionId": "a2ad3cae-da22-419f-a99a-95bccbc7ed18",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795650567702
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795688847875
+      }
+    ],
+    "1.6 EX-031: instructions to weaken tests or checks (CT-8, CT-9)": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644713784
+      },
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644721483
+      },
+      {
+        "executionId": "a2ad3cae-da22-419f-a99a-95bccbc7ed18",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795650565991
+      },
+      {
+        "executionId": "a2ad3cae-da22-419f-a99a-95bccbc7ed18",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795650566091
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795688848141
+      }
+    ],
+    "1.8 EX-032: instructions to push or publish elsewhere (CT-10)": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644713828
+      },
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644722311
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795688848766
+      }
+    ],
+    "2.1 EX-028 extension implementation (CT-11, CT-12)": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644713867
+      },
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644722621
+      },
+      {
+        "executionId": "a2ad3cae-da22-419f-a99a-95bccbc7ed18",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795650566041
+      },
+      {
+        "executionId": "a2ad3cae-da22-419f-a99a-95bccbc7ed18",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795650568152
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795688849620
+      }
+    ],
+    "3. Checkpoint - ensure scanner rule tests pass": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644713956
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795688962142
+      }
+    ],
+    "4.1 `decideMcpWrite` extension: trusted-commands and guard-file targets (CT-5, CT-6, CT-7)": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644714017
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795688962193
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795689246138
+      }
+    ],
+    "4.4 `guard-mcp-write` command extension (CT-5, CT-6, CT-7)": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644714077
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795689525539
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795689626909
+      }
+    ],
+    "5.1 `packages/core/src/env-values.ts`: shared `.env*` value loader (CT-13, CT-14)": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644714112
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795689246999
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795689350203
+      }
+    ],
+    "5.3 `guard-web-fetch` command (CT-13)": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644714173
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795689627891
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795689946739
+      }
+    ],
+    "5.6 `.kiro/hooks/guard-web-fetch.json` hook": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644714229
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795689949566
+      }
+    ],
+    "6.1 `guard-env-write` command and hook (CT-14)": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644714300
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795689951091
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795690133125
+      }
+    ],
+    "7. Checkpoint - ensure guard and hook tests pass": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644714366
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795690135915
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795690385160
+      }
+    ],
+    "8.1 `packages/core/src/sandbox-policy.ts` (CT-18)": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644714404
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795689350743
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795689523076
+      }
+    ],
+    "9.1 `exorcist init --kiro` extension: new hooks (CT-15)": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644714439
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795690385217
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795690504542
+      }
+    ],
+    "9.3 `exorcist init --kiro --sandbox` (CT-16, CT-17)": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644714478
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795690505662
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795690777012
+      }
+    ],
+    "10. Checkpoint - ensure init and sandbox tests pass": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644714515
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795690778963
+      }
+    ],
+    "11.1 Possession Lab attack 9 implementation (CT-19)": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644714606
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795690779390
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795690931768
+      }
+    ],
+    "12.1 Add paired benchmark cases (CT-20)": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644714650
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795690934458
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795695628220
+      }
+    ],
+    "13. Checkpoint - ensure web and benchmark tests pass": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644714703
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795695629168
+      }
+    ],
+    "14.1 `docs/INCIDENTS.md`: the 2025 Kiro trusted-commands incident (CT-21)": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644714740
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795691311697
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795691413664
+      }
+    ],
+    "14.2 `docs/REFERENCE.md`, `docs/KNOWN_LIMITATIONS.md` and `facts.mjs` (CT-21)": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644714777
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795691414724
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795691714302
+      }
+    ],
+    "15.1 `docs/KIRO_LOG.md` row and moving the brief (CT-22)": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644714823
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795695630169
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795695691406
+      }
+    ],
+    "15.2 Final checkpoint - typecheck, test, commit (CT-22)": [
+      {
+        "executionId": "44603878-6e65-4704-9c31-429d8c19ba73",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795644714892
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795695692140
+      }
+    ],
+    "1. EX-007 extension and EX-030/031/032 rule files": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795688848825
+      }
+    ],
+    "2. EX-028 extension: meta tags and alt text": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795688849923
+      }
+    ],
+    "1.10 Write property test for Property 3 (settings-tamper, weaken-checks, redirect-publish negation)": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795688856896
+      },
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795688949280
+      }
+    ],
+    "1.2 Write unit tests for the EX-007 extension": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795688949355
+      }
+    ],
+    "1.3 Write property test for Properties 1 and 2": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795688950232
+      }
+    ],
+    "1.5 Write unit tests for EX-030": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795688951806
+      }
+    ],
+    "1.7 Write unit tests for EX-031 (attacks and the CT-9 counter-examples)": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795688952727
+      }
+    ],
+    "1.9 Write unit tests for EX-032": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795688953748
+      }
+    ],
+    "1.11 Write property test for Property 4": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795688954910
+      }
+    ],
+    "2.2 Write unit tests for the EX-028 extension": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795688955103
+      }
+    ],
+    "4.2 Write unit tests for the `decideMcpWrite` extension": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795689246463
+      }
+    ],
+    "4.3 Write property test for Property 7": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795689246574
+      }
+    ],
+    "5.2 Write unit tests for `loadEnvValues`": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795689350316
+      }
+    ],
+    "8. Sandbox policy check": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795689523155
+      }
+    ],
+    "8.2 Write unit tests for `sandboxFindings`": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795689523857
+      }
+    ],
+    "8.3 Write property test for Property 8": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795689524871
+      }
+    ],
+    "4. `decideMcpWrite` extension and `guard-mcp-write` command extension": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795689626958
+      }
+    ],
+    "4.5 Write unit tests for the extended `guard-mcp-write` command": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795689627065
+      }
+    ],
+    "5.4 Write unit tests for `guard-web-fetch`": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795689947089
+      }
+    ],
+    "5.5 Write property test for Property 5": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795689948564
+      }
+    ],
+    "5. `.env*` value loader and `guard-web-fetch`": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795689949598
+      }
+    ],
+    "5.7 Write a hook schema/format test for `guard-web-fetch.json`": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795689950572
+      }
+    ],
+    "6. `guard-env-write` command and hook": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795690133176
+      }
+    ],
+    "6.2 Write unit tests for `guard-env-write` and its hook file": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795690134141
+      }
+    ],
+    "6.3 Write property test for Property 6": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795690135610
+      }
+    ],
+    "9.2 Write unit tests for the init extension": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795690505275
+      }
+    ],
+    "9. `exorcist init --kiro` extension and `--sandbox`": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795690777053
+      }
+    ],
+    "9.4 Write unit tests for `--sandbox`": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795690777807
+      }
+    ],
+    "11. Possession Lab attack 9": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795690931841
+      }
+    ],
+    "11.2 Write a component/unit test for Possession Lab attack 9": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795690932926
+      }
+    ],
+    "11.3 Extend the existing accessibility and end-to-end test suite with a step for attack 9": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795690933871
+      }
+    ],
+    "12.2 Run the existing benchmark test against the new cases": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795691311556
+      }
+    ],
+    "14. Documentation updates": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795691714355
+      }
+    ],
+    "12. Benchmark fixtures with benign look-alikes": [
+      {
+        "executionId": "25777f21-622f-4ae1-8769-2ea636c65ee6",
+        "chatSessionId": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+        "timestamp": 1795695628273
+      }
+    ]
+  }
+}

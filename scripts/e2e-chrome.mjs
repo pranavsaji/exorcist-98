@@ -539,7 +539,7 @@ await step('Possession Lab: the rug pull plays to the end, protected vs compromi
 
 await step('Possession Lab: every attack ends with the shielded side protected', async () => {
   const lab = page.getByRole('dialog', { name: /Possession Lab/ });
-  const names = ['The Rug Pull', 'The Poisoned Tool', 'The Secret Leak', 'The Unknown Host', 'The Poisoned Result', 'The Canary', 'The Lethal Trifecta', 'The Hidden Page'];
+  const names = ['The Rug Pull', 'The Poisoned Tool', 'The Secret Leak', 'The Unknown Host', 'The Poisoned Result', 'The Canary', 'The Lethal Trifecta', 'The Hidden Page', 'The Settings Tamper'];
   const seen = [];
   for (const name of names) {
     await lab.getByRole('button', { name, exact: true }).click();
@@ -557,6 +557,17 @@ await step('Possession Lab: every attack ends with the shielded side protected',
     if (name === 'The Lethal Trifecta') {
       if ((await lab.locator('.lab-rule', { hasText: 'EX-027' }).count()) === 0) throw new Error('trifecta: no EX-027 event on the last step');
       if ((await lab.locator('.lab-event[data-actor="user"]').count()) === 0) throw new Error('trifecta: your answer to the prompt is not shown');
+    }
+    // Attack 9 (CT-19): stopped by EX-030, shown as text with its infection level.
+    if (name === 'The Settings Tamper') {
+      if ((await lab.locator('.lab-rule', { hasText: 'EX-030' }).count()) === 0) throw new Error('settings tamper: no EX-030 event');
+      await lab.locator('.lab-verdict-safe', { hasText: 'Result: protected.' }).waitFor({ timeout: 5000 });
+      await lab.locator('.lab-verdict-harm', { hasText: 'Result: compromised.' }).waitFor({ timeout: 5000 });
+      await lab.getByRole('button', { name, exact: true }).focus();
+      const ring = await lab.getByRole('button', { name, exact: true }).evaluate((el) => getComputedStyle(el).outlineStyle + '|' + getComputedStyle(el).boxShadow);
+      if (!ring) throw new Error('settings tamper: no focus style');
+      const r9 = await axe('possession-lab-settings-tamper'); axeReports.push(r9);
+      if (r9.violations.length) throw new Error(`settings tamper: ${r9.violations.length} axe violation types`);
     }
     seen.push(name);
   }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -79,5 +79,19 @@ describe('FACTS: one source for every number', () => {
     expect(fr.repos).toBe(fr.round1Repos + fr.round2Repos + fr.round3Repos);
     expect(f['benchmarkAttacksCaught']).toBe(f['benchmarkAttacks']);
     expect(f['benchmarkBenignClean']).toBe(f['benchmarkBenign']);
+  });
+});
+describe('m11 config tamper: documentation and record', () => {
+  it('CT-21: REFERENCE.md lists EX-030 to EX-035 and INCIDENTS.md cites the primary source', () => {
+    const ref = read('docs/REFERENCE.md');
+    for (const id of ['EX-030', 'EX-031', 'EX-032', 'EX-033', 'EX-034', 'EX-035']) expect(ref).toContain(`| ${id} |`);
+    const inc = read('docs/INCIDENTS.md');
+    expect(inc).toContain('Primary source: Embrace The Red');
+    expect(inc).toContain('https://embracethered.com/blog/posts/2025/aws-kiro-aribtrary-command-execution-with-indirect-prompt-injection/');
+  });
+  it('CT-22: KIRO_LOG.md has the m11 row and the brief lives in docs/kiro-briefs only', () => {
+    expect(read('docs/KIRO_LOG.md')).toContain('m11-config-tamper');
+    expect(existsSync(fromRoot('docs/kiro-briefs/TASK-config-tamper.md'))).toBe(true);
+    expect(existsSync(fromRoot('TASK-config-tamper.md'))).toBe(false);
   });
 });

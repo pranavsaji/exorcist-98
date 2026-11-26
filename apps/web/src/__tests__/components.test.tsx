@@ -252,3 +252,20 @@ describe('Possession Lab: The Hidden Page (m8-incidents)', () => {
     expect(html).toContain('Summoning the attack');
   });
 });
+
+describe('Possession Lab: The Settings Tamper (m11-config-tamper)', () => {
+  it('CT-19: opens on attack 9 from a deep link, with native buttons and the attack group labelled', async () => {
+    const { PossessionLab } = await import('@/components/PossessionLab');
+    const html = renderToStaticMarkup(<PossessionLab initial="settings-tamper" request={{ tab: 'scripted', scenario: 'settings-tamper', seq: 1 }} />);
+    expect(html).toContain('role="group" aria-label="Choose an attack"');
+    expect(html).toContain('Summoning the attack');
+  });
+  it('CT-19: the attack buttons are real buttons (keyboard reachable), and the result is stated in text, not colour', async () => {
+    const { readFileSync } = await import('node:fs');
+    const src = readFileSync(new URL('../components/PossessionLab.tsx', import.meta.url), 'utf8');
+    expect(src).toMatch(/<button key=\{s\.id\} type="button"/);
+    expect(src).toContain('Infection level: ');
+    expect(src).toContain('Result: protected.');
+    expect(src).toContain('Result: compromised.');
+  });
+});

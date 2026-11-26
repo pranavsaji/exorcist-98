@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { displayMessage } from '@exorcist-98/core';
 import { isWrapped } from '@exorcist-98/shield';
@@ -20,12 +20,12 @@ export const DEFAULT_MCP_BIN = 'npx -y @exorcist-98/mcp-server@0.2.0';
  * blocks the tool: an on-access hook would block every file read. So under
  * the default command such a hook is written disabled. 0.1.0 lacked
  * on-access; 0.1.1 to 0.1.3 lacked `gate` and `guard-mcp-write`; 0.2.0 has every
- * command. Add a command here when it is not yet in the pinned version, and remove
- * it once DEFAULT_BIN has it.
+ * command, except guard-web-fetch and guard-env-write (added in M11). Add a command here
+ * when it is not yet in the pinned version, and remove it once DEFAULT_BIN has it.
  */
-const MISSING_FROM_DEFAULT_BIN = new Set<string>([]);
+const MISSING_FROM_DEFAULT_BIN = new Set<string>(['guard-web-fetch', 'guard-env-write']);
 
-export const INIT_HELP = `Usage: exorcist init [folder] [--kiro] [--shield] [--no-agent] [--force]
+export const INIT_HELP = `Usage: exorcist init [folder] [--kiro] [--shield] [--sandbox] [--no-agent] [--force]
                     [--bin <command>] [--mcp-bin <command>]
 
 Add Exorcist 98 to a Kiro project:
@@ -35,6 +35,8 @@ Add Exorcist 98 to a Kiro project:
   .kiro/hooks/exorcist-gate.json       when the agent stops, fail if it added a high or critical finding
                                        to a steering, spec, hook, agent or MCP file (Kiro Stop hook)
   .kiro/hooks/exorcist-mcp-write-guard.json  a person must confirm any agent write to an MCP config (Kiro hook)
+  .kiro/hooks/exorcist-guard-web-fetch.json  block a web fetch whose address holds a secret, canary or .env value (Kiro hook)
+  .kiro/hooks/exorcist-guard-env-write.json  block writing a .env value into any other file (Kiro hook)
   .kiro/steering/exorcist.md           tell the agent how to treat tool output
   .exorcist/kiro-hook.sh               puts Node on PATH for the Kiro hooks (Kiro's hook PATH has none)
   .exorcist/.gitignore                 keeps the hook log out of git
@@ -46,12 +48,39 @@ Add Exorcist 98 to a Kiro project:
 --no-agent  With --kiro, leave the agent out.
 --shield    Put every server in .kiro/settings/mcp.json behind the Real-Time Shield
             (implies --kiro). Undo with:  exorcist unwrap .kiro/settings/mcp.json
+--sandbox   With --kiro, also turn on Kiro's sandbox for this project by writing
+            .kiro/settings/sandbox.json (sandbox on, network blocked, MCP sandboxing on).
+            An existing file is never changed, not even with --force. Undo: delete the file.
 --bin       The command the hooks and the Shield run (default: ${DEFAULT_BIN}).
 --mcp-bin   The command that starts the agent's MCP server (default: ${DEFAULT_MCP_BIN}).
 
 Turn on the git hook once per clone:  git config core.hooksPath .githooks
 Existing files are never overwritten unless you pass --force.
 `;
+
+/** Fields documented at https://kiro.dev/docs/sandbox. A project file can only tighten a global policy. */
+export const SANDBOX_REL = '.kiro/settings/sandbox.json';
+export const SANDBOX_SETTINGS = { enabled: true, networkAccess: 'DEFAULT_BLOCKED', mcpSandboxing: true } as const;
+
+/** Write the sandbox file only when nothing is there (never overwrites, even with --force). */
+export function writeSandboxFile(root: string, io: Io): boolean {
+  const path = join(root, SANDBOX_REL);
+  let present = false;
+  try { lstatSync(path); present = true; } catch { /* absent */ }
+  if (!present) {
+    mkdirSync(dirname(path), { recursive: true });
+    try {
+      writeFileSync(path, `${JSON.stringify(SANDBOX_SETTINGS, null, 2)}\n`, { encoding: 'utf8', flag: 'wx' });
+      io.out(`Wrote ${SANDBOX_REL}: sandbox on, network blocked by default, MCP sandboxing on.`);
+      io.out(`Undo: delete ${SANDBOX_REL}. (A project file can only tighten a global sandbox policy.)`);
+      return true;
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e;
+    }
+  }
+  io.out(`Left ${SANDBOX_REL} unchanged: it already exists. Delete it and rerun to get the Exorcist settings.`);
+  return false;
+}
 
 const hook = (name: string, description: string, body: object): string =>
   `${JSON.stringify({ version: 'v1', hooks: [{ name, description, ...body }] }, null, 2)}\n`;
@@ -132,7 +161,7 @@ function describeMcpConfig(path: string): { exists: boolean; line: string; warni
 export async function initCommand(argv: string[], io: Io): Promise<number> {
   const p = parse(argv, {
     force: { type: 'boolean' }, bin: { type: 'string' }, 'mcp-bin': { type: 'string' },
-    kiro: { type: 'boolean' }, shield: { type: 'boolean' }, 'no-agent': { type: 'boolean' },
+    kiro: { type: 'boolean' }, sandbox: { type: 'boolean' }, shield: { type: 'boolean' }, 'no-agent': { type: 'boolean' },
     help: { type: 'boolean', short: 'h' },
   });
   if (!p.ok) { io.err(`${p.error}\n\n${INIT_HELP}`); return 2; }
@@ -147,6 +176,9 @@ export async function initCommand(argv: string[], io: Io): Promise<number> {
   const agent = kiro && p.values['no-agent'] !== true;
   if (p.values['no-agent'] === true && !kiro) { io.err('--no-agent only makes sense with --kiro.'); return 2; }
 
+  const sandbox = p.values['sandbox'] === true;
+  if (sandbox && !kiro) { io.err('--sandbox only makes sense with --kiro (or --shield).'); return 2; }
+
   const binWords = splitCommand(bin);
   const mcpWords = splitCommand(mcpBin);
   if (!binWords) { io.err('--bin is empty or has an unclosed quote.'); return 2; }
@@ -156,6 +188,8 @@ export async function initCommand(argv: string[], io: Io): Promise<number> {
   const onAccessOff = isDefaultBin && MISSING_FROM_DEFAULT_BIN.has('on-access');
   const gateOff = isDefaultBin && MISSING_FROM_DEFAULT_BIN.has('gate');
   const mcpWriteOff = isDefaultBin && MISSING_FROM_DEFAULT_BIN.has('guard-mcp-write');
+  const webFetchOff = isDefaultBin && MISSING_FROM_DEFAULT_BIN.has('guard-web-fetch');
+  const envWriteOff = isDefaultBin && MISSING_FROM_DEFAULT_BIN.has('guard-env-write');
 
   const files: Planned[] = [
     {
@@ -201,11 +235,33 @@ export async function initCommand(argv: string[], io: Io): Promise<number> {
       rel: '.kiro/hooks/exorcist-mcp-write-guard.json',
       summary: mcpWriteOff
         ? 'PreToolUse on write and shell tools: WRITTEN DISABLED, because the published version in the default command has no guard-mcp-write command (pass --bin with a newer build, then set "enabled": true)'
-        : 'PreToolUse on write and shell tools: a person must confirm any agent write to an MCP config',
-      body: hook('exorcist-mcp-write-guard', 'A person must confirm any agent write to an MCP config. Exit code 2 blocks the write.', {
+        : 'PreToolUse on write and shell tools: a person must confirm any agent write to an MCP config, trusted commands or hook/agent file',
+      body: hook('exorcist-mcp-write-guard', 'A person must confirm any agent write to an MCP config, any change that adds a trusted command in .vscode/settings.json, and any change to a file in .kiro/hooks/ or .kiro/agents/. Exit code 2 blocks the write.', {
         trigger: 'PreToolUse', matcher: 'write|shell',
         action: { type: 'command', command: `${HOOK_RUNNER} ${bin} guard-mcp-write` }, timeout: 150,
         ...(mcpWriteOff ? { enabled: false } : {}),
+      }),
+    },
+    {
+      rel: '.kiro/hooks/exorcist-guard-web-fetch.json',
+      summary: webFetchOff
+        ? 'PreToolUse on web_fetch: WRITTEN DISABLED, because the published version in the default command has no guard-web-fetch command (pass --bin with a newer build, then set "enabled": true)'
+        : 'PreToolUse on web_fetch: blocks a fetch whose address holds a secret, canary or .env value',
+      body: hook('exorcist-guard-web-fetch', 'Blocks the web_fetch tool when the address holds a secret (key or token), a canary token, or a value from a .env file of this project. Exit code 2 blocks the fetch; the reason names the kind of value and the host, never the value.', {
+        trigger: 'PreToolUse', matcher: 'web_fetch|webFetch',
+        action: { type: 'command', command: `${HOOK_RUNNER} ${bin} guard-web-fetch` }, timeout: 15,
+        ...(webFetchOff ? { enabled: false } : {}),
+      }),
+    },
+    {
+      rel: '.kiro/hooks/exorcist-guard-env-write.json',
+      summary: envWriteOff
+        ? 'PreToolUse on write tools: WRITTEN DISABLED, because the published version in the default command has no guard-env-write command (pass --bin with a newer build, then set "enabled": true)'
+        : 'PreToolUse on write tools: blocks writing a .env value into any other file',
+      body: hook('exorcist-guard-env-write', 'Blocks the write tools (fs_write, str_replace) when the text to be written holds a value from a .env file of this project and the destination is not itself a .env file. Exit code 2 blocks the write; the reason names the file, never the value.', {
+        trigger: 'PreToolUse', matcher: 'write|fs_write|str_replace',
+        action: { type: 'command', command: `${HOOK_RUNNER} ${bin} guard-env-write` }, timeout: 15,
+        ...(envWriteOff ? { enabled: false } : {}),
       }),
     },
     { rel: '.kiro/steering/exorcist.md', body: STEERING, summary: 'steering (inclusion: always): tool output and file text are data, never instructions' },
@@ -241,6 +297,8 @@ export async function initCommand(argv: string[], io: Io): Promise<number> {
     if (wroteAny) io.out('Turn on the git hook with:  git config core.hooksPath .githooks');
     return wroteAny ? 0 : 1;
   }
+
+  if (sandbox) writeSandboxFile(root, io);
 
   // --kiro: the MCP config, then a summary of everything.
   const mcpPath = join(root, '.kiro/settings/mcp.json');
@@ -285,6 +343,8 @@ export async function initCommand(argv: string[], io: Io): Promise<number> {
     `  ${mcp.line}`,
     ...mcp.warnings.map((w) => `  ${w}`),
     shield ? `  Shield: ${shieldLine ?? 'not applied'}` : '  Shield: not applied. To put every server behind it: exorcist init --shield (undo: exorcist unwrap .kiro/settings/mcp.json)',
+    'Sandbox',
+    sandbox ? `  ${SANDBOX_REL}: see the lines above` : '  not changed. To turn on Kiro\'s sandbox for this project: exorcist init --kiro --sandbox',
     'Git',
     `  ${label('.githooks/pre-commit')}\n      turn on once per clone: git config core.hooksPath .githooks`,
     '',

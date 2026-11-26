@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import type { ScenarioId, SimEvent, SimResult } from '@exorcist-98/shield/simulator';
 import { play } from '@/lib/sound';
+import { SEVERITY_INFO } from '@/lib/severity';
 import { ByoaLab } from './ByoaLab';
 
 type ScenarioCard = { id: ScenarioId; title: string; summary: string };
@@ -38,6 +39,7 @@ function EventRow({ e, shielded }: { e: SimEvent; shielded: boolean }) {
         <span className="lab-actor">{ACTOR[e.actor]}</span>
         {label && <span className={`lab-tag lab-tag-${e.tone}`}>{label}</span>}
         {e.ruleId && e.ruleId !== 'SHIELD' && <span className="lab-rule">{e.ruleId}</span>}
+        {e.severity && <span className="lab-rule lab-level" data-level={e.severity}>Infection level: {SEVERITY_INFO[e.severity].label}</span>}
       </div>
       <p className="m-0 mt-0.5 text-[0.85rem] leading-snug">{e.text}</p>
       {e.quote !== undefined && e.quote !== '' && <pre tabIndex={0} className="lab-quote">{e.quote}</pre>}

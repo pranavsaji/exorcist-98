@@ -133,6 +133,36 @@ const ENTRIES: Record<string, PlainEntry> = {
     attack:
       'The name of a file or folder reads like an instruction ("ignore previous instructions...") or hides invisible characters. An agent that lists the project reads every name, so a name alone can steer it.',
   },
+  'EX-030': {
+    headline: 'This text asks your AI to change its own settings or guards',
+    attack:
+      'A file tells the agent to add a wildcard to its trusted commands, switch on auto-approve, or edit its hooks, custom agents, steering files or AGENTS.md. If the agent obeys, it stops asking you before it runs commands, and the change stays after the poisoned file is gone.',
+  },
+  'EX-031': {
+    headline: 'This text tells your AI to skip, delete or weaken your tests and checks',
+    attack:
+      'A file tells the agent to add .skip to tests, delete a test file as "flaky", commit with --no-verify, add "|| true" to a CI step, lower a coverage threshold, or make a failing check pass without fixing it. A bad change then gets through because the checks no longer catch it.',
+  },
+  'EX-032': {
+    headline: 'This text tells your AI to send your code somewhere else',
+    attack:
+      'A file tells the agent to push to a remote that is not your origin, add a new remote, publish a package, switch the package registry, or open a pull request against another repository. If the agent obeys, your code or a poisoned package leaves your control.',
+  },
+  'EX-033': {
+    headline: 'This settings file lets your AI run any command without asking you',
+    attack:
+      'A committed settings file lists a wildcard or a bare shell name as trusted (Kiro trusted commands, Claude Code or Cursor allow rules). Whoever wrote the file decides that the agent never asks before running a command, so a poisoned file elsewhere in the project can then run anything on your machine.',
+  },
+  'EX-034': {
+    headline: 'This settings file lets Copilot run any terminal command without asking you',
+    attack:
+      'The terminal auto-approve map in a committed settings file marks a pattern that matches every command as approved. The agent then runs commands without showing you a prompt.',
+  },
+  'EX-035': {
+    headline: 'This project file switches off the sandbox around your AI tool servers',
+    attack:
+      'A committed Kiro sandbox file turns MCP sandboxing, or the whole command sandbox, off, so local tool servers run without the operating-system boundary. This is only information: a project file can only tighten your global sandbox policy, so your global setting may still apply.',
+  },
   'EX-027': {
     headline: 'Your AI read untrusted text and private data, and now wants to send something out',
     attack:

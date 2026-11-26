@@ -86,6 +86,36 @@
     ],
     "exfil-sentence-docs": [
       "EX-002"
+    ],
+    "claude-allow-bash-wildcard": [
+      "EX-033"
+    ],
+    "cursor-shell-wildcard": [
+      "EX-033"
+    ],
+    "copilot-autoapprove-map": [
+      "EX-034"
+    ],
+    "settings-tamper-docs": [
+      "EX-030"
+    ],
+    "weaken-tests-docs": [
+      "EX-031"
+    ],
+    "redirect-publish-docs": [
+      "EX-032"
+    ],
+    "meta-tag-ai": [
+      "EX-028"
+    ],
+    "alt-text-instructions": [
+      "EX-028"
+    ],
+    "sandbox-mcp-off": [
+      "EX-035"
+    ],
+    "trusted-commands-wildcard": [
+      "EX-033"
     ]
   },
   "benign": [
@@ -115,6 +145,16 @@
     "mcp-source-hints-go",
     "hidden-ui-text",
     "long-odd-filenames",
-    "negated-exfil-docs"
+    "negated-exfil-docs",
+    "cursor-shell-narrow",
+    "copilot-autoapprove-narrow",
+    "settings-docs-for-people",
+    "weaken-tests-ordinary-code",
+    "ci-or-true",
+    "release-process-docs",
+    "ordinary-meta-tags",
+    "descriptive-alt-text",
+    "sandbox-mcp-on",
+    "trusted-commands-narrow"
   ]
 }

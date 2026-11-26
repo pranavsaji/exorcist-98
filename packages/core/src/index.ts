@@ -23,6 +23,7 @@ export {
   newToken, isCanaryToken, canariesPath, loadCanariesFile, findCanaryInText, base64Needles, lineColOf, maskToken, isCanaryHome,
   findStagedCanaries, CanariesFileSchema, CanaryRecordSchema, CANARY_PREFIX, CANARY_TOKEN_RE_SOURCE, CANARY_TRAP_DIR, CANARY_RECORDS_FILE,
 } from './canary.js';
+export { sandboxFindings, SANDBOX_RULE_ID } from './sandbox-policy.js';
 export type { Canary, CanaryRecord, CanariesFile, CanaryHit, CanaryShape, CanariesResult, StagedCanaryHit, StagedCanaryResult } from './canary.js';
 export { fetchGithubRepo, isSafeRef, readTar, safeRelativePath, writeEntries, DEFAULT_TAR_LIMITS } from './remote/tarball.js';
 export type { TarLimits, TarEntry, ExtractResult, FetchLike } from './remote/tarball.js';
@@ -45,8 +46,13 @@ export { decide as decideCommitGuard, isGitCommit } from './hook-guard.js';
 export type { HookDecision } from './hook-guard.js';
 export { extractReadPaths, decideRead, isReadTool, shownName, mustCheckFully, limitFor } from './on-access.js';
 export type { OnAccessDecision, DecideReadOptions } from './on-access.js';
-export { decideMcpWrite, SHELL_LIMIT } from './mcp-write-guard.js';
+export { decideMcpWrite, isTrustedCommandsWrite, isGuardFileWrite, trustedEntries, SHELL_LIMIT } from './mcp-write-guard.js';
 export type { McpWriteDecision } from './mcp-write-guard.js';
+export { decideWebFetch, extractFetchUrls, urlForms, shortHost, webFetchBlockMessage } from './web-fetch-guard.js';
+export type { WebFetchKind, WebFetchDecision, WebFetchContext } from './web-fetch-guard.js';
+export { decideEnvWrite, envWriteBlockMessage, isEnvFilePath } from './env-write-guard.js';
+export type { EnvWriteDecision } from './env-write-guard.js';
+export { loadEnvValues, parseEnvValues, isIgnorableEnvValue, MIN_ENV_VALUE_LENGTH } from './env-values.js';
 export { sha256File, sha256Bytes, readAllowedReads, addAllowedRead, allowedReadsLocation, allowKey, findProjectRoot, isInside, realPath } from './allowed-reads.js';
 export type { AllowReadResult, AllowedRead, AllowedReadsLocation } from './allowed-reads.js';
 export { isGateFile, gateRole, gateFindings, isBlocking, tooLargeFinding, renderGate } from './gate.js';

@@ -9,6 +9,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync,
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { isWrapped } from '@exorcist-98/shield';
+import { sandboxFindings } from '@exorcist-98/core';
 import { DEFAULT_BIN, DEFAULT_MCP_BIN, initCommand, splitCommand } from '../commands/init.js';
 import { wrapCommand } from '../commands/config.js';
 import { REVIEWER_PROMPT, REVIEWER_TOOLS } from '../kiro-agent.js';
@@ -56,7 +57,6 @@ describe('exorcist init --kiro', () => {
     expect(hookOf(d, 'exorcist-gate').trigger).toBe('Stop');
     expect(hookOf(d, 'exorcist-gate').action.command).toBe(`sh .exorcist/kiro-hook.sh ${DEFAULT_BIN} gate`);
     expect(hookOf(d, 'exorcist-gate').enabled).toBeUndefined();
-    expect(io.all()).not.toContain('WRITTEN DISABLED');
     for (const n of ['exorcist-secrets', 'exorcist-mcp-scan', 'exorcist-on-access']) {
       expect(hookOf(d, n).action.command.startsWith('sh .exorcist/kiro-hook.sh ')).toBe(true);
     }
@@ -84,14 +84,14 @@ describe('exorcist init --kiro', () => {
     }
   });
 
-  it('under the default command (0.2.0, which has every command) every hook is on', async () => {
+  it('under the default command every hook is on except the two new guards the pinned version lacks', async () => {
     const d = tmp();
     const io = capture();
     expect(await initCommand([d, '--kiro'], io)).toBe(0);
     expect(hookOf(d, 'exorcist-on-access').enabled).toBeUndefined();
     expect(hookOf(d, 'exorcist-on-access').action.command).toContain(DEFAULT_BIN);
-    // 0.1.3 lacked gate and guard-mcp-write, so those hooks were written disabled; 0.2.0 has both.
-    expect(io.all()).not.toContain('WRITTEN DISABLED');
+    // 0.2.0 has gate and guard-mcp-write; guard-web-fetch and guard-env-write are newer (CT-15.2).
+    expect(io.all().match(/WRITTEN DISABLED/g)).toHaveLength(2);
     expect(hookOf(d, 'exorcist-gate').enabled).toBeUndefined();
     expect(hookOf(d, 'exorcist-mcp-write-guard').enabled).toBeUndefined();
     expect(hookOf(d, 'exorcist-secrets').enabled).toBeUndefined();
@@ -113,7 +113,6 @@ describe('exorcist init --kiro', () => {
     expect(h.trigger).toBe('PreToolUse');
     expect(h.enabled).toBeUndefined();
     expect(h.action.command).toBe(`sh .exorcist/kiro-hook.sh ${DEFAULT_BIN} guard-mcp-write`);
-    expect(io.all()).not.toContain('WRITTEN DISABLED');
     const local = tmp();
     expect(await initCommand([local, '--kiro', '--bin', '/opt/x98/cli.mjs'], capture())).toBe(0);
     expect(hookOf(local, 'exorcist-mcp-write-guard').enabled).toBeUndefined();
@@ -278,5 +277,127 @@ describe('splitCommand (how --bin and --mcp-bin become a command and its argumen
     fc.assert(fc.property(fc.array(word, { minLength: 1, maxLength: 6 }), (words) => {
       expect(splitCommand(words.map((w) => `"${w}"`).join(' '))).toEqual(words);
     }));
+  });
+});
+
+describe('init --kiro: web-fetch and env-write guards (CT-15)', () => {
+  const WF = '.kiro/hooks/exorcist-guard-web-fetch.json';
+  const EW = '.kiro/hooks/exorcist-guard-env-write.json';
+  it('CT-15: --kiro writes both hooks through the runner with the right triggers and matchers', async () => {
+    const d = tmp();
+    expect(await initCommand([d, '--kiro', '--bin', '/opt/x98/cli.mjs'], capture())).toBe(0);
+    const wf = hookOf(d, 'exorcist-guard-web-fetch');
+    const ew = hookOf(d, 'exorcist-guard-env-write');
+    expect(existsSync(join(d, WF)) && existsSync(join(d, EW))).toBe(true);
+    expect([wf.trigger, ew.trigger]).toEqual(['PreToolUse', 'PreToolUse']);
+    expect(wf.matcher).toBe('web_fetch|webFetch');
+    expect(ew.matcher).toBe('write|fs_write|str_replace');
+    expect(wf.action.command).toBe('sh .exorcist/kiro-hook.sh /opt/x98/cli.mjs guard-web-fetch');
+    expect(ew.action.command).toBe('sh .exorcist/kiro-hook.sh /opt/x98/cli.mjs guard-env-write');
+    expect(wf.enabled).toBeUndefined();
+    expect(ew.enabled).toBeUndefined();
+  });
+  it('CT-15: both are written disabled, with a reason, when the pinned bin lacks the command', async () => {
+    const d = tmp();
+    const io = capture();
+    expect(await initCommand([d, '--kiro'], io)).toBe(0);
+    expect(hookOf(d, 'exorcist-guard-web-fetch').enabled).toBe(false);
+    expect(hookOf(d, 'exorcist-guard-env-write').enabled).toBe(false);
+    const out = io.all();
+    expect(out).toContain('has no guard-web-fetch command');
+    expect(out).toContain('has no guard-env-write command');
+  });
+  it('CT-15: both are listed in the help text and in the --kiro summary', async () => {
+    const h = capture();
+    expect(await initCommand(['--help'], h)).toBe(0);
+    const d = tmp();
+    const io = capture();
+    await initCommand([d, '--kiro'], io);
+    for (const text of [h.all(), io.all()]) {
+      expect(text).toContain('exorcist-guard-web-fetch.json');
+      expect(text).toContain('exorcist-guard-env-write.json');
+    }
+  });
+  it('CT-15: an existing hook file is kept without --force and replaced with it', async () => {
+    const d = tmp();
+    mkdirSync(join(d, '.kiro/hooks'), { recursive: true });
+    writeFileSync(join(d, WF), '{"mine":true}\n');
+    const io = capture();
+    expect(await initCommand([d, '--kiro'], io)).toBe(0);
+    expect(readFileSync(join(d, WF), 'utf8')).toBe('{"mine":true}\n');
+    expect(io.all()).toContain(`kept  ${WF}`);
+    expect(await initCommand([d, '--kiro', '--force'], capture())).toBe(0);
+    expect(hookOf(d, 'exorcist-guard-web-fetch').name).toBe('exorcist-guard-web-fetch');
+  });
+});
+
+describe('init --kiro --sandbox (CT-16, CT-17)', () => {
+  const SB = '.kiro/settings/sandbox.json';
+  it('CT-16: the first run writes the documented fields and prints what it wrote and how to undo it', async () => {
+    const d = tmp();
+    const io = capture();
+    expect(await initCommand([d, '--kiro', '--sandbox'], io)).toBe(0);
+    expect(json(join(d, SB))).toEqual({ enabled: true, networkAccess: 'DEFAULT_BLOCKED', mcpSandboxing: true });
+    expect(io.all()).toContain(`Wrote ${SB}`);
+    expect(io.all()).toContain(`Undo: delete ${SB}`);
+  });
+  it('CT-16: the written file passes a check built from the documented fields and gives no EX-035 finding', async () => {
+    const d = tmp();
+    await initCommand([d, '--kiro', '--sandbox'], capture());
+    const text = readFileSync(join(d, SB), 'utf8');
+    const o = JSON.parse(text) as Record<string, unknown>;
+    expect(Object.keys(o).sort()).toEqual(['enabled', 'mcpSandboxing', 'networkAccess']);
+    expect(typeof o['enabled']).toBe('boolean');
+    expect(['DEFAULT_BLOCKED', 'COMMON_DEPENDENCIES', 'DEFAULT_ALLOWED']).toContain(o['networkAccess']);
+    expect(typeof o['mcpSandboxing']).toBe('boolean');
+    expect(sandboxFindings(text, SB)).toEqual([]);
+  });
+  it('CT-16: a second run leaves the file unchanged and says so (idempotent)', async () => {
+    const d = tmp();
+    await initCommand([d, '--kiro', '--sandbox'], capture());
+    const once = readFileSync(join(d, SB), 'utf8');
+    const io = capture();
+    await initCommand([d, '--kiro', '--sandbox'], io);
+    expect(readFileSync(join(d, SB), 'utf8')).toBe(once);
+    expect(io.all()).toContain(`Left ${SB} unchanged`);
+    expect(io.all()).not.toContain(`Wrote ${SB}`);
+  });
+  it('CT-16: an existing file is kept, even with --force', async () => {
+    const d = tmp();
+    mkdirSync(join(d, '.kiro/settings'), { recursive: true });
+    writeFileSync(join(d, SB), '{"enabled":false}\n');
+    const io = capture();
+    await initCommand([d, '--kiro', '--sandbox', '--force'], io);
+    expect(readFileSync(join(d, SB), 'utf8')).toBe('{"enabled":false}\n');
+    expect(io.all()).toContain(`Left ${SB} unchanged`);
+  });
+  it('CT-16: --sandbox without --kiro is refused and writes nothing; --shield implies --kiro', async () => {
+    const d = tmp();
+    const io = capture();
+    expect(await initCommand([d, '--sandbox'], io)).toBe(2);
+    expect(io.all()).toContain('--sandbox only makes sense with --kiro');
+    expect(existsSync(join(d, SB))).toBe(false);
+    expect(existsSync(join(d, '.kiro/hooks'))).toBe(false);
+  });
+  it('CT-17: init and init --kiro without --sandbox never create or change the file, and mention the option', async () => {
+    const d = tmp();
+    const plain = capture();
+    expect(await initCommand([d], plain)).toBe(0);
+    expect(existsSync(join(d, SB))).toBe(false);
+    const kiro = capture();
+    expect(await initCommand([d, '--kiro'], kiro)).toBe(0);
+    expect(existsSync(join(d, SB))).toBe(false);
+    expect(kiro.all()).toContain('exorcist init --kiro --sandbox');
+    const e = tmp();
+    mkdirSync(join(e, '.kiro/settings'), { recursive: true });
+    writeFileSync(join(e, SB), '{"enabled":false}\n');
+    await initCommand([e, '--kiro', '--force'], capture());
+    expect(readFileSync(join(e, SB), 'utf8')).toBe('{"enabled":false}\n');
+  });
+  it('CT-17: the help text documents --sandbox', async () => {
+    const h = capture();
+    expect(await initCommand(['--help'], h)).toBe(0);
+    expect(h.all()).toContain('--sandbox');
+    expect(h.all()).toContain('Undo: delete the file');
   });
 });

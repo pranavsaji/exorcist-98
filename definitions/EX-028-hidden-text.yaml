@@ -1,5 +1,5 @@
 id: EX-028
-title: Hidden text that instructs the AI
+title: Hidden text, meta tags or image alt text that instruct the AI
 severity: high
 applies_to:
   - instruction
@@ -13,6 +13,13 @@ match:
   # display:none, visibility:hidden, opacity:0, off-screen position, zero-size
   # box) whose text names the AI or asks for an action. Hidden text that does
   # neither (a closed modal, a screen-reader label, a collapsed menu) is quiet.
+  #
+  # m11 (CT-11, CT-12), same rule id, same code path: also (a) an HTML <meta>
+  # tag whose name is aimed at a model (ai-instructions, llm, assistant, ...)
+  # and whose content addresses the AI, whatever its visibility, and (b) image
+  # alt text (<img alt> or Markdown ![alt](...)) that names the AI as its
+  # addressee or asks for an action. Ordinary meta names (description,
+  # viewport, robots) and alt text that only describes the image are quiet.
   hidden_text: true
   # Hidden markup shown inside Markdown code is displayed, not hidden.
   skip_in_code: true

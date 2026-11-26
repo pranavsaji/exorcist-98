@@ -9,8 +9,9 @@ import type { Io } from '../util.js';
 
 export const GUARD_MCP_WRITE_HELP = `Usage: exorcist guard-mcp-write   (Kiro hook helper)
 Reads a Kiro PreToolUse hook event from stdin. When the tool would write to
-.kiro/settings/mcp.json (in a project or in your home folder), a person must
-confirm it: on a Mac with the system verification (Touch ID or login password),
+.kiro/settings/mcp.json (in a project or in your home folder), adds a trusted
+command to .vscode/settings.json, or creates, changes, moves or deletes a file
+in .kiro/hooks/ or .kiro/agents/, a person must confirm it: on a Mac with the system verification (Touch ID or login password),
 else in a native dialog you click (Deny is the default),
 elsewhere by typing a code shown on your terminal (/dev/tty). The dialog names
 the file and never shows what the agent wanted to write.
@@ -58,25 +59,33 @@ export function hookDeps(): GuardDeps {
   return { term, promptIo: { out: write, err: write }, home: homedir(), timeoutMs: PROMPT_TIMEOUT_MS };
 }
 
+type Guarded = 'mcp-config' | 'trusted-commands' | 'guard-file';
+
 /** Plain-language text for the dialog. Names the file, never the content. */
-function dialogMessage(path: string): string {
+function dialogMessage(kind: Guarded, path: string): string {
+  if (kind === 'trusted-commands') return `Your AI agent wants to change which commands it may run without asking you:\n\n${shownName(path)}\n\nA wider list lets the agent run programs on your computer without your approval. Allow it only if you asked for this change.`;
+  if (kind === 'guard-file') return `Your AI agent wants to change one of its own guard files (a hook or a custom agent):\n\n${shownName(path)}\n\nThese files decide what the agent is stopped from doing. Allow it only if you asked for this change.`;
   return `Your AI agent wants to change an MCP configuration file:\n\n${shownName(path)}\n\nA changed MCP config can start programs on your computer. Allow it only if you asked for this change.`;
 }
 
-function reasonText(path: string): string {
+function reasonText(kind: Guarded, path: string): string {
+  if (kind === 'trusted-commands') return `Allow your AI agent to change its trusted commands in ${shownName(path)}`;
+  if (kind === 'guard-file') return `Allow your AI agent to change its guard file ${shownName(path)}`;
   return `Allow your AI agent to change the MCP config ${shownName(path)}`;
 }
-function blockMessage(path: string, why: string): string {
+function blockMessage(kind: Guarded, path: string, why: string): string {
+  if (kind === 'trusted-commands') return `Exorcist 98 blocked the write to ${shownName(path)}: ${why} The trusted commands list decides which programs the agent may run without asking, so only you may change it. To make the change yourself, edit the file in your own editor, then ask the agent to continue.`;
+  if (kind === 'guard-file') return `Exorcist 98 blocked the write to ${shownName(path)}: ${why} Hooks and custom agents decide what the agent is stopped from doing, so only you may change them. To make the change yourself, edit the file in your own editor, then ask the agent to continue.`;
   return `Exorcist 98 blocked the write to ${shownName(path)}: ${why} An MCP config can start programs on your computer, so only you may change it. To make the change yourself, edit the file in your own editor, then ask the agent to continue.`;
 }
 
 /** Ask once; a timeout counts as no. */
-async function askPerson(deps: GuardDeps, path: string): Promise<'yes' | 'no' | 'nobody' | 'timeout'> {
+async function askPerson(deps: GuardDeps, kind: Guarded, path: string): Promise<'yes' | 'no' | 'nobody' | 'timeout'> {
   const { term, promptIo } = deps;
   const run = async (): Promise<'yes' | 'no' | 'nobody'> => {
-    if (term.interactive) return (await personConfirms(term, promptIo, dialogMessage(path), reasonText(path))) ? 'yes' : 'no';
+    if (term.interactive) return (await personConfirms(term, promptIo, dialogMessage(kind, path), reasonText(kind, path))) ? 'yes' : 'no';
     // No terminal to type in: only the OS verification or a native dialog can ask.
-    const answer = await askOwner(term, dialogMessage(path), reasonText(path));
+    const answer = await askOwner(term, dialogMessage(kind, path), reasonText(kind, path));
     return answer === 'allow' ? 'yes' : answer === 'deny' ? 'no' : 'nobody';
   };
   let timer: NodeJS.Timeout | undefined;
@@ -96,12 +105,12 @@ export async function guardMcpWriteCommand(stdin: string, io: Io, deps: GuardDep
   let event: unknown;
   try { event = JSON.parse(stdin); } catch { return 0; }
   const decision = decideMcpWrite(event, deps.home, process.cwd());
-  if (decision.target !== 'mcp-config') return 0;
-  const answer = await askPerson(deps, decision.path);
+  if (decision.target === 'other') return 0;
+  const answer = await askPerson(deps, decision.target, decision.path);
   if (answer === 'yes') return 0;
   const why = answer === 'no' ? 'you did not confirm it.'
     : answer === 'timeout' ? 'nobody confirmed it in time.'
     : 'there is no dialog or terminal where a person can be asked.';
-  io.err(blockMessage(decision.path, why));
+  io.err(blockMessage(decision.target, decision.path, why));
   return 2;
 }

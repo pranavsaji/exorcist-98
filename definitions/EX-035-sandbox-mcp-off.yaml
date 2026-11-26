@@ -1,0 +1,29 @@
+id: EX-035
+title: Committed sandbox file turns MCP sandboxing off
+severity: low
+applies_to:
+  - config
+# The encyclopedia record for the sandbox policy check (CT-18). The real
+# check is in code: packages/core/src/sandbox-policy.ts reads
+# .kiro/settings/sandbox.json (JSON with comments) and looks at the "enabled"
+# and "mcpSandboxing" fields, which a text match cannot do reliably. So this
+# rule is not run as a signature; the pattern below documents what it reports.
+# Informational: the lowest level there is (a project file can only tighten the
+# global policy, so the global policy may still apply). It stays below the
+# default gate threshold, so it never fails "exorcist gate" or "exorcist scan".
+# Field names: https://kiro.dev/docs/sandbox
+enabled: false
+match:
+  regex: '"(?:mcpSandboxing|enabled)"\s*:\s*false'
+  file_regex: '\.kiro/settings/sandbox\.json$'
+owasp:
+  - "ASI05 Unexpected Code Execution"
+  - "LLM06:2025 Excessive Agency"
+fix: >
+  A committed .kiro/settings/sandbox.json sets MCP sandboxing (or the whole
+  command sandbox) to off, so local MCP server processes run without the
+  operating-system boundary. This is information only: a project file can only
+  tighten the global sandbox policy, so if your global policy turns it on, it
+  still applies. To be covered in every project, set "enabled": true and
+  "mcpSandboxing": true in your global ~/.kiro/settings/sandbox.json, or in
+  this project file.
