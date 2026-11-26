@@ -267,7 +267,7 @@ Before any text reaches a model, every credential-shaped value is masked at the 
 
 ## Measured, not claimed
 
-- **Tests:** <!--f:tests-->2,743<!--/f--> tests in <!--f:testFiles-->193<!--/f--> files (unit, <!--f:propertyTests-->212<!--/f--> fast-check properties and real-process tests), plus a <!--f:browserSteps-->45<!--/f-->-step Chrome run with an axe accessibility scan on every window: <!--f:browserAxeViolationTypes-->0<!--/f--> violation types.
+- **Tests:** <!--f:tests-->2,746<!--/f--> tests in <!--f:testFiles-->193<!--/f--> files (unit, <!--f:propertyTests-->213<!--/f--> fast-check properties and real-process tests), plus a <!--f:browserSteps-->45<!--/f-->-step Chrome run with an axe accessibility scan on every window: <!--f:browserAxeViolationTypes-->0<!--/f--> violation types.
 - **Labelled corpus** (`fixtures/benchmark/`): <!--f:benchmarkAttacksCaught-->38<!--/f--> of <!--f:benchmarkAttacks-->38<!--/f--> defanged attacks caught, <!--f:benchmarkBenignClean-->37<!--/f--> of <!--f:benchmarkBenign-->37<!--/f--> look-alike ordinary files left alone. We wrote this corpus, so it shows coverage of known patterns, not real-world recall.
 - **Published Kiro attacks** ([`docs/INCIDENTS.md`](INCIDENTS.md)): defanged replicas of CVE-2026-10591 (hidden web text rewrites the MCP config) and the Mindgard file-name attack are in the corpus, with the rule, Shield or hook layer that stops each and what is not covered.
 - **Held-out public repositories** ([`docs/BENCHMARK.md`](BENCHMARK.md), held-out set C): on 5 repos never used for tuning (about 9,500 files) the scanner raised 1 finding, and it is correct.

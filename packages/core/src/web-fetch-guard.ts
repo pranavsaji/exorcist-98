@@ -52,10 +52,13 @@ function percentDecode(s: string): string {
 const SEPARATORS = /[\s/?&=#.+]/g;
 const B64_RUN = /[A-Za-z0-9+/_-]{12,}={0,2}/g;
 
-/** Work done so far on one address: forms already produced and decoded bytes spent. `exhausted` once a cap stopped the search. */
-type FormState = { seen: Set<string>; bytes: number; exhausted: boolean };
-const newState = (): FormState => ({ seen: new Set(), bytes: 0, exhausted: false });
-/** True when the form is new and within the form cap; sets `exhausted` when the cap stops it. */
+/**
+ * Work done so far on one address: forms already yielded, the shallowest depth at which each form was
+ * expanded, and decoded bytes spent. `exhausted` once a cap stopped the search.
+ */
+type FormState = { seen: Set<string>; expandedAt: Map<string, number>; bytes: number; exhausted: boolean };
+const newState = (): FormState => ({ seen: new Set(), expandedAt: new Map(), bytes: 0, exhausted: false });
+/** True when the form is new (not yielded before) and within the form cap; sets `exhausted` when the cap stops it. */
 function admit(f: string, st: FormState): boolean {
   if (f === '' || st.seen.has(f)) return false;
   if (st.seen.size >= MAX_FORMS) { st.exhausted = true; return false; }
@@ -73,15 +76,22 @@ function* base64Forms(s: string, st: FormState): Generator<string> {
     }
   }
 }
-/** Each form as soon as it is produced, so the caller can stop at the first match. */
+/**
+ * Each form as soon as it is produced, so the caller can stop at the first match. A form is yielded once,
+ * but expanded again when it is reached at a shallower depth than before, since it may then decode further.
+ * Depth only ever decreases between expansions of one form and is at least 0, so this terminates.
+ */
 function* formsOf(s: string, depth: number, st: FormState): Generator<string> {
   const decoded = percentDecode(s);
   for (const f of [s, decoded, decoded.replace(SEPARATORS, '')]) if (admit(f, st)) yield f;
   if (depth >= 2) return;
+  const prior = st.expandedAt.get(s);
+  if (prior !== undefined && prior <= depth) return;
+  st.expandedAt.set(s, depth);
   // Base64 may sit in a path segment or a query value, so look at the pieces and at the whole.
   for (const piece of [decoded, ...decoded.split(/[/?&=#]/)]) {
     for (const b of base64Forms(piece, st)) {
-      if (admit(b, st)) { yield b; yield* formsOf(b, depth + 1, st); }
+      if (b !== '') yield* formsOf(b, depth + 1, st);
       if (st.exhausted) return;
     }
     if (st.exhausted) return;

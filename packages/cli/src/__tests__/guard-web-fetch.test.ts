@@ -29,6 +29,12 @@ function run(stdin: string) {
 }
 const b64 = (s: string) => Buffer.from(s).toString('base64');
 
+/** `s` under `n` base64 layers, unpadded and percent-encoded for a query value. */
+const layered = (s: string, n: number): string => {
+  let v = s;
+  for (let i = 0; i < n; i++) v = b64(v).replace(/=+$/, '');
+  return encodeURIComponent(v);
+};
 describe('guard-web-fetch', () => {
   it('CT-13: blocks a raw .env value in the query, naming the kind and host but not the value or URL', () => {
     const { dir } = project();
@@ -109,6 +115,22 @@ describe('guard-web-fetch', () => {
     const r = decideWebFetch({ tool_name: 'web_fetch', tool_input: { url: `https://a.example.invalid/${'A'.repeat(16_000)}` } }, { envValues: [], canaries: [] });
     expect(r).toEqual({ block: true, kind: 'too-many-encodings', host: '*.example.invalid' });
   });
+  it('CT-13: blocks a secret under three base64 layers followed by the same secret under two, without printing it', () => {
+    const { dir } = project();
+    const url = `https://a.example.invalid/?a=${layered(GH, 3)}&b=${layered(GH, 2)}`;
+    const r = run(event(dir, url));
+    expect(r.code).toBe(2);
+    expect(r.err).toContain('secret');
+    expect(r.err).not.toContain(GH);
+    expect(r.err).not.toContain(url);
+  });
+  it('CT-13: blocks a canary under three base64 layers followed by the same canary under two', () => {
+    const { dir, token } = project();
+    const r = run(event(dir, `https://a.example.invalid/?a=${layered(token, 3)}&b=${layered(token, 2)}`));
+    expect(r.code).toBe(2);
+    expect(r.err).toContain('canary');
+    expect(r.err).not.toContain(token);
+  });
   it('CT-13: allows on unparsable stdin and on events without a URL', () => {
     expect(run('not json').code).toBe(0);
     expect(run('').code).toBe(0);
@@ -140,6 +162,17 @@ describe('guard-web-fetch properties', () => {
         expect(decideWebFetch({ tool_name: 'web_fetch', tool_input: { url } }, ctx).block).toBe(true);
         const clean = `https://${host}.example.invalid/${other}?page=1`;
         expect(decideWebFetch({ tool_name: 'web_fetch', tool_input: { url: clean } }, ctx).block).toBe(false);
+      },
+    ), { numRuns: 100 });
+  });
+  it('CT-13: the same secret under any two base64 depths, in either order, is blocked when one depth is within reach', () => {
+    fc.assert(fc.property(
+      fc.integer({ min: 1, max: 3 }), fc.integer({ min: 1, max: 3 }), fc.stringMatching(/^[a-z]{3,10}$/),
+      (d1, d2, host) => {
+        fc.pre(Math.min(d1, d2) <= 2);
+        const url = `https://${host}.example.invalid/?a=${layered(GH, d1)}&b=${layered(GH, d2)}`;
+        const d = decideWebFetch({ tool_name: 'web_fetch', tool_input: { url } }, { envValues: [], canaries: [] });
+        expect(d.block).toBe(true);
       },
     ), { numRuns: 100 });
   });
