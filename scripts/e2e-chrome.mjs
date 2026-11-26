@@ -574,10 +574,15 @@ await step('Possession Lab: every attack ends with the shielded side protected',
   for (const name of names) {
     await lab.getByRole('button', { name, exact: true }).click();
     await lab.getByText(/^Step 1 of/).waitFor({ timeout: 5000 });
+    // Earlier steps fold to their titles, so note each rule while its step is the current one.
+    const rulesSeen = new Set();
+    const noteRules = async () => { for (const r of await lab.locator('.lab-rule').allInnerTexts()) rulesSeen.add(r.trim()); };
+    await noteRules();
     for (let i = 0; i < 10; i++) {
       const next = lab.getByRole('button', { name: 'Next step ▶' });
       if (await next.isDisabled()) break;
       await next.click();
+      await noteRules();
     }
     const safe = await lab.locator('.lab-verdict-safe').innerText();
     const harm = await lab.locator('.lab-verdict-harm').innerText();
@@ -590,7 +595,7 @@ await step('Possession Lab: every attack ends with the shielded side protected',
     }
     // Attack 9 (CT-19): stopped by EX-030, shown as text with its infection level.
     if (name === 'The Settings Tamper') {
-      if ((await lab.locator('.lab-rule', { hasText: 'EX-030' }).count()) === 0) throw new Error('settings tamper: no EX-030 event');
+      if (!rulesSeen.has('EX-030')) throw new Error(`settings tamper: no EX-030 event at any step (saw: ${[...rulesSeen].join(', ') || 'none'})`);
       await lab.locator('.lab-verdict-safe', { hasText: 'Result: protected.' }).waitFor({ timeout: 5000 });
       await lab.locator('.lab-verdict-harm', { hasText: 'Result: compromised.' }).waitFor({ timeout: 5000 });
       await lab.getByRole('button', { name, exact: true }).focus();

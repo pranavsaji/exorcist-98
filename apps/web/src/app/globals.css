@@ -321,8 +321,10 @@ body {
     font-size: 0.95rem;
     font-weight: 800;
   }
-  .lab-step {
-    opacity: 0.72;
+  /* Past steps are told apart by the dashed .lab-past button and a softer text colour, not by
+     opacity: opacity also dims the STOPPED and WARNING tags below WCAG AA contrast. */
+  .lab-step-past .lab-past {
+    color: #3d3450;
   }
   .lab-step-current {
     opacity: 1;
@@ -422,8 +424,9 @@ body {
   to { transform: none; }
 }
 @keyframes stamp {
-  from { transform: rotate(-9deg) scale(2.4); opacity: 0; }
-  to { transform: rotate(-9deg) scale(1); opacity: 0.85; }
+  /* Scale only, like lab-in: a fade from opacity 0 fails WCAG AA contrast mid-animation. */
+  from { transform: rotate(-9deg) scale(2.4); }
+  to { transform: rotate(-9deg) scale(1); }
 }
 
 /* ── Ouija board (m5-ouija): what the invisible text says ─────────────── */
