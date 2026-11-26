@@ -39,7 +39,7 @@ const MCP = `{
 `;
 
 describe('exorcist init --kiro', () => {
-  it('writes the hooks, steering and the reviewer agent, and prints what it did', async () => {
+  it('KG-14 writes the hooks, steering and the reviewer agent, and prints what it did', async () => {
     const d = tmp();
     const io = capture();
     expect(await initCommand([d, '--kiro'], io)).toBe(0);
@@ -84,7 +84,7 @@ describe('exorcist init --kiro', () => {
     }
   });
 
-  it('under the default command (0.2.0, which has every command) every hook is on', async () => {
+  it('KG-15 under the default command (0.2.0, which has every command) every hook is on', async () => {
     const d = tmp();
     const io = capture();
     expect(await initCommand([d, '--kiro'], io)).toBe(0);

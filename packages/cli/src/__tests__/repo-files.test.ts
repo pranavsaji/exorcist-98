@@ -24,7 +24,7 @@ function scan(path: string, ...extra: string[]) {
 // ── Kiro hooks ────────────────────────────────────────────────────────────────
 
 // Triggers whose names were confirmed in kiro.dev/docs/hooks on the day the hooks were written.
-const VERIFIED_TRIGGERS = ['PostFileSave', 'PreToolUse', 'Stop'] as const;
+const VERIFIED_TRIGGERS = ['PostFileSave', 'PostTaskExec', 'PreToolUse', 'Stop'] as const;
 
 const HookFile = z.object({
   version: z.literal('v1'),
@@ -47,8 +47,8 @@ const HookFile = z.object({
 describe('.kiro/hooks follow the documented v1 format', () => {
   const files = readdirSync(join(ROOT, '.kiro/hooks')).sort();
 
-  it('there are exactly six hook files and no leftover YAML', () => {
-    expect(files).toEqual(['definition-save.json', 'exorcist-gate.json', 'mcp-config-change.json', 'mcp-config-write-guard.json', 'on-access-scan.json', 'pre-commit-secrets.json', 'spec-change.json']);
+  it('KG-25 there are exactly ten hook files and no leftover YAML', () => {
+    expect(files).toEqual(['definition-save.json', 'exorcist-gate.json', 'kiro-log.json', 'mcp-config-change.json', 'mcp-config-write-guard.json', 'on-access-scan.json', 'pre-commit-secrets.json', 'spec-change.json', 'spec-trace.json', 'verify-after-task.json']);
   });
 
   for (const f of files) {
@@ -110,6 +110,36 @@ describe('.kiro/hooks follow the documented v1 format', () => {
     for (const id of ['read', 'web_fetch', 'web_search']) expect(m.test(id), id).toBe(false);
     expect(h?.action.type === 'command' && h.action.command).toBe('sh scripts/kiro-hook.sh node_modules/.bin/tsx packages/cli/src/index.ts guard-mcp-write');
   });
+  it('KE-28 verify-after-task is a PostTaskExec command hook through the launcher, with a script that uses no shell', () => {
+    const h = HookFile.parse(readJson('.kiro/hooks/verify-after-task.json')).hooks[0];
+    expect(h?.name).toBe('verify-after-task');
+    expect(h?.trigger).toBe('PostTaskExec');
+    const cmd = h?.action.type === 'command' ? h.action.command : '';
+    expect(cmd.startsWith('sh scripts/kiro-hook.sh ')).toBe(true);
+    expect(cmd).not.toMatch(/(^|\s)(pnpm|npx|node)(\s|$)/);
+    const script = read('scripts/verify-after-task.mjs');
+    expect(script).toContain("'-r', 'typecheck'");
+    expect(script).toContain("'related'");
+    expect(script).not.toMatch(/\beval\b|shell:\s*true|execSync|exec\(/);
+  });
+  it('KE-29 kiro-log is a Stop agent hook that appends one row to docs/KIRO_LOG.md only when files changed', () => {
+    const h = HookFile.parse(readJson('.kiro/hooks/kiro-log.json')).hooks[0];
+    expect(h?.name).toBe('kiro-log');
+    expect(h?.trigger).toBe('Stop');
+    expect(h?.action.type).toBe('agent');
+    const p = h?.action.type === 'agent' ? h.action.prompt : '';
+    expect(p).toContain('docs/KIRO_LOG.md');
+    expect(p).toContain('one dated row');
+    expect(p).toContain('spec task IDs');
+    expect(p).toContain('changed no file, do nothing');
+    expect(p).toContain('Edit no file other than docs/KIRO_LOG.md');
+  });
+  it('KE-30 the kiro-log prompt forbids inventing files, task IDs or outcomes', () => {
+    const h = HookFile.parse(readJson('.kiro/hooks/kiro-log.json')).hooks[0];
+    const p = h?.action.type === 'agent' ? h.action.prompt : '';
+    expect(p).toContain('only what this turn actually did');
+    expect(p).toContain('invent no file, task ID or outcome');
+  });
   it('the spec-change hook still tells the agent to touch only THREATS.md', () => {
     const h = HookFile.parse(readJson('.kiro/hooks/spec-change.json')).hooks[0];
     expect(h?.action.type === 'agent' && h.action.prompt).toContain('Do not modify any file other than docs/THREATS.md');
@@ -128,7 +158,7 @@ describe('the Kiro Power follows the Agent Plugins layout', () => {
     keywords: z.array(z.string().min(1)).min(3),
   }).passthrough();
 
-  it('plugin.json has the required fields', () => {
+  it('KG-18 plugin.json has the required fields', () => {
     const p = plugin.parse(readJson('power/plugin.json'));
     expect(p.name).toBe('exorcist');
     expect(p.keywords).toEqual(expect.arrayContaining(['mcp security', 'prompt injection']));
@@ -159,7 +189,7 @@ describe('the Kiro Power follows the Agent Plugins layout', () => {
   // m10-kiro-gate 3.1, 3.2: the published Agent Plugins 1.0.0 JSON schemas (agent-plugins.org/schemas/1.0.0),
   // with additionalProperties false, which is how a client would validate the files. kiro.dev/docs/powers/create
   // names plugin.json as the only required file; no POWER.md and no steering folder exist in the format.
-  it('plugin.json and mcp.json match the Agent Plugins 1.0.0 schemas exactly', () => {
+  it('KG-18 plugin.json and mcp.json match the Agent Plugins 1.0.0 schemas exactly', () => {
     z.object({
       $schema: z.literal('https://agent-plugins.org/schemas/1.0.0/plugin.schema.json'),
       name: z.string().min(1).max(64).regex(/^(?!.*(?:--|\.\.))[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/),
@@ -170,16 +200,16 @@ describe('the Kiro Power follows the Agent Plugins layout', () => {
     const Stdio = z.object({ type: z.literal('stdio'), command: z.string().min(1), args: z.array(z.string()), env: z.record(z.string()).optional() }).strict();
     z.object({ $schema: z.literal('https://agent-plugins.org/schemas/1.0.0/mcp.schema.json'), mcpServers: z.record(Stdio) }).strict().parse(readJson('power/mcp.json'));
   });
-  it('has only the files the documented format has (plugin.json, mcp.json, skills/), each skill with a SKILL.md', () => {
+  it('KG-17 has only the files the documented format has (plugin.json, mcp.json, skills/), each skill with a SKILL.md', () => {
     expect(readdirSync(join(ROOT, 'power')).sort()).toEqual(['mcp.json', 'plugin.json', 'skills']);
     for (const dir of readdirSync(join(ROOT, 'power/skills'))) expect(existsSync(join(ROOT, 'power/skills', dir, 'SKILL.md')), dir).toBe(true);
   });
-  it('the scan-repo skill tells the agent to pass the absolute workspace path and leave the folder prompt to the user', () => {
+  it('KG-19 the scan-repo skill tells the agent to pass the absolute workspace path and leave the folder prompt to the user', () => {
     const text = read('power/skills/scan-repo/SKILL.md');
     expect(text).toContain('absolute path of the project');
     expect(text).toContain('Only the user\'s answer counts');
   });
-  it('the Power version matches the packages it installs', () => {
+  it('KG-20 the Power version matches the packages it installs', () => {
     const power = plugin.parse(readJson('power/plugin.json'));
     const mcp = z.object({ version: z.string() }).parse(readJson('packages/mcp-server/package.json'));
     const cli = z.object({ version: z.string() }).parse(readJson('packages/cli/package.json'));

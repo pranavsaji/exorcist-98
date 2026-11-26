@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "verify-after-task",
+      "description": "After a spec task finishes, run pnpm -r typecheck and the vitest files related to the files git reports as changed. A failure sends the output to the agent. Runs through scripts/kiro-hook.sh because Kiro gives hook commands a PATH without Node.",
+      "trigger": "PostTaskExec",
+      "action": {
+        "type": "command",
+        "command": "sh scripts/kiro-hook.sh node_modules/.bin/tsx scripts/verify-after-task.mjs"
+      },
+      "timeout": 600
+    }
+  ]
+}

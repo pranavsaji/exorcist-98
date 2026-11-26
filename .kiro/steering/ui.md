@@ -1,3 +1,7 @@
+---
+inclusion: fileMatch
+fileMatchPattern: ["apps/web/src/**/*.tsx", "apps/web/src/**/*.css"]
+---
 # UI direction: haunted retro desktop
 
 - An original late-90s desktop look of our own design: beveled windows, title bars, a taskbar, pixel icons. No real operating system or antivirus brand assets.

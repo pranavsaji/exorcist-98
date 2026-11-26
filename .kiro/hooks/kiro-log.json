@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "kiro-log",
+      "description": "When the agent finishes a turn that changed files, add one dated row to docs/KIRO_LOG.md.",
+      "trigger": "Stop",
+      "action": {
+        "type": "agent",
+        "prompt": "The turn has ended. Only if this turn changed one or more files, append exactly one dated row to docs/KIRO_LOG.md that names the files changed and any spec task IDs completed. Describe only what this turn actually did: invent no file, task ID or outcome. If this turn changed no file, do nothing and say nothing. Edit no file other than docs/KIRO_LOG.md."
+      }
+    }
+  ]
+}

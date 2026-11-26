@@ -65,14 +65,15 @@ The repository is at 0.2.0 (the gate, the baseline and the incident rules), whic
 
 ## Built with Kiro
 
-- **Kiro IDE** wrote and implemented ten specs (requirements, design, tasks), among them the OS release, the precision work, the incident rules, the baseline and the gate. Four steering files set the security rules before any code. The repository has <!--f:specs-->22<!--/f--> specs, <!--f:steering-->10<!--/f--> steering files and <!--f:hooks-->7<!--/f--> hooks.
+- **Kiro IDE** wrote and implemented ten specs (requirements, design, tasks), among them the OS release, the precision work, the incident rules, the baseline and the gate. Four steering files set the security rules before any code. The repository has <!--f:specs-->23<!--/f--> specs, <!--f:steering-->11<!--/f--> steering files and <!--f:hooks-->10<!--/f--> hooks.
 - **Seen working in Kiro:** the Power was installed through Kiro's Powers panel, and the on-access hook was seen firing in Kiro IDE: it blocked the agent's read of a brief that quoted an injection phrase ([`docs/KIRO_LOG.md`](docs/KIRO_LOG.md)).
+- **Session evidence:** the exported transcripts of this project's Kiro sessions come to <!--f:kiroSessions-->27<!--/f--> sessions, <!--f:kiroCredits-->1,530.44<!--/f--> credits and <!--f:kiroToolCalls-->3,747<!--/f--> tool calls, in which hooks ran <!--f:hookRuns-->1,708<!--/f--> times and blocked <!--f:hookBlocks-->3<!--/f--> tool calls. The specs hold <!--f:shallLines-->179<!--/f--> acceptance criteria and <!--f:tasksDone-->291<!--/f--> of <!--f:tasksTotal-->322<!--/f--> tasks are done.
 - **Kiro CLI** implemented parts of six features in headless runs. **Kiro Crew** runs the [nightly patrol app](https://github.com/pranavsaji/exorcist-98-crew).
 - Not everything is Kiro's work. The dated record of what Kiro did and did not do is [`docs/KIRO_LOG.md`](docs/KIRO_LOG.md); the feature-by-feature map is [How we used Kiro](https://exorcist-98.vercel.app/how-kiro).
 
 ## Measured
 
-- <!--f:tests-->2,445<!--/f--> tests in <!--f:testFiles-->169<!--/f--> files (<!--f:propertyTests-->171<!--/f--> fast-check properties), and a <!--f:browserSteps-->45<!--/f-->-step Chrome run with an accessibility scan.
+- <!--f:tests-->2,420<!--/f--> tests in <!--f:testFiles-->166<!--/f--> files (<!--f:propertyTests-->202<!--/f--> fast-check properties), and a <!--f:browserSteps-->45<!--/f-->-step Chrome run with an accessibility scan.
 - A corpus we wrote: <!--f:benchmarkAttacksCaught-->28<!--/f--> of <!--f:benchmarkAttacks-->28<!--/f--> attacks caught, <!--f:benchmarkBenignClean-->27<!--/f--> of <!--f:benchmarkBenign-->27<!--/f--> ordinary look-alikes left alone. It shows coverage of known patterns, not real-world recall.
 - On 5 public repositories never used for tuning (about 9,500 files) the scanner raised 1 finding, and it was correct ([`docs/BENCHMARK.md`](docs/BENCHMARK.md)).
 - A field report on <!--f:fieldReport.repos-->483<!--/f--> public repositories in <!--f:fieldReport.rounds-->3<!--/f--> rounds. The first round was noisy; after the fixes, serious alerts fell from 4.0 to 0.24 per repository on a fresh set. That set had no real threats, so it shows how quiet the scanner is, not how often an alert is right ([`docs/FIELD_REPORT.md`](docs/FIELD_REPORT.md)).

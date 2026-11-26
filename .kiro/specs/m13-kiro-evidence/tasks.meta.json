@@ -1,0 +1,837 @@
+{
+  "pbtResults": {
+    "2.2 Write property test for workspace filter": {
+      "status": "passed",
+      "lastRunTimestamp": 1795637591487
+    },
+    "2.4 Write property test for malformed-line parsing": {
+      "status": "passed",
+      "lastRunTimestamp": 1795637592463
+    },
+    "2.5 Write property test for home-path redaction": {
+      "status": "passed",
+      "lastRunTimestamp": 1795637592856
+    },
+    "2.6 Write property test for deep secret redaction": {
+      "status": "passed",
+      "lastRunTimestamp": 1795637593409
+    },
+    "2.3 Write property test for tool payload truncation": {
+      "status": "passed",
+      "lastRunTimestamp": 1795637595518
+    },
+    "3.2 Write property test for hook run/block counting": {
+      "status": "passed",
+      "lastRunTimestamp": 1795637709704
+    },
+    "15.3 Write property test for the completeness comparison": {
+      "status": "passed",
+      "lastRunTimestamp": 1795644983986
+    },
+    "10.4 Write property test for the exit-code rule": {
+      "status": "passed",
+      "lastRunTimestamp": 1795645158667
+    }
+  },
+  "executionHistory": {
+    "1. Research the real session format": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637243837
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637250735
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637416682
+      }
+    ],
+    "2.1 Implement `isThisProjectWorkspace`, `redactHomePath`, `redactSecretsDeep`, `truncateToolPayload`, `parseEventLine` in `packages/core/src/kiro-evidence.ts`; export from `index.ts`": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637243903
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637428728
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637509193
+      }
+    ],
+    "3.1 Implement `isHookRun`, `isHookBlock`, `extractSessionRecord`, `aggregateTotals`, `containsSecretShape` in `packages/core/src/kiro-evidence.ts`": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637243947
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637519141
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637633067
+      }
+    ],
+    "4. Checkpoint: core extractor tests pass": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637243984
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637733397
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637771288
+      }
+    ],
+    "5.1 Write `scripts/kiro-evidence.mjs`: walk `~/.kiro/sessions/`, skip non-project sessions, write `evidence/kiro-sessions/<id>.jsonl.gz` and `index.json`, never descend into `~/.kiro/settings/`": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637244018
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637775621
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637990703
+      }
+    ],
+    "5.2 Add the post-write rescan (re-read each written file, scan with `containsSecretShape`, delete and exit 1 on a hit) before leaving any output on disk": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637244060
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637990916
+      }
+    ],
+    "6. Checkpoint: export script tests pass": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637244100
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637994019
+      }
+    ],
+    "7.1 Implement `renderKiroEvidenceMd` and the `scripts/kiro-evidence-md.ts` CLI wrapper that writes `docs/KIRO_EVIDENCE.md` from `evidence/kiro-sessions/index.json`": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637244144
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637998807
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795638218392
+      }
+    ],
+    "8.1 Add `kiroEvidence()` reader and `countShallLines`/`countTasks` counters to `scripts/facts.mjs`; wire `kiroSessions`, `kiroCredits`, `kiroToolCalls`, `hookRuns`, `hookBlocks` plus the SHALL-line and task-count keys into the facts object and the README markers": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637244185
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637999340
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795638218546
+      }
+    ],
+    "9. Checkpoint: publishing and facts tests pass": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637244252
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795638225598
+      }
+    ],
+    "10.1 Implement `extractRequirementIds`, `extractTestedIds`, `diffIds` in `packages/core/src/spec-trace.ts`; export from `index.ts`": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637244281
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795638233627
+      },
+      {
+        "executionId": "6e02dcf8-dcc5-4793-963e-ae607194d2d1",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795644751914
+      },
+      {
+        "executionId": "6e02dcf8-dcc5-4793-963e-ae607194d2d1",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795644752604
+      },
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795650526155
+      }
+    ],
+    "10.3 Implement `scripts/spec-trace.mjs`: find ID-bearing specs, collect test names, report gaps per spec, exit 0 only when every spec has no gaps": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637244313
+      },
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795650532133
+      },
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795650603831
+      }
+    ],
+    "10.5 Add `.kiro/hooks/spec-trace.json` (`PostFileSave`, matcher for `.kiro/specs/**` and test files, command through `scripts/kiro-hook.sh`)": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637244359
+      },
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795650536065
+      }
+    ],
+    "11.1 Add inline `KG-1`, `KG-2`, ... IDs to each acceptance criterion in `.kiro/specs/m10-kiro-gate/requirements.md`, and prefix the matching test names in `gate.test.ts`, `gate.property.test.ts`, the CLI tests and the hook/agent tests with the same IDs": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637244392
+      },
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795650537585
+      }
+    ],
+    "11.3 Add a sentence to `docs/KIRO_EVIDENCE.md` (or `docs/REFERENCE.md`) stating plainly that every spec other than `m10-kiro-gate` and `m13-kiro-evidence` predates requirement IDs and is outside `spec-trace.mjs`'s coverage": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637244427
+      },
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795650538784
+      }
+    ],
+    "12. Checkpoint: spec-trace tests pass": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637244466
+      },
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795674875553
+      }
+    ],
+    "13.1 Add `.kiro/hooks/verify-after-task.json` (`PostTaskExec`, command through `scripts/kiro-hook.sh`, running `pnpm -r typecheck` plus the vitest files related to the changed files)": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637244645
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795638233710
+      },
+      {
+        "executionId": "6e02dcf8-dcc5-4793-963e-ae607194d2d1",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795644752176
+      },
+      {
+        "executionId": "6e02dcf8-dcc5-4793-963e-ae607194d2d1",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795644755177
+      },
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795650532083
+      },
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795650604906
+      },
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795674875202
+      }
+    ],
+    "13.2 Add `.kiro/hooks/kiro-log.json` (`Stop`, agent action, prompt instructing: append one dated row to `docs/KIRO_LOG.md` naming files changed and spec task IDs completed when the turn changed anything, edit nothing else, do nothing when the turn changed nothing, invent nothing)": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637244755
+      },
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795674875416
+      }
+    ],
+    "14.1 Write `.kiro/skills/add-virus-definition/SKILL.md` (front matter plus steps: rule YAML, unit test, benchmark attack and benign look-alike, docs, facts)": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637244815
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795638234701
+      },
+      {
+        "executionId": "6e02dcf8-dcc5-4793-963e-ae607194d2d1",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795644702750
+      }
+    ],
+    "14.2 Write `.kiro/skills/triage-finding/SKILL.md` (front matter plus steps: deciding true/false positive, suppressing with a reason or a baseline)": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637244864
+      },
+      {
+        "executionId": "6e02dcf8-dcc5-4793-963e-ae607194d2d1",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795644707725
+      }
+    ],
+    "14.3 Add `resources: [\"skill://add-virus-definition\", \"skill://triage-finding\"]` to `.kiro/agents/exorcist-red-team.json`": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637244923
+      },
+      {
+        "executionId": "6e02dcf8-dcc5-4793-963e-ae607194d2d1",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795644707942
+      }
+    ],
+    "15.1 Add `.kiro/steering/release.md` with `inclusion: manual` front matter and release-cutting guidance": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637244975
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795638235734
+      },
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795650526743
+      }
+    ],
+    "15.2 Implement the directory-vs-table completeness comparison used by the steering table check (pure function, e.g. in `packages/core/src/steering-table.ts`)": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637245012
+      },
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795650533071
+      }
+    ],
+    "15.4 Add `STEERING_TABLE` to `apps/web/src/lib/how-kiro.ts`, one row per file under `.kiro/steering/` with its mode, patterns and a plain-language reason": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637245061
+      },
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795650534567
+      }
+    ],
+    "16. Checkpoint: hooks, skills and steering tests pass": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637245174
+      },
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795674875617
+      }
+    ],
+    "17.1 Write `.kiro/agents/exorcist-auditor.json`: `fs_write` allowed only under `docs/reviews/**` and denied elsewhere; `shell` allowed only for a fixed read-only command list plus `pnpm vitest run`, denied otherwise; prompt instructing an audit of one named package against `.kiro/steering/security.md` producing `docs/reviews/<date>-<package>-audit.md` with severity, file:line, evidence and a suggested fix": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637245208
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795638237179
+      },
+      {
+        "executionId": "6e02dcf8-dcc5-4793-963e-ae607194d2d1",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795644752394
+      },
+      {
+        "executionId": "6e02dcf8-dcc5-4793-963e-ae607194d2d1",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795644754306
+      },
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795650525214
+      }
+    ],
+    "18. Checkpoint: all tests pass": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637245247
+      },
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795674955445
+      },
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795675710181
+      }
+    ],
+    "19. Finish": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637245282
+      },
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795675710243
+      },
+      {
+        "executionId": "cc079970-6eb7-4510-820e-af278464db59",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795689377263
+      },
+      {
+        "executionId": "00cf2515-d173-4de0-b290-49cf4afb5a5f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795689501150
+      },
+      {
+        "executionId": "00cf2515-d173-4de0-b290-49cf4afb5a5f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795689507889
+      }
+    ],
+    "2. Core extractor functions": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637509277
+      }
+    ],
+    "2.2 Write property test for workspace filter": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637519255
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637633368
+      }
+    ],
+    "3. Hook-run and hook-block recognition, and session/totals aggregation": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637633262
+      }
+    ],
+    "2.3 Write property test for tool payload truncation": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637637405
+      }
+    ],
+    "2.4 Write property test for malformed-line parsing": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637639918
+      }
+    ],
+    "2.5 Write property test for home-path redaction": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637640496
+      }
+    ],
+    "2.6 Write property test for deep secret redaction": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637641251
+      }
+    ],
+    "3.2 Write property test for hook run/block counting": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637644645
+      },
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637722656
+      }
+    ],
+    "3.3 Write property test for totals aggregation": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637724711
+      }
+    ],
+    "3.4 Write unit tests for `extractSessionRecord` and `containsSecretShape` against a small hand-built fixture session": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637729498
+      }
+    ],
+    "5. Export script with safety rescan": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637990980
+      }
+    ],
+    "5.3 Write unit test running the script against a temporary fake `~/.kiro/sessions/` tree: a kept session, a skipped session, a session whose output trips the rescan, and a fixture settings folder that must never be read": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795637993573
+      }
+    ],
+    "7. Publish the evidence document": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795638218486
+      }
+    ],
+    "8. Facts keys": [
+      {
+        "executionId": "3065e035-0e72-4ea9-82a8-7b55f83e1230",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795638218589
+      }
+    ],
+    "14. Skills and red-team resources": [
+      {
+        "executionId": "6e02dcf8-dcc5-4793-963e-ae607194d2d1",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795644708039
+      }
+    ],
+    "14.4 Write unit tests asserting both SKILL.md files' front matter and required step headings, and that the agent's resources list both `skill://` URIs and that both files exist": [
+      {
+        "executionId": "6e02dcf8-dcc5-4793-963e-ae607194d2d1",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795644710270
+      }
+    ],
+    "17. Auditor agent": [
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795650525261
+      }
+    ],
+    "15. Steering modes": [
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795650534609
+      }
+    ],
+    "11. Migrate m10-kiro-gate to requirement IDs": [
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795650538828
+      }
+    ],
+    "10. Spec trace": [
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795650603922
+      }
+    ],
+    "13. New hooks": [
+      {
+        "executionId": "e22d939c-5d99-4af0-95ce-6b9f375ab09a",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795674875480
+      }
+    ],
+    "20.1 Implement the four redactions and the sign-in output omission in `packages/core/src/kiro-evidence.ts`": [
+      {
+        "executionId": "00cf2515-d173-4de0-b290-49cf4afb5a5f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795689501515
+      },
+      {
+        "executionId": "00cf2515-d173-4de0-b290-49cf4afb5a5f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795689508334
+      },
+      {
+        "executionId": "00cf2515-d173-4de0-b290-49cf4afb5a5f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795689752045
+      }
+    ],
+    "20.2 Add JWT and ARN-account shapes to `containsSecretShape` so the after-write rescan fails on them": [
+      {
+        "executionId": "00cf2515-d173-4de0-b290-49cf4afb5a5f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795689501922
+      },
+      {
+        "executionId": "00cf2515-d173-4de0-b290-49cf4afb5a5f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795689752188
+      }
+    ],
+    "20.3 Write KE tests with made-up values built at runtime, one per KE-48 to KE-52": [
+      {
+        "executionId": "00cf2515-d173-4de0-b290-49cf4afb5a5f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795689502440
+      },
+      {
+        "executionId": "00cf2515-d173-4de0-b290-49cf4afb5a5f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795689752288
+      }
+    ],
+    "20.4 Re-run `node scripts/kiro-evidence.mjs`, regenerate `docs/KIRO_EVIDENCE.md`, refresh facts, run the KE tests, `pnpm -r typecheck` and `pnpm vitest run`, and commit as a new commit without pushing": [
+      {
+        "executionId": "00cf2515-d173-4de0-b290-49cf4afb5a5f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795689502765
+      },
+      {
+        "executionId": "00cf2515-d173-4de0-b290-49cf4afb5a5f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795689795549
+      },
+      {
+        "executionId": "00cf2515-d173-4de0-b290-49cf4afb5a5f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795690317900
+      },
+      {
+        "executionId": "9461e66e-0030-4ee2-949f-6b53114b7892",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795690446560
+      },
+      {
+        "executionId": "9461e66e-0030-4ee2-949f-6b53114b7892",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795690459076
+      }
+    ],
+    "20. Redact JWTs, AWS account IDs, emails and sign-in output in the export": [
+      {
+        "executionId": "00cf2515-d173-4de0-b290-49cf4afb5a5f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795690318235
+      }
+    ],
+    "21.1 Implement KE-54 and KE-55 in `packages/core/src/kiro-evidence.ts`": [
+      {
+        "executionId": "9461e66e-0030-4ee2-949f-6b53114b7892",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795690446605
+      },
+      {
+        "executionId": "9461e66e-0030-4ee2-949f-6b53114b7892",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795690459185
+      },
+      {
+        "executionId": "9461e66e-0030-4ee2-949f-6b53114b7892",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795690666354
+      }
+    ],
+    "21.2 Add the sign-in URL shape to `containsSecretShape` so the after-write rescan fails on it": [
+      {
+        "executionId": "9461e66e-0030-4ee2-949f-6b53114b7892",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795690446641
+      },
+      {
+        "executionId": "9461e66e-0030-4ee2-949f-6b53114b7892",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795690667893
+      }
+    ],
+    "21.3 Write KE tests with made-up values built at runtime, one per KE-54, KE-55 and KE-56": [
+      {
+        "executionId": "9461e66e-0030-4ee2-949f-6b53114b7892",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795690446695
+      },
+      {
+        "executionId": "9461e66e-0030-4ee2-949f-6b53114b7892",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795690672526
+      }
+    ],
+    "21.4 Re-run `node scripts/kiro-evidence.mjs`, regenerate `docs/KIRO_EVIDENCE.md`, refresh facts, run the KE tests, `pnpm -r typecheck` and `pnpm vitest run`, and commit as a new commit without pushing": [
+      {
+        "executionId": "9461e66e-0030-4ee2-949f-6b53114b7892",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795690446731
+      },
+      {
+        "executionId": "9461e66e-0030-4ee2-949f-6b53114b7892",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795690745510
+      },
+      {
+        "executionId": "9461e66e-0030-4ee2-949f-6b53114b7892",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795691378116
+      }
+    ],
+    "21. Redact sign-in URLs and omit files read outside the workspace": [
+      {
+        "executionId": "9461e66e-0030-4ee2-949f-6b53114b7892",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795691378169
+      }
+    ],
+    "22.1 Implement KE-58 in `packages/core/src/kiro-evidence.ts` and write a KE-58 test": [
+      {
+        "executionId": "104509c6-9dff-491e-b31f-cb8d08d8b5a5",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795691492374
+      },
+      {
+        "executionId": "104509c6-9dff-491e-b31f-cb8d08d8b5a5",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795691495661
+      },
+      {
+        "executionId": "104509c6-9dff-491e-b31f-cb8d08d8b5a5",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795691682556
+      }
+    ],
+    "22.2 Re-run `node scripts/kiro-evidence.mjs`, regenerate `docs/KIRO_EVIDENCE.md`, refresh facts, run the KE tests, `pnpm -r typecheck` and `pnpm vitest run`, and commit as a new commit without pushing": [
+      {
+        "executionId": "104509c6-9dff-491e-b31f-cb8d08d8b5a5",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795691492412
+      },
+      {
+        "executionId": "104509c6-9dff-491e-b31f-cb8d08d8b5a5",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795691683374
+      },
+      {
+        "executionId": "104509c6-9dff-491e-b31f-cb8d08d8b5a5",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795692077810
+      }
+    ],
+    "22. Drop model signature fields from the export": [
+      {
+        "executionId": "104509c6-9dff-491e-b31f-cb8d08d8b5a5",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795692077866
+      }
+    ]
+  }
+}

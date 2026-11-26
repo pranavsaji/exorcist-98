@@ -1,3 +1,6 @@
+---
+inclusion: always
+---
 # Product: Exorcist 98
 
 - Exorcist 98 is the 1990s desktop antivirus, resurrected to protect AI coding agents.

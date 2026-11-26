@@ -1,3 +1,6 @@
+---
+inclusion: always
+---
 # Tech conventions
 
 - TypeScript strict mode everywhere, Node 20+, pnpm workspaces.

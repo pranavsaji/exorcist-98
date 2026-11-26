@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "spec-trace",
+      "description": "When a spec or a test file is saved, list the requirement IDs no test name starts with, and the test IDs the spec lacks. Warning only: it always exits 0, so it never fails the save.",
+      "trigger": "PostFileSave",
+      "matcher": "((^|/)\\.kiro/specs/.+\\.md$|\\.test\\.tsx?$)",
+      "action": {
+        "type": "command",
+        "command": "sh scripts/kiro-hook.sh node_modules/.bin/tsx scripts/spec-trace.mjs --warn"
+      },
+      "timeout": 60
+    }
+  ]
+}

@@ -65,7 +65,7 @@ describe('scripts/kiro-hook.sh', () => {
   });
 
   it('every command hook in this repo goes through it, never a bare pnpm, npx or node', () => {
-    for (const f of ['pre-commit-secrets', 'definition-save', 'mcp-config-change', 'on-access-scan', 'mcp-config-write-guard']) {
+    for (const f of ['pre-commit-secrets', 'definition-save', 'mcp-config-change', 'on-access-scan', 'mcp-config-write-guard', 'verify-after-task']) {
       const cmd = hookCommand(join(ROOT, `.kiro/hooks/${f}.json`));
       expect(cmd.startsWith('sh scripts/kiro-hook.sh ')).toBe(true);
       expect(cmd).not.toMatch(/(^|\s)(pnpm|npx|node)(\s|$)/);
@@ -172,7 +172,7 @@ const stopEvent = (cwd: string): string => JSON.stringify({ hook_event_name: 'St
 
 describe('the exorcist-gate Stop hook (m10-kiro-gate 2.1 to 2.3, 2.6)', () => {
   const file = join(ROOT, '.kiro/hooks/exorcist-gate.json');
-  it('is Kiro v1 JSON with trigger Stop and goes through the launcher', () => {
+  it('KG-11 KG-12 is Kiro v1 JSON with trigger Stop and goes through the launcher', () => {
     const parsed = KiroHookSchema.parse(JSON.parse(readFileSync(file, 'utf8')));
     expect(parsed.hooks[0]?.trigger).toBe('Stop');
     const cmd = hookCommand(file);
@@ -180,14 +180,14 @@ describe('the exorcist-gate Stop hook (m10-kiro-gate 2.1 to 2.3, 2.6)', () => {
     expect(cmd).not.toMatch(/(^|\s)(pnpm|npx|node)(\s|$)/);
     expect(cmd.endsWith(' gate')).toBe(true);
   });
-  it('every hook file in this repository matches the schema', () => {
+  it('KG-16 every hook file in this repository matches the schema', () => {
     for (const f of ['definition-save', 'mcp-config-change', 'on-access-scan', 'pre-commit-secrets', 'spec-change', 'exorcist-gate']) {
       expect(() => KiroHookSchema.parse(JSON.parse(readFileSync(join(ROOT, `.kiro/hooks/${f}.json`), 'utf8'))), f).not.toThrow();
     }
   });
   // The hook runs in the project root; here the project is a temporary repository, so the paths are absolute.
   const inRepo = `sh ${join(ROOT, 'scripts/kiro-hook.sh')} ${TSX} ${CLI_SRC} gate`;
-  it('with Kiro\'s PATH: a change that adds hidden characters fails, and the agent gets the list on stderr', () => {
+  it('KG-13 with Kiro\'s PATH: a change that adds hidden characters fails, and the agent gets the list on stderr', () => {
     const repo = gateRepo(true);
     const r = runHook(inRepo, stopEvent(repo), repo, NODE_DIR);
     expect(r.code).toBe(1);

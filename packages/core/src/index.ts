@@ -105,3 +105,15 @@ export { parseDirectives, applyInline, reasonForReport, NEVER_INLINE } from './s
 export type { Directive, InlineResult, SuppressedFinding, RejectedDirective, RejectCause } from './suppress.js';
 export { languageOf, extractToolDescriptions, scanSourceTools } from './source-tools.js';
 export type { SourceLang, ToolString } from './source-tools.js';
+export {
+  isThisProjectWorkspace, redactHomePath, redactSecretsDeep, truncateToolPayload, parseEventLine,
+  isHookRun, isHookBlock, extractSessionRecord, aggregateTotals, containsSecretShape,
+  KiroEventSchema, TRUNCATION_SUFFIX,
+} from './kiro-evidence.js';
+export type { KiroEvent, HookRef, HookBlockRecord, SessionRecord, Totals } from './kiro-evidence.js';
+export { renderKiroEvidenceMd, TRANSCRIPT_DIR } from './kiro-evidence-md.js';
+export type { EvidenceIndex } from './kiro-evidence-md.js';
+export { detectIdPrefix, extractRequirementIds, extractTestedIds, diffIds, specTraceExitCode } from './spec-trace.js';
+export type { IdDiff } from './spec-trace.js';
+export { compareSteeringTable } from './steering-table.js';
+export type { SteeringTableDiff } from './steering-table.js';

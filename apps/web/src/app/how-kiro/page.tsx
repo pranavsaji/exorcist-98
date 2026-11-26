@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { BookIcon, GhostIcon, ShieldIcon, SkullIcon } from '@/components/Icons';
 import { SiteFooter } from '@/components/SiteFooter';
 import {
-  CHECK_COMMANDS, HOW_KIRO_INTRO, HOW_KIRO_TITLE, SURFACES, SURPRISES, USER_SETUP,
+  CHECK_COMMANDS, HOW_KIRO_INTRO, HOW_KIRO_TITLE, STEERING_TABLE, SURFACES, SURPRISES, USER_SETUP,
 } from '@/lib/how-kiro';
 
 // Static content (apps/web/src/lib/how-kiro.ts, the same source as docs/HOW_KIRO.md):
@@ -141,6 +141,35 @@ export default function HowKiroPage() {
           </ol>
         </Panel>
 
+        <Panel id="steering-files" title="Steering files" icon={<BookIcon size={18} />}>
+          <p className="mt-0">Each file under <Rich text="`.kiro/steering/`" />, when Kiro includes it, and why.</p>
+          <div className="bevel-in overflow-x-auto" tabIndex={0} role="region" aria-label="Steering files table">
+            <table className="w-full border-collapse text-left text-xs">
+              <thead>
+                <tr>
+                  <th scope="col" className="p-1 font-extrabold">File</th>
+                  <th scope="col" className="p-1 font-extrabold">Mode</th>
+                  <th scope="col" className="p-1 font-extrabold">Patterns</th>
+                  <th scope="col" className="p-1 font-extrabold">Why</th>
+                </tr>
+              </thead>
+              <tbody>
+                {STEERING_TABLE.map((r) => (
+                  <tr key={r.file} className="border-t border-ink/30 align-top">
+                    <td className="p-1"><code className="break-all font-mono">{r.file}</code></td>
+                    <td className="p-1">{r.mode}</td>
+                    <td className="p-1">
+                      {r.patterns.length > 0
+                        ? <ul className="m-0 list-none p-0">{r.patterns.map((p) => <li key={p}><code className="break-all font-mono">{p}</code></li>)}</ul>
+                        : 'none'}
+                    </td>
+                    <td className="p-1">{r.reason}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
 
         <Panel id="check" title="Check it yourself" icon={<BookIcon size={18} />}>
           <p className="mt-0">Run these from a clone of the repository.</p>

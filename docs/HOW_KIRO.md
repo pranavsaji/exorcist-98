@@ -309,6 +309,22 @@ Installing the Crew app found that crons need `permissions.cron`, the proxy head
 - `docs/KIRO_LOG.md` rows dated 2026-11-19 (Crew)
 - Crew repository (exorcist-98-crew) `docs/KNOWN_LIMITATIONS.md`
 
+## Steering files
+
+| File | Mode | Patterns | Why |
+| --- | --- | --- | --- |
+| `product.md` | always | none | What the product is and what must never break; every change should be judged against it. |
+| `security.md` | always | none | The safety rules (defanged samples, untrusted text as data, no secrets) apply to every change. |
+| `tech.md` | always | none | Language, layout, validation and test conventions apply to every change. |
+| `ui.md` | fileMatch | `apps/web/src/**/*.tsx`<br>`apps/web/src/**/*.css` | The retro desktop look only matters when editing web components and styles. |
+| `ai-masking.md` | fileMatch | `packages/core/src/llm/**`<br>`packages/core/src/scanner/heuristic-engine.ts`<br>`packages/shield/src/ai-review.ts`<br>`packages/shield/src/proxy.ts`<br>`scripts/bedrock-smoke.ts`<br>`scripts/ai-judge-eval.ts`<br>`scripts/detonation-eval.ts` | What may be sent to the model matters only in the code that builds model prompts. |
+| `canary.md` | fileMatch | `**/canary*.ts`<br>`packages/cli/src/commands/check-staged.ts`<br>`packages/core/src/secrets-check.ts` | Canary token rules matter only in the canary detector and the commit check. |
+| `git-safety.md` | fileMatch | `packages/core/src/origin.ts`<br>`packages/core/src/repo-config-guard.ts`<br>`packages/cli/src/commands/origin.ts`<br>`packages/core/src/secrets-check.ts`<br>`packages/cli/src/commands/check-staged.ts`<br>`apps/web/src/lib/scan-service.ts` | Running git inside a scanned repository is only done in these files. |
+| `kiro-hooks.md` | fileMatch | `.kiro/hooks/**`<br>`.kiro/agents/**`<br>`scripts/kiro-hook.sh`<br>`scripts/hook-*.ts`<br>`packages/cli/src/commands/init.ts`<br>`packages/cli/src/kiro-hook-script.ts`<br>`packages/cli/src/kiro-agent.ts`<br>`packages/core/src/hook-guard.ts` | Hook and agent file formats are only needed when editing hooks, agents and their writers. |
+| `repo-input.md` | fileMatch | `packages/shield/src/**`<br>`packages/core/src/allowed-reads.ts`<br>`packages/core/src/on-access.ts`<br>`packages/core/src/liveupdate.ts`<br>`packages/cli/src/commands/lock.ts`<br>`packages/cli/src/commands/update.ts`<br>`packages/cli/src/commands/on-access.ts` | Files shipped with a repository never count as approvals; this matters in the Shield and the allowance code. |
+| `untrusted-output.md` | fileMatch | `packages/mcp-server/src/**`<br>`packages/shield/src/byoa.ts`<br>`apps/web/src/app/api/**`<br>`apps/web/src/components/**`<br>`packages/cli/src/commands/**`<br>`packages/core/src/on-access.ts`<br>`packages/core/src/ouija.ts`<br>`packages/core/src/scanner/signature-engine.ts` | How much attacker text may be repeated matters only in code that prints or returns findings. |
+| `release.md` | manual | none | Release steps are needed rarely and only when the owner asks for them, with #release. |
+
 ## Check it yourself
 
 ```sh

@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { renderToStaticMarkup } from 'react-dom/server';
 import HowKiroPage from '@/app/how-kiro/page';
 import {
-  CHECK_COMMANDS, HOW_KIRO_INTRO, HOW_KIRO_TITLE, SURFACES, SURPRISES, USER_SETUP, howKiroMarkdown,
+  CHECK_COMMANDS, HOW_KIRO_INTRO, HOW_KIRO_TITLE, STEERING_TABLE, SURFACES, SURPRISES, USER_SETUP, howKiroMarkdown,
 } from '@/lib/how-kiro';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -42,7 +42,7 @@ describe('docs/HOW_KIRO.md and the /how-kiro page', () => {
     const text = pageText();
     const headings = [
       HOW_KIRO_TITLE, 'Kiro features at a glance', ...SURFACES.map((s) => s.title), USER_SETUP.title,
-      'Where Kiro surprised us', ...SURPRISES.map((s) => s.title), 'Check it yourself',
+      'Where Kiro surprised us', ...SURPRISES.map((s) => s.title), 'Steering files', 'Check it yourself',
     ];
     for (const h of headings) {
       expect(MD, `Markdown heading: ${h}`).toMatch(new RegExp(`^#{1,3} ${h.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'm'));
@@ -71,6 +71,15 @@ describe('docs/HOW_KIRO.md and the /how-kiro page', () => {
     }
     for (const t of allText()) expect(text, t.slice(0, 60)).toContain(plain(t));
     for (const c of CHECK_COMMANDS) expect(text).toContain(c);
+  });
+
+  it('KE-35: the page renders every steering file with its mode, patterns and reason', () => {
+    const text = pageText();
+    for (const r of STEERING_TABLE) {
+      expect(text, r.file).toContain(`${r.file}${r.mode}`);
+      for (const p of r.patterns) expect(text, `${r.file} ${p}`).toContain(p);
+      expect(text, r.file).toContain(r.reason);
+    }
   });
 
   it('every file the page cites exists', () => {

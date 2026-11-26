@@ -1,0 +1,754 @@
+{
+  "sessions": [
+    {
+      "id": "sess_cecf3a51-16cc-458f-ae5f-51ac6caea5ec",
+      "title": "Review Project Plan and Steering Files",
+      "agentMode": "vibe",
+      "startTime": "2026-11-15T08:23:33.162Z",
+      "endTime": "2026-11-21T18:24:02.976Z",
+      "model": "auto",
+      "autopilot": true,
+      "approveForMe": true,
+      "credits": 1005.1690479326701,
+      "toolCalls": {
+        "read_file": 133,
+        "execute_bash": 724,
+        "fs_write": 478,
+        "load_resource": 10,
+        "control_bash_process": 28,
+        "tool_call": 94,
+        "str_replace": 186,
+        "web_fetch": 54
+      },
+      "hookRuns": {
+        "pre-commit-secrets": 656,
+        "spec-change": 11,
+        "definition-save": 6,
+        "zz-probe-pretooluse": 5,
+        "mcp-config-change": 1
+      },
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [
+        "6fede46",
+        "8b56974"
+      ],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_19adb2a3-689f-4d4d-af30-09e01a1833f1",
+      "title": "Implement M5 Lockfile Spec Tasks",
+      "agentMode": "vibe",
+      "startTime": "2026-11-23T16:16:27.088Z",
+      "endTime": "2026-11-23T16:52:53.955Z",
+      "model": "auto",
+      "autopilot": null,
+      "approveForMe": null,
+      "credits": 9.684111111442787,
+      "toolCalls": {
+        "execute_bash": 25,
+        "read_file": 16,
+        "fs_write": 3,
+        "str_replace": 29
+      },
+      "hookRuns": {
+        "pre-commit-secrets": 25
+      },
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_7087461e-849d-4437-b38c-260211978263",
+      "title": "Implement m5-canary Spec",
+      "agentMode": "vibe",
+      "startTime": "2026-11-23T16:16:27.123Z",
+      "endTime": "2026-11-23T16:52:53.952Z",
+      "model": "auto",
+      "autopilot": null,
+      "approveForMe": null,
+      "credits": 9.68193708043118,
+      "toolCalls": {
+        "execute_bash": 20,
+        "read_file": 15,
+        "fs_write": 5,
+        "str_replace": 33
+      },
+      "hookRuns": {
+        "pre-commit-secrets": 20,
+        "definition-save": 1
+      },
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_697106f1-2be6-42b2-8116-0d7b7adfaa26",
+      "title": "Implement M5-Ouija Spec Tasks",
+      "agentMode": "vibe",
+      "startTime": "2026-11-23T16:16:27.126Z",
+      "endTime": "2026-11-23T16:52:53.948Z",
+      "model": "auto",
+      "autopilot": null,
+      "approveForMe": null,
+      "credits": 7.9118396044776125,
+      "toolCalls": {
+        "execute_bash": 57,
+        "fs_write": 4,
+        "str_replace": 25
+      },
+      "hookRuns": {
+        "pre-commit-secrets": 57,
+        "spec-change": 2,
+        "definition-save": 1
+      },
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_cd50865d-d243-44d2-ad13-273aba4a16d1",
+      "title": "Implement m5-on-access Spec",
+      "agentMode": "vibe",
+      "startTime": "2026-11-23T16:16:27.169Z",
+      "endTime": "2026-11-23T16:52:32.092Z",
+      "model": "auto",
+      "autopilot": null,
+      "approveForMe": null,
+      "credits": 10.74837284859038,
+      "toolCalls": {
+        "execute_bash": 46,
+        "read_file": 10,
+        "fs_write": 7,
+        "str_replace": 27
+      },
+      "hookRuns": {
+        "pre-commit-secrets": 46,
+        "spec-change": 2
+      },
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_3b932699-bfa9-4d77-8172-bee88f6228b4",
+      "title": "Implement m5-liveupdate Spec",
+      "agentMode": "vibe",
+      "startTime": "2026-11-23T16:17:14.644Z",
+      "endTime": "2026-11-23T16:52:53.808Z",
+      "model": "auto",
+      "autopilot": null,
+      "approveForMe": null,
+      "credits": 6.682793171807628,
+      "toolCalls": {
+        "execute_bash": 34,
+        "read_file": 2,
+        "fs_write": 5,
+        "str_replace": 13
+      },
+      "hookRuns": {
+        "pre-commit-secrets": 34
+      },
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_9bb09bda-b36b-4294-9d84-99bb79a9825d",
+      "title": "Implement M5-Origin Spec Tasks",
+      "agentMode": "vibe",
+      "startTime": "2026-11-23T16:17:14.670Z",
+      "endTime": "2026-11-23T16:52:46.356Z",
+      "model": "auto",
+      "autopilot": null,
+      "approveForMe": null,
+      "credits": 5.937538084908789,
+      "toolCalls": {
+        "execute_bash": 24,
+        "read_file": 5,
+        "fs_write": 4,
+        "str_replace": 25
+      },
+      "hookRuns": {
+        "pre-commit-secrets": 24
+      },
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_ec9bfeb7-6eab-4bf5-8f57-ac5d5fe1ad22",
+      "title": "Implement M6 OS Release Touchid Feature",
+      "agentMode": "spec",
+      "startTime": "2026-11-25T00:55:42.285Z",
+      "endTime": "2026-11-25T01:39:37.942Z",
+      "model": "auto",
+      "autopilot": true,
+      "approveForMe": true,
+      "credits": 53.91958360945274,
+      "toolCalls": {
+        "read_file": 9,
+        "list_directory": 4,
+        "grep_search": 3,
+        "task_list": 3,
+        "task_update": 41,
+        "task_status": 40
+      },
+      "hookRuns": {
+        "on-access-scan": 9
+      },
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_b2f92f89-6d3d-4e43-b2d5-a212bbeabac6",
+      "title": "Read the file TASK-precision.md at the repository root and follow it: create ...",
+      "agentMode": "spec",
+      "startTime": "2026-11-25T01:30:05.566Z",
+      "endTime": "2026-11-25T02:14:37.080Z",
+      "model": "auto",
+      "autopilot": true,
+      "approveForMe": true,
+      "credits": 57.48364591923712,
+      "toolCalls": {
+        "read_file": 18,
+        "list_directory": 8,
+        "grep_search": 4,
+        "execute_bash": 97,
+        "validate_spec_format": 17
+      },
+      "hookRuns": {
+        "on-access-scan": 18,
+        "pre-commit-secrets": 97
+      },
+      "hookBlocks": {
+        "on-access-scan": 1
+      },
+      "hookBlockEvents": [
+        {
+          "hookName": "on-access-scan",
+          "toolName": "read_file",
+          "timestamp": "2026-11-25T01:31:45.857Z"
+        }
+      ],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_b60178aa-ef22-4599-9eec-5bc2c1cb50f5",
+      "title": "Integrate Release 0.1.2 Branch Merge",
+      "agentMode": "vibe",
+      "startTime": "2026-11-25T01:49:16.583Z",
+      "endTime": "2026-11-25T03:41:45.841Z",
+      "model": "auto",
+      "autopilot": null,
+      "approveForMe": true,
+      "credits": 25.821876282918737,
+      "toolCalls": {
+        "execute_bash": 86,
+        "fs_write": 1
+      },
+      "hookRuns": {
+        "pre-commit-secrets": 86
+      },
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_a9f5eb24-3888-4e38-8489-9775e7d4dde0",
+      "title": "Investigate And Fix OS-Release Security Bug",
+      "agentMode": "bug-fix",
+      "startTime": "2026-11-25T01:51:14.415Z",
+      "endTime": "2026-11-25T01:56:59.496Z",
+      "model": "auto",
+      "autopilot": true,
+      "approveForMe": true,
+      "credits": 2.1405738953565505,
+      "toolCalls": {
+        "file_search": 1,
+        "read_file": 5,
+        "execute_bash": 5,
+        "grep_search": 3
+      },
+      "hookRuns": {
+        "on-access-scan": 5,
+        "pre-commit-secrets": 5
+      },
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_2e8c4c6d-edf5-4f6b-a957-b03c927f456f",
+      "title": "Fix M7 Security Bypass Vulnerabilities",
+      "agentMode": "bug-fix",
+      "startTime": "2026-11-25T02:19:18.647Z",
+      "endTime": "2026-11-25T02:49:01.717Z",
+      "model": "auto",
+      "autopilot": true,
+      "approveForMe": true,
+      "credits": 15.209323213764506,
+      "toolCalls": {
+        "read_file": 1,
+        "execute_bash": 2
+      },
+      "hookRuns": {
+        "on-access-scan": 1,
+        "pre-commit-secrets": 2
+      },
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_3967037a-7799-4493-bb31-452d4a94fdd2",
+      "title": "Scan this repo for prompt injection using the exorcist power, and tell me the...",
+      "agentMode": "vibe",
+      "startTime": "2026-11-25T03:44:29.073Z",
+      "endTime": "2026-11-25T03:45:57.164Z",
+      "model": "auto",
+      "autopilot": null,
+      "approveForMe": true,
+      "credits": 0.283654352238806,
+      "toolCalls": {
+        "kiro_powers": 2
+      },
+      "hookRuns": {},
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_56e3c33e-7ab0-4db1-a14e-b37aec5bbc80",
+      "title": "Debug Power MCP Server Path Scanning Issue",
+      "agentMode": "bug-fix",
+      "startTime": "2026-11-25T03:47:42.556Z",
+      "endTime": "2026-11-25T06:57:34.671Z",
+      "model": "auto",
+      "autopilot": true,
+      "approveForMe": true,
+      "credits": 16.700746527031505,
+      "toolCalls": {
+        "read_file": 7,
+        "list_directory": 5,
+        "grep_search": 5,
+        "remote_web_search": 1,
+        "web_fetch": 3,
+        "execute_bash": 41
+      },
+      "hookRuns": {
+        "on-access-scan": 7,
+        "pre-commit-secrets": 41
+      },
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_c99d0e2c-ff33-46cd-93c5-b4c98a3758e8",
+      "title": "Execute Task Doc Instructions",
+      "agentMode": "vibe",
+      "startTime": "2026-11-25T06:23:25.791Z",
+      "endTime": "2026-11-25T06:39:40.390Z",
+      "model": "auto",
+      "autopilot": null,
+      "approveForMe": true,
+      "credits": 5.3897704212271975,
+      "toolCalls": {
+        "execute_bash": 26
+      },
+      "hookRuns": {
+        "pre-commit-secrets": 26
+      },
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_46506e53-399d-40cf-af9e-dd019d4d5e72",
+      "title": "Implement Incidents Feature From Spec",
+      "agentMode": "spec",
+      "startTime": "2026-11-25T08:32:00.617Z",
+      "endTime": "2026-11-25T09:43:49.060Z",
+      "model": "auto",
+      "autopilot": true,
+      "approveForMe": true,
+      "credits": 59.44896887860698,
+      "toolCalls": {
+        "read_file": 5,
+        "list_directory": 2,
+        "execute_bash": 19,
+        "grep_search": 2,
+        "web_fetch": 2,
+        "validate_spec_format": 2,
+        "task_list": 4,
+        "task_update": 26,
+        "task_status": 25,
+        "invoke_sub_agent": 1
+      },
+      "hookRuns": {
+        "on-access-scan": 5,
+        "pre-commit-secrets": 19
+      },
+      "hookBlocks": {
+        "on-access-scan": 1
+      },
+      "hookBlockEvents": [
+        {
+          "hookName": "on-access-scan",
+          "toolName": "read_file",
+          "timestamp": "2026-11-25T09:32:44.158Z"
+        }
+      ],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_c599bc94-08ce-4e56-8365-c13c85b7fd37",
+      "title": "Implement M9 Adoption Spec and Tasks",
+      "agentMode": "spec",
+      "startTime": "2026-11-25T08:32:10.285Z",
+      "endTime": "2026-11-25T09:43:00.697Z",
+      "model": "auto",
+      "autopilot": true,
+      "approveForMe": true,
+      "credits": 55.66218765058046,
+      "toolCalls": {
+        "read_file": 8,
+        "list_directory": 4,
+        "execute_bash": 12,
+        "validate_spec_format": 2,
+        "task_update": 35,
+        "task_list": 2,
+        "task_status": 34,
+        "invoke_sub_agent": 2
+      },
+      "hookRuns": {
+        "on-access-scan": 8,
+        "pre-commit-secrets": 12
+      },
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_9398bf22-9acd-4eda-b4a9-e09d26cd63c4",
+      "title": "Implement M10 Kiro Gate Specification",
+      "agentMode": "spec",
+      "startTime": "2026-11-25T08:32:22.765Z",
+      "endTime": "2026-11-25T08:52:29.854Z",
+      "model": "auto",
+      "autopilot": true,
+      "approveForMe": true,
+      "credits": 28.276776506799337,
+      "toolCalls": {
+        "file_search": 1,
+        "read_file": 1,
+        "execute_bash": 53,
+        "web_fetch": 13,
+        "remote_web_search": 3,
+        "validate_spec_format": 9
+      },
+      "hookRuns": {
+        "on-access-scan": 1,
+        "pre-commit-secrets": 53,
+        "exorcist-gate": 1
+      },
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_2e500639-fefa-4af2-9ca1-7807f80d70ce",
+      "title": "Execute Polish Task List",
+      "agentMode": "vibe",
+      "startTime": "2026-11-25T08:32:34.571Z",
+      "endTime": "2026-11-25T09:08:20.735Z",
+      "model": "auto",
+      "autopilot": null,
+      "approveForMe": true,
+      "credits": 39.36522931160864,
+      "toolCalls": {
+        "execute_bash": 116,
+        "fs_write": 4,
+        "read_file": 3
+      },
+      "hookRuns": {
+        "pre-commit-secrets": 116,
+        "on-access-scan": 3
+      },
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_beb591f4-bea1-44fd-8a96-1b89dde2aeac",
+      "title": "Release 0.2.0 Merge and Verification",
+      "agentMode": "vibe",
+      "startTime": "2026-11-25T09:55:51.201Z",
+      "endTime": "2026-11-25T10:27:40.096Z",
+      "model": "auto",
+      "autopilot": null,
+      "approveForMe": true,
+      "credits": 25.257860935157552,
+      "toolCalls": {
+        "execute_bash": 126
+      },
+      "hookRuns": {
+        "pre-commit-secrets": 126,
+        "exorcist-gate": 1
+      },
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_dff94482-692b-4ace-bbc0-91846840f63d",
+      "title": "Create Gate Test Markdown File",
+      "agentMode": "vibe",
+      "startTime": "2026-11-25T10:42:37.449Z",
+      "endTime": "2026-11-25T10:54:36.216Z",
+      "model": "auto",
+      "autopilot": null,
+      "approveForMe": true,
+      "credits": 6.713840873466002,
+      "toolCalls": {
+        "execute_bash": 29,
+        "fs_write": 2
+      },
+      "hookRuns": {
+        "pre-commit-secrets": 29,
+        "exorcist-gate": 3,
+        "mcp-config-write-guard": 2
+      },
+      "hookBlocks": {
+        "mcp-config-write-guard": 1
+      },
+      "hookBlockEvents": [
+        {
+          "hookName": "mcp-config-write-guard",
+          "toolName": "fs_write",
+          "timestamp": "2026-11-25T10:45:35.015Z"
+        }
+      ],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_3acf15eb-dd89-44cd-b121-2b1310b7f9e2",
+      "title": "Feature brief: a Shield log you can prove nobody rewrote, and approvals that ...",
+      "agentMode": "vibe",
+      "startTime": "2026-11-25T19:14:29.481Z",
+      "endTime": "2026-11-25T19:15:45.884Z",
+      "model": "auto",
+      "autopilot": null,
+      "approveForMe": null,
+      "credits": 0,
+      "toolCalls": {},
+      "hookRuns": {},
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_f6c1c62f-55ec-4ca7-8d0c-15da078c7e7d",
+      "title": "Feature brief: show the Kiro work, with its own records",
+      "agentMode": "vibe",
+      "startTime": "2026-11-25T19:14:29.481Z",
+      "endTime": "2026-11-25T19:15:45.153Z",
+      "model": "auto",
+      "autopilot": null,
+      "approveForMe": null,
+      "credits": 0,
+      "toolCalls": {},
+      "hookRuns": {},
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_9e0582c6-a713-4024-832c-88b05594f019",
+      "title": "m12-audit-chain spec: requirements done, writing design",
+      "agentMode": "spec",
+      "startTime": "2026-11-25T19:56:05.789Z",
+      "endTime": "2026-11-26T00:18:53.388Z",
+      "model": "auto",
+      "autopilot": true,
+      "approveForMe": true,
+      "credits": 37.59538043300166,
+      "toolCalls": {
+        "read_file": 3,
+        "list_directory": 1,
+        "execute_bash": 15,
+        "task_list": 4,
+        "task_update": 64,
+        "task_status": 66,
+        "task_get": 1,
+        "invoke_sub_agent": 3
+      },
+      "hookRuns": {
+        "on-access-scan": 3,
+        "pre-commit-secrets": 15,
+        "exorcist-gate": 1
+      },
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+      "title": "Implement M13 Kiro Evidence Spec",
+      "agentMode": "spec",
+      "startTime": "2026-11-25T19:58:36.972Z",
+      "endTime": "2026-11-26T11:15:42.481Z",
+      "model": "auto",
+      "autopilot": true,
+      "approveForMe": true,
+      "credits": 42.03574730646767,
+      "toolCalls": {
+        "read_file": 2,
+        "list_directory": 1,
+        "execute_bash": 17,
+        "task_list": 7,
+        "task_update": 84,
+        "task_status": 85,
+        "invoke_sub_agent": 9
+      },
+      "hookRuns": {
+        "on-access-scan": 2,
+        "pre-commit-secrets": 17,
+        "verify-after-task": 17,
+        "kiro-log": 3,
+        "exorcist-gate": 3
+      },
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_746e6671-2396-4462-b0fd-906c7d6bc409",
+      "title": "Implement Config Tamper Detection System",
+      "agentMode": "spec",
+      "startTime": "2026-11-25T19:58:56.684Z",
+      "endTime": "2026-11-26T11:15:39.495Z",
+      "model": "auto",
+      "autopilot": true,
+      "approveForMe": true,
+      "credits": 0,
+      "toolCalls": {
+        "read_file": 2,
+        "list_directory": 1,
+        "execute_bash": 6,
+        "task_list": 4,
+        "task_update": 70,
+        "task_status": 73,
+        "invoke_sub_agent": 6,
+        "task_get": 1
+      },
+      "hookRuns": {
+        "on-access-scan": 2,
+        "pre-commit-secrets": 6
+      },
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    },
+    {
+      "id": "sess_e14b8140-ef61-4b34-ae82-10a1d8f0face",
+      "title": "Implement M14 First Five Minutes Spec",
+      "agentMode": "spec",
+      "startTime": "2026-11-25T20:02:22.783Z",
+      "endTime": "2026-11-25T22:18:47.656Z",
+      "model": "auto",
+      "autopilot": true,
+      "approveForMe": true,
+      "credits": 3.3191114479270314,
+      "toolCalls": {
+        "read_file": 1,
+        "list_directory": 2,
+        "execute_bash": 70,
+        "web_fetch": 8,
+        "remote_web_search": 4,
+        "bash_placeholder": 1,
+        "validate_spec_format": 10
+      },
+      "hookRuns": {
+        "on-access-scan": 1,
+        "pre-commit-secrets": 70,
+        "exorcist-gate": 1
+      },
+      "hookBlocks": {},
+      "hookBlockEvents": [],
+      "commits": [],
+      "eventsDroppedUnparseable": 0
+    }
+  ],
+  "totals": {
+    "sessionsKept": 27,
+    "sessionsSkipped": 27,
+    "credits": 1530.4399173991712,
+    "toolCalls": {
+      "read_file": 246,
+      "execute_bash": 1650,
+      "fs_write": 513,
+      "load_resource": 10,
+      "control_bash_process": 28,
+      "tool_call": 94,
+      "str_replace": 338,
+      "web_fetch": 80,
+      "list_directory": 28,
+      "grep_search": 17,
+      "task_list": 24,
+      "task_update": 320,
+      "task_status": 323,
+      "validate_spec_format": 40,
+      "file_search": 2,
+      "kiro_powers": 2,
+      "remote_web_search": 8,
+      "invoke_sub_agent": 21,
+      "task_get": 2,
+      "bash_placeholder": 1
+    },
+    "hookRuns": {
+      "pre-commit-secrets": 1582,
+      "spec-change": 15,
+      "definition-save": 8,
+      "zz-probe-pretooluse": 5,
+      "mcp-config-change": 1,
+      "on-access-scan": 65,
+      "exorcist-gate": 10,
+      "mcp-config-write-guard": 2,
+      "verify-after-task": 17,
+      "kiro-log": 3
+    },
+    "hookBlocks": {
+      "on-access-scan": 2,
+      "mcp-config-write-guard": 1
+    },
+    "eventsDroppedUnparseable": 0
+  }
+}

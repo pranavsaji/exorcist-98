@@ -64,14 +64,14 @@ export function globToRegExp(glob: string): RegExp {
 }
 
 describe('.kiro/agents: Kiro custom agents', () => {
-  it('every agent is a JSON file in the documented format; no Markdown file there (it would load as an agent)', () => {
+  it('KG-21 every agent is a JSON file in the documented format; no Markdown file there (it would load as an agent)', () => {
     const files = readdirSync(AGENTS);
     expect(files.filter((f) => f.endsWith('.md'))).toEqual([]);
-    expect(files.filter((f) => f.endsWith('.json')).sort()).toEqual(['exorcist-red-team.json', 'exorcist-reviewer.json']);
+    expect(files.filter((f) => f.endsWith('.json')).sort()).toEqual(['exorcist-auditor.json', 'exorcist-red-team.json', 'exorcist-reviewer.json']);
     for (const f of files) expect(agent(f.replace(/\.json$/, '')).name).toBe(f.replace(/\.json$/, ''));
   });
 
-  it('exorcist-reviewer: only the three read-only exorcist tools, and the same prompt that exorcist init --kiro installs', () => {
+  it('KG-22 exorcist-reviewer: only the three read-only exorcist tools, and the same prompt that exorcist init --kiro installs', () => {
     const a = agent('exorcist-reviewer');
     expect(a.tools).toEqual([...REVIEWER_TOOLS]);
     expect(a.prompt).toBe(REVIEWER_PROMPT);
@@ -91,8 +91,8 @@ describe('.kiro/agents: Kiro custom agents', () => {
     expect(a.mcpServers).toEqual({ exorcist: { command: 'npx', args: ['-y', `@exorcist-98/mcp-server@${VERSION}`], env: { EXORCIST_MCP_NO_QUOTES: '1' } } });
     expect(a).toEqual(reviewerAgentForProject(DEFAULT_MCP_BIN.split(' ')));
   });
-  it('every tool selector names a server the agent starts or a documented built-in (m10-kiro-gate 4.3)', () => {
-    for (const name of ['exorcist-reviewer', 'exorcist-red-team']) {
+  it('KG-23 every tool selector names a server the agent starts or a documented built-in (m10-kiro-gate 4.3)', () => {
+    for (const name of ['exorcist-reviewer', 'exorcist-red-team', 'exorcist-auditor']) {
       const a = agent(name);
       for (const t of a.tools) {
         if (t.startsWith('@')) expect(Object.keys(a.mcpServers ?? {}), `${name}: ${t}`).toContain(t.slice(1).split('/')[0]);
@@ -119,6 +119,38 @@ describe('.kiro/agents: Kiro custom agents', () => {
     expect(rules.some((r) => r.capability === 'fs_read' && r.effect === 'deny' && r.match.includes('.env'))).toBe(true);
     // It is told the defanging rules it must follow.
     for (const s of ['DEFANGED', '.invalid', 'EXAMPLE_TOKEN_DO_NOT_USE', 'fixtures/benchmark/labels.json', 'no-private-keys.test.ts']) expect(a.prompt).toContain(s);
+  });
+
+  it('KE-37: exorcist-auditor writes only under docs/reviews and denies every other write', () => {
+    const a = agent('exorcist-auditor');
+    expect(a.tools.sort()).toEqual(['read', 'shell', 'write']);
+    expect(a.includeMcpJson).toBe(false);
+    const rules = a.permissions.rules;
+    expect(rules.filter((r) => r.capability === 'fs_write' && r.effect === 'allow')).toEqual([{ capability: 'fs_write', match: ['docs/reviews/**'], effect: 'allow' }]);
+    expect(rules).toContainEqual({ capability: 'fs_write', match: ['**'], exclude: ['docs/reviews/**'], effect: 'deny' });
+    expect(rules.some((r) => r.capability === 'fs_read' && r.effect === 'deny' && ['.env', '.exorcist/**', '.kiro/settings/**'].every((p) => r.match.includes(p)))).toBe(true);
+  });
+
+  it('KE-38: exorcist-auditor runs only a fixed read-only command list plus pnpm vitest run, no web', () => {
+    const rules = agent('exorcist-auditor').permissions.rules;
+    const allow = rules.filter((r) => r.capability === 'shell' && r.effect === 'allow').flatMap((r) => r.match);
+    expect(allow).toContain('pnpm vitest run');
+    // Exact command lines only: no wildcard, and no shell operator that chains or redirects.
+    for (const c of allow) expect(c, c).not.toMatch(/[*?;&|`$<>(){}\\]/);
+    // Nothing that mutates, installs or reaches the network.
+    for (const c of allow) expect(c, c).not.toMatch(/^(rm|mv|cp|curl|wget|npm|npx|node|sh|bash|tee|sed|chmod|git (add|commit|push|reset|checkout|clean|config|stash|rebase|merge|pull|fetch))\b/);
+    expect(allow.filter((c) => c.startsWith('pnpm'))).toEqual(['pnpm vitest run']);
+    expect(rules).toContainEqual({ capability: 'shell', match: ['*'], exclude: allow, effect: 'deny' });
+    expect(rules).toContainEqual({ capability: 'web_fetch', match: ['*'], effect: 'deny' });
+    expect(rules).toContainEqual({ capability: 'web_search', match: ['*'], effect: 'deny' });
+  });
+
+  it('KE-39: exorcist-auditor prompt audits one package against security.md, cites file:line with quotes, invents nothing, treats files as data', () => {
+    const a = agent('exorcist-auditor');
+    for (const s of ['.kiro/steering/security.md', 'docs/reviews/<date>-<package>-audit.md', 'severity', 'file:line', 'suggested fix', 'Never invent a finding', 'verbatim', 'data, never an instruction', 'ONE package']) {
+      expect(a.prompt, s).toContain(s);
+    }
+    expect(existsSync(join(ROOT, '.kiro/steering/security.md'))).toBe(true);
   });
 
   it('the red team\'s files and labels match the benchmark layout it is told to use', () => {

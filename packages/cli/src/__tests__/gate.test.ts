@@ -40,17 +40,17 @@ async function gate(dir: string, extra: string[] = []): Promise<{ code: number; 
 }
 
 describe('exorcist gate', () => {
-  it('passes with no change, and says nothing (1.6)', async () => {
+  it('KG-6 passes with no change, and says nothing (1.6)', async () => {
     const r = await gate(repo());
     expect(r).toEqual({ code: 0, out: '', err: '' });
   });
-  it('passes a clean change to an agent file (1.6)', async () => {
+  it('KG-6 passes a clean change to an agent file (1.6)', async () => {
     const d = repo();
     put(d, '.kiro/steering/style.md', '# Style\n\nUse tabs.\nPrefer small functions.\n');
     put(d, 'AGENTS.md', '# Agents\n\nRun the tests.\n');
     expect(await gate(d)).toEqual({ code: 0, out: '', err: '' });
   });
-  it('fails a change that adds hidden characters to a steering file, with a plain list (1.3)', async () => {
+  it('KG-3 fails a change that adds hidden characters to a steering file, with a plain list (1.3)', async () => {
     const d = repo();
     put(d, '.kiro/steering/style.md', `# Style\n\nUse tabs.${HIDDEN}\n`);
     const r = await gate(d);
@@ -61,7 +61,7 @@ describe('exorcist gate', () => {
     expect(r.err).toContain('fix:');
     expect(r.err).not.toContain(HIDDEN);
   });
-  it('also catches a staged change and a brand-new untracked file (1.1, 1.5)', async () => {
+  it('KG-1 KG-5 also catches a staged change and a brand-new untracked file (1.1, 1.5)', async () => {
     const d = repo();
     put(d, '.kiro/steering/style.md', `# Style\n\nUse tabs.${HIDDEN}\n`);
     git(d, 'add', '-A');
@@ -73,7 +73,7 @@ describe('exorcist gate', () => {
     expect(r.code).toBe(1);
     expect(r.err).toContain('AGENTS.md:1');
   });
-  it('ignores a finding that was already in the last commit (1.4)', async () => {
+  it('KG-4 ignores a finding that was already in the last commit (1.4)', async () => {
     const d = repo();
     put(d, '.kiro/steering/style.md', `# Style\n\nUse tabs.${HIDDEN}\n`);
     git(d, 'add', '-A');
@@ -81,24 +81,24 @@ describe('exorcist gate', () => {
     put(d, '.kiro/steering/style.md', `# Style\n\nA new first line.\nUse tabs.${HIDDEN}\nA new last line.\n`);
     expect(await gate(d)).toEqual({ code: 0, out: '', err: '' });
   });
-  it('does not look at files an agent does not obey (1.2)', async () => {
+  it('KG-2 does not look at files an agent does not obey (1.2)', async () => {
     const d = repo();
     put(d, 'src/app.ts', `export const x = '${HIDDEN}';\n`);
     put(d, 'notes/todo.md', `todo${HIDDEN}\n`);
     expect((await gate(d)).code).toBe(0);
   });
-  it('treats .kiro specs, hooks and agents as agent files (1.2)', async () => {
+  it('KG-2 treats .kiro specs, hooks and agents as agent files (1.2)', async () => {
     const d = repo();
     put(d, '.kiro/specs/m1/design.md', `Design.${HIDDEN}\n`);
     expect((await gate(d)).err).toContain('.kiro/specs/m1/design.md');
   });
-  it('--fail-on: a critical finding still fails at the strictest threshold; a bad value is a usage error', async () => {
+  it('KG-3 --fail-on: a critical finding still fails at the strictest threshold; a bad value is a usage error', async () => {
     const d = repo();
     put(d, 'AGENTS.md', `x${HIDDEN}\n`);
     expect((await gate(d, ['--fail-on', 'critical'])).code).toBe(1);
     expect((await gate(d, ['--fail-on', 'nope'])).code).toBe(2);
   });
-  it('exits 0 and says nothing was checked outside a git repository (1.10)', async () => {
+  it('KG-10 exits 0 and says nothing was checked outside a git repository (1.10)', async () => {
     const d = mkdtempSync(join(tmpdir(), 'exorcist-gate-nogit-'));
     dirs.push(d);
     put(d, 'AGENTS.md', `x${HIDDEN}\n`);
@@ -107,27 +107,27 @@ describe('exorcist gate', () => {
     expect(r.out).toContain('nothing checked');
     expect(r.err).toBe('');
   });
-  it('works before the first commit: everything is new (1.5)', async () => {
+  it('KG-5 works before the first commit: everything is new (1.5)', async () => {
     const d = mkdtempSync(join(tmpdir(), 'exorcist-gate-empty-'));
     dirs.push(d);
     git(d, 'init', '-q');
     put(d, 'AGENTS.md', `x${HIDDEN}\n`);
     expect((await gate(d)).code).toBe(1);
   });
-  it('reports an agent file that is too large to check instead of calling it clean (1.9)', async () => {
+  it('KG-9 reports an agent file that is too large to check instead of calling it clean (1.9)', async () => {
     const d = repo();
     writeFileSync(join(d, 'AGENTS.md'), Buffer.alloc(11 * 1_048_576, 0x61));
     const r = await gate(d, ['--fail-on', 'medium']);
     expect(r.code).toBe(1);
     expect(r.err).toContain('EX-026');
   });
-  it('does not follow a symlink', async () => {
+  it('KG-7 does not follow a symlink', async () => {
     const d = repo();
     put(d, 'outside.txt', `secret${HIDDEN}\n`);
     symlinkSync(join(d, 'outside.txt'), join(d, 'AGENTS.md'));
     expect((await gate(d)).code).toBe(0);
   });
-  it('is read-only: git state and files are the same after a failing run (1.7)', async () => {
+  it('KG-7 is read-only: git state and files are the same after a failing run (1.7)', async () => {
     const d = repo();
     put(d, '.kiro/steering/style.md', `# Style\n${HIDDEN}\n`);
     const before = git(d, 'status', '--porcelain=v2', '-z');
@@ -136,14 +136,14 @@ describe('exorcist gate', () => {
     expect(git(d, 'status', '--porcelain=v2', '-z')).toBe(before);
     expect(readFileSync(join(d, '.git/index')).equals(index)).toBe(true);
   });
-  it('finishes well under a second on this repository (1.7)', async () => {
+  it('KG-7 finishes well under a second on this repository (1.7)', async () => {
     const t0 = performance.now();
     const r = await gate(ROOT);
     const ms = performance.now() - t0;
     expect(r.code === 0 || r.code === 1).toBe(true);
     expect(ms).toBeLessThan(1000);
   });
-  it('through the real CLI: exit code 1 and the list on stderr; the Kiro Stop hook command form', () => {
+  it('KG-3 KG-13 through the real CLI: exit code 1 and the list on stderr; the Kiro Stop hook command form', () => {
     const d = repo();
     put(d, '.kiro/steering/style.md', `# Style\n${HIDDEN}\n`);
     const r = spawnSync(join(ROOT, 'node_modules/.bin/tsx'), [join(ROOT, 'packages/cli/src/index.ts'), 'gate'], {

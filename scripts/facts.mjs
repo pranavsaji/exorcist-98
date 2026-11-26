@@ -15,6 +15,8 @@
 //   browserSteps, browserAxeViolationTypes      from the log of the browser suite (cached the same way)
 //   propertyTests                               `fc.assert(` calls in the test files
 //   definitions, specs, steering, hooks, agents files in definitions/, .kiro/specs, .kiro/steering, .kiro/hooks, .kiro/agents
+//   shallLines, tasksDone, tasksTotal           SHALL lines in .kiro/specs/*/requirements.md; checkbox tasks in .kiro/specs/*/tasks.md
+//   kiroSessions, kiroCredits, kiroToolCalls, hookRuns, hookBlocks  totals in evidence/kiro-sessions/index.json (zeros when absent)
 //   hauntedRepoFindings                         `exorcist scan fixtures/haunted-repo` with the built CLI
 //   benchmark*                                  the case folders in fixtures/benchmark, and how many passed in the report
 //   fieldReport                                 the tables in docs/FIELD_REPORT.md
@@ -55,6 +57,76 @@ function hauntedRepoFindings() {
   if (!existsSync(cli)) throw new Error('packages/cli/dist/index.mjs is missing: run `pnpm --filter @exorcist-98/cli build` first');
   const out = execFileSync('node', [cli, 'scan', join(ROOT, 'fixtures/haunted-repo'), '--format', 'json', '--fail-on', 'none'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   return JSON.parse(out).findings.length;
+}
+
+const sumValues = (o) => (o && typeof o === 'object' ? Object.values(o).reduce((a, v) => a + (typeof v === 'number' && Number.isFinite(v) ? v : 0), 0) : 0);
+const finite = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+
+/**
+ * Totals of the exported Kiro sessions, read from evidence/kiro-sessions/index.json.
+ * A missing or unreadable file gives zeros, so facts still run before the first export. (KE-18)
+ */
+export function kiroEvidence(root = ROOT) {
+  const zero = { kiroSessions: 0, kiroCredits: 0, kiroToolCalls: 0, hookRuns: 0, hookBlocks: 0 };
+  const p = join(root, 'evidence/kiro-sessions/index.json');
+  if (!existsSync(p)) return zero;
+  let t;
+  try { t = JSON.parse(readFileSync(p, 'utf8'))?.totals; } catch { return zero; }
+  if (!t || typeof t !== 'object') return zero;
+  return {
+    kiroSessions: finite(t.sessionsKept),
+    kiroCredits: Math.round(finite(t.credits) * 100) / 100,
+    kiroToolCalls: sumValues(t.toolCalls),
+    hookRuns: sumValues(t.hookRuns),
+    hookBlocks: sumValues(t.hookBlocks),
+  };
+}
+
+/** Lines containing the word SHALL, outside fenced code blocks. (KE-20) */
+export function countShallLines(text) {
+  let fence = null;
+  let n = 0;
+  for (const line of String(text).split(/\r?\n/)) {
+    const f = /^\s*(`{3,}|~{3,})/.exec(line);
+    if (f) {
+      if (fence === null) fence = f[1][0];
+      else if (f[1][0] === fence) fence = null;
+      continue;
+    }
+    if (fence === null && /\bSHALL\b/.test(line)) n++;
+  }
+  return n;
+}
+
+/** Checkbox task lines: `done` are `[x]`/`[X]`, `total` includes `[ ]`. (KE-21) */
+export function countTasks(text) {
+  let done = 0;
+  let total = 0;
+  for (const m of String(text).matchAll(/^\s*[-*]\s+\[([ xX])\]/gm)) {
+    total++;
+    if (m[1] !== ' ') done++;
+  }
+  return { done, total };
+}
+
+/** SHALL lines over every requirements.md and task counts over every tasks.md under .kiro/specs. */
+export function specCounts(root = ROOT) {
+  const dir = join(root, '.kiro/specs');
+  const out = { shallLines: 0, tasksDone: 0, tasksTotal: 0 };
+  if (!existsSync(dir)) return out;
+  for (const name of readdirSync(dir).sort()) {
+    const d = join(dir, name);
+    if (!statSync(d).isDirectory()) continue;
+    const req = join(d, 'requirements.md');
+    if (existsSync(req)) out.shallLines += countShallLines(readFileSync(req, 'utf8'));
+    const tk = join(d, 'tasks.md');
+    if (existsSync(tk)) {
+      const c = countTasks(readFileSync(tk, 'utf8'));
+      out.tasksDone += c.done;
+      out.tasksTotal += c.total;
+    }
+  }
+  return out;
 }
 
 const num = (s) => Number(String(s).replace(/,/g, ''));
@@ -124,6 +196,8 @@ export function compute(args = []) {
     steering: countDir('.kiro/steering', (n) => n.endsWith('.md')),
     hooks: countDir('.kiro/hooks', (n) => n.endsWith('.json')),
     agents: countDir('.kiro/agents', (n) => n.endsWith('.json')),
+    ...specCounts(),
+    ...kiroEvidence(),
     hauntedRepoFindings: hauntedRepoFindings(),
     benchmarkAttacks: Object.keys(labels.attacks).length,
     benchmarkBenign: labels.benign.length,

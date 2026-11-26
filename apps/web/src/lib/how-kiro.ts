@@ -220,6 +220,27 @@ export const CHECK_COMMANDS: string[] = [
   'pnpm --filter @exorcist-98/cli build && node packages/cli/dist/index.mjs init --kiro /tmp/kiro-demo',
 ];
 
+export type SteeringMode = 'always' | 'fileMatch' | 'manual' | 'auto';
+export type SteeringRow = { file: string; mode: SteeringMode; patterns: string[]; reason: string };
+
+/**
+ * One row per file under .kiro/steering/ (m13-kiro-evidence, KE-35). A test checks that the
+ * file list equals the real directory and that each mode equals the file's front matter.
+ */
+export const STEERING_TABLE: SteeringRow[] = [
+  { file: 'product.md', mode: 'always', patterns: [], reason: 'What the product is and what must never break; every change should be judged against it.' },
+  { file: 'security.md', mode: 'always', patterns: [], reason: 'The safety rules (defanged samples, untrusted text as data, no secrets) apply to every change.' },
+  { file: 'tech.md', mode: 'always', patterns: [], reason: 'Language, layout, validation and test conventions apply to every change.' },
+  { file: 'ui.md', mode: 'fileMatch', patterns: ['apps/web/src/**/*.tsx', 'apps/web/src/**/*.css'], reason: 'The retro desktop look only matters when editing web components and styles.' },
+  { file: 'ai-masking.md', mode: 'fileMatch', patterns: ['packages/core/src/llm/**', 'packages/core/src/scanner/heuristic-engine.ts', 'packages/shield/src/ai-review.ts', 'packages/shield/src/proxy.ts', 'scripts/bedrock-smoke.ts', 'scripts/ai-judge-eval.ts', 'scripts/detonation-eval.ts'], reason: 'What may be sent to the model matters only in the code that builds model prompts.' },
+  { file: 'canary.md', mode: 'fileMatch', patterns: ['**/canary*.ts', 'packages/cli/src/commands/check-staged.ts', 'packages/core/src/secrets-check.ts'], reason: 'Canary token rules matter only in the canary detector and the commit check.' },
+  { file: 'git-safety.md', mode: 'fileMatch', patterns: ['packages/core/src/origin.ts', 'packages/core/src/repo-config-guard.ts', 'packages/cli/src/commands/origin.ts', 'packages/core/src/secrets-check.ts', 'packages/cli/src/commands/check-staged.ts', 'apps/web/src/lib/scan-service.ts'], reason: 'Running git inside a scanned repository is only done in these files.' },
+  { file: 'kiro-hooks.md', mode: 'fileMatch', patterns: ['.kiro/hooks/**', '.kiro/agents/**', 'scripts/kiro-hook.sh', 'scripts/hook-*.ts', 'packages/cli/src/commands/init.ts', 'packages/cli/src/kiro-hook-script.ts', 'packages/cli/src/kiro-agent.ts', 'packages/core/src/hook-guard.ts'], reason: 'Hook and agent file formats are only needed when editing hooks, agents and their writers.' },
+  { file: 'repo-input.md', mode: 'fileMatch', patterns: ['packages/shield/src/**', 'packages/core/src/allowed-reads.ts', 'packages/core/src/on-access.ts', 'packages/core/src/liveupdate.ts', 'packages/cli/src/commands/lock.ts', 'packages/cli/src/commands/update.ts', 'packages/cli/src/commands/on-access.ts'], reason: 'Files shipped with a repository never count as approvals; this matters in the Shield and the allowance code.' },
+  { file: 'untrusted-output.md', mode: 'fileMatch', patterns: ['packages/mcp-server/src/**', 'packages/shield/src/byoa.ts', 'apps/web/src/app/api/**', 'apps/web/src/components/**', 'packages/cli/src/commands/**', 'packages/core/src/on-access.ts', 'packages/core/src/ouija.ts', 'packages/core/src/scanner/signature-engine.ts'], reason: 'How much attacker text may be repeated matters only in code that prints or returns findings.' },
+  { file: 'release.md', mode: 'manual', patterns: [], reason: 'Release steps are needed rarely and only when the owner asks for them, with #release.' },
+];
+
 /** docs/HOW_KIRO.md, generated from the content above. */
 export function howKiroMarkdown(): string {
   const out: string[] = [
@@ -249,6 +270,11 @@ export function howKiroMarkdown(): string {
   for (const st of SURPRISES) {
     out.push(`### ${st.title}`, '', st.story, '', ...st.evidence.map((e) => `- ${e}`), '');
   }
+  out.push('## Steering files', '', '| File | Mode | Patterns | Why |', '| --- | --- | --- | --- |');
+  for (const r of STEERING_TABLE) {
+    out.push(`| \`${r.file}\` | ${r.mode} | ${r.patterns.length > 0 ? r.patterns.map((p) => `\`${p}\``).join('<br>') : 'none'} | ${r.reason} |`);
+  }
+  out.push('');
   out.push('## Check it yourself', '', '```sh', ...CHECK_COMMANDS, '```', '');
   return out.join('\n');
 }

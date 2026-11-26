@@ -1,3 +1,6 @@
+---
+inclusion: always
+---
 # Security rules for this repo
 
 - Never add real malware or working exfiltration endpoints. All attack samples in fixtures/ are defanged (example.invalid domains, placeholder secrets like `EXAMPLE_TOKEN_DO_NOT_USE`).
