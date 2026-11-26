@@ -109,6 +109,8 @@ Both rules live in `packages/core/src/kiro-evidence.ts`. KE-54 runs in the same 
 ## Model signature fields (Requirement 13)
 The `reasoningSignature` and `signature` fields (KE-58) are removed at any depth in the same pass that drops images, before redaction.
 
+## Security review gaps (Requirement 14)
+Order per event in `packages/core/src/kiro-evidence.ts`: (1) omit outputs of calls that name a path under home outside the workspace (KE-59), (2) redact the full strings, including the KE-60 key shapes, (3) truncate to 2 KB, (4) redact any partial known-prefix token left at the cut (KE-62), (5) the final per-line pass. A single path detector, shared by `read_file`, `fs_read`, `execute_bash`, `control_bash_process` and any tool with a command-bearing argument, matches `~/`, `$HOME`, `${HOME}` and the absolute home path outside `workspacePaths`; it replaces KE-55's read-only check. KE-61: `containsSecretShape` also matches the KE-60 shapes unless the value is already a redaction placeholder. KE-63: tests build values at runtime. Trade-off: the detector looks at the command text, so a command that merely mentions a home path drops its whole output (false positive); this is accepted because the alternative is leaking credential files.
 ## Data Models
 - `KiroEvent`: discriminated union keyed by event type (`user`, `assistant`, `tool_call`, `tool_result`, `ContextualHookInvoked`, `usage_summary`, `unknown` fallback), fields confirmed during research.
 - `SessionRecord`: `{ id, title, agentMode, startTime, endTime, model, autopilot, approveForMe, credits, toolCalls: Record<string, number>, hookRuns: Record<string, number>, hookBlocks: Record<string, number>, commits: string[] }`.

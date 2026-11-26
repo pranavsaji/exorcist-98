@@ -144,3 +144,12 @@ Exorcist 98 was built inside Kiro. This milestone makes that verifiable instead 
 #### Acceptance Criteria
 
 1. KE-58 THE export SHALL drop the `reasoningSignature` and `signature` fields, at any depth, from every event it writes, because they are opaque model signature blobs that are not useful to a reader and look like secrets.
+
+### Requirement 14: Close the security review gaps in the export
+**User Story:** As a maintainer, I want the export to omit and redact credential material from any file-returning tool and from truncated strings, so that future exports stay clean.
+#### Acceptance Criteria
+1. KE-59 THE export SHALL replace the output of every call to a tool that can return file contents (`read_file`, `fs_read`, `execute_bash`, `control_bash_process`, and any shell-like tool identified by a command-bearing argument) whose command or path names a file or folder under the home folder (`~/`, `$HOME`, `${HOME}` or the absolute home path) outside the session's workspace, for example `~/.aws`, `~/.npmrc`, `~/.netrc`, `~/.config`, `~/.ssh` or `~/.kiro`, with `[omitted: file outside the workspace]`, which generalises KE-55.
+2. KE-60 THE redaction SHALL replace the value and keep the key for INI-style and lowercase credential keys: `aws_secret_access_key`, `aws_access_key_id`, `aws_session_token`, `_authToken` (including `//registry/:_authToken=`), `password = ...`, `password: ...` and netrc `password <value>`, with or without spaces around `=`.
+3. KE-61 WHEN a value of a KE-60 shape is not already a redaction placeholder, THE after-write rescan SHALL detect the shape and fail the export in the same way as for other secret shapes.
+4. KE-62 THE export SHALL redact each full string before truncating the string to 2 KB, and after truncating SHALL redact any partial known-prefix token left immediately before the cut, for the prefixes `gh[pousr]_`, `github_pat_`, `AKIA`, `ASIA`, `sk-`, `npm_`, `xox[abposr]-` and `eyJ`.
+5. KE-63 THE test suite SHALL contain at least one test for each of KE-59, KE-60, KE-61 and KE-62, each using made-up values built at runtime.

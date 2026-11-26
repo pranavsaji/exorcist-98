@@ -832,6 +832,71 @@
         "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
         "timestamp": 1795692077866
       }
+    ],
+    "23.1 Implement KE-59 in `packages/core/src/kiro-evidence.ts`: generalise KE-55 to all file-returning tools with one shared path detector": [
+      {
+        "executionId": "74c35f29-52cf-4f5c-92a2-d69519df134f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795692573407
+      },
+      {
+        "executionId": "74c35f29-52cf-4f5c-92a2-d69519df134f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795692577205
+      },
+      {
+        "executionId": "74c35f29-52cf-4f5c-92a2-d69519df134f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795692879553
+      }
+    ],
+    "23.2 Implement KE-60 and KE-61: redact INI-style and lowercase credential keys and detect them in the after-write rescan": [
+      {
+        "executionId": "74c35f29-52cf-4f5c-92a2-d69519df134f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795692573458
+      },
+      {
+        "executionId": "74c35f29-52cf-4f5c-92a2-d69519df134f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795692880595
+      }
+    ],
+    "23.3 Implement KE-62: redact full strings before truncating, then redact the partial prefix at the cut": [
+      {
+        "executionId": "74c35f29-52cf-4f5c-92a2-d69519df134f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795692573491
+      },
+      {
+        "executionId": "74c35f29-52cf-4f5c-92a2-d69519df134f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795692881968
+      }
+    ],
+    "23.4 Write KE tests for KE-59 to KE-62, with test names starting with the KE-ID and made-up values built at runtime": [
+      {
+        "executionId": "74c35f29-52cf-4f5c-92a2-d69519df134f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795692573523
+      },
+      {
+        "executionId": "74c35f29-52cf-4f5c-92a2-d69519df134f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795692882605
+      }
+    ],
+    "23.5 Re-run `node scripts/kiro-evidence.mjs`, run the rescan, regenerate `docs/KIRO_EVIDENCE.md`, refresh facts, run the KE tests, `pnpm -r typecheck` and `pnpm vitest run`, and commit as a new commit without pushing": [
+      {
+        "executionId": "74c35f29-52cf-4f5c-92a2-d69519df134f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795692573556
+      },
+      {
+        "executionId": "74c35f29-52cf-4f5c-92a2-d69519df134f",
+        "chatSessionId": "sess_702afcac-dc0d-453e-8757-7a5f56248c00",
+        "timestamp": 1795692921540
+      }
     ]
   }
 }

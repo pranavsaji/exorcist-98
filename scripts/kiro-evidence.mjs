@@ -33,7 +33,7 @@ const { redactSecretText } = await import(pathToFileURL(join(ROOT, 'packages/cor
 const {
   isThisProjectWorkspace, redactHomePath, redactSecretsDeep, truncateToolPayload, parseEventLine,
   extractSessionRecord, aggregateTotals, containsSecretShape, finalizeEventLine,
-  omitSignInOutputs, omitOutsideWorkspaceReads, extraSecretShapeCounts,
+  omitSignInOutputs, omitOutsideWorkspaceReads, extraSecretShapeCounts, dropAttachments, redactPartialTokens,
 } = core;
 
 const { values } = parseArgs({
@@ -58,8 +58,11 @@ function homeDeep(value) {
   }
   return value;
 }
-/** Cut, then home path, then secrets: the order the design gives. */
-const redactAll = (value) => redactSecretsDeep(homeDeep(truncateToolPayload(value)));
+/**
+ * KE-62: drop images and signature fields, home path, redact every full string, cut to 2 KB, then
+ * redact any partial known-prefix token left at the cut. The per-line pass follows in finalizeEventLine.
+ */
+const redactAll = (value) => redactPartialTokens(truncateToolPayload(redactSecretsDeep(homeDeep(dropAttachments(value)))));
 
 function readJson(path) {
   try { return JSON.parse(readFileSync(path, 'utf8')); } catch { return null; }
@@ -84,6 +87,7 @@ function secretKindCounts(text) {
   if (extra.jwt > 0) counts.set('jwt', (counts.get('jwt') ?? 0) + extra.jwt);
   if (extra.account > 0) counts.set('aws-account', (counts.get('aws-account') ?? 0) + extra.account);
   if (extra.signInUrl > 0) counts.set('sign-in-url', (counts.get('sign-in-url') ?? 0) + extra.signInUrl);
+  if (extra.credential > 0) counts.set('credential-key', (counts.get('credential-key') ?? 0) + extra.credential);
   return counts;
 }
 function stringValues(value, out = []) {
@@ -164,7 +168,7 @@ if (!existsSync(SESSIONS)) {
         if (event) parsedEvents.push(event); // KE-6: a malformed line is dropped
       }
       // KE-51: sign-in tool output is replaced before anything else reads it.
-      // KE-55: a home-folder file read outside this session's workspace is omitted the same way.
+      // KE-55, KE-59: a call that names a home-folder path outside this session's workspace has its output omitted the same way.
       const events = omitOutsideWorkspaceReads(omitSignInOutputs(parsedEvents), workspacePathsOf(sessionJson), HOME);
       const record = redactAll(extractSessionRecord({ ...sessionJson, id }, events));
       // Final pass: redact the serialized line itself, then prove it still parses (KE-9, KE-10).

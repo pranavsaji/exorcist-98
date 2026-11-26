@@ -10,9 +10,9 @@ These are the Kiro sessions that built this project, exported with secrets and h
 | --- | ---: |
 | Sessions kept | 27 |
 | Sessions skipped (other projects) | 27 |
-| Credits | 1530.44 |
-| Tool calls | 3747 |
-| Hook runs | 1708 |
+| Credits | 1540.57 |
+| Tool calls | 3766 |
+| Hook runs | 1718 |
 | Hook blocks | 3 |
 | Events dropped (unparseable after redaction) | 0 |
 
@@ -20,18 +20,18 @@ These are the Kiro sessions that built this project, exported with secrets and h
 
 | Name | Count |
 | --- | ---: |
-| execute_bash | 1650 |
+| execute_bash | 1653 |
 | fs_write | 513 |
 | str_replace | 338 |
-| task_status | 323 |
-| task_update | 320 |
+| task_status | 330 |
+| task_update | 328 |
 | read_file | 246 |
 | tool_call | 94 |
 | web_fetch | 80 |
 | validate_spec_format | 40 |
 | control_bash_process | 28 |
 | list_directory | 28 |
-| task_list | 24 |
+| task_list | 25 |
 | invoke_sub_agent | 21 |
 | grep_search | 17 |
 | load_resource | 10 |
@@ -45,14 +45,14 @@ These are the Kiro sessions that built this project, exported with secrets and h
 
 | Name | Count |
 | --- | ---: |
-| pre-commit-secrets | 1582 |
+| pre-commit-secrets | 1585 |
 | on-access-scan | 65 |
-| verify-after-task | 17 |
+| verify-after-task | 22 |
 | spec-change | 15 |
-| exorcist-gate | 10 |
+| exorcist-gate | 11 |
 | definition-save | 8 |
 | zz-probe-pretooluse | 5 |
-| kiro-log | 3 |
+| kiro-log | 4 |
 | mcp-config-write-guard | 2 |
 | mcp-config-change | 1 |
 

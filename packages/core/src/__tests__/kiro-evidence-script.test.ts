@@ -176,4 +176,23 @@ describe('scripts/kiro-evidence.mjs against a fake sessions tree', () => {
     expect(text).toContain('[redacted sign-in url]');
     expect(text).toContain('[omitted: file outside the workspace]');
   });
+  it('KE-59 KE-62: a cat of ~/.npmrc is omitted, a token at the 2 KB cut is redacted, and the run exits 0', () => {
+    const tok = `npm_${'aB3dE5gH7jK9mN1pQ3sT5vX7zB9dF1hJ3lN5'}`;
+    const text = 'lorem ipsum '.repeat(200).slice(0, 2048 - 14 - 9) + ' ' + tok + ' and more';
+    addSession('aaaaaaaaaaaaaaaa', 'sess_ke59', '/Users/a/exorcist-98', [
+      envelope(1, { type: 'tool_call', toolCallId: 'c1', toolName: 'execute_bash', args: { command: 'cat ~/.npmrc' } }),
+      envelope(2, { type: 'tool_result', toolCallId: 'c1', status: 'completed', content: `//registry.example.invalid/:_authToken=${tok}` }),
+      envelope(3, { type: 'tool_call', toolCallId: 'c2', toolName: 'execute_bash', args: { command: 'ls' } }),
+      envelope(4, { type: 'tool_result', toolCallId: 'c2', status: 'completed', content: text }),
+    ]);
+    const r = run();
+    expect(r.status).toBe(0);
+    const written = gunzipSync(readFileSync(join(out, 'sess_ke59.jsonl.gz'))).toString('utf8');
+    expect(written).toContain('[omitted: file outside the workspace]');
+    expect(written).not.toContain(tok);
+    expect(written).not.toContain('npm_aB3');
+    expect(written).not.toContain('_authToken');
+    expect(written.trim().split('\n')).toHaveLength(4);
+    for (const l of written.trim().split('\n')) expect(() => JSON.parse(l)).not.toThrow();
+  });
 });

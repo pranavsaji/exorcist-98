@@ -233,7 +233,7 @@ function keepEmail(address: string): boolean {
  */
 function redactExtras(text: string, serialized: boolean): string {
   if (text.length === 0) return text;
-  let out = text.replace(new RegExp(JWT_SOURCE, 'g'), JWT_MARKER);
+  let out = redactCredentialKeys(text).replace(new RegExp(JWT_SOURCE, 'g'), JWT_MARKER);
   out = out.replace(new RegExp(ARN_ACCOUNT_SOURCE, 'g'), (_m, head: string) => `${head}${ACCOUNT_MARKER}`);
   out = out.replace(new RegExp(ACCOUNT_FIELD_SOURCE, 'gi'), (_m, head: string) => `${head}${ACCOUNT_MARKER}`);
   out = out.replace(new RegExp(EMAIL_SOURCE, 'g'), (m: string, offset: number, whole: string) => {
@@ -252,7 +252,7 @@ function redactExtras(text: string, serialized: boolean): string {
 // (one or two backslashes, for a string that was escaped once or twice).
 const URL_SOURCE = '[A-Za-z][A-Za-z0-9+.-]*:(?:\\\\{0,2}\\/){2}(?:[^\\s"\'<>\\\\]|\\\\{1,2}u0026|\\\\{1,2}\\/)+';
 // A parameter name after `?` or `&` (also `&amp;` and `\u0026`) followed by `=`.
-const SIGN_IN_PARAM = /(?:\?|&|&amp;|\\{1,2}u0026)(?:code_challenge|state|code|client_id|redirect_uri)=/i;
+const SIGN_IN_PARAM = /(?:\?|&|&amp;|\\{1,2}u0026)(?:code_challenge|state|code|client_id|redirect_uri|user_code|device_code)=/i;
 export const SIGN_IN_URL_MARKER = '[redacted sign-in url]';
 
 /** True when `url` has a query string holding a sign-in parameter. */
@@ -273,13 +273,13 @@ export function redactExportText(text: string): string {
 }
 
 /** Counts of the shapes the rescan adds: JWTs, AWS account IDs and sign-in URLs. Never returns the values. (KE-52, KE-56) */
-export function extraSecretShapeCounts(text: string): { jwt: number; account: number; signInUrl: number } {
+export function extraSecretShapeCounts(text: string): { jwt: number; account: number; signInUrl: number; credential: number } {
   const jwt = text.match(new RegExp(JWT_SOURCE, 'g'))?.length ?? 0;
   const account =
     (text.match(new RegExp(ARN_ACCOUNT_SOURCE, 'g'))?.length ?? 0) +
     (text.match(new RegExp(ACCOUNT_FIELD_SOURCE, 'gi'))?.length ?? 0);
   const signInUrl = (text.match(new RegExp(URL_SOURCE, 'g')) ?? []).filter(isSignInUrl).length;
-  return { jwt, account, signInUrl };
+  return { jwt, account, signInUrl, credential: countCredentialKeys(text) };
 }
 
 function commandsOf(p: Record<string, unknown>): string[] {
@@ -326,31 +326,43 @@ export function omitSignInOutputs(events: KiroEvent[]): KiroEvent[] {
 }
 
 export const OUTSIDE_WORKSPACE_OMITTED = '[omitted: file outside the workspace]';
-const READ_TOOLS = new Set(['read_file', 'fs_read']);
 const PATH_KEYS = new Set(['path', 'filePath', 'file_path']);
+const COMMAND_KEYS = new Set(['command', 'cmd', 'script', 'input']);
 
-/** Every file path a read call names: its `filePath`, and path keys in `args`, `originalArgs`, `input` (nested, `paths[]`, `operations[]`). */
-function readPathsOf(p: Record<string, unknown>): string[] {
-  const out: string[] = [];
+/**
+ * KE-59: one path detector shared by every tool that can return file contents (`read_file`,
+ * `fs_read`, `execute_bash`, `control_bash_process`, and any tool whose arguments carry a
+ * command-like or path-like field). It collects the command text and the file paths a call names.
+ */
+function callTargets(p: Record<string, unknown>): { commands: string[]; paths: string[] } {
+  const commands: string[] = [];
+  const paths: string[] = [];
   const walk = (v: unknown, depth: number): void => {
-    if (depth > 4) return;
-    if (typeof v === 'string') {
-      if (depth === 0) {
-        try { walk(JSON.parse(v) as unknown, 1); } catch { /* not JSON */ }
-      }
-    } else if (Array.isArray(v)) {
+    if (depth > 6) return;
+    if (Array.isArray(v)) {
       for (const x of v) walk(x, depth + 1);
     } else if (typeof v === 'object' && v !== null) {
       for (const [k, x] of Object.entries(v)) {
-        if (PATH_KEYS.has(k) && typeof x === 'string') out.push(x);
-        else if (k === 'paths' && Array.isArray(x)) for (const s of x) { if (typeof s === 'string') out.push(s); }
-        else walk(x, depth + 1);
+        if (typeof x === 'string') {
+          if (PATH_KEYS.has(k)) paths.push(x);
+          else if (COMMAND_KEYS.has(k)) commands.push(x);
+        } else if (k === 'paths' && Array.isArray(x)) {
+          for (const s of x) { if (typeof s === 'string') paths.push(s); }
+        } else walk(x, depth + 1);
       }
     }
   };
-  if (typeof p['filePath'] === 'string') out.push(p['filePath']);
-  for (const key of ['args', 'originalArgs', 'input']) walk(p[key], 0);
-  return out;
+  if (typeof p['filePath'] === 'string') paths.push(p['filePath']);
+  for (const key of ['args', 'originalArgs', 'input']) {
+    const v = p[key];
+    if (typeof v === 'string') {
+      let parsed: unknown;
+      try { parsed = JSON.parse(v); } catch { parsed = undefined; }
+      if (typeof parsed === 'object' && parsed !== null) walk(parsed, 1);
+      else commands.push(v); // a plain string is a command line
+    } else walk(v, 1);
+  }
+  return { commands, paths };
 }
 
 function cleanAbs(path: string): string {
@@ -382,28 +394,154 @@ function isOutsideWorkspaceHomePath(path: string, workspacePaths: string[], home
   });
 }
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Every token of `command` that names a path under home: `~/..`, `$HOME/..`, `${HOME}/..` or the absolute home prefix (also in quotes, after `=`, `<`, `>`). */
+function homePathTokens(command: string, home: string): string[] {
+  const abs = cleanAbs(home);
+  const prefixes = ['~', '\\$HOME', '\\$\\{HOME\\}', ...(abs === '/' ? [] : [escapeRegExp(abs), escapeRegExp(home.replace(/[\\/]+$/, ''))])];
+  const re = new RegExp(`(?<![\\w$~/.-])(?:${prefixes.join('|')})(?:/[^\\s'"\`;|&<>()]*)?(?=[\\s'"\`;|&<>()]|$)`, 'g');
+  return command.match(re) ?? [];
+}
+
+/** True when a call names a path under home that is outside every workspace path. */
+function callNamesOutsidePath(p: Record<string, unknown>, workspacePaths: string[], home: string): boolean {
+  const { commands, paths } = callTargets(p);
+  if (paths.some((x) => isOutsideWorkspaceHomePath(x, workspacePaths, home))) return true;
+  return commands.some((c) => homePathTokens(c, home).some((t) => isOutsideWorkspaceHomePath(t, workspacePaths, home)));
+}
+
 /**
- * Replace the result of every `read_file` or `fs_read` call for a file under the home folder but
- * outside the session's `workspacePaths` with `[omitted: file outside the workspace]`. Call and
- * result are paired by `toolCallId`, as in `omitSignInOutputs`. Relative paths count as inside. (KE-55)
+ * Replace the result of every tool call that names a path under the home folder but outside the
+ * session's `workspacePaths` with `[omitted: file outside the workspace]`. Call and result are
+ * paired by `toolCallId`, as in `omitSignInOutputs`. Relative paths count as inside, and `~` alone
+ * is not a path under home. (KE-55, KE-59)
+ *
+ * False-positive trade-off: the detector reads the call's text, not what the tool did. A command
+ * that merely mentions a home path (`ls ~/.config`, `echo "see ~/.npmrc"`) drops its whole output.
+ * That is accepted: the alternative is leaking credential files. An output already omitted as a
+ * sign-in output keeps that marker.
  */
 export function omitOutsideWorkspaceReads(events: KiroEvent[], workspacePaths: string[], home: string): KiroEvent[] {
   if (home.length === 0) return events;
   const ids = new Set<string>();
   for (const e of events) {
     const p = payloadOf(e);
-    if (p['type'] === 'tool_call' && typeof p['toolName'] === 'string' && READ_TOOLS.has(p['toolName'])
-      && typeof p['toolCallId'] === 'string'
-      && readPathsOf(p).some((x) => isOutsideWorkspaceHomePath(x, workspacePaths, home))) ids.add(p['toolCallId']);
+    if (p['type'] === 'tool_call' && typeof p['toolCallId'] === 'string'
+      && callNamesOutsidePath(p, workspacePaths, home)) ids.add(p['toolCallId']);
   }
   if (ids.size === 0) return events;
   return events.map((e) => {
     const p = payloadOf(e);
     if (p['type'] !== 'tool_result' || typeof p['toolCallId'] !== 'string' || !ids.has(p['toolCallId'])) return e;
+    if (p['content'] === SIGN_IN_OMITTED) return e;
     const next = { ...p, type: 'tool_result', content: OUTSIDE_WORKSPACE_OMITTED } as KiroEvent['payload'];
     if ('output' in next) (next as Record<string, unknown>)['output'] = OUTSIDE_WORKSPACE_OMITTED;
     return { ...e, payload: next };
   });
+}
+
+// ---- Requirement 14: credential keys and partial tokens (KE-60 to KE-62) ----
+export const CREDENTIAL_MARKER = '[redacted credential]';
+const CRED_KEY = '(?:(?<![A-Za-z])|(?<=\\\\[nrt]))(?<key>aws_secret_access_key|aws_access_key_id|aws_session_token|password|_authToken)';
+// `key = value`, `key: value`, `"key": "value"`, also with escaped quotes (`\"key\":\"value\"`) in a serialized line.
+const CRED_DELIMITED_SOURCE =
+  `${CRED_KEY}(?<sep>(?:\\\\*["'])?[ \\t]*[=:][ \\t]*)(?:(?<q>\\\\*["'])(?<quoted>[^"'\\\\]{4,})|(?<bare>[^\\s"'\\\\,;}]{4,}))`;
+// netrc: `password <value>` (see isNetrcContext).
+const CRED_NETRC_SOURCE = '(?:(?<![A-Za-z])|(?<=\\\\[nrt]))(?<key>password)(?<sep>[ \\t]+)(?<bare>[^\\s"\'\\\\,;}]{4,})';
+const NOT_CREDENTIAL_TYPES = new Set([
+  'string', 'number', 'boolean', 'any', 'unknown', 'null', 'undefined', 'none', 'true', 'false', 'void', 'never',
+  'object', 'optional', 'required', 'bytes', 'secret', 'secretstr', 'text', 'password',
+]);
+
+/**
+ * What counts as a credential value, to keep ordinary code readable: a literal token of 4 or more
+ * non-space characters that is not already a `[redacted ...]` marker, not a type name (`string`,
+ * `Optional`...), not a call or expression (`os.getenv(..)`, anything with parentheses), not a
+ * reference (`$VAR`, `${VAR}`, `<placeholder>`, `process.env.X`, `self.x`) and not a mask (`****`).
+ * A plain identifier such as `hunter2abc` is still treated as a literal password.
+ */
+function isCredentialValue(v: string): boolean {
+  if (v.length < 4 || v.startsWith('[redacted')) return false;
+  if (/^[<$%{(]/.test(v) || /[()]/.test(v) || /^\w+\[/.test(v)) return false;
+  if (NOT_CREDENTIAL_TYPES.has(v.toLowerCase())) return false;
+  if (/^(?:process|os|env|self|this|config|settings|args|params|secrets)\./i.test(v)) return false;
+  if (/^(?:\*+|x{4,}|\.+|-+|_+)$/i.test(v)) return false;
+  return true;
+}
+
+/** netrc `password <value>` only counts at the start of a line, or after `login <name>`, and the value must hold a digit or symbol (so prose such as "password required" is kept). */
+function isNetrcContext(before: string, value: string): boolean {
+  if (!/[^A-Za-z]/.test(value)) return false;
+  const tail = before.slice(-200);
+  return /(?:^|\n|\\n)[ \t]*$/.test(tail) || /\blogin\s+\S+\s+$/.test(tail);
+}
+
+type CredGroups = { key: string; sep: string; q?: string; quoted?: string; bare?: string };
+
+function credentialPass(text: string, onHit: () => void, replace: boolean): string {
+  const fix = (m: string, groups: CredGroups, ok: (v: string) => boolean): string => {
+    const value = groups.quoted ?? groups.bare ?? '';
+    if (!isCredentialValue(value) || !ok(value)) return m;
+    onHit();
+    return `${groups.key}${groups.sep}${groups.q ?? ''}${CREDENTIAL_MARKER}`;
+  };
+  let out = text.replace(new RegExp(CRED_DELIMITED_SOURCE, 'gi'), (...a: unknown[]) =>
+    fix(a[0] as string, a[a.length - 1] as CredGroups, () => true));
+  out = out.replace(new RegExp(CRED_NETRC_SOURCE, 'gi'), (...a: unknown[]) => {
+    const offset = a[a.length - 3] as number;
+    const whole = a[a.length - 2] as string;
+    return fix(a[0] as string, a[a.length - 1] as CredGroups, (v) => isNetrcContext(whole.slice(0, offset), v));
+  });
+  return replace ? out : text;
+}
+
+/** Replace the value of a credential key (see KE-60) with `[redacted credential]`, keeping the key. */
+export function redactCredentialKeys(text: string): string {
+  if (text.length < 8) return text;
+  return credentialPass(text, () => undefined, true);
+}
+
+/** Number of credential-key values in `text` that `redactCredentialKeys` would replace. (KE-61) */
+export function countCredentialKeys(text: string): number {
+  if (text.length < 8) return 0;
+  let n = 0;
+  credentialPass(text, () => { n += 1; }, false);
+  return n;
+}
+
+const PARTIAL_TOKEN_TAIL = /(?<![A-Za-z0-9])(?:gh[pousr]_|github_pat_|AKIA|ASIA|sk-|npm_|xox[abposr]-|eyJ)[A-Za-z0-9_.-]*$/;
+export const PARTIAL_MARKER = '[redacted partial]';
+
+function redactPartialString(text: string, maxBytes: number): string {
+  if (!text.endsWith(TRUNCATION_SUFFIX)) return text;
+  const head = text.slice(0, text.length - TRUNCATION_SUFFIX.length);
+  const m = PARTIAL_TOKEN_TAIL.exec(head);
+  if (!m) return text;
+  let kept = head.slice(0, m.index);
+  const room = maxBytes - Buffer.byteLength(PARTIAL_MARKER + TRUNCATION_SUFFIX, 'utf8');
+  while (kept.length > 0 && Buffer.byteLength(kept, 'utf8') > room) kept = Array.from(kept).slice(0, -1).join('');
+  return kept + PARTIAL_MARKER + TRUNCATION_SUFFIX;
+}
+
+/**
+ * After truncation: in every string that ends with the truncation suffix, replace a known-prefix
+ * token (`gh[pousr]_`, `github_pat_`, `AKIA`, `ASIA`, `sk-`, `npm_`, `xox[abposr]-`, `eyJ`) cut off
+ * right before the suffix, or the bare prefix, with `[redacted partial]`. The string stays within
+ * `maxBytes`. (KE-62)
+ */
+export function redactPartialTokens<T>(value: T, maxBytes = 2048): T {
+  const walk = (v: unknown): unknown => {
+    if (typeof v === 'string') return redactPartialString(v, maxBytes);
+    if (Array.isArray(v)) return v.map(walk);
+    if (typeof v === 'object' && v !== null) {
+      return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x)]));
+    }
+    return v;
+  };
+  return walk(value) as T;
 }
 
 function redactNode(value: unknown): unknown {
@@ -481,6 +619,11 @@ function cleanNode(value: unknown, maxBytes: number): unknown {
 export function truncateToolPayload(value: unknown, maxBytes = 2048): unknown {
   const c = cleanNode(value, maxBytes);
   return c === DROP ? undefined : c;
+}
+
+/** Remove image and signature fields only, with no cut. Run first so the redaction passes never see attachments. (KE-3, KE-58, KE-62) */
+export function dropAttachments<T>(value: T): T {
+  return truncateToolPayload(value, Number.POSITIVE_INFINITY) as T;
 }
 
 /** Parse one messages.jsonl line. Malformed JSON or a line without the envelope gives null. (KE-6) */
@@ -709,5 +852,5 @@ export function finalizeEventLine(event: unknown): EventLineResult {
 export function containsSecretShape(text: string): boolean {
   if (containsSecret(text)) return true;
   const extra = extraSecretShapeCounts(text);
-  return extra.jwt > 0 || extra.account > 0 || extra.signInUrl > 0;
+  return extra.jwt > 0 || extra.account > 0 || extra.signInUrl > 0 || extra.credential > 0;
 }

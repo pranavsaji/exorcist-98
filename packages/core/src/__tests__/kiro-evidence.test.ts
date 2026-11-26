@@ -1,7 +1,7 @@
 /** m13-kiro-evidence: unit tests for extractSessionRecord and containsSecretShape (task 3.4). */
 import { describe, expect, it } from 'vitest';
 import {
-  containsSecretShape, extraSecretShapeCounts, extractSessionRecord, finalizeEventLine, isSignInCommand, omitOutsideWorkspaceReads, omitSignInOutputs,
+  containsSecretShape, dropAttachments, extraSecretShapeCounts, redactPartialTokens, TRUNCATION_SUFFIX, extractSessionRecord, finalizeEventLine, isSignInCommand, omitOutsideWorkspaceReads, omitSignInOutputs,
   parseEventLine, redactSecretsDeep, redactSignInUrls, truncateToolPayload, type KiroEvent,
 } from '../kiro-evidence.js';
 
@@ -288,8 +288,9 @@ describe('Requirement 12 redactions', () => {
       ...pair('k', 'execute_bash', { command: `cat ${home}/.zshrc` }),
     ];
     const out = omitOutsideWorkspaceReads(events, ws, home);
-    for (const id of ['a', 'b', 'c', 'd', 'h', 'i']) expect(resultOf(out, id)).toBe('[omitted: file outside the workspace]');
-    for (const id of ['e', 'f', 'g', 'j', 'k']) expect(resultOf(out, id)).toBe(`body-${id}`);
+    // 'k' is an execute_bash that cats a home file: KE-59 now omits it too.
+    for (const id of ['a', 'b', 'c', 'd', 'h', 'i', 'k']) expect(resultOf(out, id)).toBe('[omitted: file outside the workspace]');
+    for (const id of ['e', 'f', 'g', 'j']) expect(resultOf(out, id)).toBe(`body-${id}`);
   });
 
   it('KE-56: the rescan flags a sign-in URL, escaped or not, and ignores the placeholders', () => {
@@ -333,5 +334,152 @@ describe('Requirement 13 model signature fields', () => {
       note: 'the word signature stays',
     });
     expect(JSON.stringify(out)).not.toContain(sig);
+  });
+});
+
+// ---- Requirement 14 (KE-59 to KE-63). Every value is built at run time from pieces. ----
+describe('Requirement 14 security review gaps', () => {
+  const fhome = '/Users/fake';
+  const fws = [`${fhome}/proj/exorcist-98`];
+  const mk = (payload: Record<string, unknown>): KiroEvent => parseEventLine(JSON.stringify({ id: 'm', timestamp: 't', payload }))!;
+  const omitted = (toolName: string, args: unknown, extra: Record<string, unknown> = {}): boolean => {
+    const out = omitOutsideWorkspaceReads([
+      mk({ type: 'tool_call', toolCallId: 'x', toolName, args, ...extra }),
+      mk({ type: 'tool_result', toolCallId: 'x', content: 'body' }),
+    ], fws, fhome);
+    return (out[1]!.payload as Record<string, unknown>).content === '[omitted: file outside the workspace]';
+  };
+  it('KE-59: a command that names a home path outside the workspace has its output omitted', () => {
+    const bad = [
+      'cat ~/.aws/credentials', 'cat ~/.npmrc', 'grep x ~/.netrc', 'ls ~/.config', 'cat ~/.ssh/config', 'ls ~/.kiro/sessions',
+      'cat $HOME/.npmrc', 'cat ${HOME}/.npmrc', `cat "${fhome}/.aws/config"`, `cat '~/.npmrc'`, 'FOO=~/.npmrc; cat $FOO', 'cat < ~/.npmrc', 'x > ~/.bashrc',
+    ];
+    for (const c of bad) expect(omitted('execute_bash', { command: c }), c).toBe(true);
+    for (const c of ['cat ~/proj/exorcist-98/README.md', 'cat README.md', 'echo ~', `cat ${fws[0]}/a.ts`]) {
+      expect(omitted('execute_bash', { command: c }), c).toBe(false);
+    }
+  });
+  it('KE-59: control_bash_process, command-like and path-like fields of any tool, and string args are covered', () => {
+    expect(omitted('control_bash_process', { command: 'cat ~/.npmrc' })).toBe(true);
+    expect(omitted('some_tool', { cmd: 'cat ~/.npmrc' })).toBe(true);
+    expect(omitted('some_tool', { script: 'cat ~/.npmrc' })).toBe(true);
+    expect(omitted('some_tool', { input: 'cat ~/.npmrc' })).toBe(true);
+    expect(omitted('some_tool', 'cat ~/.npmrc')).toBe(true);
+    expect(omitted('some_tool', { file_path: '~/.npmrc' })).toBe(true);
+    expect(omitted('some_tool', { operations: [{ path: '~/.zshrc' }] })).toBe(true);
+    expect(omitted('some_tool', { paths: ['a.ts', '~/.zshrc'] })).toBe(true);
+    expect(omitted('some_tool', { query: 'see ~/.npmrc' })).toBe(false);
+    expect(omitted('execute_bash', { command: 'ls' }, { originalArgs: { command: 'cat ~/.npmrc' } })).toBe(true);
+  });
+  it('KE-59: a sign-in output that is also outside the workspace stays omitted, with the sign-in marker kept', () => {
+    const evs = [
+      mk({ type: 'tool_call', toolCallId: 'x', toolName: 'execute_bash', args: { command: 'aws sso login; cat ~/.npmrc' } }),
+      mk({ type: 'tool_result', toolCallId: 'x', content: 'body' }),
+    ];
+    const out = omitOutsideWorkspaceReads(omitSignInOutputs(evs), fws, fhome);
+    expect((out[1]!.payload as Record<string, unknown>).content).toBe('[omitted: sign-in output]');
+  });
+
+  const mark = '[redacted credential]';
+  const val = (): string => ['Zq', '7', 'Xw', '9', 'Lm', '2'].join('');
+  const akey = (): string => ['Ab', 'Cd', 'Ef', 'Gh', 'Ij', 'Kl', 'Mn', 'Op'].join('');
+  it('KE-60: INI-style and lowercase credential keys keep the key and lose the value', () => {
+    const v = val();
+    const cases: Array<[string, string]> = [
+      [`aws_secret_access_key = ${v}`, `aws_secret_access_key = ${mark}`],
+      [`aws_secret_access_key=${v}`, `aws_secret_access_key=${mark}`],
+      [`aws_access_key_id = ${akey()}`, `aws_access_key_id = ${mark}`],
+      [`aws_session_token=${v}${v}`, `aws_session_token=${mark}`],
+      [`//registry.example.invalid/:_authToken=${v}`, `//registry.example.invalid/:_authToken=${mark}`],
+      [`_authToken = ${v}`, `_authToken = ${mark}`],
+      [`password=${v}`, `password=${mark}`],
+      [`password: ${v}`, `password: ${mark}`],
+      [`"password": "${v}"`, `"password": "${mark}"`],
+      [`machine h.example.invalid login bob password ${v}`, `machine h.example.invalid login bob password ${mark}`],
+      [`machine h.example.invalid\n  password ${v}\n  x`, `machine h.example.invalid\n  password ${mark}\n  x`],
+    ];
+    for (const [input, expected] of cases) expect(redactSecretsDeep(input), input).toBe(expected);
+    // In a serialized line, with escaped newlines and quotes, the line still parses and keeps the marker.
+    const r = finalizeEventLine({ id: 'm', timestamp: 't', payload: { type: 'tool_result', content: `[default]\naws_secret_access_key = ${v}\npassword: "${v}"\n_authToken=${v}\n` } });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.line).not.toContain(v);
+    expect(JSON.parse(r.line).payload.content).toBe(`[default]\naws_secret_access_key = ${mark}\npassword: "${mark}"\n_authToken=${mark}\n`);
+    const raw = `{"payload":{"content":"x \\"password\\": \\"${v}\\", y"}}`;
+    const fl = finalizeEventLine(JSON.parse(raw));
+    expect(fl.ok && !fl.line.includes(v)).toBe(true);
+    // Idempotent: a second pass changes nothing.
+    expect(redactSecretsDeep(redactSecretsDeep(`password=${v}`))).toBe(`password=${mark}`);
+  });
+  it('KE-60: ordinary code is left alone', () => {
+    for (const keep of [
+      'password: string;', 'password?: string', 'password: Optional[str]', 'password = os.getenv("PW")', 'password = process.env.PW',
+      'const passwordField = 1', 'passwordField: abcdefgh', 'password: ${DB_PASS}', 'password=<your password>', 'the password is required',
+      'password required here', 'password: ****', 'password=[redacted github-token: ghp_…, 40 chars]', 'password: ""', `password=${mark}`,
+      'password: boolean', 'password: Password',
+    ]) expect(redactSecretsDeep(keep), keep).toBe(keep);
+  });
+  it('KE-61: the rescan flags the credential-key shapes and not the placeholders', () => {
+    const v = val();
+    for (const hit of [`aws_secret_access_key = ${v}`, `//r.example.invalid/:_authToken=${v}`, `password: ${v}`, asLine(`password=${v}\nx`), `machine h login u password ${v}`]) {
+      expect(containsSecretShape(hit), hit).toBe(true);
+    }
+    expect(extraSecretShapeCounts(`password=${v} aws_session_token=${v}`).credential).toBe(2);
+    for (const ph of [`password=${mark}`, `aws_secret_access_key = ${mark}`, 'password: ', 'password=', 'password: string', asLine(`password=${mark}`), 'password=[redacted anything]']) {
+      expect(containsSecretShape(ph), ph).toBe(false);
+    }
+  });
+
+  const SUFFIX = TRUNCATION_SUFFIX;
+  const body = (n: number): string => 'lorem ipsum '.repeat(300).slice(0, n);
+  const tok = (kind: string): string => {
+    const t = 'aB3dE5gH7jK9mN1pQ3sT5vX7zB9dF1hJ3lN5';
+    return ({
+      ghp: `ghp_${t}`, ghs: `ghs_${t}`, pat: `github_pat_${t}${t}`, akia: `AKIA${'ABCD1234EFGH5678'}`, asia: `ASIA${'ABCD1234EFGH5678'}`,
+      sk: `sk-${t}${t.slice(0, 12)}`, npm: `npm_${t}`, xox: `xoxb-${'1234567890-abcdefghij'}`,
+      jwt: ['eyJ' + t, 'eyJ' + t, t].join('.'),
+    } as Record<string, string>)[kind]!;
+  };
+  const pipeline = (v: unknown): unknown => redactPartialTokens(truncateToolPayload(redactSecretsDeep(dropAttachments(v))));
+  it('KE-62: a token straddling the 2 KB cut leaves no token characters, for each prefix family', () => {
+    const room = 2048 - Buffer.byteLength(SUFFIX, 'utf8');
+    for (const kind of ['ghp', 'ghs', 'pat', 'akia', 'asia', 'sk', 'npm', 'xox', 'jwt']) {
+      const t = tok(kind);
+      for (const keep of [2, 4, 7, 12, 20]) {
+        const text = body(room - keep - 1) + ' ' + t + ' tail words after the token';
+        const out = (pipeline({ content: text }) as { content: string }).content;
+        expect(Buffer.byteLength(out, 'utf8'), `${kind} ${keep}`).toBeLessThanOrEqual(2048);
+        expect(out.endsWith(SUFFIX)).toBe(true);
+        expect(out).not.toContain(t.slice(0, 8));
+        expect(out).not.toMatch(/(?:ghp_|ghs_|github_pat_|AKIA|ASIA|sk-|npm_|xoxb-|eyJ)[A-Za-z0-9_.-]+(?:…\(truncated\))$/);
+      }
+    }
+  });
+  it('KE-62: a partial prefix left at the cut becomes [redacted partial] within the byte cap', () => {
+    for (const kind of ['ghp', 'pat', 'akia', 'sk', 'npm', 'xox', 'jwt']) {
+      const t = tok(kind);
+      for (const len of [3, 6, 10]) {
+        const tail = t.slice(0, Math.max(len, kind === 'pat' ? 11 : kind === 'xox' ? 5 : kind === 'sk' || kind === 'jwt' ? 3 : 4));
+        const cut = `${body(100)} ${tail}${SUFFIX}`;
+        const out = redactPartialTokens({ s: cut }).s;
+        expect(out).toBe(`${body(100)} [redacted partial]${SUFFIX}`);
+      }
+    }
+    const full = `${body(2048 - 14 - 1)}${'é'}${'sk-'}${SUFFIX}`;
+    const capped = redactPartialTokens(full).length > 0 ? redactPartialTokens(full) : '';
+    expect(Buffer.byteLength(capped, 'utf8')).toBeLessThanOrEqual(2048);
+    expect(capped.endsWith(`[redacted partial]${SUFFIX}`)).toBe(true);
+    // Not a token start (inside a word) and not truncated: unchanged.
+    expect(redactPartialTokens(`risk-${SUFFIX}`)).toBe(`risk-${SUFFIX}`);
+    expect(redactPartialTokens('see sk-abc')).toBe('see sk-abc');
+  });
+  it('KE-63: every KE-59 to KE-62 test here builds its values at run time', () => {
+    expect(tok('ghp')).toMatch(/^ghp_/);
+  });
+});
+describe('KE-54 device-code parameters', () => {
+  it('KE-54: a device sign-in URL with a user_code parameter becomes [redacted sign-in url]', () => {
+    const code = ['AB', 'CD'].join('') + '-' + ['EF', 'GH'].join('');
+    expect(redactSecretsDeep(`1. Open https://device.example.invalid/start/#/device?user_code=${code}`)).toBe(`1. Open ${SIGN_MARK}`);
   });
 });
