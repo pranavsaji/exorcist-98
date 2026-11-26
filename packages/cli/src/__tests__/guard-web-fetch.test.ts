@@ -78,6 +78,37 @@ describe('guard-web-fetch', () => {
     expect(run(event(dir, 'https://a.example.invalid/true')).code).toBe(0);
     expect(run(event(dir, `https://a.example.invalid/?k=${ENV_VALUE}`, 'fs_write')).code).toBe(0);
   });
+  it('CT-13: blocks a secret placed after 16,384 characters, without printing it', () => {
+    const { dir } = project();
+    const r = run(event(dir, `https://a.example.invalid/?pad=${'x'.repeat(16_400)}&k=${ENV_VALUE}`));
+    expect(r.code).toBe(2);
+    expect(r.err).toContain('too long to check');
+    expect(r.err).not.toContain(ENV_VALUE);
+    expect(r.err.trim().split('\n')).toHaveLength(1);
+  });
+  it('CT-13: blocks a canary in the 65th base64 piece after 64 padding pieces', () => {
+    const { dir, token } = project();
+    const pad = Array.from({ length: 64 }, (_v, i) => `piece${String(i).padStart(3, '0')}abcdef`).join('/');
+    const r = run(event(dir, `https://a.example.invalid/${pad}/${b64(token)}`));
+    expect(r.code).toBe(2);
+    expect(r.err).not.toContain(token);
+  });
+  it('CT-13: allows an ordinary long URL under the cap with no secret', () => {
+    const { dir } = project();
+    expect(run(event(dir, `https://a.example.invalid/?q=${'hello+world+'.repeat(500)}`)).code).toBe(0);
+  });
+  it('CT-13: blocks when the form cap is reached before a match, with its own kind', () => {
+    const { dir } = project();
+    const pad = Array.from({ length: 300 }, (_v, i) => b64(`filler text number ${i} of the padding`).replace(/=+$/, '')).join('/');
+    const r = run(event(dir, `https://a.example.invalid/${pad}`));
+    expect(r.code).toBe(2);
+    expect(r.err).toContain('too many encoded pieces');
+    expect(r.err).not.toContain('filler text');
+  });
+  it('CT-13: blocks when the decoded-byte budget is reached, with its own kind', () => {
+    const r = decideWebFetch({ tool_name: 'web_fetch', tool_input: { url: `https://a.example.invalid/${'A'.repeat(16_000)}` } }, { envValues: [], canaries: [] });
+    expect(r).toEqual({ block: true, kind: 'too-many-encodings', host: '*.example.invalid' });
+  });
   it('CT-13: allows on unparsable stdin and on events without a URL', () => {
     expect(run('not json').code).toBe(0);
     expect(run('').code).toBe(0);
